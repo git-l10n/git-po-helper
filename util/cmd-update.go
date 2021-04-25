@@ -12,6 +12,10 @@ import (
 // CmdUpdate implements update sub command.
 func CmdUpdate(fileName string) error {
 	locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
+	localeFullName, err := GetPrettyLocaleName(locale)
+	if err != nil {
+		log.Error(err)
+	}
 	potFile := filepath.Join("po", "git.pot")
 	poFile := filepath.Join("po", locale+".po")
 	if !Exist(filepath.Join(GitRootDir, poFile)) {
@@ -28,9 +32,10 @@ func CmdUpdate(fileName string) error {
 	if err := cmd.Start(); err != nil {
 		return ExecError(err)
 	}
-	log.Infof("Running: %s ...", strings.Join(cmd.Args, " "))
+	log.Infof("Updating .po file for '%s':", localeFullName)
+	log.Infof("\t%s ...", strings.Join(cmd.Args, " "))
 	if err := cmd.Wait(); err != nil {
 		return ExecError(err)
 	}
-	return nil
+	return CheckPoFile(poFile)
 }

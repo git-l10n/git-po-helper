@@ -51,7 +51,7 @@ func CmdInit(fileName string) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Creating l10n file for '%s':", localeFullName)
+	log.Infof("Creating .po file for '%s':", localeFullName)
 	log.Infof("\t%s ...", strings.Join(cmd.Args, " "))
 	if err = cmd.Start(); err != nil {
 		return ExecError(err)

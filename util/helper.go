@@ -40,7 +40,11 @@ func IsDir(name string) bool {
 func ExecError(err error) error {
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			return errors.New(string(exitError.Stderr))
+			var msg string = string(exitError.Stderr)
+			if msg == "" {
+				return err
+			}
+			return errors.New(msg)
 		}
 	}
 	return err
