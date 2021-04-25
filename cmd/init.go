@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// versionCmd represents the version command
 var initCmd = &cobra.Command{
 	Use:   "init <XX.po>",
 	Short: "Create XX.po file",
