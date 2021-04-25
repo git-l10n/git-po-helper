@@ -2,8 +2,12 @@ package util
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
+	"strings"
+
+	"github.com/git-l10n/git-po-helper/data"
 )
 
 // Exist check if path is exist.
@@ -40,4 +44,28 @@ func ExecError(err error) error {
 		}
 	}
 	return err
+}
+
+// GetPrettyLocaleName shows full language name and location
+func GetPrettyLocaleName(locale string) (string, error) {
+	var (
+		langName string
+		locName  string
+	)
+	items := strings.SplitN(locale, "_", 2)
+	langName = data.GetLanguageName(items[0])
+	if langName == "" {
+		return "", fmt.Errorf("invalid language code for locale '%s'", locale)
+	}
+	if len(items) > 1 && items[1] != "" {
+		locName = data.GetLocationName(items[1])
+		if locName == "" {
+			return "", fmt.Errorf("invalid country or location code for locale '%s'", locale)
+		}
+	}
+	if locName != "" {
+		return fmt.Sprintf("%s - %s", langName, locName), nil
+	} else {
+		return langName, nil
+	}
 }
