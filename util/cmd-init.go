@@ -31,6 +31,10 @@ Notes for l10n team leader:
 // CmdInit implements init sub command.
 func CmdInit(fileName string) error {
 	locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
+	localeFullName, err := GetPrettyLocaleName(locale)
+	if err != nil {
+		return err
+	}
 	potFile := filepath.Join("po", "git.pot")
 	poFile := filepath.Join(GitRootDir, "po", locale+".po")
 	if Exist(poFile) {
@@ -47,7 +51,8 @@ func CmdInit(fileName string) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Running: %s ...", strings.Join(cmd.Args, " "))
+	log.Infof("Creating l10n file for '%s':", localeFullName)
+	log.Infof("\t%s ...", strings.Join(cmd.Args, " "))
 	if err = cmd.Start(); err != nil {
 		return ExecError(err)
 	}
