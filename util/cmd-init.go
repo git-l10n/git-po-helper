@@ -29,16 +29,18 @@ Notes for l10n team leader:
 }
 
 // CmdInit implements init sub command.
-func CmdInit(fileName string) error {
+func CmdInit(fileName string) bool {
 	locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
 	localeFullName, err := GetPrettyLocaleName(locale)
 	if err != nil {
-		return err
+		log.Errorf("fail to init: %s", err)
+		return false
 	}
 	potFile := filepath.Join("po", "git.pot")
 	poFile := filepath.Join(GitRootDir, "po", locale+".po")
 	if Exist(poFile) {
-		return fmt.Errorf("fail to init, 'po/%s' is already exist", filepath.Base(poFile))
+		log.Errorf("fail to init, 'po/%s' is already exist", filepath.Base(poFile))
+		return false
 	}
 	cmd := exec.Command("msginit",
 		"-i",
@@ -49,16 +51,20 @@ func CmdInit(fileName string) error {
 	cmd.Dir = GitRootDir
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		log.Errorf("fail to init: %s", err)
+		return false
 	}
 	log.Infof("Creating .po file for '%s':", localeFullName)
 	log.Infof("\t%s ...", strings.Join(cmd.Args, " "))
 	if err = cmd.Start(); err != nil {
-		return ExecError(err)
+		log.Errorf("fail to init: %s", err)
+		ShowExecError(err)
+		return false
 	}
 	f, err := os.OpenFile(poFile, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		return err
+		log.Errorf("fail to init: %s", err)
+		return false
 	}
 	defer f.Close()
 	reader := bufio.NewReader(stdout)
@@ -71,7 +77,8 @@ func CmdInit(fileName string) error {
 		}
 		_, err2 := f.WriteString(line)
 		if err2 != nil {
-			return err2
+			log.Errorf("fail to write 'po/%s.po': %s", locale, err2)
+			return false
 		}
 		if err != nil {
 			break
@@ -80,8 +87,10 @@ func CmdInit(fileName string) error {
 	if err = cmd.Wait(); err != nil {
 		f.Close()
 		os.Remove(poFile)
-		return ExecError(err)
+		log.Errorf("fail to init: %s", err)
+		ShowExecError(err)
+		return false
 	}
 	notesForL10nTeamLeader(locale)
-	return nil
+	return true
 }

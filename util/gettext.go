@@ -8,7 +8,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func CheckPoFile(poFile string) error {
+func CheckPoFile(poFile string) bool {
+	var ret = true
+
 	cmd := exec.Command("msgfmt",
 		"-o",
 		"-",
@@ -18,22 +20,27 @@ func CheckPoFile(poFile string) error {
 	cmd.Dir = GitRootDir
 	cmd.Stdout = io.Discard
 	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return err
+	if err == nil {
+		err = cmd.Start()
 	}
-	if err := cmd.Start(); err != nil {
-		return err
+	if err != nil {
+		log.Errorf("fail to check '%s': %s", poFile, err)
+		return false
 	}
 	reader := bufio.NewReader(stderr)
 	for {
 		line, err := reader.ReadString('\n')
-		log.Error(line)
+		if len(line) > 0 {
+			ret = false
+			log.Error(line)
+		}
 		if err != nil {
 			break
 		}
 	}
 	if err := cmd.Wait(); err != nil {
-		return err
+		log.Errorf("fail to check '%s': %s", poFile, err)
+		ret = false
 	}
-	return nil
+	return ret
 }

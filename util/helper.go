@@ -1,13 +1,14 @@
 package util
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/data"
+	log "github.com/sirupsen/logrus"
 )
 
 // Exist check if path is exist.
@@ -36,18 +37,25 @@ func IsDir(name string) bool {
 	return true
 }
 
-// ExecError will try to return error message of stderr
-func ExecError(err error) error {
-	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			var msg string = string(exitError.Stderr)
-			if msg == "" {
-				return err
-			}
-			return errors.New(msg)
+// ShowExecError will try to return error message of stderr
+func ShowExecError(err error) {
+	if err == nil {
+		return
+	}
+	exitError, ok := err.(*exec.ExitError)
+	if !ok {
+		return
+	}
+	buf := bytes.NewBuffer(exitError.Stderr)
+	for {
+		line, eof := buf.ReadString('\n')
+		if len(line) > 0 {
+			log.Error(line)
+		}
+		if eof != nil {
+			break
 		}
 	}
-	return err
 }
 
 // GetPrettyLocaleName shows full language name and location

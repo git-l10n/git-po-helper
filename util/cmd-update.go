@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -10,17 +9,18 @@ import (
 )
 
 // CmdUpdate implements update sub command.
-func CmdUpdate(fileName string) error {
+func CmdUpdate(fileName string) bool {
 	locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
 	localeFullName, err := GetPrettyLocaleName(locale)
-	if err != nil {
-		log.Error(err)
-	}
 	potFile := filepath.Join("po", "git.pot")
 	poFile := filepath.Join("po", locale+".po")
+	if err != nil {
+		log.Errorf("fail to update '%s': %s", poFile, err)
+		return false
+	}
 	if !Exist(filepath.Join(GitRootDir, poFile)) {
-		return fmt.Errorf("'po/%s.po' does not exist, try to create one using init command",
-			locale)
+		log.Errorf("fail to update '%s', does not exist", poFile)
+		return false
 	}
 	cmd := exec.Command("msgmerge",
 		"--add-location",
@@ -30,12 +30,15 @@ func CmdUpdate(fileName string) error {
 		potFile)
 	cmd.Dir = GitRootDir
 	if err := cmd.Start(); err != nil {
-		return ExecError(err)
+		log.Errorf("fail to update '%s': %s", poFile, err)
+		return false
 	}
 	log.Infof("Updating .po file for '%s':", localeFullName)
 	log.Infof("\t%s ...", strings.Join(cmd.Args, " "))
 	if err := cmd.Wait(); err != nil {
-		return ExecError(err)
+		log.Errorf("fail to update '%s': %s", poFile, err)
+		ShowExecError(err)
+		return false
 	}
 	return CheckPoFile(poFile)
 }
