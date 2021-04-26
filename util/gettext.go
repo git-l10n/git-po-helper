@@ -73,6 +73,46 @@ func CheckPoFile(poFile string, localeFullName string) bool {
 	return checkPoFile(filepath.Join(BackCompatibleGetTextDir, "msgfmt"), poFile)
 }
 
+func CheckCorePoFile(locale string, localeFullName string) bool {
+	log.Infof("Checking syntax of po file against core.pot for '%s'", localeFullName)
+	if !GenerateCorePot() {
+		log.Errorf("Fail to check core po file for '%s'", localeFullName)
+		return false
+	}
+
+	fin, err := os.Open(filepath.Join(GitRootDir, "po", locale+".po"))
+	if err != nil {
+		log.Error(err)
+		return false
+	}
+
+	fout, err := os.CreateTemp("", "tmp-core-po")
+	if err != nil {
+		log.Errorf("Fail to create tmpfile: %s", err)
+		return false
+	}
+	defer os.Remove(fout.Name())
+	_, err = io.Copy(fout, fin)
+	if err != nil {
+		log.Errorf("Fail to copy po/%s.po to tmpfile: %s", locale, err)
+		return false
+	}
+
+	cmd := exec.Command("msgmerge",
+		"--add-location",
+		"--backup=off",
+		"-U",
+		fout.Name(),
+		filepath.Join("po-core", "core.pot"))
+	if err = cmd.Run(); err != nil {
+		log.Errorf("Fail to update core po file: %s", err)
+		ShowExecError(err)
+		return false
+	}
+
+	return checkPoFile("msgfmt", fout.Name())
+}
+
 func GenerateCorePot() bool {
 	var (
 		coreDir        = filepath.Join(GitRootDir, "po-core")
@@ -96,7 +136,7 @@ func GenerateCorePot() bool {
 		}
 	}
 	if IsFile(corePotFile) {
-		log.Warn("po-core/core.pot is already exist, not overwrite")
+		log.Info("po-core/core.pot is already exist, not overwrite")
 		return true
 	}
 	cmdArgs := []string{

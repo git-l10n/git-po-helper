@@ -8,7 +8,7 @@ import (
 )
 
 // CmdCheckPo implements check-po sub command.
-func CmdCheckPo(fileName string) bool {
+func CmdCheckPo(fileName string, checkCore bool) bool {
 	var err error
 
 	locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
@@ -21,5 +21,11 @@ func CmdCheckPo(fileName string) bool {
 		log.Errorf("fail to check 'po/%s.po', does not exist", locale)
 		return false
 	}
-	return CheckPoFile(poFile, localeFullName)
+	if !CheckPoFile(poFile, localeFullName) {
+		return false
+	}
+	if checkCore && !CheckCorePoFile(locale, localeFullName) {
+		return false
+	}
+	return true
 }
