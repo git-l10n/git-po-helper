@@ -40,5 +40,5 @@ func CmdUpdate(fileName string) bool {
 		ShowExecError(err)
 		return false
 	}
-	return CheckPoFile(poFile)
+	return CheckPoFile(poFile, localeFullName)
 }

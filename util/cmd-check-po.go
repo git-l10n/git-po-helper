@@ -21,6 +21,5 @@ func CmdCheckPo(fileName string) bool {
 		log.Errorf("fail to check 'po/%s.po', does not exist", locale)
 		return false
 	}
-	log.Infof("checking syntax of po file for '%s'", localeFullName)
-	return CheckPoFile(poFile)
+	return CheckPoFile(poFile, localeFullName)
 }
