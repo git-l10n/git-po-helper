@@ -3,6 +3,7 @@ package util
 import (
 	"bufio"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -70,4 +71,55 @@ func CheckPoFile(poFile string, localeFullName string) bool {
 	}
 	log.Infof("Checking syntax of po file for '%s' (use gettext 0.14 for backward compatible)", localeFullName)
 	return checkPoFile(filepath.Join(BackCompatibleGetTextDir, "msgfmt"), poFile)
+}
+
+func GenerateCorePot() bool {
+	var (
+		coreDir        = filepath.Join(GitRootDir, "po-core")
+		corePotFile    = filepath.Join(GitRootDir, "po-core", "core.pot")
+		err            error
+		localizedFiles = []string{
+			"remote.c",
+			"wt-status.c",
+			"builtin/clone.c",
+			"builtin/checkout.c",
+			"builtin/index-pack.c",
+			"builtin/push.c",
+			"builtin/reset.c",
+		}
+	)
+	if !Exist(coreDir) {
+		err = os.MkdirAll(coreDir, 0755)
+		if err != nil {
+			log.Error(err)
+			return false
+		}
+	}
+	if IsFile(corePotFile) {
+		log.Warn("po-core/core.pot is already exist, not overwrite")
+		return true
+	}
+	cmdArgs := []string{
+		"xgettext",
+		"--force-po",
+		"--add-comments=TRANSLATORS:",
+		"--from-code=UTF-8",
+		"--language=C",
+		"--keyword=_",
+		"--keyword=N_",
+		"--keyword='Q_:1,2'",
+		"-o",
+		"po-core/core.pot",
+	}
+	cmdArgs = append(cmdArgs, localizedFiles...)
+	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	cmd.Dir = GitRootDir
+	cmd.Stderr = os.Stderr
+	log.Infof("Creating core pot file in %s", corePotFile)
+	if err := cmd.Run(); err != nil {
+		log.Errorf("fail to create 'po-core/core.pot': %s", err)
+		os.Remove(corePotFile)
+		return false
+	}
+	return true
 }

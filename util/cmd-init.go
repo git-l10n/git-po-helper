@@ -13,33 +13,78 @@ import (
 
 func notesForL10nTeamLeader(locale string) {
 	fmt.Printf(`
-============================================================
+========================================================================
 Notes for l10n team leader:
 
-    Since you created an initial locale file, you are likely
-    to be the leader of the %s l10n team.
+    Since you created an initial locale file, you are likely to be the
+    leader of the %s l10n team.
 
-    You should add your team infomation in the "po/TEAMS"
-    file, and make a commit for it.
+    You should add your team infomation in the "po/TEAMS" file, and
+    make a commit for it.
 
-    Please read the file "po/README" first to understand the
-    workflow of Git l10n maintenance.
-============================================================
+    Please read the file "po/README" first to understand the workflow
+    of Git l10n maintenance.
+========================================================================
 `, locale)
 }
 
+func notesForCorePoFile(locale string) {
+	msg := `
+========================================================================
+Notes for core po file:
+
+    To contribute a new l10n translation for Git, make a full
+    translation is not a piece of cake.  A small part of "po/git.pot"
+    is marked and saved in "po-core/core.pot".
+
+    The new generated po file for locale "XX" is stored in
+    "po-core/XX.po" which includes core l10n entries.
+
+    After translate this core po file, you can merge it to
+    "po/XX.po" using the following commands:
+
+        msgcat po-core/XX.po po/XX.po -s -o /tmp/XX.po
+        mv /tmp/XX.po po/XX.po
+        msgmerge --add-location --backup=off -U po/XX.po po/git.pot
+========================================================================
+`
+	msg = strings.Replace(msg, "XX", locale, -1)
+	fmt.Println(msg)
+}
+
 // CmdInit implements init sub command.
-func CmdInit(fileName string) bool {
-	locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
-	localeFullName, err := GetPrettyLocaleName(locale)
+func CmdInit(fileName string, onlyCore bool) bool {
+	var (
+		potFile        string
+		poFile         string
+		locale         string
+		localeFullName string
+		err            error
+	)
+
+	locale = strings.TrimSuffix(filepath.Base(fileName), ".po")
+	localeFullName, err = GetPrettyLocaleName(locale)
 	if err != nil {
 		log.Errorf("fail to init: %s", err)
 		return false
 	}
-	potFile := filepath.Join("po", "git.pot")
-	poFile := filepath.Join(GitRootDir, "po", locale+".po")
-	if Exist(poFile) {
-		log.Errorf("fail to init, 'po/%s' is already exist", filepath.Base(poFile))
+
+	if onlyCore {
+		if !GenerateCorePot() {
+			return false
+		}
+		potFile = filepath.Join("po-core", "core.pot")
+		poFile = filepath.Join("po-core", locale+".po")
+	} else {
+		potFile = filepath.Join("po", "git.pot")
+		poFile = filepath.Join("po", locale+".po")
+	}
+	if Exist(filepath.Join(GitRootDir, poFile)) {
+		log.Errorf("fail to init, '%s' is already exist", poFile)
+		return false
+	}
+	if !Exist(filepath.Join(GitRootDir, potFile)) {
+		log.Errorf("fail to init, '%s' is not exist", potFile)
 		return false
 	}
 	cmd := exec.Command("msginit",
@@ -61,7 +106,7 @@ func CmdInit(fileName string) bool {
 		ShowExecError(err)
 		return false
 	}
-	f, err := os.OpenFile(poFile, os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(filepath.Join(GitRootDir, poFile), os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Errorf("fail to init: %s", err)
 		return false
@@ -86,11 +131,14 @@ func CmdInit(fileName string) bool {
 	}
 	if err = cmd.Wait(); err != nil {
 		f.Close()
-		os.Remove(poFile)
+		os.Remove(filepath.Join(GitRootDir, poFile))
 		log.Errorf("fail to init: %s", err)
 		ShowExecError(err)
 		return false
 	}
 	notesForL10nTeamLeader(locale)
+	if onlyCore {
+		notesForCorePoFile(locale)
+	}
 	return true
 }
