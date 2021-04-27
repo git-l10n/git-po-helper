@@ -12,13 +12,13 @@ import (
 func CmdUpdate(fileName string) bool {
 	locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
 	localeFullName, err := GetPrettyLocaleName(locale)
-	potFile := filepath.Join("po", "git.pot")
-	poFile := filepath.Join("po", locale+".po")
+	potFile := filepath.Join(PoDir, GitPot)
+	poFile := filepath.Join(PoDir, locale+".po")
 	if err != nil {
 		log.Errorf("fail to update '%s': %s", poFile, err)
 		return false
 	}
-	if !Exist(filepath.Join(GitRootDir, poFile)) {
+	if !Exist(poFile) {
 		log.Errorf("fail to update '%s', does not exist", poFile)
 		return false
 	}

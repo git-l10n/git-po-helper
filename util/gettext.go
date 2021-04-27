@@ -74,13 +74,13 @@ func CheckPoFile(poFile string, localeFullName string) bool {
 }
 
 func CheckCorePoFile(locale string, localeFullName string) bool {
-	log.Infof("Checking syntax of po file against core.pot for '%s'", localeFullName)
+	log.Infof("Checking syntax of po file against %s for '%s'", CorePot, localeFullName)
 	if !GenerateCorePot() {
 		log.Errorf("Fail to check core po file for '%s'", localeFullName)
 		return false
 	}
 
-	fin, err := os.Open(filepath.Join(GitRootDir, "po", locale+".po"))
+	fin, err := os.Open(filepath.Join(PoDir, locale+".po"))
 	if err != nil {
 		log.Error(err)
 		return false
@@ -94,7 +94,7 @@ func CheckCorePoFile(locale string, localeFullName string) bool {
 	defer os.Remove(fout.Name())
 	_, err = io.Copy(fout, fin)
 	if err != nil {
-		log.Errorf("Fail to copy po/%s.po to tmpfile: %s", locale, err)
+		log.Errorf("Fail to copy %s/%s.po to tmpfile: %s", PoDir, locale, err)
 		return false
 	}
 
@@ -103,7 +103,7 @@ func CheckCorePoFile(locale string, localeFullName string) bool {
 		"--backup=off",
 		"-U",
 		fout.Name(),
-		filepath.Join("po-core", "core.pot"))
+		filepath.Join(PoCoreDir, CorePot))
 	if err = cmd.Run(); err != nil {
 		log.Errorf("Fail to update core po file: %s", err)
 		ShowExecError(err)
@@ -115,8 +115,7 @@ func CheckCorePoFile(locale string, localeFullName string) bool {
 
 func GenerateCorePot() bool {
 	var (
-		coreDir        = filepath.Join(GitRootDir, "po-core")
-		corePotFile    = filepath.Join(GitRootDir, "po-core", "core.pot")
+		corePotFile    = filepath.Join(PoCoreDir, CorePot)
 		err            error
 		localizedFiles = []string{
 			"remote.c",
@@ -128,15 +127,15 @@ func GenerateCorePot() bool {
 			"builtin/reset.c",
 		}
 	)
-	if !Exist(coreDir) {
-		err = os.MkdirAll(coreDir, 0755)
+	if !Exist(PoCoreDir) {
+		err = os.MkdirAll(PoCoreDir, 0755)
 		if err != nil {
 			log.Error(err)
 			return false
 		}
 	}
 	if IsFile(corePotFile) {
-		log.Info("po-core/core.pot is already exist, not overwrite")
+		log.Infof("'%s' is already exist, not overwrite", corePotFile)
 		return true
 	}
 	cmdArgs := []string{
@@ -149,7 +148,7 @@ func GenerateCorePot() bool {
 		"--keyword=N_",
 		"--keyword='Q_:1,2'",
 		"-o",
-		"po-core/core.pot",
+		corePotFile,
 	}
 	cmdArgs = append(cmdArgs, localizedFiles...)
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
@@ -157,7 +156,7 @@ func GenerateCorePot() bool {
 	cmd.Stderr = os.Stderr
 	log.Infof("Creating core pot file in %s", corePotFile)
 	if err := cmd.Run(); err != nil {
-		log.Errorf("fail to create 'po-core/core.pot': %s", err)
+		log.Errorf("fail to create '%s': %s", corePotFile, err)
 		os.Remove(corePotFile)
 		return false
 	}

@@ -73,17 +73,17 @@ func CmdInit(fileName string, onlyCore bool) bool {
 		if !GenerateCorePot() {
 			return false
 		}
-		potFile = filepath.Join("po-core", "core.pot")
-		poFile = filepath.Join("po-core", locale+".po")
+		potFile = filepath.Join(PoCoreDir, CorePot)
+		poFile = filepath.Join(PoCoreDir, locale+".po")
 	} else {
-		potFile = filepath.Join("po", "git.pot")
-		poFile = filepath.Join("po", locale+".po")
+		potFile = filepath.Join(PoDir, GitPot)
+		poFile = filepath.Join(PoDir, locale+".po")
 	}
-	if Exist(filepath.Join(GitRootDir, poFile)) {
+	if Exist(poFile) {
 		log.Errorf("fail to init, '%s' is already exist", poFile)
 		return false
 	}
-	if !Exist(filepath.Join(GitRootDir, potFile)) {
+	if !Exist(potFile) {
 		log.Errorf("fail to init, '%s' is not exist", potFile)
 		return false
 	}
@@ -106,7 +106,7 @@ func CmdInit(fileName string, onlyCore bool) bool {
 		ShowExecError(err)
 		return false
 	}
-	f, err := os.OpenFile(filepath.Join(GitRootDir, poFile), os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(poFile, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Errorf("fail to init: %s", err)
 		return false
@@ -122,7 +122,7 @@ func CmdInit(fileName string, onlyCore bool) bool {
 		}
 		_, err2 := f.WriteString(line)
 		if err2 != nil {
-			log.Errorf("fail to write 'po/%s.po': %s", locale, err2)
+			log.Errorf("fail to write '%s': %s", poFile, err2)
 			return false
 		}
 		if err != nil {
@@ -131,7 +131,7 @@ func CmdInit(fileName string, onlyCore bool) bool {
 	}
 	if err = cmd.Wait(); err != nil {
 		f.Close()
-		os.Remove(filepath.Join(GitRootDir, poFile))
+		os.Remove(poFile)
 		log.Errorf("fail to init: %s", err)
 		ShowExecError(err)
 		return false

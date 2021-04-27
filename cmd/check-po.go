@@ -32,7 +32,7 @@ func (v *checkPoCommand) Command() *cobra.Command {
 	v.cmd.Flags().BoolVar(&v.O.CheckCore,
 		"core",
 		false,
-		"also check against 'po-core/core.pot'")
+		"also check against "+util.CorePot)
 
 	return v.cmd
 }

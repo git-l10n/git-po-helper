@@ -16,9 +16,9 @@ func CmdCheckPo(fileName string, checkCore bool) bool {
 	if err != nil {
 		log.Error(err)
 	}
-	poFile := filepath.Join("po", locale+".po")
-	if !Exist(filepath.Join(GitRootDir, poFile)) {
-		log.Errorf("fail to check 'po/%s.po', does not exist", locale)
+	poFile := filepath.Join(PoDir, locale+".po")
+	if !Exist(poFile) {
+		log.Errorf("fail to check '%s', does not exist", poFile)
 		return false
 	}
 	if !CheckPoFile(poFile, localeFullName) {

@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -28,8 +29,8 @@ func OpenRepository(workDir string) error {
 		return err
 	}
 	dir = string(bytes.TrimSpace(out))
-	if _, err := os.Stat(path.Join(dir, "po", "git.pot")); err != nil {
-		return errors.New("cannot find 'po/git.pot', this command is for git project")
+	if _, err := os.Stat(path.Join(dir, PoDir, GitPot)); err != nil {
+		return fmt.Errorf("cannot find '%s/%s', this command is for git project", PoDir, GitPot)
 	}
 	GitRootDir = dir
 	return nil

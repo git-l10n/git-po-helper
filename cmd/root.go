@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 
 	"github.com/git-l10n/git-po-helper/util"
@@ -100,9 +101,11 @@ func (v *rootCommand) initLog() {
 func (v *rootCommand) preCheck() {
 	err := util.OpenRepository(".")
 	if err != nil {
-		log.Fatalf("fail to open repo: %s", err.Error())
+		log.Fatalf("fail to open repo: %s", err)
 	}
-
+	if err = os.Chdir(util.GitRootDir); err != nil {
+		log.Fatalf("fail to chdir: %s", err)
+	}
 	err = util.CheckPrereq()
 	if err != nil {
 		log.Fatal(err)
