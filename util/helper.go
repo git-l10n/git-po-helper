@@ -77,7 +77,6 @@ func GetPrettyLocaleName(locale string) (string, error) {
 	}
 	if locName != "" {
 		return fmt.Sprintf("%s - %s", langName, locName), nil
-	} else {
-		return langName, nil
 	}
+	return langName, nil
 }

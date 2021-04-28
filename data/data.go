@@ -12,7 +12,7 @@ func GetLanguageName(lang string) string {
 	return langMap[lang]
 }
 
-// GetLanguageName looks up iso-3166 table and returns location name
+// GetLocationName looks up iso-3166 table and returns location name
 func GetLocationName(lang string) string {
 	return locationMap[lang]
 }

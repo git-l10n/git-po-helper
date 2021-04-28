@@ -1,5 +1,6 @@
 package util
 
+// Define const variables
 const (
 	PoDir     = "po"
 	PoCoreDir = "po-core"

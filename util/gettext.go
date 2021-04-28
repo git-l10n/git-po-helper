@@ -57,6 +57,7 @@ func checkPoFile(program string, poFile string) bool {
 	return ret
 }
 
+// CheckPoFile checks syntax of "po/xx.po"
 func CheckPoFile(poFile string, localeFullName string) bool {
 	var ret = true
 
@@ -73,6 +74,7 @@ func CheckPoFile(poFile string, localeFullName string) bool {
 	return checkPoFile(filepath.Join(BackCompatibleGetTextDir, "msgfmt"), poFile)
 }
 
+// CheckCorePoFile checks syntax of "po/xx.po" against "po-core/core.pot"
 func CheckCorePoFile(locale string, localeFullName string) bool {
 	log.Infof("Checking syntax of po file against %s for '%s'", CorePot, localeFullName)
 	if !GenerateCorePot() {
@@ -113,6 +115,7 @@ func CheckCorePoFile(locale string, localeFullName string) bool {
 	return checkPoFile("msgfmt", fout.Name())
 }
 
+// GenerateCorePot will generate "po-core/core.pot"
 func GenerateCorePot() bool {
 	var (
 		corePotFile    = filepath.Join(PoCoreDir, CorePot)
