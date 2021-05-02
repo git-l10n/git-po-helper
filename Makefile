@@ -45,22 +45,26 @@ VERSION-FILE: FORCE
 LDFLAGS := -ldflags "-X $(PKG)/version.Version=$(VERSION)"
 RELEASE_LDFLAGS := -ldflags "-X $(PKG)/version.Version=$(VERSION) -s -w"
 
-git-po-helper: $(shell find . -name '*.go') | VERSION-FILE
+go-gen:
+	$(call message,Generate code for iso-639 and iso-3166)
+	go generate github.com/git-l10n/git-po-helper/data/...
+
+git-po-helper: $(shell find . -name '*.go') | VERSION-FILE go-gen
 	$(call message,Building $@)
 	$(GOBUILD) $(LDFLAGS) -o $@
 
 golint:
-	$(call message,Testing git-repo using golint for coding style)
+	$(call message,Testing git-po-helper using golint for coding style)
 	@golint $(LOCAL_PACKAGES)
 
 test: golint ut it
 
 ut: $(TARGET)
-	$(call message,Testing git-repo for unit tests)
+	$(call message,Testing git-po-helper for unit tests)
 	$(GOTEST) $(PKG)/...
 
 it: $(TARGET)
-	$(call message,Testing git-repo for integration tests)
+	$(call message,Testing git-po-helper for integration tests)
 	@make -C test
 
 clean:
@@ -69,5 +73,6 @@ clean:
 	@rm -f VERSION-FILE
 
 .PHONY: test clean
+.PHONY: go-gen
 .PHONY: FORCE
 .PHONY: ut it

@@ -88,9 +88,10 @@ func CmdInit(fileName string, onlyCore bool) bool {
 		return false
 	}
 	cmd := exec.Command("msginit",
+		"--locale="+locale,
+		"--no-translator",
 		"-i",
 		potFile,
-		"--locale="+locale,
 		"-o",
 		"-")
 	cmd.Dir = GitRootDir
