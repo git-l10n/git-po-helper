@@ -49,7 +49,7 @@ Notes for core po file:
 ========================================================================
 `
 	msg = strings.Replace(msg, "XX", locale, -1)
-	fmt.Println(msg)
+	fmt.Print(msg)
 }
 
 // CmdInit implements init sub command.
@@ -80,11 +80,11 @@ func CmdInit(fileName string, onlyCore bool) bool {
 		poFile = filepath.Join(PoDir, locale+".po")
 	}
 	if Exist(poFile) {
-		log.Errorf("fail to init, '%s' is already exist", poFile)
+		log.Errorf(`fail to init, "%s" is already exist`, poFile)
 		return false
 	}
 	if !Exist(potFile) {
-		log.Errorf("fail to init, '%s' is not exist", potFile)
+		log.Errorf(`fail to init, "%s" is not exist`, potFile)
 		return false
 	}
 	cmd := exec.Command("msginit",
@@ -100,7 +100,7 @@ func CmdInit(fileName string, onlyCore bool) bool {
 		log.Errorf("fail to init: %s", err)
 		return false
 	}
-	log.Infof("Creating .po file for '%s':", localeFullName)
+	log.Infof(`Creating .po file for "%s":`, localeFullName)
 	log.Infof("\t%s ...", strings.Join(cmd.Args, " "))
 	if err = cmd.Start(); err != nil {
 		log.Errorf("fail to init: %s", err)
@@ -123,7 +123,7 @@ func CmdInit(fileName string, onlyCore bool) bool {
 		}
 		_, err2 := f.WriteString(line)
 		if err2 != nil {
-			log.Errorf("fail to write '%s': %s", poFile, err2)
+			log.Errorf(`fail to write "%s": %s`, poFile, err2)
 			return false
 		}
 		if err != nil {
@@ -137,9 +137,10 @@ func CmdInit(fileName string, onlyCore bool) bool {
 		ShowExecError(err)
 		return false
 	}
-	notesForL10nTeamLeader(locale)
 	if onlyCore {
 		notesForCorePoFile(locale)
+	} else {
+		notesForL10nTeamLeader(locale)
 	}
 	return true
 }

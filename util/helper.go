@@ -67,12 +67,12 @@ func GetPrettyLocaleName(locale string) (string, error) {
 	items := strings.SplitN(locale, "_", 2)
 	langName = data.GetLanguageName(items[0])
 	if langName == "" {
-		return "", fmt.Errorf("invalid language code for locale '%s'", locale)
+		return "", fmt.Errorf("invalid language code for locale \"%s\"", locale)
 	}
 	if len(items) > 1 && items[1] != "" {
 		locName = data.GetLocationName(items[1])
 		if locName == "" {
-			return "", fmt.Errorf("invalid country or location code for locale '%s'", locale)
+			return "", fmt.Errorf(`invalid country or location code for locale "%s"`, locale)
 		}
 	}
 	if locName != "" {
