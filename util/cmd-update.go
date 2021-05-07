@@ -1,6 +1,7 @@
 package util
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -15,11 +16,11 @@ func CmdUpdate(fileName string) bool {
 	potFile := filepath.Join(PoDir, GitPot)
 	poFile := filepath.Join(PoDir, locale+".po")
 	if err != nil {
-		log.Errorf("fail to update '%s': %s", poFile, err)
+		log.Errorf(`fail to update "%s": %s`, poFile, err)
 		return false
 	}
 	if !Exist(poFile) {
-		log.Errorf("fail to update '%s', does not exist", poFile)
+		log.Errorf(`fail to update "%s", does not exist`, poFile)
 		return false
 	}
 	cmd := exec.Command("msgmerge",
@@ -29,15 +30,15 @@ func CmdUpdate(fileName string) bool {
 		poFile,
 		potFile)
 	cmd.Dir = GitRootDir
+	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
-		log.Errorf("fail to update '%s': %s", poFile, err)
+		log.Errorf(`fail to update "%s": %s`, poFile, err)
 		return false
 	}
-	log.Infof("Updating .po file for '%s':", localeFullName)
+	log.Infof(`Updating .po file for "%s":`, localeFullName)
 	log.Infof("\t%s ...", strings.Join(cmd.Args, " "))
 	if err := cmd.Wait(); err != nil {
-		log.Errorf("fail to update '%s': %s", poFile, err)
-		ShowExecError(err)
+		log.Errorf(`fail to update "%s": %s`, poFile, err)
 		return false
 	}
 	return CheckPoFile(poFile, localeFullName)

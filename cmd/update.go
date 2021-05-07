@@ -21,7 +21,7 @@ var updateCmd = &cobra.Command{
 		}
 		for _, locale := range args {
 			if !util.CmdUpdate(locale) {
-				errMsgs = append(errMsgs, fmt.Sprintf("fail to update '%s'", locale))
+				errMsgs = append(errMsgs, fmt.Sprintf(`fail to update "%s"`, locale))
 			}
 		}
 		if len(errMsgs) > 0 {
