@@ -6,27 +6,6 @@ PO_HELPER_TEST_REPOSITORY_VERSION=1
 PO_HELPER_TEST_REPOSITORY="${SHARNESS_TEST_SRCDIR}/test-repository"
 PO_HELPER_TEST_REPOSITORY_VERSION_FILE="${PO_HELPER_TEST_REPOSITORY}/.VERSION"
 
-# Use fixed commit auther and committer
-GIT_AUTHOR_EMAIL=author@example.com
-GIT_AUTHOR_NAME='A U Thor'
-GIT_COMMITTER_EMAIL=committer@example.com
-GIT_COMMITTER_NAME='C O Mitter'
-export GIT_AUTHOR_EMAIL GIT_AUTHOR_NAME
-export GIT_COMMITTER_EMAIL GIT_COMMITTER_NAME
-
-# Use fixed commit time
-test_tick () {
-	if test -z "${test_tick+set}"
-	then
-		test_tick=1112911993
-	else
-		test_tick=$(($test_tick + 60))
-	fi
-	GIT_COMMITTER_DATE="$test_tick -0700"
-	GIT_AUTHOR_DATE="$test_tick -0700"
-	export GIT_COMMITTER_DATE GIT_AUTHOR_DATE
-}
-
 create_test_repository () {
 	# create lock
 	lockmsg="locked by $$"
@@ -110,9 +89,7 @@ create_test_repository_real () {
 	)
 }
 
-# Run test_tick to initial author/committer name and time
-test_tick
-
+# Create test repository
 if ! test_repository_is_uptodate
 then
 	create_test_repository

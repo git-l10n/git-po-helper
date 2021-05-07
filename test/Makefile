@@ -19,6 +19,8 @@
 
 SHELL_PATH ?= $(SHELL)
 SHELL_PATH_SQ = $(subst ','\'',$(SHELL_PATH))
+PERL_PATH ?= /usr/bin/perl
+PERL_PATH_SQ = $(subst ','\'',$(PERL_PATH))
 RM ?= rm -f
 PROVE ?= prove
 AGGREGATE_SCRIPT ?= lib/aggregate-results.sh
