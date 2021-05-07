@@ -74,7 +74,7 @@ func (v *commitLog) Parse(r io.Reader) bool {
 				for {
 					peek, err := reader.Peek(1)
 					if err != nil {
-						log.Errorf("header '%s' is too short, early EOF: %s", err)
+						log.Errorf(`header "%s" is too short, early EOF: %s`, err)
 						ret = false
 						break
 					}
@@ -262,7 +262,7 @@ func checkCommitChanges(commit string) bool {
 		return false
 	}
 	if len(badChanges) > 0 {
-		log.Errorf("Found changes beyond '%s/' in commit %s:", PoDir, commit)
+		log.Errorf(`Found changes beyond "%s/" in commit %s:`, PoDir, commit)
 		for _, change := range badChanges {
 			log.Errorf("\t%s", change)
 		}

@@ -90,7 +90,7 @@ func CheckPrereq() error {
 	if BackCompatibleGetTextDir == "" {
 		log.Warnln("cannot find gettext 0.14, and won't run gettext backward compatible test")
 	} else {
-		log.Debugf("find backward compatible gettext at '%s'", BackCompatibleGetTextDir)
+		log.Debugf(`find backward compatible gettext at "%s"`, BackCompatibleGetTextDir)
 	}
 	return nil
 }

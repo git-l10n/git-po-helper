@@ -29,7 +29,7 @@ func checkPoFile(program string, poFile string) bool {
 		err = cmd.Start()
 	}
 	if err != nil {
-		log.Errorf("Fail to check '%s': %s", poFile, err)
+		log.Errorf(`Fail to check "%s": %s`, poFile, err)
 		return false
 	}
 	reader := bufio.NewReader(stderr)
@@ -43,7 +43,7 @@ func checkPoFile(program string, poFile string) bool {
 		}
 	}
 	if err := cmd.Wait(); err != nil {
-		log.Errorf("Fail to check '%s': %s", poFile, err)
+		log.Errorf(`Fail to check "%s": %s`, poFile, err)
 		ret = false
 	}
 	for _, line := range msgs {
@@ -61,7 +61,7 @@ func checkPoFile(program string, poFile string) bool {
 func CheckPoFile(poFile string, localeFullName string) bool {
 	var ret = true
 
-	log.Infof("Checking syntax of po file for '%s'", localeFullName)
+	log.Infof(`Checking syntax of po file for "%s"`, localeFullName)
 	ret = checkPoFile("msgfmt", poFile)
 	if !ret {
 		return ret
@@ -70,15 +70,15 @@ func CheckPoFile(poFile string, localeFullName string) bool {
 	if BackCompatibleGetTextDir == "" {
 		return ret
 	}
-	log.Infof("Checking syntax of po file for '%s' (use gettext 0.14 for backward compatible)", localeFullName)
+	log.Infof(`Checking syntax of po file for "%s" (use gettext 0.14 for backward compatible)`, localeFullName)
 	return checkPoFile(filepath.Join(BackCompatibleGetTextDir, "msgfmt"), poFile)
 }
 
 // CheckCorePoFile checks syntax of "po/xx.po" against "po-core/core.pot"
 func CheckCorePoFile(locale string, localeFullName string) bool {
-	log.Infof("Checking syntax of po file against %s for '%s'", CorePot, localeFullName)
+	log.Infof(`Checking syntax of po file against %s for "%s"`, CorePot, localeFullName)
 	if !GenerateCorePot() {
-		log.Errorf("Fail to check core po file for '%s'", localeFullName)
+		log.Errorf(`Fail to check core po file for "%s"`, localeFullName)
 		return false
 	}
 
@@ -138,7 +138,7 @@ func GenerateCorePot() bool {
 		}
 	}
 	if IsFile(corePotFile) {
-		log.Infof("'%s' is already exist, not overwrite", corePotFile)
+		log.Infof(`"%s" is already exist, not overwrite`, corePotFile)
 		return true
 	}
 	cmdArgs := []string{
@@ -159,7 +159,7 @@ func GenerateCorePot() bool {
 	cmd.Stderr = os.Stderr
 	log.Infof("Creating core pot file in %s", corePotFile)
 	if err := cmd.Run(); err != nil {
-		log.Errorf("fail to create '%s': %s", corePotFile, err)
+		log.Errorf(`fail to create "%s": %s`, corePotFile, err)
 		os.Remove(corePotFile)
 		return false
 	}

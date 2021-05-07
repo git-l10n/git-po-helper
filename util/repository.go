@@ -30,7 +30,7 @@ func OpenRepository(workDir string) error {
 	}
 	dir = string(bytes.TrimSpace(out))
 	if _, err := os.Stat(path.Join(dir, PoDir, GitPot)); err != nil {
-		return fmt.Errorf("cannot find '%s/%s', this command is for git project", PoDir, GitPot)
+		return fmt.Errorf(`cannot find "%s/%s", this command is for git project`, PoDir, GitPot)
 	}
 	GitRootDir = dir
 	return nil

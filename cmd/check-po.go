@@ -45,7 +45,7 @@ func (v checkPoCommand) Execute(args []string) error {
 	}
 	for _, locale := range args {
 		if !util.CmdCheckPo(locale, v.O.CheckCore) {
-			errMsgs = append(errMsgs, fmt.Sprintf("fail to check '%s'", locale))
+			errMsgs = append(errMsgs, fmt.Sprintf(`fail to check "%s"`, locale))
 		}
 	}
 	if len(errMsgs) > 0 {

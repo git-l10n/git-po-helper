@@ -18,7 +18,7 @@ func CmdCheckPo(fileName string, checkCore bool) bool {
 	}
 	poFile := filepath.Join(PoDir, locale+".po")
 	if !Exist(poFile) {
-		log.Errorf("fail to check '%s', does not exist", poFile)
+		log.Errorf(`fail to check "%s", does not exist`, poFile)
 		return false
 	}
 	if !CheckPoFile(poFile, localeFullName) {
