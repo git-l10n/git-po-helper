@@ -136,11 +136,11 @@ func (v *commitLog) checkAuthorCommitter() bool {
 	)
 
 	if _, ok := v.Meta["author"]; !ok {
-		log.Error("Cannot author field in commit")
+		log.Error("Cannot find author field in commit")
 		return false
 	}
 	if _, ok := v.Meta["committer"]; !ok {
-		log.Error("Cannot committer field in commit")
+		log.Error("Cannot find committer field in commit")
 		return false
 	}
 
@@ -148,24 +148,26 @@ func (v *commitLog) checkAuthorCommitter() bool {
 	m = re.FindStringSubmatch(value)
 	if len(m) == 0 {
 		log.Errorf("Bad format for author field: %s", value)
-		return false
-	}
-	author = m[1]
-	if err = v.checkCommitDate(m[2], m[4]); err != nil {
-		log.Errorf("Bad author date: %s", err)
 		ret = false
+	} else {
+		author = m[1]
+		if err = v.checkCommitDate(m[2], m[4]); err != nil {
+			log.Errorf("Bad author date: %s", err)
+			ret = false
+		}
 	}
 
 	value = v.Meta["committer"].(string)
 	m = re.FindStringSubmatch(value)
 	if len(m) == 0 {
 		log.Errorf("Bad format for committer field: %s", value)
-		return false
-	}
-	committer = m[1]
-	if err = v.checkCommitDate(m[2], m[4]); err != nil {
-		log.Errorf("Bad committer date: %s", err)
 		ret = false
+	} else {
+		committer = m[1]
+		if err = v.checkCommitDate(m[2], m[4]); err != nil {
+			log.Errorf("Bad committer date: %s", err)
+			ret = false
+		}
 	}
 	if author != committer {
 		log.Warnf("author (%s) and committer (%s) are different", author, committer)
