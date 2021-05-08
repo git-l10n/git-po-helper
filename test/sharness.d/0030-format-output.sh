@@ -13,5 +13,6 @@ make_user_friendly_and_stable_output () {
 		-e "s/	/    /g" \
 		-e "s/\\\\t/    /g" \
 		-e "s/$ZERO_OID/<ZERO-OID>/g" \
+		-e "s/commit [0-9a-f]\+:/commit <OID>:/g" \
 		-e "s/$OID_REGEX/<OID>/g"
 }

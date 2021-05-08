@@ -13,18 +13,31 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	defaultMaxCommits = 100
+)
+
 type commitLog struct {
 	// Meta holds header of a raw commit
 	Meta map[string]interface{}
 	// Msg holds commit message of a raw commit
 	Msg []string
+	// oid is commit ID for this commit
+	oid string
 }
 
-func newCommitLog() commitLog {
-	commitLog := commitLog{}
+func newCommitLog(oid string) commitLog {
+	commitLog := commitLog{oid: oid}
 	commitLog.Meta = make(map[string]interface{})
 	commitLog.Msg = []string{}
 	return commitLog
+}
+
+func (v *commitLog) CommitID() string {
+	if len(v.oid) > 7 {
+		return v.oid[:7]
+	}
+	return v.oid
 }
 
 // Parse reads and parse raw commit object
@@ -48,13 +61,13 @@ func (v *commitLog) Parse(r io.Reader) bool {
 		if isMeta {
 			kv := strings.SplitN(line, " ", 2)
 			if len(kv) != 2 {
-				log.Errorf("cannot parse commit HEADER: %s", line)
+				log.Errorf("commit %s: cannot parse commit HEADER: %s", v.CommitID(), line)
 				ret = false
 			}
 			switch kv[0] {
 			case "author", "committer", "encoding", "tree":
 				if _, ok := v.Meta[kv[0]]; ok {
-					log.Errorf("Duplicate header: %s", line)
+					log.Errorf("commit %s: duplicate header: %s", v.CommitID(), line)
 					ret = false
 				} else {
 					v.Meta[kv[0]] = kv[1]
@@ -66,7 +79,7 @@ func (v *commitLog) Parse(r io.Reader) bool {
 				v.Meta[kv[0]] = append(v.Meta[kv[0]].([]string), kv[1])
 			case "gpgsig", "gpgsig-sha256", "mergetag":
 				if _, ok := v.Meta[kv[0]]; ok {
-					log.Errorf("Duplicate header: %s", line)
+					log.Errorf("commit %s: duplicate header: %s", v.CommitID(), line)
 					ret = false
 					break
 				}
@@ -74,7 +87,8 @@ func (v *commitLog) Parse(r io.Reader) bool {
 				for {
 					peek, err := reader.Peek(1)
 					if err != nil {
-						log.Errorf(`header "%s" is too short, early EOF: %s`, err)
+						log.Errorf(`commit %s: header "%s" is too short, early EOF: %s`,
+							v.CommitID(), err)
 						ret = false
 						break
 					}
@@ -87,7 +101,7 @@ func (v *commitLog) Parse(r io.Reader) bool {
 					}
 				}
 			default:
-				log.Errorf("Unknown commit header: %s", line)
+				log.Errorf("commit %s: unknown commit header: %s", v.CommitID(), line)
 				ret = false
 			}
 		} else {
@@ -121,7 +135,7 @@ func (v *commitLog) checkCommitDate(date string, timeZone string) error {
 	if ts > currentTs {
 		return fmt.Errorf("date is in the future, %d seconds from now", ts-currentTs)
 	}
-	log.Debugf("ts is : %d, currentTs is : %d", ts, currentTs)
+	log.Debugf("commit %s: ts is : %d, currentTs is : %d", v.CommitID(), ts, currentTs)
 	return nil
 }
 
@@ -136,23 +150,23 @@ func (v *commitLog) checkAuthorCommitter() bool {
 	)
 
 	if _, ok := v.Meta["author"]; !ok {
-		log.Error("Cannot find author field in commit")
+		log.Errorf("commit %s: cannot find author field in commit", v.CommitID())
 		return false
 	}
 	if _, ok := v.Meta["committer"]; !ok {
-		log.Error("Cannot find committer field in commit")
+		log.Errorf("commit %s: cannot find committer field in commit", v.CommitID())
 		return false
 	}
 
 	value = v.Meta["author"].(string)
 	m = re.FindStringSubmatch(value)
 	if len(m) == 0 {
-		log.Errorf("Bad format for author field: %s", value)
+		log.Errorf("commit %s: bad format for author field: %s", v.CommitID(), value)
 		ret = false
 	} else {
 		author = m[1]
 		if err = v.checkCommitDate(m[2], m[4]); err != nil {
-			log.Errorf("Bad author date: %s", err)
+			log.Errorf("commit %s: bad author date: %s", v.CommitID(), err)
 			ret = false
 		}
 	}
@@ -160,17 +174,18 @@ func (v *commitLog) checkAuthorCommitter() bool {
 	value = v.Meta["committer"].(string)
 	m = re.FindStringSubmatch(value)
 	if len(m) == 0 {
-		log.Errorf("Bad format for committer field: %s", value)
+		log.Errorf("commit %s: bad format for committer field: %s", v.CommitID(), value)
 		ret = false
 	} else {
 		committer = m[1]
 		if err = v.checkCommitDate(m[2], m[4]); err != nil {
-			log.Errorf("Bad committer date: %s", err)
+			log.Errorf("commit %s: bad committer date: %s", v.CommitID(), err)
 			ret = false
 		}
 	}
 	if author != committer {
-		log.Warnf("author (%s) and committer (%s) are different", author, committer)
+		log.Warnf("commit %s: author (%s) and committer (%s) are different",
+			v.CommitID(), author, committer)
 	}
 
 	return ret
@@ -201,7 +216,7 @@ func (v *commitLog) Display() {
 func checkCommitLog(commit string) bool {
 	var (
 		ret       = true
-		commitLog = newCommitLog()
+		commitLog = newCommitLog(commit)
 	)
 	cmd := exec.Command("git",
 		"cat-file",
@@ -242,8 +257,11 @@ func checkCommitChanges(commit string) bool {
 		"-r",
 		commit)
 	stdout, err := cmd.StdoutPipe()
-	if err = cmd.Start(); err != nil {
-		log.Errorf("Fail to run git-diff-tree: %s", err)
+	if err == nil {
+		err = cmd.Start()
+	}
+	if err != nil {
+		log.Errorf("commit %s: fail to run git-diff-tree: %s", AbbrevCommit(commit), err)
 		return false
 	}
 	reader := bufio.NewReader(stdout)
@@ -260,11 +278,12 @@ func checkCommitChanges(commit string) bool {
 		}
 	}
 	if err = cmd.Wait(); err != nil {
-		log.Errorf("Fail to run git-diff-tree: %s", err)
+		log.Errorf("commit %s: fail to run git-diff-tree: %s", AbbrevCommit(commit), err)
 		return false
 	}
 	if len(badChanges) > 0 {
-		log.Errorf(`Found changes beyond "%s/" in commit %s:`, PoDir, commit)
+		log.Errorf(`commit %s: found changes beyond "%s/" directory`,
+			AbbrevCommit(commit), PoDir)
 		for _, change := range badChanges {
 			log.Errorf("\t%s", change)
 		}

@@ -25,9 +25,9 @@ test_expect_success "new commit with changes outside of po/" '
 		git commit -F .git/commit-message &&
 
 		cat >expect <<-EOF &&
-		level=error msg="Found changes beyond \"po/\" in commit <OID>:"
+		level=error msg="commit <OID>: found changes beyond \"po/\" directory"
 		level=error msg="    C.txt"
-		level=warning msg="author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		EOF
 		test_must_fail git-po-helper check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -57,9 +57,9 @@ test_expect_success "new commit with unsupported hidden meta fields" '
 		git update-ref refs/heads/master $cid &&
 
 		cat >expect <<-EOF &&
-		level=error msg="Unknown commit header: note: i am a hacker"
-		level=error msg="Unknown commit header: note: happy coding"
-		level=warning msg="author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+		level=error msg="commit <OID>: unknown commit header: note: i am a hacker"
+		level=error msg="commit <OID>: unknown commit header: note: happy coding"
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		EOF
 		test_must_fail git-po-helper check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -90,8 +90,8 @@ test_expect_success "new commit with datetime in the future" '
 		git update-ref refs/heads/master $cid &&
 
 		cat >expect <<-EOF &&
-		level=error msg="Bad author date: date is in the future, XX seconds from now"
-		level=error msg="Bad committer date: date is in the future, XX seconds from now"
+		level=error msg="commit <OID>: bad author date: date is in the future, XX seconds from now"
+		level=error msg="commit <OID>: bad committer date: date is in the future, XX seconds from now"
 		EOF
 		test_must_fail git-po-helper check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out |
@@ -122,8 +122,8 @@ test_expect_success "new commit with bad email address" '
 		git update-ref refs/heads/master $cid &&
 
 		cat >expect <<-EOF &&
-		level=error msg="Bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
-		level=error msg="Bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
+		level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
+		level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
 		EOF
 		test_must_fail git-po-helper check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&

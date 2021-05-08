@@ -5,10 +5,15 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/data"
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	oidRegex = regexp.MustCompile(`^[0-9a-f]{7,40}[0-9]*$`)
 )
 
 // Exist check if path is exist.
@@ -79,4 +84,12 @@ func GetPrettyLocaleName(locale string) (string, error) {
 		return fmt.Sprintf("%s - %s", langName, locName), nil
 	}
 	return langName, nil
+}
+
+// AbbrevCommit returns abbrev commit id
+func AbbrevCommit(oid string) string {
+	if oidRegex.MatchString(oid) {
+		return oid[:7]
+	}
+	return oid
 }
