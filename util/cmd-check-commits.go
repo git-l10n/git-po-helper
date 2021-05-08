@@ -4,13 +4,16 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/mattn/go-isatty"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -308,11 +311,20 @@ func CheckCommit(commit string) bool {
 
 // CmdCheckCommits implements check-commits sub command.
 func CmdCheckCommits(args ...string) bool {
-	var ret = true
+	var (
+		ret     = true
+		commits = []string{}
+		cmdArgs = []string{
+			"git",
+			"rev-list",
+		}
+		maxCommits int64
+		err        error
+	)
 
-	cmdArgs := []string{
-		"git",
-		"rev-list",
+	maxCommits, err = strconv.ParseInt(os.Getenv("MAX_COMMITS"), 10, 32)
+	if err != nil {
+		maxCommits = defaultMaxCommits
 	}
 	cmdArgs = append(cmdArgs, args...)
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
@@ -331,12 +343,29 @@ func CmdCheckCommits(args ...string) bool {
 		line, err := reader.ReadString('\n')
 		line = strings.TrimSpace(line)
 		if line != "" {
-			if !CheckCommit(line) {
-				ret = false
-			}
+			commits = append(commits, line)
 		}
 		if err != nil {
 			break
+		}
+	}
+	if len(commits) > int(maxCommits) && !viper.GetBool("force") {
+		if isatty.IsTerminal(os.Stdin.Fd()) && isatty.IsTerminal(os.Stdout.Fd()) {
+			answer := GetUserInput(fmt.Sprintf("too many commits to check (%d > %d), continue to run? (y/N)",
+				len(commits), maxCommits),
+				"no")
+			if !AnswerIsTrue(answer) {
+				return false
+			}
+		} else {
+			log.Errorf("too many commits to check (%d > %d), check args or use option --force",
+				len(commits), maxCommits)
+			return false
+		}
+	}
+	for _, commit := range commits {
+		if !CheckCommit(commit) {
+			ret = false
 		}
 	}
 	return ret

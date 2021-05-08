@@ -5,12 +5,14 @@ import (
 
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type checkCommitsCommand struct {
 	cmd *cobra.Command
 	O   struct {
 		NoGPG bool
+		Force bool
 	}
 }
 
@@ -27,11 +29,15 @@ func (v *checkCommitsCommand) Command() *cobra.Command {
 			return v.Execute(args)
 		},
 	}
-	v.cmd.Flags().BoolVar(&v.O.NoGPG,
-		"no-gpg",
+	v.cmd.Flags().Bool("no-gpg",
 		false,
 		"no gpg verify")
-
+	v.cmd.Flags().BoolP("force",
+		"f",
+		false,
+		"run even too many commits")
+	viper.BindPFlag("no-gpg", v.cmd.Flags().Lookup("no-gpg"))
+	viper.BindPFlag("force", v.cmd.Flags().Lookup("force"))
 	return v.cmd
 }
 

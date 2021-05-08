@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os"
@@ -84,6 +85,34 @@ func GetPrettyLocaleName(locale string) (string, error) {
 		return fmt.Sprintf("%s - %s", langName, locName), nil
 	}
 	return langName, nil
+}
+
+// GetUserInput reads user input from stdin
+func GetUserInput(prompt, defaultValue string) string {
+	fmt.Print(prompt)
+
+	reader := bufio.NewReader(os.Stdin)
+	text, _ := reader.ReadString('\n')
+	text = strings.TrimSpace(text)
+
+	if text == "" {
+		return defaultValue
+	}
+	return text
+}
+
+// AnswerIsTrue indicates answer is a true value
+func AnswerIsTrue(answer string) bool {
+	answer = strings.ToLower(strings.TrimSpace(answer))
+	if answer == "y" ||
+		answer == "yes" ||
+		answer == "t" ||
+		answer == "true" ||
+		answer == "on" ||
+		answer == "1" {
+		return true
+	}
+	return false
 }
 
 // AbbrevCommit returns abbrev commit id

@@ -131,4 +131,37 @@ test_expect_success "new commit with bad email address" '
 	)
 '
 
+test_expect_success "too many commits to check" '
+	(
+		cd workdir &&
+		test_must_fail env MAX_COMMITS=1 git-po-helper check-commits >actual 2>&1 &&
+		cat >expect <<-\EOF &&
+		level=error msg="too many commits to check (4 > 1), check args or use option --force"
+		EOF
+		test_cmp expect actual
+	)
+'
+
+test_expect_success "too many commits to check" '
+	(
+		cd workdir &&
+		test_must_fail env MAX_COMMITS=1 git-po-helper check-commits --force >out 2>&1 &&
+		make_user_friendly_and_stable_output <out |
+			sed -e "s/[0-9]* seconds/XX seconds/g" >actual &&
+		cat >expect <<-\EOF &&
+		level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
+		level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
+		level=error msg="commit <OID>: bad author date: date is in the future, XX seconds from now"
+		level=error msg="commit <OID>: bad committer date: date is in the future, XX seconds from now"
+		level=error msg="commit <OID>: unknown commit header: note: i am a hacker"
+		level=error msg="commit <OID>: unknown commit header: note: happy coding"
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+		level=error msg="commit <OID>: found changes beyond \"po/\" directory"
+		level=error msg="    C.txt"
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+		EOF
+		test_cmp expect actual
+	)
+'
+
 test_done
