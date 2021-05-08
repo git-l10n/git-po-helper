@@ -89,12 +89,15 @@ func (v *rootCommand) initLog() {
 	f.ForceColors = false
 	log.SetFormatter(f)
 	verbose := viper.GetInt("verbose")
+	quiet := viper.GetInt("quiet")
 	if verbose == 1 {
 		log.SetLevel(log.DebugLevel)
 	} else if verbose > 1 {
 		log.SetLevel(log.TraceLevel)
-	} else if viper.GetBool("quiet") {
+	} else if quiet == 1 {
 		log.SetLevel(log.WarnLevel)
+	} else if quiet > 1 {
+		log.SetLevel(log.ErrorLevel)
 	}
 }
 
@@ -136,9 +139,8 @@ func (v *rootCommand) Command() *cobra.Command {
 	v.cmd.PersistentFlags().Bool("dryrun",
 		false,
 		"dryrun mode")
-	v.cmd.PersistentFlags().BoolP("quiet",
+	v.cmd.PersistentFlags().CountP("quiet",
 		"q",
-		false,
 		"quiet mode")
 	v.cmd.PersistentFlags().CountP("verbose",
 		"v",

@@ -10,14 +10,23 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/mattn/go-isatty"
+	"github.com/qiniu/iconv"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
 const (
-	defaultMaxCommits = 100
+	defaultMaxCommits     = 100
+	subjectWidthHardLimit = 62
+	subjectWidthSoftLimit = 50
+	bodyWidthHardLimit    = 72
+	commitSubjectPrefix   = "l10n:"
+	sobPrefix             = "Signed-off-by:"
+	defaultEncoding       = "utf-8"
 )
 
 type commitLog struct {
@@ -36,11 +45,41 @@ func newCommitLog(oid string) commitLog {
 	return commitLog
 }
 
+// Encoding is encoding for this commit log
+func (v *commitLog) Encoding() string {
+	if e, ok := v.Meta["encoding"]; ok {
+		return e.(string)
+	}
+	return defaultEncoding
+}
+
+// CommitID is commit-id for this commit log
 func (v *commitLog) CommitID() string {
 	if len(v.oid) > 7 {
 		return v.oid[:7]
 	}
 	return v.oid
+}
+
+func (v *commitLog) isMergeCommit() bool {
+	parents := v.Meta["parent"].([]string)
+	return len(parents) > 1
+}
+
+func (v *commitLog) hasGpgSig() bool {
+	if val, ok := v.Meta["gpgsig"]; ok {
+		return val.(bool)
+	} else if val, ok := v.Meta["gpgsig-sha256"]; ok {
+		return val.(bool)
+	}
+	return false
+}
+
+func (v *commitLog) hasMergeTag() bool {
+	if val, ok := v.Meta["mergetag"]; ok {
+		return val.(bool)
+	}
+	return false
 }
 
 // Parse reads and parse raw commit object
@@ -194,26 +233,204 @@ func (v *commitLog) checkAuthorCommitter() bool {
 	return ret
 }
 
-// Display show contents of commit
-func (v *commitLog) Display() {
-	for key, val := range v.Meta {
-		switch key {
-		case "author", "committer", "encoding", "tree":
-			fmt.Printf("%s %s\n", key, val.(string))
-		case "parent":
-			for _, line := range val.([]string) {
-				fmt.Printf("%s %s\n", key, line)
-			}
-		case "gpgsig", "gpgsig-sha256", "mergetag":
-			fmt.Printf("%s ...\n", key)
-			fmt.Println(" ...")
-			fmt.Println(" ...")
+func (v *commitLog) checkSubject() bool {
+	var (
+		ret     = true
+		nr      = len(v.Msg)
+		subject string
+		width   int
+	)
+
+	if nr > 1 {
+		if v.Msg[1] != "" {
+			log.Errorf("commit %s: no blank line between subject and body of commit message", v.CommitID())
+			ret = false
+		}
+	} else if nr == 0 {
+		log.Errorf("commit %s: do not have any commit message", v.CommitID())
+		return false
+	}
+
+	subject = v.Msg[0]
+	width = len(subject)
+
+	if v.isMergeCommit() {
+		if !strings.HasPrefix(subject, "Merge ") {
+			log.Errorf(`commit %s: merge commit does not have prefix "Merge" in subject`,
+				v.CommitID())
+			ret = false
+		}
+	} else if !strings.HasPrefix(subject, commitSubjectPrefix+" ") {
+		log.Errorf(`commit %s: do not have prefix "%s" in subject`,
+			v.CommitID(), commitSubjectPrefix)
+		ret = false
+	}
+
+	if width > subjectWidthHardLimit {
+		log.Errorf(`commit %s: subject is too long (%d > %d)`,
+			v.CommitID(), width, subjectWidthHardLimit)
+		ret = false
+	} else if width > subjectWidthSoftLimit {
+		log.Warnf(`commit %s: subject is too long (%d > %d)`,
+			v.CommitID(), width, subjectWidthSoftLimit)
+	} else if width == 0 {
+		log.Errorf(`commit %s: subject is empty`, v.CommitID())
+		return false
+	}
+
+	if subject[width-1] == '.' {
+		log.Errorf("commit %s: subject should not end with period", v.CommitID())
+		ret = false
+	}
+
+	for _, c := range subject {
+		if c > unicode.MaxASCII || !unicode.IsPrint(c) {
+			log.Errorf(`commit %s: subject has non-ascii character "%c"`, v.CommitID(), c)
+			ret = false
+			break
 		}
 	}
-	fmt.Println("")
-	for _, line := range v.Msg {
-		fmt.Println(line)
+
+	return ret
+}
+
+func (v *commitLog) checkBody() bool {
+	var (
+		ret        = true
+		nr         = len(v.Msg)
+		width      int
+		body_start int
+		sig_start  = 0
+	)
+
+	if nr == 0 {
+		return false
+	} else if nr > 1 {
+		if v.Msg[1] != "" {
+			body_start = 1
+		} else if nr == 2 {
+			log.Errorf("commit %s: empty body of commit message")
+			return false
+		} else {
+			body_start = 2
+		}
+
+		for i := body_start; i < nr; i++ {
+			width = len(v.Msg[i])
+			if width > bodyWidthHardLimit {
+				log.Errorf(`commit %s: commit log message is too long (%d > %d)`,
+					v.CommitID(), width, bodyWidthHardLimit)
+				ret = false
+			} else if width == 0 {
+				sig_start = i
+			}
+		}
 	}
+
+	// For a merge commit, do not check s-o-b signature
+	if v.isMergeCommit() {
+		return ret
+	}
+
+	hasSobPrefix := false
+	if sig_start == 0 {
+		sig_start = nr - 1
+	}
+	for i := sig_start; i < nr; i++ {
+		if strings.HasPrefix(v.Msg[i], sobPrefix+" ") {
+			hasSobPrefix = true
+			break
+		}
+	}
+	if !hasSobPrefix {
+		log.Errorf(`commit %s: cannot find "%s" signature`,
+			v.CommitID(), sobPrefix)
+		ret = false
+	}
+	return ret
+}
+
+func (v *commitLog) checkGpg() bool {
+	var ret = true
+	if v.hasGpgSig() {
+		cmd := exec.Command("git",
+			"verify-commit",
+			v.CommitID())
+		if err := cmd.Run(); err != nil {
+			log.Errorf("commit %s: cannot verify gpg-sig: %s", err)
+			ret = false
+		}
+	}
+	return ret
+}
+
+func sameEncoding(enc1, enc2 string) bool {
+	enc1 = strings.Replace(strings.ToLower(enc1), "-", "", -1)
+	enc2 = strings.Replace(strings.ToLower(enc2), "-", "", -1)
+	return enc1 == enc2
+}
+
+func (v *commitLog) checkEncoding() bool {
+	var (
+		ret      = true
+		err      error
+		out      = make([]byte, 1024)
+		useIconv = true
+		cd       iconv.Iconv
+	)
+
+	if sameEncoding(defaultEncoding, v.Encoding()) {
+		useIconv = false
+	} else {
+		cd, err = iconv.Open(defaultEncoding, v.Encoding())
+		if err != nil {
+			log.Errorf("iconv.Open failed: %s", err)
+			return false
+		}
+		defer cd.Close()
+	}
+
+	doEncodingCheck := func(list ...string) bool {
+		var (
+			err    error
+			retVal = true
+		)
+		for _, line := range list {
+			if useIconv {
+				lineWidth := len(line)
+				nLeft := lineWidth
+				for nLeft > 0 {
+					_, nLeft, err = cd.Do([]byte(line[lineWidth-nLeft:]), nLeft, out)
+					if err != nil {
+						log.Errorf(`commit %s: bad %s characters in: "%s"`,
+							v.CommitID(), v.Encoding(), line)
+						log.Errorf("\t%s", err)
+						retVal = false
+						break
+					}
+				}
+			} else {
+				if !utf8.ValidString(line) {
+					log.Errorf(`commit %s: bad UTF-8 characters in: "%s"`,
+						v.CommitID(), line)
+					retVal = false
+				}
+			}
+		}
+		return retVal
+	}
+
+	// Check author, committer
+	if !doEncodingCheck(v.Meta["author"].(string), v.Meta["committer"].(string)) {
+		ret = false
+	}
+
+	// Check commit log
+	if !doEncodingCheck(v.Msg...) {
+		ret = false
+	}
+
+	return ret
 }
 
 func checkCommitLog(commit string) bool {
@@ -243,6 +460,18 @@ func checkCommitLog(commit string) bool {
 	}
 
 	if !commitLog.checkAuthorCommitter() {
+		ret = false
+	}
+	if !commitLog.checkSubject() {
+		ret = false
+	}
+	if !commitLog.checkBody() {
+		ret = false
+	}
+	if !commitLog.checkEncoding() {
+		ret = false
+	}
+	if !commitLog.checkGpg() {
 		ret = false
 	}
 

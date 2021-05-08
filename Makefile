@@ -2,10 +2,10 @@ TARGET := git-po-helper
 PKG := github.com/git-l10n/git-po-helper
 VENDOR_EXISTS=$(shell test -d vendor && echo 1 || echo 0)
 ifeq ($(VENDOR_EXISTS), 1)
-    GOBUILD := GO111MODULE=on CGO_ENABLED=0 go build -mod=vendor
+    GOBUILD := GO111MODULE=on go build -mod=vendor
     GOTEST := GO111MODULE=on go test -mod=vendor
 else
-    GOBUILD := GO111MODULE=on CGO_ENABLED=0 go build
+    GOBUILD := GO111MODULE=on go build
     GOTEST := GO111MODULE=on go test
 endif
 
