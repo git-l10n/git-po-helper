@@ -105,7 +105,6 @@ test_oid_cache () {
 # by test_oid_init or test_oid_cache.
 test_oid () {
 	local algo="${test_hash_algo}" &&
-set -x
 
 	case "$1" in
 	--hash=*)
@@ -124,7 +123,6 @@ set -x
 		BUG "undefined key '$1'"
 	fi &&
 	eval "printf '%s' \"\${$var}\""
-set +x
 }
 
 # Insert a slash into an object ID so it can be used to reference a location
