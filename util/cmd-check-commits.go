@@ -354,6 +354,10 @@ func (v *commitLog) checkBody() bool {
 
 func (v *commitLog) checkGpg() bool {
 	var ret = true
+
+	if viper.GetBool("no-gpg") {
+		return ret
+	}
 	if v.hasGpgSig() {
 		cmd := exec.Command("git",
 			"verify-commit",
