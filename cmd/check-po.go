@@ -3,6 +3,8 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io/fs"
+	"path/filepath"
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/util"
@@ -41,11 +43,33 @@ func (v checkPoCommand) Execute(args []string) error {
 	var errMsgs []string
 
 	if len(args) == 0 {
-		return newUserError("no argument for check-po command")
-	}
-	for _, locale := range args {
-		if !util.CmdCheckPo(locale, v.O.CheckCore) {
-			errMsgs = append(errMsgs, fmt.Sprintf(`fail to check "%s"`, locale))
+		poFiles := []string{}
+
+		filepath.Walk("po", func(path string, info fs.FileInfo, err error) error {
+			if !info.IsDir() {
+				if filepath.Ext(path) == ".po" {
+					poFiles = append(poFiles, path)
+				}
+				return nil
+			}
+			if path == "po" {
+				return nil
+			}
+			// skip subdir
+			return filepath.SkipDir
+		})
+
+		for _, path := range poFiles {
+			locale := strings.TrimSuffix(filepath.Base(path), ".po")
+			if !util.CmdCheckPo(locale, v.O.CheckCore) {
+				errMsgs = append(errMsgs, fmt.Sprintf(`fail to check "%s"`, locale))
+			}
+		}
+	} else {
+		for _, locale := range args {
+			if !util.CmdCheckPo(locale, v.O.CheckCore) {
+				errMsgs = append(errMsgs, fmt.Sprintf(`fail to check "%s"`, locale))
+			}
 		}
 	}
 	if len(errMsgs) > 0 {
