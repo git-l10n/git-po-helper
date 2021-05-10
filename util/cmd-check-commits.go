@@ -62,8 +62,10 @@ func (v *commitLog) CommitID() string {
 }
 
 func (v *commitLog) isMergeCommit() bool {
-	parents := v.Meta["parent"].([]string)
-	return len(parents) > 1
+	if parents, ok := v.Meta["parent"]; ok {
+		return len(parents.([]string)) > 1
+	}
+	return false
 }
 
 func (v *commitLog) hasGpgSig() bool {
@@ -555,7 +557,11 @@ func CmdCheckCommits(args ...string) bool {
 	if err != nil {
 		maxCommits = defaultMaxCommits
 	}
-	cmdArgs = append(cmdArgs, args...)
+	if len(args) > 0 {
+		cmdArgs = append(cmdArgs, args...)
+	} else {
+		cmdArgs = append(cmdArgs, "HEAD@{u}..HEAD")
+	}
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = GitRootDir
 	stdout, err := cmd.StdoutPipe()

@@ -42,13 +42,7 @@ func (v *checkCommitsCommand) Command() *cobra.Command {
 }
 
 func (v checkCommitsCommand) Execute(args []string) error {
-	var ret bool
-	if len(args) == 0 {
-		ret = util.CmdCheckCommits("HEAD@{u}..HEAD")
-	} else {
-		ret = util.CmdCheckCommits(args...)
-	}
-	if !ret {
+	if !util.CmdCheckCommits(args...) {
 		return errors.New("fail to check commits")
 	}
 	return nil
