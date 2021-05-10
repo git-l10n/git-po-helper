@@ -2,20 +2,14 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
-	"io/fs"
-	"path/filepath"
-	"strings"
 
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type checkPoCommand struct {
 	cmd *cobra.Command
-	O   struct {
-		CheckCore bool
-	}
 }
 
 func (v *checkPoCommand) Command() *cobra.Command {
@@ -31,49 +25,17 @@ func (v *checkPoCommand) Command() *cobra.Command {
 			return v.Execute(args)
 		},
 	}
-	v.cmd.Flags().BoolVar(&v.O.CheckCore,
-		"core",
+	v.cmd.Flags().Bool("core",
 		false,
 		"also check against "+util.CorePot)
+	viper.BindPFlag("core", v.cmd.Flags().Lookup("core"))
 
 	return v.cmd
 }
 
 func (v checkPoCommand) Execute(args []string) error {
-	var errMsgs []string
-
-	if len(args) == 0 {
-		poFiles := []string{}
-
-		filepath.Walk("po", func(path string, info fs.FileInfo, err error) error {
-			if !info.IsDir() {
-				if filepath.Ext(path) == ".po" {
-					poFiles = append(poFiles, path)
-				}
-				return nil
-			}
-			if path == "po" {
-				return nil
-			}
-			// skip subdir
-			return filepath.SkipDir
-		})
-
-		for _, path := range poFiles {
-			locale := strings.TrimSuffix(filepath.Base(path), ".po")
-			if !util.CmdCheckPo(locale, v.O.CheckCore) {
-				errMsgs = append(errMsgs, fmt.Sprintf(`fail to check "%s"`, locale))
-			}
-		}
-	} else {
-		for _, locale := range args {
-			if !util.CmdCheckPo(locale, v.O.CheckCore) {
-				errMsgs = append(errMsgs, fmt.Sprintf(`fail to check "%s"`, locale))
-			}
-		}
-	}
-	if len(errMsgs) > 0 {
-		return errors.New(strings.Join(errMsgs, "\n"))
+	if !util.CmdCheckPo(args...) {
+		return errors.New("fail to check po")
 	}
 	return nil
 }
