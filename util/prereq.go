@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -43,7 +42,7 @@ func getBackCompatibleGetTextDir() string {
 		"/opt/gettext",
 		"/usr/local/Cellar/gettext",
 	} {
-		filepath.Walk(rootDir, func(path string, info fs.FileInfo, err error) error {
+		filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 			if !info.IsDir() {
 				return nil
 			}

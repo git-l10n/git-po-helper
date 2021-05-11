@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -27,6 +28,10 @@ const (
 	commitSubjectPrefix   = "l10n:"
 	sobPrefix             = "Signed-off-by:"
 	defaultEncoding       = "utf-8"
+)
+
+var (
+	shouldCheckTeams = false
 )
 
 type commitLog struct {
@@ -507,8 +512,12 @@ func checkCommitChanges(commit string) bool {
 		line, err := reader.ReadString('\n')
 		line = strings.TrimSpace(line)
 		if idx := strings.Index(line, "\t"); idx >= 0 {
-			if !strings.HasPrefix(line[idx+1:], PoDir+"/") {
+			fileName := line[idx+1:]
+			if !strings.HasPrefix(fileName, PoDir+"/") {
 				badChanges = append(badChanges, line[idx+1:])
+			}
+			if fileName == "po/TEAMS" {
+				shouldCheckTeams = true
 			}
 		}
 		if err != nil {
@@ -539,6 +548,11 @@ func CheckCommit(commit string) bool {
 	}
 	if !checkCommitLog(commit) {
 		ret = false
+	}
+
+	if shouldCheckTeams {
+		ParseTeams(filepath.Join("po", "TEAMS"))
+
 	}
 
 	return ret

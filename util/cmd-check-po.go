@@ -1,7 +1,7 @@
 package util
 
 import (
-	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -14,7 +14,7 @@ func CmdCheckPo(args ...string) bool {
 	var ret = true
 
 	if len(args) == 0 {
-		filepath.Walk("po", func(path string, info fs.FileInfo, err error) error {
+		filepath.Walk("po", func(path string, info os.FileInfo, err error) error {
 			if !info.IsDir() {
 				if filepath.Ext(path) == ".po" {
 					args = append(args, path)
