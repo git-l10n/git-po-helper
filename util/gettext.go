@@ -3,6 +3,7 @@ package util
 import (
 	"bufio"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,7 +24,6 @@ func checkPoFile(program string, poFile string) bool {
 		"--statistics",
 		poFile)
 	cmd.Dir = GitRootDir
-	cmd.Stdout = io.Discard
 	stderr, err := cmd.StderrPipe()
 	if err == nil {
 		err = cmd.Start()
@@ -88,7 +88,7 @@ func CheckCorePoFile(locale string, localeFullName string) bool {
 		return false
 	}
 
-	fout, err := os.CreateTemp("", "tmp-core-po")
+	fout, err := ioutil.TempFile("", "tmp-core-po")
 	if err != nil {
 		log.Errorf("Fail to create tmpfile: %s", err)
 		return false

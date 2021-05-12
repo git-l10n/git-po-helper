@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,7 +32,7 @@ func checkoutTmpfile(f *FileRevision) error {
 	if f.Revision == "" {
 		return nil
 	}
-	tmpfile, err := os.CreateTemp("", "*--"+filepath.Base(f.File))
+	tmpfile, err := ioutil.TempFile("", "*--"+filepath.Base(f.File))
 	if err != nil {
 		return fmt.Errorf("fail to create tmpfile: %s", err)
 	}

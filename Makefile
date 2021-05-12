@@ -1,5 +1,5 @@
-TARGET := git-po-helper
 PKG := github.com/git-l10n/git-po-helper
+TARGET := git-po-helper
 VENDOR_EXISTS=$(shell test -d vendor && echo 1 || echo 0)
 ifeq ($(VENDOR_EXISTS), 1)
     GOBUILD := GO111MODULE=on go build -mod=vendor
@@ -10,25 +10,11 @@ else
 endif
 
 ifeq ($(shell uname), Darwin)
-    TAR=gtar
-else
-    TAR=tar
+    CC := clang
 endif
 
-GOBUILD_LINUX_64 := env GOOS=linux GOARCH=amd64 $(GOBUILD)
-GOBUILD_LINUX_32 := env GOOS=linux GOARCH=386 $(GOBUILD)
-GOBUILD_WINDOWS_64 := env GOOS=windows GOARCH=amd64 $(GOBUILD)
-GOBUILD_WINDOWS_32 := env GOOS=windows GOARCH=386 $(GOBUILD)
-GOBUILD_MAC_64 := env GOOS=darwin GOARCH=amd64 $(GOBUILD)
-GOBUILD_MAC_32 := env GOOS=darwin GOARCH=386 $(GOBUILD)
-
-BUILD_RELEASE_FLAG=-ldflags "-s -w"
-
-SHA256SUM=shasum -a 256
-GPGSIGN=gpg -sba -u Alibaba
 # Returns a list of all non-vendored (local packages)
 LOCAL_PACKAGES = $(shell go list ./... | grep -v -e '^$(PKG)/vendor/')
-LOCAL_GO_FILES = $(shell find -L $BUILD_DIR  -name "*.go" -not -path "$(PKG_BUILD_DIR)/vendor/*" -not -path "$(PKG_BUILD_DIR)/_build/*")
 
 define message
 	@echo "### $(1)"
@@ -43,7 +29,6 @@ VERSION-FILE: FORCE
 
 # Define LDFLAGS after include of REPO-VERSION-FILE
 LDFLAGS := -ldflags "-X $(PKG)/version.Version=$(VERSION)"
-RELEASE_LDFLAGS := -ldflags "-X $(PKG)/version.Version=$(VERSION) -s -w"
 
 go-gen:
 	$(call message,Generate code for iso-639 and iso-3166)
