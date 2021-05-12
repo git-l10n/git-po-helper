@@ -26,8 +26,10 @@ test_expect_success "new commit with changes outside of po/" '
 
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: found changes beyond \"po/\" directory"
-		level=error msg="    C.txt"
+		level=error msg="        C.txt"
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -60,6 +62,8 @@ test_expect_success "new commit with unsupported hidden meta fields" '
 		level=error msg="commit <OID>: unknown commit header: note: i am a hacker"
 		level=error msg="commit <OID>: unknown commit header: note: happy coding"
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -92,6 +96,8 @@ test_expect_success "new commit with datetime in the future" '
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: bad author date: date is in the future, XX seconds from now"
 		level=error msg="commit <OID>: bad committer date: date is in the future, XX seconds from now"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out |
@@ -124,6 +130,8 @@ test_expect_success "new commit with bad email address" '
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
 		level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -137,6 +145,8 @@ test_expect_success "too many commits to check" '
 		test_must_fail env MAX_COMMITS=1 git-po-helper check-commits >actual 2>&1 &&
 		cat >expect <<-\EOF &&
 		level=error msg="too many commits to check (4 > 1), check args or use option --force"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_cmp expect actual
 	)
@@ -157,8 +167,10 @@ test_expect_success "too many commits to check" '
 		level=error msg="commit <OID>: unknown commit header: note: happy coding"
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: found changes beyond \"po/\" directory"
-		level=error msg="    C.txt"
+		level=error msg="        C.txt"
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_cmp expect actual
 	)
@@ -178,6 +190,8 @@ test_expect_success "long subject, exceed hard limit" '
 		cat >expect <<-EOF &&
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: subject is too long (74 > 62)"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -219,6 +233,8 @@ test_expect_success "no empty line between subject and body" '
 		cat >expect <<-EOF &&
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: no blank line between subject and body of commit message"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -239,6 +255,8 @@ test_expect_success "no l10n prefix in subject" '
 
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: do not have prefix \"l10n:\" in subject"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -259,6 +277,8 @@ test_expect_success "non-ascii characters in subject" '
 
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: subject has non-ascii character \"简\""
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -279,6 +299,8 @@ test_expect_success "subject end with period" '
 
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: subject should not end with period"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -300,6 +322,8 @@ test_expect_success "empty commit log" '
 
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: do not have any commit message"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -318,6 +342,8 @@ test_expect_success "oneline commit message" '
 
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -339,6 +365,8 @@ test_expect_success "no s-o-b signature" '
 
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -362,6 +390,8 @@ test_expect_success "too long message in commit log body" '
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: commit log message is too long (84 > 72)"
 		level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -415,6 +445,8 @@ test_expect_success "merge commit subject not start with Merge" '
 
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: merge commit does not have prefix \"Merge\" in subject"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -463,6 +495,8 @@ test_expect_success "utf-8 characters in commit log with wrong encoding" '
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: bad iso-8859-6 characters in: \"使用 utf-8 编码的提交说明。\""
 		level=error msg="    illegal byte sequence"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -513,6 +547,8 @@ test_expect_success "gbk characters in commit log with wrong encoding" '
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: bad iso-8859-6 characters in: \"ʹ\xd3\xc3 gbk \xb1\xe0\xc2\xeb\xb5\xc4\xccύ˵\xc3\xf7\xa1\xa3\""
 		level=error msg="    illegal byte sequence"
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
@@ -533,6 +569,8 @@ test_expect_success "bad utf-8 characters in commit log" '
 
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: bad UTF-8 characters in: \"ʹ\xd3\xc3 gbk \xb1\xe0\xc2\xeb\xb5\xc4\xccύ˵\xc3\xf7\xa1\xa3\""
+
+		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
 		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&

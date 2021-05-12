@@ -148,10 +148,10 @@ func DiffFiles(src string, dest string) bool {
 		}
 		diffStat += fmt.Sprintf("%d removed", del)
 	}
-	fmt.Fprintf(os.Stderr, "# Diff between %s and %s\n",
+	fmt.Printf("# Diff between %s and %s\n",
 		filepath.Base(src), filepath.Base(dest))
 	if diffStat == "" {
-		fmt.Fprintf(os.Stderr, "\tNothing changed.\n")
+		fmt.Println("\tNothing changed.")
 	}
 
 	if filepath.Base(dest) == GitPot {
@@ -159,12 +159,11 @@ func DiffFiles(src string, dest string) bool {
 		if out, err := exec.Command("git", "describe", "--always").Output(); err == nil {
 			gitDescribe = strings.TrimSpace(string(out))
 		}
-		fmt.Fprintf(os.Stderr, "l10n: git.pot: vN.N.N round N (%s)\n", diffStat)
-		fmt.Fprintln(os.Stderr, "")
-		fmt.Fprintf(os.Stderr, "Generate po/git.pot from (%s) for git vN.N.N l10n round N.\n",
-			gitDescribe)
+		fmt.Printf("l10n: git.pot: vN.N.N round N (%s)\n", diffStat)
+		fmt.Println("")
+		fmt.Printf("Generate po/git.pot from (%s) for git vN.N.N l10n round N.\n", gitDescribe)
 	} else {
-		fmt.Fprintf(os.Stderr, "\t%s\n", diffStat)
+		fmt.Printf("\t%s\n", diffStat)
 	}
 	return true
 }

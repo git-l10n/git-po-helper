@@ -16,6 +16,8 @@ test_expect_success "update: zh_CN.po not exist" '
 		test_must_fail git-po-helper update zh_CN >actual 2>&1 &&
 		cat >expect <<-\EOF &&
 		level=error msg="fail to update \"po/zh_CN.po\", does not exist"
+
+		ERROR: fail to execute "git-po-helper update"
 		EOF
 		test_cmp expect actual
 	)

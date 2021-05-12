@@ -138,7 +138,7 @@ func GenerateCorePot() bool {
 		}
 	}
 	if IsFile(corePotFile) {
-		log.Infof(`"%s" is already exist, not overwrite`, corePotFile)
+		log.Debugf(`"%s" is already exist, not overwrite`, corePotFile)
 		return true
 	}
 	cmdArgs := []string{

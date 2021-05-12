@@ -50,7 +50,8 @@ func CmdCheckPo(args ...string) bool {
 		if !CheckPoFile(poFile, localeFullName) {
 			ret = false
 		}
-		if viper.GetBool("core") && !CheckCorePoFile(locale, localeFullName) {
+		if (viper.GetBool("check--core") || viper.GetBool("check-po--core")) &&
+			!CheckCorePoFile(locale, localeFullName) {
 			ret = false
 		}
 	}

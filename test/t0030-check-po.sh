@@ -47,6 +47,8 @@ test_expect_success "bad syntax of zh_CN.po" '
 		level=error msg="Fail to check \"po/zh_CN.po\": exit status 1"
 		level=error msg="\tpo/zh_CN.po:25: end-of-line within string\n"
 		level=error msg="\tmsgfmt: found 1 fatal error\n"
+
+		ERROR: fail to execute "git-po-helper check-po"
 		EOF
 		test_cmp expect actual
 	)

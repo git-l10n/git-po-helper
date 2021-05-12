@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"path/filepath"
 
 	"github.com/git-l10n/git-po-helper/util"
@@ -21,8 +20,8 @@ func (v *diffCommand) Command() *cobra.Command {
 	}
 
 	v.cmd = &cobra.Command{
-		Use:           "diff [[<old>] <target>]",
-		Short:         "Check syntax of XX.po file",
+		Use:           "diff [-r revision [-r revision]] [[<src>] <target>]",
+		Short:         "Show changes between two l10n files",
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return v.Execute(args)
@@ -85,7 +84,7 @@ func (v diffCommand) Execute(args []string) error {
 		dest.File = args[1]
 	}
 	if !util.DiffFileRevision(src, dest) {
-		return errors.New("diff failure")
+		return executeError
 	}
 	return nil
 }

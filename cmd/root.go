@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -13,7 +14,8 @@ import (
 )
 
 var (
-	rootCmd = rootCommand{}
+	rootCmd      = rootCommand{}
+	executeError = errors.New("fail to execute")
 )
 
 // commandError is an error used to signal different error situations in command handling.

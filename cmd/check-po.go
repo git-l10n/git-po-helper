@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"errors"
-
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -27,15 +25,15 @@ func (v *checkPoCommand) Command() *cobra.Command {
 	}
 	v.cmd.Flags().Bool("core",
 		false,
-		"also check against "+util.CorePot)
-	viper.BindPFlag("core", v.cmd.Flags().Lookup("core"))
+		"also check XX.po against "+util.CorePot)
+	viper.BindPFlag("check-po--core", v.cmd.Flags().Lookup("core"))
 
 	return v.cmd
 }
 
 func (v checkPoCommand) Execute(args []string) error {
 	if !util.CmdCheckPo(args...) {
-		return errors.New("fail to check po")
+		return executeError
 	}
 	return nil
 }

@@ -360,7 +360,7 @@ func (v *commitLog) checkBody() bool {
 func (v *commitLog) checkGpg() bool {
 	var ret = true
 
-	if viper.GetBool("no-gpg") {
+	if viper.GetBool("check--no-gpg") || viper.GetBool("check-commits--no-gpg") {
 		return ret
 	}
 	if v.hasGpgSig() {
@@ -532,7 +532,7 @@ func checkCommitChanges(commit string) bool {
 		log.Errorf(`commit %s: found changes beyond "%s/" directory`,
 			AbbrevCommit(commit), PoDir)
 		for _, change := range badChanges {
-			log.Errorf("\t%s", change)
+			log.Errorf("\t\t%s", change)
 		}
 		return false
 	}
@@ -602,7 +602,8 @@ func CmdCheckCommits(args ...string) bool {
 			break
 		}
 	}
-	if len(commits) > int(maxCommits) && !viper.GetBool("force") {
+	if len(commits) > int(maxCommits) &&
+		(!viper.GetBool("check--force") && !viper.GetBool("check-commits--force")) {
 		if isatty.IsTerminal(os.Stdin.Fd()) && isatty.IsTerminal(os.Stdout.Fd()) {
 			answer := GetUserInput(fmt.Sprintf("too many commits to check (%d > %d), continue to run? (y/N)",
 				len(commits), maxCommits),

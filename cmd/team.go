@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"errors"
-
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -45,7 +43,7 @@ func (v *teamCommand) Command() *cobra.Command {
 
 func (v teamCommand) Execute(args []string) error {
 	if !util.ShowTeams(args...) {
-		return errors.New("fail to show team")
+		return executeError
 	}
 	return nil
 }

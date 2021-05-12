@@ -16,6 +16,8 @@ test_expect_success "check syntax of po/TEAMS" '
 		cat >expect <<-EOF &&
 		level=error msg="bad syntax at line 79 (unknown key \"Respository\"): Respository:\thttps://github.com/l10n-tw/git-po"
 		level=error msg="bad syntax at line 80 (need two tabs between k/v): Leader: \tYi-Jyun Pan <pan93412 AT gmail.com>"
+
+		ERROR: fail to execute "git-po-helper team"
 		EOF
 		test_must_fail git-po-helper team --check >actual 2>&1 &&
 		test_cmp expect actual

@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"errors"
-
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
 )
@@ -42,10 +40,10 @@ func (v initCommand) Execute(args []string) error {
 		return newUserError("must given 1 argument for init command")
 	}
 	locale := args[0]
-	if util.CmdInit(locale, v.O.OnlyCore) {
-		return nil
+	if !util.CmdInit(locale, v.O.OnlyCore) {
+		return executeError
 	}
-	return errors.New("fail to execute init command")
+	return nil
 }
 
 var initCmd = initCommand{}

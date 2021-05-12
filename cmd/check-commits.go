@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"errors"
-
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -10,10 +8,6 @@ import (
 
 type checkCommitsCommand struct {
 	cmd *cobra.Command
-	O   struct {
-		NoGPG bool
-		Force bool
-	}
 }
 
 func (v *checkCommitsCommand) Command() *cobra.Command {
@@ -22,7 +16,7 @@ func (v *checkCommitsCommand) Command() *cobra.Command {
 	}
 
 	v.cmd = &cobra.Command{
-		Use:           "check-commits [rev-list range...]",
+		Use:           "check-commits [<range>]",
 		Short:         "Check commits for l10n conventions",
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -31,19 +25,19 @@ func (v *checkCommitsCommand) Command() *cobra.Command {
 	}
 	v.cmd.Flags().Bool("no-gpg",
 		false,
-		"no gpg verify")
+		"do no verify gpg-signed commit")
 	v.cmd.Flags().BoolP("force",
 		"f",
 		false,
 		"run even too many commits")
-	viper.BindPFlag("no-gpg", v.cmd.Flags().Lookup("no-gpg"))
-	viper.BindPFlag("force", v.cmd.Flags().Lookup("force"))
+	viper.BindPFlag("check-commits--no-gpg", v.cmd.Flags().Lookup("no-gpg"))
+	viper.BindPFlag("check-commits--force", v.cmd.Flags().Lookup("force"))
 	return v.cmd
 }
 
 func (v checkCommitsCommand) Execute(args []string) error {
 	if !util.CmdCheckCommits(args...) {
-		return errors.New("fail to check commits")
+		return executeError
 	}
 	return nil
 }
