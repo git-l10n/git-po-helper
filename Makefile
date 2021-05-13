@@ -30,13 +30,17 @@ VERSION-FILE: FORCE
 # Define LDFLAGS after include of REPO-VERSION-FILE
 LDFLAGS := -ldflags "-X $(PKG)/version.Version=$(VERSION)"
 
-go-gen:
-	$(call message,Generate code for iso-639 and iso-3166)
-	go generate github.com/git-l10n/git-po-helper/data/...
-
-git-po-helper: $(shell find . -name '*.go') | VERSION-FILE go-gen
+git-po-helper: $(shell find . \( -name '*.go' -not -name 'iso-*.go' \) ) data/iso-3166.go data/iso-639.go | VERSION-FILE
 	$(call message,Building $@)
 	$(GOBUILD) $(LDFLAGS) -o $@
+
+data/iso-3166.go: data/iso-3166.csv data/iso-3166.t
+	$(call message,Generate code for iso-3166 and iso-639)
+	go generate github.com/git-l10n/git-po-helper/data/...
+
+data/iso-639.go: data/iso-639.csv data/iso-639.t
+	$(call message,Generate code for iso-639 and iso-3166)
+	go generate github.com/git-l10n/git-po-helper/data/...
 
 golint:
 	$(call message,Testing git-po-helper using golint for coding style)
