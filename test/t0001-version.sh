@@ -18,7 +18,7 @@ test_expect_success "git-po-helper version output test" '
 	)
 '
 
-test_expect_failure "check git-po-helper version format" '
+test_expect_success "check git-po-helper version format" '
 	(
 		cd workdir &&
 		grep "^git-po-helper version [0-9]\+\.[0-9]\+\.[0-9]\+" out >actual &&
