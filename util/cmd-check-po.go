@@ -11,7 +11,18 @@ import (
 
 // CmdCheckPo implements check-po sub command.
 func CmdCheckPo(args ...string) bool {
-	var ret = true
+	var (
+		ret       = true
+		prompt    Prompt
+		checkCore bool
+	)
+
+	if viper.GetBool("check--core") || viper.GetBool("check-po--core") {
+		checkCore = true
+	}
+	if checkCore {
+		prompt.PromptWidth = 18
+	}
 
 	if len(args) == 0 {
 		filepath.Walk("po", func(path string, info os.FileInfo, err error) error {
@@ -47,12 +58,16 @@ func CmdCheckPo(args ...string) bool {
 			ret = false
 			continue
 		}
-		if !CheckPoFile(poFile, localeFullName) {
+		prompt.LongPrompt = localeFullName
+		prompt.ShortPrompt = poFile
+		if !CheckPoFile(poFile, prompt) {
 			ret = false
 		}
-		if (viper.GetBool("check--core") || viper.GetBool("check-po--core")) &&
-			!CheckCorePoFile(locale, localeFullName) {
-			ret = false
+		if checkCore {
+			prompt.ShortPrompt = filepath.Join(PoCoreDir, locale+".po")
+			if !CheckCorePoFile(locale, prompt) {
+				ret = false
+			}
 		}
 	}
 	return ret

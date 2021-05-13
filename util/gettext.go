@@ -2,6 +2,7 @@ package util
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -9,15 +10,64 @@ import (
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
-func checkPoFile(program string, poFile string) bool {
+type Prompt struct {
+	ShortPrompt string
+	LongPrompt  string
+	PromptWidth int
+	Silence     bool
+}
+
+func (v *Prompt) String() string {
+	return fmt.Sprintf("[%s]", v.ShortPrompt)
+}
+
+func (v *Prompt) Width() int {
+	if v.PromptWidth == 0 {
+		return 13
+	}
+	return v.PromptWidth
+}
+
+func runPoChecking(backCompatibleGettext string, poFile string, prompt Prompt) bool {
 	var (
-		msgs []string
-		ret  = true
+		msgs            []string
+		ret             = true
+		execProgram     string
+		bannerDisplayed bool
 	)
 
-	cmd := exec.Command(program,
+	showCheckingBanner := func(err error) {
+		if !bannerDisplayed {
+			bannerDisplayed = true
+			if backCompatibleGettext != "" {
+				if err != nil {
+					log.Infof(`Checking syntax of po file for "%s" (use "%s" for backward compatible)`,
+						prompt.LongPrompt, backCompatibleGettext)
+				} else {
+					log.Debugf(`Checking syntax of po file for "%s" (use "%s" for backward compatible)`,
+						prompt.LongPrompt, backCompatibleGettext)
+				}
+			} else {
+				if err != nil {
+					log.Infof(`Checking syntax of po file for "%s"`, prompt.LongPrompt)
+				} else {
+					log.Debugf(`Checking syntax of po file for "%s"`, prompt.LongPrompt)
+				}
+			}
+		}
+		if err != nil {
+			log.Errorf(`Fail to check "%s": %s`, poFile, err)
+		}
+	}
+
+	execProgram = backCompatibleGettext
+	if execProgram == "" {
+		execProgram = "msgfmt"
+	}
+	cmd := exec.Command(execProgram,
 		"-o",
 		"-",
 		"--check",
@@ -29,9 +79,10 @@ func checkPoFile(program string, poFile string) bool {
 		err = cmd.Start()
 	}
 	if err != nil {
-		log.Errorf(`Fail to check "%s": %s`, poFile, err)
+		showCheckingBanner(err)
 		return false
 	}
+
 	reader := bufio.NewReader(stderr)
 	for {
 		line, err := reader.ReadString('\n')
@@ -42,27 +93,27 @@ func checkPoFile(program string, poFile string) bool {
 			break
 		}
 	}
-	if err := cmd.Wait(); err != nil {
-		log.Errorf(`Fail to check "%s": %s`, poFile, err)
+	if err = cmd.Wait(); err != nil {
+		showCheckingBanner(err)
 		ret = false
+	} else {
+		showCheckingBanner(nil)
 	}
 	for _, line := range msgs {
-		if ret {
-			log.Infof("\t%s", line)
-		} else {
+		if !ret {
 			log.Errorf("\t%s", line)
+		} else if !prompt.Silence {
+			fmt.Printf("%-*s %s", prompt.Width(), prompt.String(), line)
 		}
 	}
-
 	return ret
 }
 
 // CheckPoFile checks syntax of "po/xx.po"
-func CheckPoFile(poFile string, localeFullName string) bool {
+func CheckPoFile(poFile string, prompt Prompt) bool {
 	var ret = true
 
-	log.Infof(`Checking syntax of po file for "%s"`, localeFullName)
-	ret = checkPoFile("msgfmt", poFile)
+	ret = runPoChecking("", poFile, prompt)
 	if !ret {
 		return ret
 	}
@@ -70,15 +121,19 @@ func CheckPoFile(poFile string, localeFullName string) bool {
 	if BackCompatibleGetTextDir == "" {
 		return ret
 	}
-	log.Infof(`Checking syntax of po file for "%s" (use gettext 0.14 for backward compatible)`, localeFullName)
-	return checkPoFile(filepath.Join(BackCompatibleGetTextDir, "msgfmt"), poFile)
+
+	// Turn off output of gettext 0.14 if verbose mode is off (default).
+	if viper.GetInt("verbose") == 0 {
+		prompt.Silence = true
+	}
+	return runPoChecking(filepath.Join(BackCompatibleGetTextDir, "msgfmt"), poFile, prompt)
 }
 
 // CheckCorePoFile checks syntax of "po/xx.po" against "po-core/core.pot"
-func CheckCorePoFile(locale string, localeFullName string) bool {
-	log.Infof(`Checking syntax of po file against %s for "%s"`, CorePot, localeFullName)
+func CheckCorePoFile(locale string, prompt Prompt) bool {
+	log.Debugf(`Checking syntax of po file against %s for "%s"`, CorePot, prompt.LongPrompt)
 	if !GenerateCorePot() {
-		log.Errorf(`Fail to check core po file for "%s"`, localeFullName)
+		log.Errorf(`Fail to check core po file for "%s"`, prompt.LongPrompt)
 		return false
 	}
 
@@ -112,7 +167,7 @@ func CheckCorePoFile(locale string, localeFullName string) bool {
 		return false
 	}
 
-	return checkPoFile("msgfmt", fout.Name())
+	return runPoChecking("", fout.Name(), prompt)
 }
 
 // GenerateCorePot will generate "po-core/core.pot"

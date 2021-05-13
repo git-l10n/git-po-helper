@@ -94,8 +94,7 @@ test_expect_success "check update of zh_CN.po" '
 		cd workdir &&
 
 		cat >expect <<-\EOF
-		level=info msg="Checking syntax of po file for \"Chinese - China\""
-		level=info msg="\t2 translated messages, 5102 untranslated messages.\n"
+		[po/zh_CN.po] 2 translated messages, 5102 untranslated messages.
 		EOF
 		git-po-helper check-po zh_CN >out 2>&1 &&
 		head -2 out >actual &&
@@ -109,7 +108,7 @@ test_expect_success "check core update of zh_CN.po" '
 
 		cat >expect <<-\EOF
 		level=info msg="Creating core pot file in po-core/core.pot"
-		level=info msg="\t2 translated messages, 479 untranslated messages.\n"
+		[po-core/zh_CN.po] 2 translated messages, 479 untranslated messages.
 		EOF
 		git-po-helper check-po --core zh_CN >out 2>&1 &&
 		grep -A1 "Creating core pot file" out >actual &&
