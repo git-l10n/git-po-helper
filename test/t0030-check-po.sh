@@ -41,12 +41,13 @@ test_expect_success "bad syntax of zh_CN.po" '
 		msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz""
 		EOF
 
-		test_must_fail git-po-helper check-po  zh_CN >actual 2>&1 &&
+		test_must_fail git-po-helper check-po  zh_CN >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		level=info msg="Checking syntax of po file for \"Chinese - China\""
 		level=error msg="Fail to check \"po/zh_CN.po\": exit status 1"
-		level=error msg="\tpo/zh_CN.po:25: end-of-line within string\n"
-		level=error msg="\tmsgfmt: found 1 fatal error\n"
+		level=error msg="    po/zh_CN.po:25: end-of-line within string\n"
+		level=error msg="    msgfmt: found 1 fatal error\n"
 
 		ERROR: fail to execute "git-po-helper check-po"
 		EOF
@@ -97,7 +98,8 @@ test_expect_success "check update of zh_CN.po" '
 		[po/zh_CN.po] 2 translated messages, 5102 untranslated messages.
 		EOF
 		git-po-helper check-po zh_CN >out 2>&1 &&
-		head -2 out >actual &&
+		make_user_friendly_and_stable_output <out |
+			head -2 >actual &&
 		test_cmp expect actual
 	)
 '
@@ -112,6 +114,19 @@ test_expect_success "check core update of zh_CN.po" '
 		EOF
 		git-po-helper check-po --core zh_CN >out 2>&1 &&
 		grep -A1 "Creating core pot file" out >actual &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success "show warning of gettext 0.14 not found issue" '
+	(
+		cd workdir &&
+
+		cat >expect <<-\EOF
+		level=warning msg="cannot find gettext 0.14, and won'"'"'t run gettext backward compatible test"
+		[po/zh_CN.po] 2 translated messages, 5102 untranslated messages.
+		EOF
+		git-po-helper check-po --no-gettext-back-compatible zh_CN >actual 2>&1 &&
 		test_cmp expect actual
 	)
 '

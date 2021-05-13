@@ -13,7 +13,8 @@ test_expect_success "fail to init: zh_CN.po already exist" '
 	(
 		cd workdir &&
 		touch po/zh_CN.po &&
-		test_must_fail git-po-helper init zh_CN >actual 2>&1 &&
+		test_must_fail git-po-helper init zh_CN >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		level=error msg="fail to init, \"po/zh_CN.po\" is already exist"
 
@@ -53,7 +54,8 @@ test_expect_success "init zh_CN" '
 test_expect_success "init with invalid locale" '
 	(
 		cd workdir &&
-		test_must_fail git-po-helper init xx >actual 2>&1 &&
+		test_must_fail git-po-helper init xx >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		level=error msg="fail to init: invalid language code for locale \"xx\""
 
@@ -99,7 +101,8 @@ test_expect_success "init --core en_GB" '
 test_expect_success "init --core with invalid locale" '
 	(
 		cd workdir &&
-		test_must_fail git-po-helper init --core xx >actual 2>&1 &&
+		test_must_fail git-po-helper init --core xx >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		level=error msg="fail to init: invalid language code for locale \"xx\""
 

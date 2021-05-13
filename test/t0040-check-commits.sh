@@ -142,7 +142,8 @@ test_expect_success "new commit with bad email address" '
 test_expect_success "too many commits to check" '
 	(
 		cd workdir &&
-		test_must_fail env MAX_COMMITS=1 git-po-helper check-commits >actual 2>&1 &&
+		test_must_fail env MAX_COMMITS=1 git-po-helper check-commits >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		level=error msg="too many commits to check (4 > 1), check args or use option --force"
 

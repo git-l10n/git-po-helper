@@ -13,7 +13,8 @@ test_expect_success "update: zh_CN.po not exist" '
 	(
 		cd workdir &&
 		test ! -f po/zh_CN.po &&
-		test_must_fail git-po-helper update zh_CN >actual 2>&1 &&
+		test_must_fail git-po-helper update zh_CN >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		level=error msg="fail to update \"po/zh_CN.po\", does not exist"
 

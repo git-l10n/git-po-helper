@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 // BackCompatibleGetTextDir is installed dir for gettext 0.14
@@ -31,6 +32,9 @@ func isGetTextBackCompatible(execPath string) bool {
 func getBackCompatibleGetTextDir() string {
 	var getTextDir string
 
+	if viper.GetBool("no-gettext-back-compatible") {
+		return ""
+	}
 	execPath, err := exec.LookPath("gettext")
 	if err == nil {
 		if isGetTextBackCompatible(execPath) {

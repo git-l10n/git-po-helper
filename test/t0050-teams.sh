@@ -14,12 +14,13 @@ test_expect_success "check syntax of po/TEAMS" '
 		cd workdir &&
 
 		cat >expect <<-EOF &&
-		level=error msg="bad syntax at line 79 (unknown key \"Respository\"): Respository:\thttps://github.com/l10n-tw/git-po"
-		level=error msg="bad syntax at line 80 (need two tabs between k/v): Leader: \tYi-Jyun Pan <pan93412 AT gmail.com>"
+		level=error msg="bad syntax at line 79 (unknown key \"Respository\"): Respository:    https://github.com/l10n-tw/git-po"
+		level=error msg="bad syntax at line 80 (need two tabs between k/v): Leader:     Yi-Jyun Pan <pan93412 AT gmail.com>"
 
 		ERROR: fail to execute "git-po-helper team"
 		EOF
-		test_must_fail git-po-helper team --check >actual 2>&1 &&
+		test_must_fail git-po-helper team --check >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
 '
@@ -34,7 +35,8 @@ test_expect_success "fixed po/TEAMS" '
 
 		cat >expect <<-EOF &&
 		EOF
-		git-po-helper team --check >actual 2>&1 &&
+		git-po-helper team --check >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
 '
@@ -62,9 +64,9 @@ test_expect_success "show teams" '
 		zh_CN (Simplified Chinese)
 		zh_TW (Traditional Chinese)
 		EOF
-		git-po-helper team >actual 2>error &&
-		test_cmp expect actual &&
-		test ! -s error
+		git-po-helper team >out &&
+		make_user_friendly_and_stable_output <out >actual &&
+		test_cmp expect actual
 	)
 '
 
@@ -91,9 +93,9 @@ test_expect_success "show team leaders" '
 		Jiang Xin <worldhello.net@gmail.com>
 		Yi-Jyun Pan <pan93412@gmail.com>
 		EOF
-		git-po-helper team --leader >actual 2>error &&
-		test_cmp expect actual &&
-		test ! -s error
+		git-po-helper team --leader >out &&
+		make_user_friendly_and_stable_output <out >actual &&
+		test_cmp expect actual
 	)
 '
 
@@ -133,9 +135,9 @@ test_expect_success "show team members" '
 		Franklin Weng <franklin@goodhorse.idv.tw>
 		EOF
 
-		git-po-helper team --members >actual 2>error &&
-		test_cmp expect actual &&
-		test ! -s error
+		git-po-helper team --members >out &&
+		make_user_friendly_and_stable_output <out >actual &&
+		test_cmp expect actual
 	)
 '
 

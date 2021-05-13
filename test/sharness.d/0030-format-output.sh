@@ -7,6 +7,7 @@
 # redundant to the more machine-readable output the tests already assert.
 make_user_friendly_and_stable_output () {
 	sed \
+		-e "/cannot find gettext 0.14, and won't run gettext backward compatible test/d" \
 		-e "s/  *\$//" \
 		-e "s/  */ /g" \
 		-e "s/'/\"/g" \
