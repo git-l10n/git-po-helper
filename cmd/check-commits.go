@@ -37,7 +37,7 @@ func (v *checkCommitsCommand) Command() *cobra.Command {
 
 func (v checkCommitsCommand) Execute(args []string) error {
 	if !util.CmdCheckCommits(args...) {
-		return executeError
+		return errExecute
 	}
 	return nil
 }

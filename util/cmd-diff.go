@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// FileRevision is used as an argument for diff function
 type FileRevision struct {
 	Revision string
 	File     string
@@ -61,6 +62,7 @@ func checkoutTmpfile(f *FileRevision) error {
 	return nil
 }
 
+// DiffFileRevision implements diff on two files with specific revision.
 func DiffFileRevision(src, dest FileRevision) bool {
 	var (
 		srcFile  string
@@ -93,6 +95,7 @@ func DiffFileRevision(src, dest FileRevision) bool {
 	return DiffFiles(srcFile, destFile)
 }
 
+// DiffFiles implements diff on two files.
 func DiffFiles(src string, dest string) bool {
 	var (
 		add int32

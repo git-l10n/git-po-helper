@@ -84,7 +84,7 @@ func (v diffCommand) Execute(args []string) error {
 		dest.File = args[1]
 	}
 	if !util.DiffFileRevision(src, dest) {
-		return executeError
+		return errExecute
 	}
 	return nil
 }

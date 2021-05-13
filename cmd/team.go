@@ -43,7 +43,7 @@ func (v *teamCommand) Command() *cobra.Command {
 
 func (v teamCommand) Execute(args []string) error {
 	if !util.ShowTeams(args...) {
-		return executeError
+		return errExecute
 	}
 	return nil
 }

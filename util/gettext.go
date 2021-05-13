@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Prompt holds prompt for output of a message.
 type Prompt struct {
 	ShortPrompt string
 	LongPrompt  string
@@ -24,6 +25,7 @@ func (v *Prompt) String() string {
 	return fmt.Sprintf("[%s]", v.ShortPrompt)
 }
 
+// Width is the width for prompt.
 func (v *Prompt) Width() int {
 	if v.PromptWidth == 0 {
 		return 13

@@ -17,7 +17,7 @@ var updateCmd = &cobra.Command{
 		}
 		for _, locale := range args {
 			if !util.CmdUpdate(locale) {
-				err = executeError
+				err = errExecute
 			}
 		}
 		return err

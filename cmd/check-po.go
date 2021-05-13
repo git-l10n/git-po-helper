@@ -33,7 +33,7 @@ func (v *checkPoCommand) Command() *cobra.Command {
 
 func (v checkPoCommand) Execute(args []string) error {
 	if !util.CmdCheckPo(args...) {
-		return executeError
+		return errExecute
 	}
 	return nil
 }

@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	rootCmd      = rootCommand{}
-	executeError = errors.New("fail to execute")
+	rootCmd    = rootCommand{}
+	errExecute = errors.New("fail to execute")
 )
 
 // commandError is an error used to signal different error situations in command handling.

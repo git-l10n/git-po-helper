@@ -21,11 +21,13 @@ const (
 	l10nTestLanguage = "is (Icelandic)"
 )
 
+// User contains user name and email.
 type User struct {
 	Name  string
 	Email string
 }
 
+// Team contains infomation for a l10n team.
 type Team struct {
 	Language   string
 	Repository string
@@ -42,6 +44,7 @@ func parseUser(line string) (User, error) {
 	return User{Name: m[1], Email: m[2]}, nil
 }
 
+// ParseTeams implements parse of "po/TEAMS" file.
 func ParseTeams(fileName string) ([]Team, bool) {
 	var (
 		teams []Team
@@ -172,6 +175,7 @@ func ParseTeams(fileName string) ([]Team, bool) {
 	return teams, ret
 }
 
+// ShowTeams will show leader/members of a team.
 func ShowTeams(args ...string) bool {
 	var (
 		teams      []Team

@@ -41,7 +41,7 @@ func (v initCommand) Execute(args []string) error {
 	}
 	locale := args[0]
 	if !util.CmdInit(locale, v.O.OnlyCore) {
-		return executeError
+		return errExecute
 	}
 	return nil
 }

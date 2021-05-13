@@ -137,7 +137,7 @@ func (v *commitLog) Parse(r io.Reader) bool {
 					peek, err := reader.Peek(1)
 					if err != nil {
 						log.Errorf(`commit %s: header "%s" is too short, early EOF: %s`,
-							v.CommitID(), err)
+							v.CommitID(), kv[0], err)
 						ret = false
 						break
 					}
@@ -303,33 +303,33 @@ func (v *commitLog) checkSubject() bool {
 
 func (v *commitLog) checkBody() bool {
 	var (
-		ret        = true
-		nr         = len(v.Msg)
-		width      int
-		body_start int
-		sig_start  = 0
+		ret       = true
+		nr        = len(v.Msg)
+		width     int
+		bodyStart int
+		sigStart  = 0
 	)
 
 	if nr == 0 {
 		return false
 	} else if nr > 1 {
 		if v.Msg[1] != "" {
-			body_start = 1
+			bodyStart = 1
 		} else if nr == 2 {
-			log.Errorf("commit %s: empty body of commit message")
+			log.Errorf("commit %s: empty body of commit message", v.CommitID())
 			return false
 		} else {
-			body_start = 2
+			bodyStart = 2
 		}
 
-		for i := body_start; i < nr; i++ {
+		for i := bodyStart; i < nr; i++ {
 			width = len(v.Msg[i])
 			if width > bodyWidthHardLimit {
 				log.Errorf(`commit %s: commit log message is too long (%d > %d)`,
 					v.CommitID(), width, bodyWidthHardLimit)
 				ret = false
 			} else if width == 0 {
-				sig_start = i
+				sigStart = i
 			}
 		}
 	}
@@ -340,10 +340,10 @@ func (v *commitLog) checkBody() bool {
 	}
 
 	hasSobPrefix := false
-	if sig_start == 0 {
-		sig_start = nr - 1
+	if sigStart == 0 {
+		sigStart = nr - 1
 	}
-	for i := sig_start; i < nr; i++ {
+	for i := sigStart; i < nr; i++ {
 		if strings.HasPrefix(v.Msg[i], sobPrefix+" ") {
 			hasSobPrefix = true
 			break
@@ -368,7 +368,7 @@ func (v *commitLog) checkGpg() bool {
 			"verify-commit",
 			v.CommitID())
 		if err := cmd.Run(); err != nil {
-			log.Errorf("commit %s: cannot verify gpg-sig: %s", err)
+			log.Errorf("commit %s: cannot verify gpg-sig: %s", v.CommitID(), err)
 			ret = false
 		}
 	}
