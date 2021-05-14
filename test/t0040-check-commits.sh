@@ -495,7 +495,7 @@ test_expect_success "utf-8 characters in commit log with wrong encoding" '
 
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: bad iso-8859-6 characters in: \"使用 utf-8 编码的提交说明。\""
-		level=error msg="    illegal byte sequence"
+		level=error msg="    <iconv failure message>..."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
@@ -547,7 +547,7 @@ test_expect_success "gbk characters in commit log with wrong encoding" '
 
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: bad iso-8859-6 characters in: \"ʹ\xd3\xc3 gbk \xb1\xe0\xc2\xeb\xb5\xc4\xccύ˵\xc3\xf7\xa1\xa3\""
-		level=error msg="    illegal byte sequence"
+		level=error msg="    <iconv failure message>..."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
