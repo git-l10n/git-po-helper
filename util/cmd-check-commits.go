@@ -163,6 +163,16 @@ func (v *commitLog) Parse(r io.Reader) bool {
 	return ret
 }
 
+func getDuration(s int64) string {
+	seconds := fmt.Sprintf("%ds", s)
+	d, err := time.ParseDuration(seconds)
+	if err != nil {
+		log.Errorf("fail to parse duration: %s: %s", seconds, err)
+		return seconds
+	}
+	return d.String()
+}
+
 func (v *commitLog) checkCommitDate(date string, timeZone string) error {
 	ts, err := strconv.ParseInt(date, 10, 64)
 	if err != nil {
@@ -182,7 +192,11 @@ func (v *commitLog) checkCommitDate(date string, timeZone string) error {
 	}
 	currentTs := time.Now().UTC().Unix()
 	if ts > currentTs {
-		return fmt.Errorf("date is in the future, %d seconds from now", ts-currentTs)
+		return fmt.Errorf("date is in the future, %s from now",
+			getDuration(ts-currentTs))
+	} else if currentTs-ts > 3600*24*180 /* a half year earlier */ {
+		log.Warnf("commit %s: too old commit date (%s earlier). Please check your system clock!",
+			v.CommitID(), getDuration(currentTs-ts))
 	}
 	log.Debugf("commit %s: ts is : %d, currentTs is : %d", v.CommitID(), ts, currentTs)
 	return nil
