@@ -51,9 +51,9 @@ test_expect_success "new commit with unsupported hidden meta fields" '
 		test_tick &&
 		git commit -F .git/commit-message &&
 		git cat-file commit HEAD >.git/commit-meta &&
-		sed -e "/^parent /a note: i am a hacker" \
-			-e "/^committer /a note: happy coding" <.git/commit-meta \
-			>.git/commit-hacked-meta &&
+		perl -pe "s#^(parent .*)#\1\nnote: i am a hacker#;
+		          s#(^committer .*)#\1\nnote: happy coding#" \
+		     <.git/commit-meta >.git/commit-hacked-meta &&
 
 		cid=$(git hash-object -w -t commit .git/commit-hacked-meta) &&
 		git update-ref refs/heads/master $cid &&
@@ -87,7 +87,7 @@ test_expect_success "new commit with datetime in the future" '
 		git cat-file commit HEAD >.git/commit-meta &&
 		future=$(($(date -u +"%s")+100)) &&
 		sed -e "s/^author .*/author Jiang Xin <worldhello.net@gmail.com> $future +0000/" \
-			-e "s/^committer .*/committer Jiang Xin <worldhello.net@gmail.com> $future +0000/" \
+		    -e "s/^committer .*/committer Jiang Xin <worldhello.net@gmail.com> $future +0000/" \
 			<.git/commit-meta >.git/commit-hacked-meta &&
 
 		cid=$(git hash-object -w -t commit .git/commit-hacked-meta) &&
