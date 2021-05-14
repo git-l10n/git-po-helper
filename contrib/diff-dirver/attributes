@@ -1,0 +1,2 @@
+*.po diff=gettext-uniq
+*.pot diff=gettext-uniq

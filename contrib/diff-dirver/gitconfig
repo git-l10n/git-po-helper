@@ -1,0 +1,3 @@
+[diff "gettext-uniq"]
+	textconv = msguniq -i --no-location --strict -s
+	cachetextconv = true
