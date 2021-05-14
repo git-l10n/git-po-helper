@@ -47,6 +47,9 @@ func getBackCompatibleGetTextDir() string {
 		"/usr/local/Cellar/gettext",
 	} {
 		filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+			if info == nil {
+				return filepath.SkipDir
+			}
 			if !info.IsDir() {
 				return nil
 			}

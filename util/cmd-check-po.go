@@ -26,6 +26,9 @@ func CmdCheckPo(args ...string) bool {
 
 	if len(args) == 0 {
 		filepath.Walk("po", func(path string, info os.FileInfo, err error) error {
+			if info == nil {
+				return filepath.SkipDir
+			}
 			if !info.IsDir() {
 				if filepath.Ext(path) == ".po" {
 					args = append(args, path)
