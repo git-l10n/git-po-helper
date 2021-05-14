@@ -1,3 +1,5 @@
+[![Build Status](https://dev.azure.com/gitself/git-po-helper/_apis/build/status/git-l10n.git-po-helper)](https://dev.azure.com/gitself/git-po-helper/_build/latest?definitionId=1)
+
 **A helper program to check conventions for git l10n contributions**
 
 `git-po-helper` is a helper program for git l10n coordinator and git l10n contributors to check conventions for git l10n contributions. Pull request to [git-l10n/git-po](https://github.com/git-l10n/git-po) must comply with the following conventions.
