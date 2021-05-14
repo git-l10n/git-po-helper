@@ -6,6 +6,15 @@ PO_HELPER_TEST_REPOSITORY_VERSION=2
 PO_HELPER_TEST_REPOSITORY="${SHARNESS_TEST_SRCDIR}/test-repository"
 PO_HELPER_TEST_REPOSITORY_VERSION_FILE="${PO_HELPER_TEST_REPOSITORY}/.VERSION"
 
+case $(uname) in
+Darwin)
+	TAR_CMD="tar"
+	;;
+*)
+	TAR_CMD="tar --wildcards"
+	;;
+esac
+
 create_test_repository () {
 	# create lock
 	lockmsg="locked by $$"
@@ -41,8 +50,7 @@ create_test_repository () {
 		gpg --verify "${SHARNESS_TEST_SRCDIR}/git.tar.sign"
 		if test $? -ne 0
 		then
-			echo >&2 "ERROR: fail to download git.tar, or fail to verify gpg signature"
-			exit 1
+			echo >&2 "WARNING: cannot verify the signature of the download git package"
 		fi
 	fi
 
@@ -72,8 +80,9 @@ test_repository_is_uptodate() {
 }
 
 create_test_repository_real () {
+	git config --global init.defaultbranch master &&
 	git init "$PO_HELPER_TEST_REPOSITORY" &&
-	tar --strip-components=1 -C test-repository -xf git.tar -- \
+	${TAR_CMD} --strip-components=1 -C test-repository -xf git.tar -- \
 		"git-*/po/git.pot" \
 		"git-*/po/bg.po" \
 		"git-*/po/ca.po" \
