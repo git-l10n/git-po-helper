@@ -48,7 +48,7 @@ jobs:
     displayName: 'Unit test'
 
   - script: |
-      make it
+      make it DEFAULT_TEST_TARGET=test
     workingDirectory: '$(modulePath)'
     displayName: 'Integration test'
 
@@ -89,12 +89,17 @@ jobs:
     displayName: 'Get dependencies, then build'
 
   - script: |
+      sudo test/install-prereq.sh
+    workingDirectory: '$(modulePath)'
+    displayName: 'Install prerequsites'
+
+  - script: |
       make ut
     workingDirectory: '$(modulePath)'
     displayName: 'Unit test'
 
   - script: |
-      make it
+      make it DEFAULT_TEST_TARGET=test
     workingDirectory: '$(modulePath)'
     displayName: 'Integration test'
 
