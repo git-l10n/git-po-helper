@@ -164,7 +164,7 @@ func DiffFiles(src string, dest string) bool {
 		}
 		fmt.Printf("l10n: git.pot: vN.N.N round N (%s)\n", diffStat)
 		fmt.Println("")
-		fmt.Printf("Generate po/git.pot from (%s) for git vN.N.N l10n round N.\n", gitDescribe)
+		fmt.Printf("Generate po/git.pot from %s for git vN.N.N l10n round N.\n", gitDescribe)
 	} else {
 		fmt.Printf("\t%s\n", diffStat)
 	}
