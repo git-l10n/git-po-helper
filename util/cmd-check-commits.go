@@ -324,6 +324,8 @@ func (v *commitLog) checkBody() bool {
 		return false
 	} else if nr > 1 {
 		if v.Msg[1] != "" {
+			// Error about no empty line between subject and body is raised
+			// when checking subject of commit og.
 			bodyStart = 1
 		} else if nr == 2 {
 			log.Errorf("commit %s: empty body of commit message", v.CommitID())
@@ -339,7 +341,7 @@ func (v *commitLog) checkBody() bool {
 					v.CommitID(), width, bodyWidthHardLimit)
 				ret = false
 			} else if width == 0 {
-				sigStart = i
+				sigStart = i + 1
 			}
 		}
 	}
@@ -351,11 +353,17 @@ func (v *commitLog) checkBody() bool {
 
 	hasSobPrefix := false
 	if sigStart == 0 {
-		sigStart = nr - 1
+		sigStart = bodyStart
 	}
 	for i := sigStart; i < nr; i++ {
 		if strings.HasPrefix(v.Msg[i], sobPrefix+" ") {
 			hasSobPrefix = true
+			continue
+		}
+		if !strings.Contains(v.Msg[i], ": ") {
+			log.Errorf(`commit %s: bad signature for line: "%s"`,
+				v.CommitID(), v.Msg[i])
+			ret = false
 			break
 		}
 	}

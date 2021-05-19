@@ -352,7 +352,7 @@ test_expect_success "oneline commit message" '
 	)
 '
 
-test_expect_success "no s-o-b signature" '
+test_expect_success "no s-o-b signature (has body message, but no s-o-b)" '
 	(
 		cd workdir &&
 		cat >.git/commit-message <<-\EOF &&
@@ -365,6 +365,7 @@ test_expect_success "no s-o-b signature" '
 		git commit --allow-empty -F .git/commit-message &&
 
 		cat >expect <<-EOF &&
+		level=error msg="commit <OID>: bad signature for line: \"This is body of commit log.\""
 		level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
 
 		ERROR: fail to execute "git-po-helper check-commits"
@@ -372,6 +373,110 @@ test_expect_success "no s-o-b signature" '
 		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
+	)
+'
+
+test_expect_success "no s-o-b signature (has body message, no s-o-b, but has other signature)" '
+	(
+		cd workdir &&
+		cat >.git/commit-message <<-\EOF &&
+		l10n: test: no s-o-b signature
+
+		This is body of commit log.
+		more commit log message...
+
+		Reported-by: reporter <reporter@example.com>
+		EOF
+		test_tick &&
+		git commit --allow-empty -F .git/commit-message &&
+
+		cat >expect <<-EOF &&
+		level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
+
+		ERROR: fail to execute "git-po-helper check-commits"
+		EOF
+		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success "has s-o-b signature (only s-o-b, no body message)" '
+	(
+		cd workdir &&
+		cat >.git/commit-message <<-\EOF &&
+		l10n: test: has s-o-b signature
+
+		Signed-off-by: author <author@example.com>
+		EOF
+		test_tick &&
+		git commit --allow-empty -F .git/commit-message &&
+
+		git-po-helper check-commits -qq HEAD~..HEAD
+	)
+'
+
+test_expect_success "has s-o-b signature (only s-o-b and other signature, no body message)" '
+	(
+		cd workdir &&
+		cat >.git/commit-message <<-\EOF &&
+		l10n: test: has s-o-b signature
+
+		Signed-off-by: author <author@example.com>
+		Reported-by: Reporter <reporter@example.com>
+		EOF
+		test_tick &&
+		git commit --allow-empty -F .git/commit-message &&
+
+		git-po-helper check-commits -qq HEAD~..HEAD
+	)
+'
+
+test_expect_success "has s-o-b signature (have s-o-b and other signature)" '
+	(
+		cd workdir &&
+		cat >.git/commit-message <<-\EOF &&
+		l10n: test: has s-o-b signature
+
+		This is body of commit log.
+		more commit log message...
+
+		Signed-off-by: author <author@example.com>
+		Reported-by: Reporter <reporter@example.com>
+		EOF
+		test_tick &&
+		git commit --allow-empty -F .git/commit-message &&
+
+		git-po-helper check-commits -qq HEAD~..HEAD
+	)
+'
+
+test_expect_success "no s-o-b signature (tailing trash message)" '
+	(
+		cd workdir &&
+		cat >.git/commit-message <<-\EOF &&
+		l10n: test: has s-o-b signature
+
+		This is body of commit log.
+		more commit log message...
+
+		Signed-off-by: author <author@example.com>
+		Reported-by: Reporter <reporter@example.com>
+
+		l10n: message should no be here
+		EOF
+		test_tick &&
+		git commit --allow-empty -F .git/commit-message &&
+
+		cat >expect <<-EOF &&
+		level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
+		
+		ERROR: fail to execute "git-po-helper check-commits"
+		EOF
+		test_must_fail git-po-helper check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
+		test_cmp expect actual
+
 	)
 '
 
@@ -390,6 +495,7 @@ test_expect_success "too long message in commit log body" '
 
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: commit log message is too long (84 > 72)"
+		level=error msg="commit <OID>: bad signature for line: \"Start body of commit log. This is is a very long commit log message, which exceed 72\""
 		level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
 
 		ERROR: fail to execute "git-po-helper check-commits"
