@@ -554,14 +554,18 @@ func checkCommitChanges(commit string) bool {
 			File:     filepath.Join("po", "TEAMS"),
 		}
 		if err := checkoutTmpfile(&teamFile); err != nil || teamFile.Tmpfile == "" {
-			log.Errorf("fail to checkout %s of revision %s: %s", teamFile.File, teamFile.Revision, err)
+			log.Errorf("commit %s: fail to checkout %s of revision %s: %s",
+				AbbrevCommit(commit), teamFile.File, teamFile.Revision, err)
 		}
 		defer func() {
 			os.Remove(teamFile.Tmpfile)
 			teamFile.Tmpfile = ""
 		}()
 
-		if _, ok := ParseTeams(teamFile.Tmpfile); !ok {
+		if _, errors := ParseTeams(teamFile.Tmpfile); len(errors) > 0 {
+			for _, error := range errors {
+				log.Errorf("commit %s: %s", AbbrevCommit(commit), error)
+			}
 			ret = false
 		}
 	}

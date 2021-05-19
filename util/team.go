@@ -45,12 +45,12 @@ func parseUser(line string) (User, error) {
 }
 
 // ParseTeams implements parse of "po/TEAMS" file.
-func ParseTeams(fileName string) ([]Team, bool) {
+func ParseTeams(fileName string) ([]Team, []error) {
 	var (
-		teams []Team
-		ret   = true
-		team  Team
-		nr    = 0
+		teams  []Team
+		team   Team
+		nr     = 0
+		errors = []error{}
 	)
 
 	if fileName == "" {
@@ -73,42 +73,36 @@ func ParseTeams(fileName string) ([]Team, bool) {
 			continue
 		}
 		if !utf8.ValidString(line) {
-			log.Errorf(`invalid utf-8 in: %s`, line)
-			ret = false
+			errors = append(errors, fmt.Errorf(`invalid utf-8 in: %s`, line))
 		}
 		kv := strings.SplitN(line, ":", 2)
 		if len(kv) != 2 {
 			if isHead {
 				continue
 			} else {
-				log.Errorf(`bad syntax at line %d (no column): %s`, nr, line)
-				ret = false
+				errors = append(errors, fmt.Errorf(`bad syntax at line %d (no column): %s`, nr, line))
 				break
 			}
 		}
 		if len(kv[1]) < 2 {
-			log.Errorf(`bad syntax at line %d (too short value): %s`, nr, line)
-			ret = false
+			errors = append(errors, fmt.Errorf(`bad syntax at line %d (too short value): %s`, nr, line))
 		} else if kv[0] == "Leader" { // Skip two tabs
 			if kv[1][0] != '\t' || kv[1][1] != '\t' {
-				log.Errorf(`bad syntax at line %d (need two tabs between k/v): %s`, nr, line)
-				ret = false
+				errors = append(errors, fmt.Errorf(`bad syntax at line %d (need two tabs between k/v): %s`, nr, line))
 				kv[1] = strings.TrimSpace(kv[1])
 			} else {
 				kv[1] = kv[1][2:]
 			}
 		} else { // skip one tab
 			if kv[1][0] != '\t' {
-				log.Errorf(`bad syntax at line %d (need tab between k/v): %s`, nr, line)
-				ret = false
+				errors = append(errors, fmt.Errorf(`bad syntax at line %d (need tab between k/v): %s`, nr, line))
 				kv[1] = strings.TrimSpace(kv[1])
 			} else {
 				kv[1] = kv[1][1:]
 			}
 		}
 		if strings.TrimSpace(kv[1]) != kv[1] {
-			log.Errorf(`bad syntax at line %d (too many spaces): %s`, nr, line)
-			ret = false
+			errors = append(errors, fmt.Errorf(`bad syntax at line %d (too many spaces): %s`, nr, line))
 		}
 
 		switch kv[0] {
@@ -124,18 +118,16 @@ func ParseTeams(fileName string) ([]Team, bool) {
 		case "Leader":
 			user, err := parseUser(kv[1])
 			if err != nil {
-				log.Errorf(`bad syntax at line %d (fail to parse user): %s`, nr, line)
-				log.Errorf("\t%s", err)
-				ret = false
+				errors = append(errors, fmt.Errorf(`bad syntax at line %d (fail to parse user): %s`, nr, line))
+				errors = append(errors, fmt.Errorf("\t%s", err))
 			} else {
 				team.Leader = user
 			}
 		case "Members":
 			user, err := parseUser(kv[1])
 			if err != nil {
-				log.Errorf(`bad syntax at line %d (fail to parse user): %s`, nr, line)
-				log.Errorf("\t%s", err)
-				ret = false
+				errors = append(errors, fmt.Errorf(`bad syntax at line %d (fail to parse user): %s`, nr, line))
+				errors = append(errors, fmt.Errorf("\t%s", err))
 			} else {
 				team.Members = append(team.Members, user)
 			}
@@ -148,8 +140,7 @@ func ParseTeams(fileName string) ([]Team, bool) {
 				line = line[2:]
 				user, err := parseUser(line)
 				if err != nil {
-					log.Errorf(`bad syntax at line %d (fail to parse user): %s`, nr, line)
-					ret = false
+					errors = append(errors, fmt.Errorf(`bad syntax at line %d (fail to parse user): %s`, nr, line))
 				} else {
 					team.Members = append(team.Members, user)
 				}
@@ -158,9 +149,7 @@ func ParseTeams(fileName string) ([]Team, bool) {
 			if isHead {
 				continue
 			} else {
-				log.Errorf(`bad syntax at line %d (unknown key "%s"): %s`,
-					nr, kv[0], line)
-				ret = false
+				errors = append(errors, fmt.Errorf(`bad syntax at line %d (unknown key "%s"): %s`, nr, kv[0], line))
 			}
 		}
 		isHead = false
@@ -172,18 +161,25 @@ func ParseTeams(fileName string) ([]Team, bool) {
 	if team.Language != "" {
 		teams = append(teams, team)
 	}
-	return teams, ret
+	return teams, errors
 }
 
 // ShowTeams will show leader/members of a team.
 func ShowTeams(args ...string) bool {
 	var (
 		teams      []Team
+		errors     []error
 		optLeader  = viper.GetBool("team-leader")
 		optMembers = viper.GetBool("team-members")
 		ret        = true
 	)
-	teams, ret = ParseTeams("")
+	teams, errors = ParseTeams("")
+	if len(errors) != 0 {
+		for _, error := range errors {
+			log.Error(error)
+		}
+		ret = false
+	}
 	log.Debugf(`get %d teams from "po/TEAMS"`, len(teams))
 	if viper.GetBool("team-check") {
 		return ret
