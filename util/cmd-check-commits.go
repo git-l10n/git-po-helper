@@ -30,10 +30,6 @@ const (
 	defaultEncoding       = "utf-8"
 )
 
-var (
-	shouldCheckTeams = false
-)
-
 type commitLog struct {
 	// Meta holds header of a raw commit
 	Meta map[string]interface{}
@@ -505,8 +501,10 @@ func checkCommitLog(commit string) bool {
 
 func checkCommitChanges(commit string) bool {
 	var (
-		err        error
-		badChanges = []string{}
+		err              error
+		badChanges       = []string{}
+		ret              = true
+		shouldCheckTeams = false
 	)
 
 	cmd := exec.Command("git",
@@ -548,9 +546,26 @@ func checkCommitChanges(commit string) bool {
 		for _, change := range badChanges {
 			log.Errorf("\t\t%s", change)
 		}
-		return false
+		ret = false
 	}
-	return true
+	if shouldCheckTeams {
+		teamFile := FileRevision{
+			Revision: commit,
+			File:     filepath.Join("po", "TEAMS"),
+		}
+		if err := checkoutTmpfile(&teamFile); err != nil || teamFile.Tmpfile == "" {
+			log.Errorf("fail to checkout %s of revision %s: %s", teamFile.File, teamFile.Revision, err)
+		}
+		defer func() {
+			os.Remove(teamFile.Tmpfile)
+			teamFile.Tmpfile = ""
+		}()
+
+		if _, ok := ParseTeams(teamFile.Tmpfile); !ok {
+			ret = false
+		}
+	}
+	return ret
 }
 
 // CheckCommit will run various checks for the given commit
@@ -562,11 +577,6 @@ func CheckCommit(commit string) bool {
 	}
 	if !checkCommitLog(commit) {
 		ret = false
-	}
-
-	if shouldCheckTeams {
-		ParseTeams(filepath.Join("po", "TEAMS"))
-
 	}
 
 	return ret
