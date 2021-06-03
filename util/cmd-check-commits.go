@@ -22,8 +22,7 @@ import (
 
 const (
 	defaultMaxCommits     = 100
-	subjectWidthHardLimit = 62
-	subjectWidthSoftLimit = 50
+	subjectWidthHardLimit = 72
 	bodyWidthHardLimit    = 72
 	commitSubjectPrefix   = "l10n:"
 	sobPrefix             = "Signed-off-by:"
@@ -287,10 +286,26 @@ func (v *commitLog) checkSubject() bool {
 		log.Errorf(`commit %s: subject is too long (%d > %d)`,
 			v.CommitID(), width, subjectWidthHardLimit)
 		ret = false
-	} else if width > subjectWidthSoftLimit {
-		log.Warnf(`commit %s: subject is too long (%d > %d)`,
-			v.CommitID(), width, subjectWidthSoftLimit)
-	} else if width == 0 {
+	}
+	for _, info := range []struct {
+		Width   int
+		Percent int
+	}{
+		{72, 98},
+		{64, 90},
+		{50, 63},
+	} {
+		if width > info.Width {
+			log.Warnf(`commit %s: subject length %d > %d, about %d%% commits have a subject less than %d characters`,
+				v.CommitID(),
+				width,
+				info.Width,
+				info.Percent,
+				info.Width)
+			break
+		}
+	}
+	if width == 0 {
 		log.Errorf(`commit %s: subject is empty`, v.CommitID())
 		return false
 	}

@@ -190,7 +190,8 @@ test_expect_success "long subject, exceed hard limit" '
 
 		cat >expect <<-EOF &&
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-		level=error msg="commit <OID>: subject is too long (74 > 62)"
+		level=error msg="commit <OID>: subject is too long (74 > 72)"
+		level=warning msg="commit <OID>: subject length 74 > 72, about 98% commits have a subject less than 72 characters"
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
@@ -213,7 +214,7 @@ test_expect_success "long subject, exceed soft limit" '
 
 		cat >expect <<-EOF &&
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-		level=warning msg="commit <OID>: subject is too long (58 > 50)"
+		level=warning msg="commit <OID>: subject length 58 > 50, about 63% commits have a subject less than 50 characters"
 		EOF
 		git-po-helper check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
