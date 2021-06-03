@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/git-l10n/git-po-helper/version"
 	"github.com/spf13/cobra"
 )
@@ -12,15 +10,15 @@ var versionCmd = &cobra.Command{
 	Use:           "version",
 	Short:         "Display the version of git-po-helper",
 	SilenceErrors: true,
-	Run: func(cmd *cobra.Command, args []string) {
-		showVersion()
-	},
-}
-
-func showVersion() {
-	fmt.Printf("git-po-helper version %s\n", version.Version)
+	Run:           func(cmd *cobra.Command, args []string) {},
+	Version:       version.Version,
 }
 
 func init() {
+	versionCmd.Flags().Bool("version",
+		true,
+		"show version")
+	versionCmd.SetVersionTemplate(`{{with .Parent.Name}}{{printf "%s " .}}{{end}}{{printf "version %s" .Version}}
+`)
 	rootCmd.AddCommand(versionCmd)
 }

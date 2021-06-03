@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/git-l10n/git-po-helper/util"
+	"github.com/git-l10n/git-po-helper/version"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
@@ -78,10 +79,6 @@ func (r Response) IsUserError() bool {
 
 type rootCommand struct {
 	cmd *cobra.Command
-
-	O struct {
-		Version bool
-	}
 }
 
 func (v *rootCommand) initLog() {
@@ -132,12 +129,9 @@ func (v *rootCommand) Command() *cobra.Command {
 			return v.Execute(args)
 		},
 	}
-
-	v.cmd.Flags().BoolVarP(&v.O.Version,
-		"version",
-		"V",
-		false,
-		"Show version")
+	v.cmd.Version = version.Version
+	v.cmd.SetVersionTemplate(`{{with .Name}}{{printf "%s " .}}{{end}}{{printf "version %s" .Version}}
+`)
 	v.cmd.PersistentFlags().Bool("dryrun",
 		false,
 		"dryrun mode")
@@ -170,12 +164,7 @@ func (v *rootCommand) Command() *cobra.Command {
 }
 
 func (v rootCommand) Execute(args []string) error {
-	if v.O.Version {
-		showVersion()
-	} else {
-		return newUserError("run 'git-po-helper -h' for help")
-	}
-	return nil
+	return newUserError("run 'git-po-helper -h' for help")
 }
 
 func (v *rootCommand) AddCommand(cmds ...*cobra.Command) {
