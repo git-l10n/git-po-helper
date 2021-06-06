@@ -168,22 +168,11 @@ func getDuration(s int64) string {
 	return d.String()
 }
 
-func (v *commitLog) checkCommitDate(date string, timeZone string) error {
+func (v *commitLog) checkCommitDate(date string) error {
+	// Timestamp of a commit is in UTC
 	ts, err := strconv.ParseInt(date, 10, 64)
 	if err != nil {
 		return fmt.Errorf("bad timestamp: %s", date)
-	}
-	if len(timeZone) > 0 {
-		tz, err := strconv.ParseInt(timeZone[1:], 10, 64)
-		if err != nil {
-			return fmt.Errorf("bad timezone: %s", timeZone)
-		}
-		tz = tz * 36 /* tz * 3600 / 100 */
-		if timeZone[0] == '+' {
-			ts -= tz
-		} else {
-			ts += tz
-		}
 	}
 	currentTs := time.Now().UTC().Unix()
 	if ts > currentTs {
@@ -193,7 +182,6 @@ func (v *commitLog) checkCommitDate(date string, timeZone string) error {
 		log.Warnf("commit %s: too old commit date (%s earlier). Please check your system clock!",
 			v.CommitID(), getDuration(currentTs-ts))
 	}
-	log.Debugf("commit %s: ts is : %d, currentTs is : %d", v.CommitID(), ts, currentTs)
 	return nil
 }
 
@@ -223,7 +211,7 @@ func (v *commitLog) checkAuthorCommitter() bool {
 		ret = false
 	} else {
 		author = m[1]
-		if err = v.checkCommitDate(m[2], m[4]); err != nil {
+		if err = v.checkCommitDate(m[2]); err != nil {
 			log.Errorf("commit %s: bad author date: %s", v.CommitID(), err)
 			ret = false
 		}
@@ -236,7 +224,7 @@ func (v *commitLog) checkAuthorCommitter() bool {
 		ret = false
 	} else {
 		committer = m[1]
-		if err = v.checkCommitDate(m[2], m[4]); err != nil {
+		if err = v.checkCommitDate(m[2]); err != nil {
 			log.Errorf("commit %s: bad committer date: %s", v.CommitID(), err)
 			ret = false
 		}
