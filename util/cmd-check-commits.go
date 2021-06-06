@@ -656,10 +656,25 @@ func CmdCheckCommits(args ...string) bool {
 			return false
 		}
 	}
+	pass := 0
+	fail := 0
 	for _, commit := range commits {
 		if !CheckCommit(commit) {
 			ret = false
+			fail += 1
+		} else {
+			pass += 1
 		}
 	}
+	if len(commits) > 0 {
+		if fail != 0 {
+			log.Errorf("checking commits: %d passed, %d failed.", pass, fail)
+		} else {
+			log.Infof("checking commits: %d passed.", pass)
+		}
+	} else {
+		log.Infoln("no commit checked.")
+	}
+
 	return ret
 }
