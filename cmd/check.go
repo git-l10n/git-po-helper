@@ -25,7 +25,7 @@ func (v *checkCommand) Command() *cobra.Command {
 	}
 	v.cmd.Flags().Bool("no-gpg",
 		false,
-		"do no verify gpg-signed commit")
+		"do not verify gpg-signed commit")
 	v.cmd.Flags().BoolP("force",
 		"f",
 		false,
@@ -33,9 +33,13 @@ func (v *checkCommand) Command() *cobra.Command {
 	v.cmd.Flags().Bool("core",
 		false,
 		"also check XX.po against "+util.CorePot)
+	v.cmd.Flags().Bool("ignore-typos",
+		false,
+		"do not check typos in .po file")
 	viper.BindPFlag("check--no-gpg", v.cmd.Flags().Lookup("no-gpg"))
 	viper.BindPFlag("check--force", v.cmd.Flags().Lookup("force"))
 	viper.BindPFlag("check--core", v.cmd.Flags().Lookup("core"))
+	viper.BindPFlag("check--ignore-typos", v.cmd.Flags().Lookup("ignore-typos"))
 
 	return v.cmd
 }
