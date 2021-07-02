@@ -8,7 +8,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
 
+	"github.com/gorilla/i18n/gettext"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -21,6 +24,15 @@ type Prompt struct {
 	Silence     bool
 }
 
+var (
+	varNamePattern      = regexp.MustCompile(`[<\[]?\b([a-zA-Z]+\.[a-zA-Z]+|[a-zA-Z]+_[a-zA-Z]+)\b[>\]]?`)
+	varNameExcludeWords = []string{
+		"e.g",
+		"i.e",
+		"example.com",
+	}
+)
+
 func (v *Prompt) String() string {
 	return fmt.Sprintf("[%s]", v.ShortPrompt)
 }
@@ -31,6 +43,90 @@ func (v *Prompt) Width() int {
 		return 13
 	}
 	return v.PromptWidth
+}
+
+func checkTyposInMoFile(moFile string) {
+	if viper.GetBool("check-po--ignore-typos") || viper.GetBool("check--ignore-typos") {
+		return
+	}
+
+	f, err := os.Open(moFile)
+	if err != nil {
+		log.Errorf("cannot open %s: %s", moFile, err)
+	}
+	defer f.Close()
+	iter := gettext.ReadMo(f)
+	for {
+		msg, err := iter.Next()
+		if err != nil {
+			if err != io.EOF {
+				log.Errorf("fail to iterator: %s\n", err)
+			}
+			break
+		}
+		if len(msg.StrPlural) == 0 {
+			checkTypos(msg.Id, msg.Str)
+		} else {
+			for i := range msg.StrPlural {
+				if i == 0 {
+					checkTypos(msg.Id, msg.StrPlural[i])
+				} else {
+					checkTypos(msg.IdPlural, msg.StrPlural[i])
+				}
+			}
+		}
+	}
+}
+
+func checkTypos(msgID, msgStr []byte) {
+	if len(msgStr) == 0 {
+		return
+	}
+
+	matchesInID := varNamePattern.FindAllStringSubmatch(string(msgID), -1)
+	if len(matchesInID) == 0 {
+		return
+	}
+	matchesInStr := varNamePattern.FindAllStringSubmatch(string(msgStr), -1)
+	unmatched := []string{}
+	for _, m := range matchesInID {
+		// Ignore exclude words
+		foundExclude := false
+		for _, exclude := range varNameExcludeWords {
+			if m[1] == exclude {
+				foundExclude = true
+				break
+			}
+		}
+		if foundExclude {
+			continue
+		}
+
+		// Ignore "<var_name>" and "[var_name]" in msgid.
+		if len(m[0]) == len(m[1])+2 {
+			continue
+		}
+
+		found := false
+		for _, mStr := range matchesInStr {
+			if m[1] == mStr[1] {
+				found = true
+				break
+			}
+		}
+		if found {
+			continue
+		}
+
+		unmatched = append(unmatched, m[1])
+	}
+	if len(unmatched) > 0 {
+		log.Warnf("mismatch variable names in msgstr: %s",
+			strings.Join(unmatched, ", "))
+		log.Warnf(">> msgid: %s", msgID)
+		log.Warnf(">> msgstr: %s", msgStr)
+		log.Warnln("")
+	}
 }
 
 func runPoChecking(poFile string, prompt Prompt, backCompatible bool) bool {
@@ -78,9 +174,18 @@ func runPoChecking(poFile string, prompt Prompt, backCompatible bool) bool {
 	if execProgram == "" {
 		execProgram = "msgfmt"
 	}
+
+	moFile, err := ioutil.TempFile("", "mofile")
+	if err != nil {
+		log.Error(err)
+		return false
+	}
+	defer os.Remove(moFile.Name())
+	moFile.Close()
+
 	cmd := exec.Command(execProgram,
 		"-o",
-		"-",
+		moFile.Name(),
 		"--check",
 		"--statistics",
 		poFile)
@@ -117,6 +222,12 @@ func runPoChecking(poFile string, prompt Prompt, backCompatible bool) bool {
 			fmt.Printf("%-*s %s", prompt.Width(), prompt.String(), line)
 		}
 	}
+
+	// Check typos in mo file.
+	if !backCompatible {
+		checkTyposInMoFile(moFile.Name())
+	}
+
 	return ret
 }
 
