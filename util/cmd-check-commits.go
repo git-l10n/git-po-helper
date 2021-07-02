@@ -661,9 +661,9 @@ func CmdCheckCommits(args ...string) bool {
 	for _, commit := range commits {
 		if !CheckCommit(commit) {
 			ret = false
-			fail += 1
+			fail++
 		} else {
-			pass += 1
+			pass++
 		}
 	}
 	if len(commits) > 0 {

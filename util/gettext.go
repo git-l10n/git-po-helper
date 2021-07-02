@@ -33,7 +33,7 @@ func (v *Prompt) Width() int {
 	return v.PromptWidth
 }
 
-func runPoChecking(backCompatibleGettext string, poFile string, prompt Prompt) bool {
+func runPoChecking(poFile string, prompt Prompt, backCompatible bool) bool {
 	var (
 		msgs            []string
 		ret             = true
@@ -41,16 +41,26 @@ func runPoChecking(backCompatibleGettext string, poFile string, prompt Prompt) b
 		bannerDisplayed bool
 	)
 
+	if backCompatible {
+		if BackCompatibleGetTextDir == "" {
+			log.Errorf("cannot find gettext 0.14, and won't run gettext backward compatible test")
+			return false
+		}
+		execProgram = filepath.Join(BackCompatibleGetTextDir, "msgfmt")
+	} else {
+		execProgram = "msgfmt"
+	}
+
 	showCheckingBanner := func(err error) {
 		if !bannerDisplayed {
 			bannerDisplayed = true
-			if backCompatibleGettext != "" {
+			if backCompatible {
 				if err != nil {
 					log.Infof(`Checking syntax of po file for "%s" (use "%s" for backward compatible)`,
-						prompt.LongPrompt, backCompatibleGettext)
+						prompt.LongPrompt, execProgram)
 				} else {
 					log.Debugf(`Checking syntax of po file for "%s" (use "%s" for backward compatible)`,
-						prompt.LongPrompt, backCompatibleGettext)
+						prompt.LongPrompt, execProgram)
 				}
 			} else {
 				if err != nil {
@@ -65,7 +75,6 @@ func runPoChecking(backCompatibleGettext string, poFile string, prompt Prompt) b
 		}
 	}
 
-	execProgram = backCompatibleGettext
 	if execProgram == "" {
 		execProgram = "msgfmt"
 	}
@@ -115,7 +124,7 @@ func runPoChecking(backCompatibleGettext string, poFile string, prompt Prompt) b
 func CheckPoFile(poFile string, prompt Prompt) bool {
 	var ret = true
 
-	ret = runPoChecking("", poFile, prompt)
+	ret = runPoChecking(poFile, prompt, false)
 	if !ret {
 		return ret
 	}
@@ -128,7 +137,7 @@ func CheckPoFile(poFile string, prompt Prompt) bool {
 	if viper.GetInt("verbose") == 0 {
 		prompt.Silence = true
 	}
-	return runPoChecking(filepath.Join(BackCompatibleGetTextDir, "msgfmt"), poFile, prompt)
+	return runPoChecking(poFile, prompt, true)
 }
 
 // CheckCorePoFile checks syntax of "po/xx.po" against "po-core/core.pot"
@@ -169,7 +178,7 @@ func CheckCorePoFile(locale string, prompt Prompt) bool {
 		return false
 	}
 
-	return runPoChecking("", fout.Name(), prompt)
+	return runPoChecking(fout.Name(), prompt, false)
 }
 
 // GenerateCorePot will generate "po-core/core.pot"
