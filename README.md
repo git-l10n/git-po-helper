@@ -1,4 +1,4 @@
-[![Build Status](https://dev.azure.com/gitself/git-po-helper/_apis/build/status/git-l10n.git-po-helper)](https://dev.azure.com/gitself/git-po-helper/_build/latest?definitionId=1)
+[![CI](https://github.com/git-l10n/git-po-helper/actions/workflows/main.yml/badge.svg)](https://github.com/git-l10n/git-po-helper/actions/workflows/main.yml)
 
 **A helper program to check conventions for git l10n contributions**
 
