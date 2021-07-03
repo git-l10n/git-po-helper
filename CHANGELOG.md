@@ -2,6 +2,14 @@
 
 Changes of git-po-helper.
 
+## 0.0.5 (2021-7-3)
+
+* Run CI using github action instead of azure-pipeline
+* check-po: check typos of unmatched variable names
+* Show number of commits checked
+* Commit time is UTC time, no need to check offset
+
+
 ## 0.0.3 (2021-6-3)
 
 * version: do not run pre-checks for version cmd
