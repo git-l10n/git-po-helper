@@ -4,6 +4,8 @@ test_description="test git-po-helper team"
 
 . ./lib/sharness.sh
 
+HELPER="git-po-helper --no-gettext-back-compatible"
+
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
 	test -f workdir/po/TEAMS
@@ -19,7 +21,7 @@ test_expect_success "check syntax of po/TEAMS" '
 
 		ERROR: fail to execute "git-po-helper team"
 		EOF
-		test_must_fail git-po-helper team --check >out 2>&1 &&
+		test_must_fail $HELPER team --check >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -35,7 +37,7 @@ test_expect_success "fixed po/TEAMS" '
 
 		cat >expect <<-EOF &&
 		EOF
-		git-po-helper team --check >out 2>&1 &&
+		$HELPER team --check >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -64,7 +66,7 @@ test_expect_success "show teams" '
 		zh_CN (Simplified Chinese)
 		zh_TW (Traditional Chinese)
 		EOF
-		git-po-helper team >out &&
+		$HELPER team >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -93,7 +95,7 @@ test_expect_success "show team leaders" '
 		Jiang Xin <worldhello.net@gmail.com>
 		Yi-Jyun Pan <pan93412@gmail.com>
 		EOF
-		git-po-helper team --leader >out &&
+		$HELPER team --leader >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -135,7 +137,7 @@ test_expect_success "show team members" '
 		Franklin Weng <franklin@goodhorse.idv.tw>
 		EOF
 
-		git-po-helper team --members >out &&
+		$HELPER team --members >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)

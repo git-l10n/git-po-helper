@@ -4,6 +4,8 @@ test_description="test git-po-helper update"
 
 . ./lib/sharness.sh
 
+HELPER="git-po-helper --no-gettext-back-compatible"
+
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
 	test -f workdir/po/git.pot
@@ -13,7 +15,7 @@ test_expect_success "update: zh_CN.po not exist" '
 	(
 		cd workdir &&
 		test ! -f po/zh_CN.po &&
-		test_must_fail git-po-helper update zh_CN >out 2>&1 &&
+		test_must_fail $HELPER update zh_CN >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		level=error msg="fail to update \"po/zh_CN.po\", does not exist"
@@ -56,7 +58,7 @@ test_expect_success "fail to update zh_CN: bad syntax of zh_CN.po" '
 		msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz""
 		EOF
 
-		test_must_fail git-po-helper update zh_CN >out 2>&1 &&
+		test_must_fail $HELPER update zh_CN >out 2>&1 &&
 		grep "po/zh_CN.po:25: end-of-line within string" out >actual &&
 		grep "^level=error" out >>actual &&
 		cat >expect <<-\EOF &&
@@ -98,7 +100,7 @@ test_expect_success "update zh_CN successfully" '
 		msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz"
 		EOF
 
-		git-po-helper update zh_CN
+		$HELPER update zh_CN
 	)
 '
 

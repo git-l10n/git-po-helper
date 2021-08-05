@@ -26,13 +26,16 @@ func isGetTextBackCompatible(execPath string) bool {
 	if err != nil {
 		return false
 	}
-	return strings.Contains(line, " 0.14.")
+	return strings.Contains(line, " 0.14") || strings.Contains(line, " 0.15")
 }
 
 func getBackCompatibleGetTextDir() string {
 	var getTextDir string
 
 	if viper.GetBool("no-gettext-back-compatible") {
+		return ""
+	}
+	if _, ok := os.LookupEnv("NO_GETTEXT_14"); ok {
 		return ""
 	}
 	execPath, err := exec.LookPath("gettext")
@@ -94,7 +97,10 @@ func CheckPrereq() error {
 
 	BackCompatibleGetTextDir = getBackCompatibleGetTextDir()
 	if BackCompatibleGetTextDir == "" {
-		log.Warnln("cannot find gettext 0.14, and won't run gettext backward compatible test")
+		if !viper.GetBool("no-gettext-back-compatible") {
+			log.Warnln("cannot find gettext 0.14 or 0.15, and couldn't run some checks. See:")
+			log.Warnf("    https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/")
+		}
 	} else {
 		log.Debugf(`find backward compatible gettext at "%s"`, BackCompatibleGetTextDir)
 	}

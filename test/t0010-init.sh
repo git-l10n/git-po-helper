@@ -4,6 +4,8 @@ test_description="test git-po-helper init"
 
 . ./lib/sharness.sh
 
+HELPER="git-po-helper --no-gettext-back-compatible"
+
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
 	test -f workdir/po/git.pot
@@ -13,7 +15,7 @@ test_expect_success "fail to init: zh_CN.po already exist" '
 	(
 		cd workdir &&
 		touch po/zh_CN.po &&
-		test_must_fail git-po-helper init zh_CN >out 2>&1 &&
+		test_must_fail $HELPER init zh_CN >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		level=error msg="fail to init, \"po/zh_CN.po\" is already exist"
@@ -45,7 +47,7 @@ test_expect_success "init zh_CN" '
 		    of Git l10n maintenance.
 		========================================================================
 		EOF
-		git-po-helper init zh_CN >actual &&
+		$HELPER init zh_CN >actual &&
 		test_cmp expect actual &&
 		test -f po/zh_CN.po
 	)
@@ -54,7 +56,7 @@ test_expect_success "init zh_CN" '
 test_expect_success "init with invalid locale" '
 	(
 		cd workdir &&
-		test_must_fail git-po-helper init xx >out 2>&1 &&
+		test_must_fail $HELPER init xx >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		level=error msg="fail to init: invalid language code for locale \"xx\""
@@ -71,7 +73,7 @@ test_expect_success "init --core en_GB" '
 		cd workdir &&
 		test ! -f po-core/core.pot &&
 		test ! -f po-core/en_GB.po &&
-		git-po-helper init --core en_GB >actual &&
+		$HELPER init --core en_GB >actual &&
 		cat >expect <<-\EOF &&
 
 		========================================================================
@@ -101,7 +103,7 @@ test_expect_success "init --core en_GB" '
 test_expect_success "init --core with invalid locale" '
 	(
 		cd workdir &&
-		test_must_fail git-po-helper init --core xx >out 2>&1 &&
+		test_must_fail $HELPER init --core xx >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		level=error msg="fail to init: invalid language code for locale \"xx\""

@@ -4,6 +4,8 @@ test_description="test git-po-helper version"
 
 . ./lib/sharness.sh
 
+HELPER="git-po-helper --no-gettext-back-compatible"
+
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
 	test -f workdir/po/git.pot
@@ -12,7 +14,7 @@ test_expect_success "setup" '
 test_expect_success "git-po-helper version output test" '
 	(
 		cd workdir &&
-		git-po-helper version >out &&
+		$HELPER version >out &&
 		grep "^git-po-helper version" out >expect &&
 		test -s expect
 	)

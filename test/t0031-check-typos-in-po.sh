@@ -4,6 +4,8 @@ test_description="check typos in po files"
 
 . ./lib/sharness.sh
 
+HELPER="git-po-helper --no-gettext-back-compatible"
+
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
 	test -f workdir/po/git.pot
@@ -59,7 +61,7 @@ test_expect_success "check typos of mismatched constant strings" '
 		msgstr "git-credential-helper [参数]"
 		EOF
 
-		git-po-helper check-po  zh_CN >out 2>&1 &&
+		$HELPER check-po  zh_CN >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		[po/zh_CN.po] 9 translated messages.
