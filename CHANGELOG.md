@@ -2,6 +2,13 @@
 
 Changes of git-po-helper.
 
+## 0.0.6 (2021-8-7)
+
+* Check more types: command names, options, and shell variables.
+* Update warning message for unable to locate gettext 0.14.
+* github-action: add test on macOS.
+
+
 ## 0.0.5 (2021-7-3)
 
 * Run CI using github action instead of azure-pipeline
