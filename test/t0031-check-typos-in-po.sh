@@ -11,11 +11,54 @@ test_expect_success "setup" '
 	test -f workdir/po/git.pot
 '
 
+test_expect_success "mismatched shell variables" '
+	(
+		cd workdir &&
+		cat >po/zh_CN.po <<-\EOF &&
+		msgid ""
+		msgstr ""
+		"Project-Id-Version: Git\n"
+		"Report-Msgid-Bugs-To: Git Mailing List <git@vger.kernel.org>\n"
+		"POT-Creation-Date: 2021-03-04 22:41+0800\n"
+		"PO-Revision-Date: 2021-03-04 22:41+0800\n"
+		"Last-Translator: Automatically generated\n"
+		"Language-Team: none\n"
+		"Language: zh_CN\n"
+		"MIME-Version: 1.0\n"
+		"Content-Type: text/plain; charset=UTF-8\n"
+		"Content-Transfer-Encoding: 8bit\n"
+		"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+		msgid "exit code $res from $command is < 0 or >= 128"
+		msgstr "命令的退出码res 应该 < 0 或 >= 128"
+
+		msgid ""
+		"Unable to find current ${remote_name}/${branch} revision in submodule path "
+		"${sm_path}"
+		msgstr ""
+		"无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
+		EOF
+
+		$HELPER check-po  zh_CN >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
+		cat >expect <<-\EOF &&
+		[po/zh_CN.po] 2 translated messages.
+		level=warning msg="mismatch variable names in msgstr: ${remote_name}, ${branch}, ${sm_path}"
+		level=warning msg=">> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
+		level=warning msg=">> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
+		level=warning
+		level=warning msg="mismatch variable names in msgstr: $res, $command"
+		level=warning msg=">> msgid: exit code $res from $command is < 0 or >= 128"
+		level=warning msg=">> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
+		level=warning
+		EOF
+		test_cmp expect actual
+	)
+'
+
 test_expect_success "check typos of mismatched constant strings" '
 	(
 		cd workdir &&
-		test ! -f po/zh_CN.po &&
-
 		cat >po/zh_CN.po <<-\EOF &&
 		msgid ""
 		msgstr ""

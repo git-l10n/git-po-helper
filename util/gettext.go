@@ -26,15 +26,17 @@ type Prompt struct {
 
 var (
 	varNamePattern = regexp.MustCompile(`[<\[]?` +
-		`\b` +
 		`(` +
-		`[a-zA-Z.]+\.[a-zA-Z]+` + // match git config variables
+		`\${[a-zA-Z0-9_]+}` + // match shell variables
 		`|` +
-		`[a-zA-Z_]+_[a-zA-Z]+` + // match variable names
+		`\$[a-zA-Z0-9_]+` + // match shell variables
 		`|` +
-		`[a-zA-Z-]*--[a-zA-Z-]+` + // match git commands or options
+		`\b[a-zA-Z.]+\.[a-zA-Z]+\b` + // match git config variables
+		`|` +
+		`\b[a-zA-Z_]+_[a-zA-Z]+\b` + // match variable names
+		`|` +
+		`\b[a-zA-Z-]*--[a-zA-Z-]+\b` + // match git commands or options
 		`)` +
-		`\b` +
 		`[>\]]?`)
 	varNameExcludeWords = []string{
 		"e.g",
