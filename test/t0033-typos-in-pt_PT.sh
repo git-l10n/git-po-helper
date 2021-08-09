@@ -16,9 +16,17 @@ level=warning msg="mismatch variable names: --contains, --no-contains"
 level=warning msg=">> msgid: --no-contains option is only allowed in list mode"
 level=warning msg=">> msgstr: a opção --contains só é permitida no modo lista"
 level=warning
-level=warning msg="mismatch variable names: --no-write-bitmap-, --no-write-bitmap-index"
+level=warning msg="mismatch variable names: --no-write-bitmap-index"
 level=warning msg=">> msgid: Incremental repacks are incompatible with bitmap indexes.  Use\n--no-write-bitmap-index or disable the pack.writebitmaps configuration."
 level=warning msg=">> msgstr: Repacks incrementais são incompatíveis com bitmap indexes. Usa\n--no-write-bitmap-índex ou desative a configuração pack.writebitmaps."
+level=warning
+level=warning msg="mismatch variable names: ${n}"
+level=warning msg=">> msgid: The commit message #${n} will be skipped:"
+level=warning msg=">> msgstr: A mensagem de commit nº${n} será ignorada:"
+level=warning
+level=warning msg="mismatch variable names: ${n}"
+level=warning msg=">> msgid: This is the commit message #${n}:"
+level=warning msg=">> msgstr: Esta é a mensagem de commit nº${n}:"
 level=warning
 level=warning msg="mismatch variable names: fetch.ouput, fetch.output"
 level=warning msg=">> msgid: configuration fetch.output contains invalid value %s"

@@ -20,11 +20,11 @@ level=warning msg="mismatch variable names: $HOME"
 level=warning msg=">> msgid: $HOME not set"
 level=warning msg=">> msgstr: Chưa đặt biến môi trường HOME"
 level=warning
-level=warning msg="mismatch variable names: --contents, n--contents"
+level=warning msg="mismatch variable names: --contents"
 level=warning msg=">> msgid: --contents and --reverse do not blend well."
 level=warning msg=">> msgstr: tùy chọn--contents và --reverse không được trộn vào nhau."
 level=warning
-level=warning msg="mismatch variable names: --deepen, n--deepen"
+level=warning msg="mismatch variable names: --deepen"
 level=warning msg=">> msgid: --deepen and --depth are mutually exclusive"
 level=warning msg=">> msgstr: Các tùy chọn--deepen và --depth loại từ lẫn nhau"
 level=warning
@@ -32,7 +32,7 @@ level=warning msg="mismatch variable names: --long"
 level=warning msg=">> msgid: --long and -z are incompatible"
 level=warning msg=">> msgstr: hai tùy chọn -long và -z không tương thích với nhau"
 level=warning
-level=warning msg="mismatch variable names: --stdout, n--stdout"
+level=warning msg="mismatch variable names: --stdout"
 level=warning msg=">> msgid: --stdout, --output, and --output-directory are mutually exclusive"
 level=warning msg=">> msgstr: Các tùy chọn--stdout, --output, và --output-directory loại từ lẫn nhau"
 level=warning
@@ -60,7 +60,7 @@ level=warning msg="mismatch variable names: --url"
 level=warning msg=">> msgid: git submodule--helper clone [--prefix=<path>] [--quiet] [--reference <repository>] [--name <name>] [--depth <depth>] [--single-branch] --url <url> --path <path>"
 level=warning msg=">> msgstr: git submodule--helper clone [--prefix=</đường/dẫn>] [--quiet] [--reference <kho>] [--name <tên>] [--depth <sâu>] [--single-branch] [--url <url>] --path </đường/dẫn>"
 level=warning
-level=warning msg="mismatch variable names: --decorate, n--decorate"
+level=warning msg="mismatch variable names: --decorate"
 level=warning msg=">> msgid: invalid --decorate option: %s"
 level=warning msg=">> msgstr: tùy chọn--decorate không hợp lệ: %s"
 level=warning
@@ -74,7 +74,7 @@ level=warning msg=">> msgstr: đường dẫn đến lệnh git-upload-pack trê
 level=warning
 EOF
 
-test_expect_failure "check typos in vi.po" '
+test_expect_success "check typos in vi.po" '
 	git-po-helper check-po vi >actual 2>&1 &&
 	test_cmp expect actual
 '

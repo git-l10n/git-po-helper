@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/gorilla/i18n/gettext"
 	log "github.com/sirupsen/logrus"
@@ -135,6 +137,36 @@ func checkTyposInMoFile(moFile string) {
 	}
 }
 
+func isUnicodeFragment(str, substr string) (bool, error) {
+	var (
+		r    rune
+		size int
+	)
+	idx := strings.Index(str, substr)
+	if idx < 0 {
+		return false, fmt.Errorf("substr %s not in %s", substr, str)
+	}
+	head := str[0:idx]
+	tail := str[idx+len(substr):]
+	if len(head) != 0 {
+		r, size = utf8.DecodeLastRuneInString(head)
+		if size > 1 {
+			if !unicode.IsPunct(r) && !unicode.IsSymbol(r) && !unicode.IsSpace(r) {
+				return true, nil
+			}
+		}
+	}
+	if len(tail) != 0 {
+		r, size = utf8.DecodeRuneInString(tail)
+		if size > 1 {
+			if !unicode.IsPunct(r) && !unicode.IsSymbol(r) && !unicode.IsSpace(r) {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
 func findUnmatchVariables(src, target string) []string {
 	var (
 		srcMap    = make(map[string]bool)
@@ -146,7 +178,9 @@ func findUnmatchVariables(src, target string) []string {
 		srcMap[m[1]] = false
 	}
 	for _, m := range keepWordsPattern.FindAllStringSubmatch(target, -1) {
-		targetMap[m[1]] = false
+		if frag, err := isUnicodeFragment(target, m[1]); err == nil && !frag {
+			targetMap[m[1]] = false
+		}
 	}
 
 	for key := range targetMap {
