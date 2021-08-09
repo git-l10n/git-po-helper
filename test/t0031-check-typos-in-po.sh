@@ -54,19 +54,19 @@ test_expect_success "check typos in zh_CN.po" '
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		[po/zh_CN.po] 6 translated messages.
-		level=warning msg="mismatch variable names in msgstr: config_variable"
+		level=warning msg="mismatch variable names: config_variable"
 		level=warning msg=">> msgid: check settings of config_variable"
 		level=warning msg=">> msgstr: 检查配置变量的设置"
 		level=warning
-		level=warning msg="mismatch variable names in msgstr: config.variables"
+		level=warning msg="mismatch variable names: config.variables"
 		level=warning msg=">> msgid: checking config.variables (one command)"
 		level=warning msg=">> msgstr: 检查 配置.变量（一条命令）"
 		level=warning
-		level=warning msg="mismatch variable names in msgstr: config.variables"
+		level=warning msg="mismatch variable names: config.variables"
 		level=warning msg=">> msgid: checking config.variables (%d commands)"
 		level=warning msg=">> msgstr: 检查 配置.变量（%d 条命令）"
 		level=warning
-		level=warning msg="mismatch variable names in msgstr: log.graphColors"
+		level=warning msg="mismatch variable names: log.graphColors"
 		level=warning msg=">> msgid: ignore invalid color %.*s in log.graphColors"
 		level=warning msg=">> msgstr: 忽略 log.graphColorss 中无效的颜色 %.*s"
 		level=warning
