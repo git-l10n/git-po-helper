@@ -39,8 +39,7 @@ test_expect_success "mismatched shell variables" '
 		"无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
 		EOF
 
-		$HELPER check-po  zh_CN >out 2>&1 &&
-		make_user_friendly_and_stable_output <out >actual &&
+		$HELPER check-po  zh_CN >actual 2>&1 &&
 		cat >expect <<-\EOF &&
 		[po/zh_CN.po] 2 translated messages.
 		level=warning msg="mismatch variable names: ${branch}, ${remote_name}, ${sm_path}, sm_path"
@@ -79,8 +78,7 @@ test_expect_success "trash variables in msgStr" '
 
 		EOF
 
-		$HELPER check-po  zh_CN >out 2>&1 &&
-		make_user_friendly_and_stable_output <out >actual &&
+		$HELPER check-po  zh_CN >actual 2>&1 &&
 		cat >expect <<-\EOF &&
 		[po/zh_CN.po] 1 translated message.
 		level=warning msg="mismatch variable names: $command, $res"
@@ -140,8 +138,7 @@ test_expect_success "check typos of mismatched constant strings" '
 		msgstr "git-credential-helper [参数]"
 		EOF
 
-		$HELPER check-po  zh_CN >out 2>&1 &&
-		make_user_friendly_and_stable_output <out >actual &&
+		$HELPER check-po  zh_CN >actual 2>&1 &&
 		cat >expect <<-\EOF &&
 		[po/zh_CN.po] 9 translated messages.
 		level=warning msg="mismatch variable names: CHERRY_PICK_HEAD, CHERRY_PICK_HEADS"

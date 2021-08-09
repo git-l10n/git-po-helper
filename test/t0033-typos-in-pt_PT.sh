@@ -4,6 +4,8 @@ test_description="check typos in pt_PT.po"
 
 . ./lib/sharness.sh
 
+HELPER="git-po-helper --no-gettext-back-compatible"
+
 test_expect_success "setup" '
 	mkdir po &&
 	touch po/git.pot &&
@@ -39,7 +41,7 @@ level=warning
 EOF
 
 test_expect_success "check typos in pt_PT.po" '
-	git-po-helper check-po pt_PT >actual 2>&1 &&
+	$HELPER check-po pt_PT >actual 2>&1 &&
 	test_cmp expect actual
 '
 
