@@ -12,9 +12,21 @@ test_expect_success "setup" '
 
 cat >expect <<-\EOF
 [po/pt_PT.po] 2876 translated messages, 1320 fuzzy translations, 842 untranslated messages.
-level=warning msg="mismatch variable names: fetch.output"
+level=warning msg="mismatch variable names: --contains, --no-contains"
+level=warning msg=">> msgid: --no-contains option is only allowed in list mode"
+level=warning msg=">> msgstr: a opção --contains só é permitida no modo lista"
+level=warning
+level=warning msg="mismatch variable names: --no-write-bitmap-, --no-write-bitmap-index"
+level=warning msg=">> msgid: Incremental repacks are incompatible with bitmap indexes.  Use\n--no-write-bitmap-index or disable the pack.writebitmaps configuration."
+level=warning msg=">> msgstr: Repacks incrementais são incompatíveis com bitmap indexes. Usa\n--no-write-bitmap-índex ou desative a configuração pack.writebitmaps."
+level=warning
+level=warning msg="mismatch variable names: fetch.ouput, fetch.output"
 level=warning msg=">> msgid: configuration fetch.output contains invalid value %s"
 level=warning msg=">> msgstr: a configuração fetch.ouput contém o valor inválido %s"
+level=warning
+level=warning msg="mismatch variable names: git-mailsplit"
+level=warning msg=">> msgid: pass --keep-cr flag to git-mailsplit for mbox format"
+level=warning msg=">> msgstr: passar a opção --keep-cr ao gitmailsplit para formato de mbox"
 level=warning
 EOF
 
