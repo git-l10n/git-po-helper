@@ -2,3 +2,5 @@ git.tar
 git.tar.sign
 test-repository
 *.swp
+test-results/
+trash directory.*/
