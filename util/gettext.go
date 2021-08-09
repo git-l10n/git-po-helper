@@ -133,7 +133,7 @@ func checkTypos(msgID, msgStr []byte) {
 		unmatched = append(unmatched, m[1])
 	}
 	if len(unmatched) > 0 {
-		log.Warnf("mismatch variable names in msgstr: %s",
+		log.Warnf("mismatch variable names: %s",
 			strings.Join(unmatched, ", "))
 		log.Warnf(">> msgid: %s", msgID)
 		log.Warnf(">> msgstr: %s", msgStr)
