@@ -2,6 +2,13 @@
 
 Changes of git-po-helper.
 
+## 0.2.0 (2021-8-9)
+
+* check-po: do not check fragment keep words in a unicode string
+* check-po: find typos in two directions
+* test: add .po examples and search typos in examples
+
+
 ## 0.0.6 (2021-8-7)
 
 * Check more types: command names, options, and shell variables.
