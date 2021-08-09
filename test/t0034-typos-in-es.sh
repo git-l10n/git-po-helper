@@ -48,6 +48,14 @@ level=warning msg="mismatch variable names: --allow-empty, --alow-empty"
 level=warning msg=">> msgid: You asked to amend the most recent commit, but doing so would make\nit empty. You can repeat your command with --allow-empty, or you can\nremove the commit entirely with \"git reset HEAD^\".\n"
 level=warning msg=">> msgstr: Has solicitado un amend en tu commit más reciente, pero hacerlo lo\nvaciaría. Puedes repetir el comando con --alow-empty, o puedes eliminar\nel commit completamente con \"git reset HEAD^\".\n"
 level=warning
+level=warning msg="mismatch variable names: --filter, usar--filter"
+level=warning msg=">> msgid: cannot use --filter with --stdin-packs"
+level=warning msg=">> msgstr: no se puede usar--filter con --stdin-packs"
+level=warning
+level=warning msg="mismatch variable names: --filter, usar--filter"
+level=warning msg=">> msgid: cannot use --filter without --stdout"
+level=warning msg=">> msgstr: no se puede usar--filter sin --stdout"
+level=warning
 level=warning msg="mismatch variable names: dimmed_zebra"
 level=warning msg=">> msgid: color moved setting must be one of 'no', 'default', 'blocks', 'zebra', 'dimmed-zebra', 'plain'"
 level=warning msg=">> msgstr: opción de color tiene que ser una de 'no', 'default', 'blocks', 'zebra', 'dimmed_zebra', 'plain'"
@@ -60,25 +68,17 @@ level=warning msg="mismatch variable names: format.headers, formate.headers"
 level=warning msg=">> msgid: format.headers without value"
 level=warning msg=">> msgstr: formate.headers. sin valor"
 level=warning
-level=warning msg="mismatch variable names: submodule--helper"
-level=warning msg=">> msgid: submodule--helper print-default-remote takes no arguments"
-level=warning msg=">> msgstr: subomdule--helper print-default-remote no toma argumentos"
-level=warning
 level=warning msg="mismatch variable names: git-apply"
 level=warning msg=">> msgid: passed to 'git apply'"
 level=warning msg=">> msgstr: pasado a 'git-apply'"
-level=warning
-level=warning msg="mismatch variable names: s--abort"
-level=warning msg=">> msgid: try \"git cherry-pick (--continue | %s--abort | --quit)\""
-level=warning msg=">> msgstr: intenta \"git cherry-pick (--continue | --quit | %s --abort)\""
 level=warning
 level=warning msg="mismatch variable names: --sateged, --staged"
 level=warning msg=">> msgid: repository has been updated, but unable to write\nnew_index file. Check that disk is not full and quota is\nnot exceeded, and then \"git restore --staged :/\" to recover."
 level=warning msg=">> msgstr: el repositorio ha sido actualizado, pero no se pudo escribir el archivo\nnew_index. Verifique que el disco no este lleno y la quota no ha\nsido superada, y luego \"git restore --sateged :/\" para recuperar."
 level=warning
-level=warning msg="mismatch variable names: s--abort"
-level=warning msg=">> msgid: try \"git revert (--continue | %s--abort | --quit)\""
-level=warning msg=">> msgstr: intenta \"git revert (--continue | --quit | %s --abort)\""
+level=warning msg="mismatch variable names: submodule--helper, subomdule--helper"
+level=warning msg=">> msgid: submodule--helper print-default-remote takes no arguments"
+level=warning msg=">> msgstr: subomdule--helper print-default-remote no toma argumentos"
 level=warning
 level=warning msg="mismatch variable names: --raw, --stat"
 level=warning msg=">> msgid: synonym for '-p --raw'"
@@ -88,9 +88,21 @@ level=warning msg="mismatch variable names: --dirstat=archivos, --dirstat=files"
 level=warning msg=">> msgid: synonym for --dirstat=files,param1,param2..."
 level=warning msg=">> msgstr: sinonimo para --dirstat=archivos,param1,param2..."
 level=warning
+level=warning msg="mismatch variable names: --abort, s--abort"
+level=warning msg=">> msgid: try \"git cherry-pick (--continue | %s--abort | --quit)\""
+level=warning msg=">> msgstr: intenta \"git cherry-pick (--continue | --quit | %s --abort)\""
+level=warning
+level=warning msg="mismatch variable names: --abort, s--abort"
+level=warning msg=">> msgid: try \"git revert (--continue | %s--abort | --quit)\""
+level=warning msg=">> msgstr: intenta \"git revert (--continue | --quit | %s --abort)\""
+level=warning
 level=warning msg="mismatch variable names: load_cache_entires, load_cache_entries"
 level=warning msg=">> msgid: unable to join load_cache_entries thread: %s"
 level=warning msg=">> msgstr: no es posible unir hilo load_cache_entires: %s"
+level=warning
+level=warning msg="mismatch variable names: --reference, usa--reference"
+level=warning msg=">> msgid: use --reference only while cloning"
+level=warning msg=">> msgstr: usa--reference  solamente si estás clonado"
 level=warning
 level=warning msg="mismatch variable names: --group, --group=trailer"
 level=warning msg=">> msgid: using --group=trailer with stdin is not supported"
@@ -98,7 +110,7 @@ level=warning msg=">> msgstr: el uso de --group = trailer con stdin no es compat
 level=warning
 EOF
 
-test_expect_failure "check typos in es.po" '
+test_expect_success "check typos in es.po" '
 	git-po-helper check-po es >actual 2>&1 &&
 	test_cmp expect actual
 '
