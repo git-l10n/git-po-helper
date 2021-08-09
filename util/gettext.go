@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/gorilla/i18n/gettext"
@@ -25,23 +26,65 @@ type Prompt struct {
 }
 
 var (
-	varNamePattern = regexp.MustCompile(`[<\[]?` +
-		`(` +
-		`\${[a-zA-Z0-9_]+}` + // match shell variables
+	keepWordsPattern = regexp.MustCompile(`(` +
+		`\${[a-zA-Z0-9_]+}` + // match shell variables: ${n}, ...
 		`|` +
-		`\$[a-zA-Z0-9_]+` + // match shell variables
+		`\$[a-zA-Z0-9_]+` + // match shell variables: $PATH, ...
 		`|` +
-		`\b[a-zA-Z.]+\.[a-zA-Z]+\b` + // match git config variables
+		`\b[a-zA-Z.]+\.[a-zA-Z]+\b` + // match git config variables: color.ui, ...
 		`|` +
-		`\b[a-zA-Z_]+_[a-zA-Z]+\b` + // match variable names
+		`\b[a-zA-Z_]+_[a-zA-Z]+\b` + // match variable names: var_name, ...
 		`|` +
-		`\b[a-zA-Z-]*--[a-zA-Z-]+\b` + // match git commands or options
-		`)` +
-		`[>\]]?`)
-	varNameExcludeWords = []string{
-		"e.g",
-		"i.e",
-		"example.com",
+		`\bgit-[a-z-]+` + // match git commands: git-log, ...
+		`|` +
+		`\bgit [a-z]+-[a-z-]+` + // match git commands: git bisect--helper, ...
+		`|` +
+		`--[a-zA-Z-=]+` + // match git options: --option, --option=value, ...
+		`)`)
+	skipWordsPatterns = []struct {
+		Pattern *regexp.Regexp
+		Replace string
+	}{
+		{
+			Pattern: regexp.MustCompile(`\b(` +
+				`git-directories` +
+				`|` +
+				`e\.g\.?` +
+				`|` +
+				`i\.e\.?` +
+				`|` +
+				`t\.ex\.?` + // "e.g." in Swedish
+				`|` +
+				`p\.e\.?` + // "e.g." in Portuguese
+				`|` +
+				`z\.B\.?` + // "e.g." in German
+				`|` +
+				`v\.d\.?` + // "e.g." in Vietnamese
+				`|` +
+				`v\.v\.?` + // "etc." in Vietnamese
+				`)\b`),
+			Replace: "...",
+		},
+		{
+			// <variable_name>
+			Pattern: regexp.MustCompile(`<[^>]+>`),
+			Replace: "<...>",
+		},
+		{
+			// [variable_name]
+			Pattern: regexp.MustCompile(`\[[^]]+\]`),
+			Replace: "[...]",
+		},
+		{
+			// %2$s, %3$d, %2$.*1$s, %1$0.1f
+			Pattern: regexp.MustCompile(`%[0-9]+(\$\.\*[0-9]*)?\$`),
+			Replace: "%...",
+		},
+		{
+			// email: user@example.com, usuari@domini.com
+			Pattern: regexp.MustCompile(`[0-9a-za-z.-]+@[0-9a-za-z-]+\.[0-9a-zA-Z.-]+`),
+			Replace: "user@email",
+		},
 	}
 )
 
@@ -77,67 +120,85 @@ func checkTyposInMoFile(moFile string) {
 			break
 		}
 		if len(msg.StrPlural) == 0 {
-			checkTypos(msg.Id, msg.Str)
+			checkTypos(string(msg.Id), string(msg.Str))
 		} else {
 			for i := range msg.StrPlural {
 				if i == 0 {
-					checkTypos(msg.Id, msg.StrPlural[i])
+					checkTypos(string(msg.Id), string(msg.StrPlural[i]))
 				} else {
-					checkTypos(msg.IdPlural, msg.StrPlural[i])
+					checkTypos(string(msg.IdPlural), string(msg.StrPlural[i]))
 				}
 			}
 		}
 	}
 }
 
-func checkTypos(msgID, msgStr []byte) {
+func findUnmatchVariables(src, target string) []string {
+	var (
+		srcMap    = make(map[string]bool)
+		targetMap = make(map[string]bool)
+		unmatched []string
+	)
+
+	for _, m := range keepWordsPattern.FindAllStringSubmatch(src, -1) {
+		srcMap[m[1]] = false
+	}
+	for _, m := range keepWordsPattern.FindAllStringSubmatch(target, -1) {
+		targetMap[m[1]] = false
+	}
+
+	for key := range targetMap {
+		if _, ok := srcMap[key]; ok {
+			srcMap[key] = true
+			targetMap[key] = true
+		}
+	}
+	for key := range srcMap {
+		if !srcMap[key] {
+			unmatched = append(unmatched, key)
+		}
+	}
+	for key := range targetMap {
+		if !targetMap[key] {
+			unmatched = append(unmatched, key)
+		}
+	}
+	sort.Strings(unmatched)
+	return unmatched
+}
+
+func checkTypos(msgID, msgStr string) {
+	var (
+		unmatched  []string
+		origMsgID  = msgID
+		origMsgStr = msgStr
+	)
+
+	// Header entry
+	if len(msgID) == 0 {
+		return
+	}
+	// Untranslated entry
 	if len(msgStr) == 0 {
 		return
 	}
-
-	matchesInID := varNamePattern.FindAllStringSubmatch(string(msgID), -1)
-	if len(matchesInID) == 0 {
-		return
+	for _, re := range skipWordsPatterns {
+		if re.Pattern.MatchString(msgID) {
+			msgID = re.Pattern.ReplaceAllString(msgID, re.Replace)
+		}
+		if re.Pattern.MatchString(msgStr) {
+			msgStr = re.Pattern.ReplaceAllString(msgStr, re.Replace)
+		}
 	}
-	matchesInStr := varNamePattern.FindAllStringSubmatch(string(msgStr), -1)
-	unmatched := []string{}
-	for _, m := range matchesInID {
-		// Ignore exclude words
-		foundExclude := false
-		for _, exclude := range varNameExcludeWords {
-			if m[1] == exclude {
-				foundExclude = true
-				break
-			}
-		}
-		if foundExclude {
-			continue
-		}
 
-		// Ignore "<var_name>" and "[var_name]" in msgid.
-		if len(m[0]) == len(m[1])+2 {
-			continue
-		}
-
-		found := false
-		for _, mStr := range matchesInStr {
-			if m[1] == mStr[1] {
-				found = true
-				break
-			}
-		}
-		if found {
-			continue
-		}
-
-		unmatched = append(unmatched, m[1])
-	}
+	unmatched = findUnmatchVariables(msgID, msgStr)
 	if len(unmatched) > 0 {
-		log.Warnf("mismatch variable names in msgstr: %s",
+		log.Warnf("mismatch variable names: %s",
 			strings.Join(unmatched, ", "))
-		log.Warnf(">> msgid: %s", msgID)
-		log.Warnf(">> msgstr: %s", msgStr)
+		log.Warnf(">> msgid: %s", origMsgID)
+		log.Warnf(">> msgstr: %s", origMsgStr)
 		log.Warnln("")
+		return
 	}
 }
 
