@@ -43,11 +43,11 @@ test_expect_success "mismatched shell variables" '
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		[po/zh_CN.po] 2 translated messages.
-		level=warning msg="mismatch variable names in msgstr: ${remote_name}, ${branch}, ${sm_path}"
+		level=warning msg="mismatch variable names: ${remote_name}, ${branch}, ${sm_path}"
 		level=warning msg=">> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
 		level=warning msg=">> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
 		level=warning
-		level=warning msg="mismatch variable names in msgstr: $res, $command"
+		level=warning msg="mismatch variable names: $res, $command"
 		level=warning msg=">> msgid: exit code $res from $command is < 0 or >= 128"
 		level=warning msg=">> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
 		level=warning

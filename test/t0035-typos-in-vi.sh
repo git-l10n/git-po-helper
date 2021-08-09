@@ -12,6 +12,10 @@ test_expect_success "setup" '
 
 cat >expect <<-\EOF
 [po/vi.po]    5204 translated messages.
+level=warning msg="mismatch variable names: $HOME"
+level=warning msg=">> msgid: $HOME not set"
+level=warning msg=">> msgstr: Chưa đặt biến môi trường HOME"
+level=warning
 level=warning msg="mismatch variable names: add_cacheinfo"
 level=warning msg=">> msgid: add_cacheinfo failed for path '%s'; merge aborting."
 level=warning msg=">> msgstr: addinfo_cache gặp lỗi đối với đường dẫn “%s”; việc hòa trộn bị bãi bỏ."
