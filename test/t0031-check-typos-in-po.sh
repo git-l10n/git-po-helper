@@ -42,7 +42,7 @@ test_expect_success "mismatched shell variables" '
 		$HELPER check-po  zh_CN >actual 2>&1 &&
 		cat >expect <<-\EOF &&
 		[po/zh_CN.po] 2 translated messages.
-		level=warning msg="mismatch variable names: ${branch}, ${remote_name}, ${sm_path}, sm_path"
+		level=warning msg="mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
 		level=warning msg=">> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
 		level=warning msg=">> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
 		level=warning

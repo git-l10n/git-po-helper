@@ -175,11 +175,19 @@ func findUnmatchVariables(src, target string) []string {
 	)
 
 	for _, m := range keepWordsPattern.FindAllStringSubmatch(src, -1) {
-		srcMap[m[1]] = false
+		key := m[1]
+		if strings.HasPrefix(key, "${") && strings.HasSuffix(key, "}") {
+			key = "$" + key[2:len(key)-1]
+		}
+		srcMap[key] = false
 	}
 	for _, m := range keepWordsPattern.FindAllStringSubmatch(target, -1) {
-		if frag, err := isUnicodeFragment(target, m[1]); err == nil && !frag {
-			targetMap[m[1]] = false
+		key := m[1]
+		if frag, err := isUnicodeFragment(target, key); err == nil && !frag {
+			if strings.HasPrefix(key, "${") && strings.HasSuffix(key, "}") {
+				key = "$" + key[2:len(key)-1]
+			}
+			targetMap[key] = false
 		}
 	}
 
