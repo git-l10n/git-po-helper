@@ -89,6 +89,11 @@ var (
 			Pattern: regexp.MustCompile(`[0-9a-za-z.-]+@[0-9a-za-z-]+\.[0-9a-zA-Z.-]+`),
 			Replace: "user@email",
 		},
+		{
+			// ---
+			Pattern: regexp.MustCompile(`---+`),
+			Replace: "——",
+		},
 	}
 )
 
