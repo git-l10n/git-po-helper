@@ -11,6 +11,16 @@ test_expect_success "setup" '
 	test -f workdir/po/git.pot
 '
 
+cat >expect <<-\EOF
+level=error msg="[po/zh_CN.po]    po/zh_CN.po:25: end-of-line within string"
+level=error msg="[po/zh_CN.po]    msgfmt: found 1 fatal error"
+level=error msg="[po/zh_CN.po]    fail to check po: exit status 1"
+level=warning msg="[po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1"
+level=warning msg="[po/zh_CN.po]    no mofile generated, and no scan typos"
+
+ERROR: fail to execute "git-po-helper check-po"
+EOF
+
 test_expect_success "bad syntax of zh_CN.po" '
 	(
 		cd workdir &&
@@ -43,18 +53,10 @@ test_expect_success "bad syntax of zh_CN.po" '
 		msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz""
 		EOF
 
-		test_must_fail $HELPER check-po  zh_CN >out 2>&1 &&
-		make_user_friendly_and_stable_output <out >actual &&
-		cat >expect <<-\EOF &&
-		level=info msg="Checking syntax of po file for \"Chinese - China\""
-		level=error msg="Fail to check \"po/zh_CN.po\": exit status 1"
-		level=error msg="    po/zh_CN.po:25: end-of-line within string\n"
-		level=error msg="    msgfmt: found 1 fatal error\n"
-
-		ERROR: fail to execute "git-po-helper check-po"
-		EOF
-		test_cmp expect actual
-	)
+		test_must_fail $HELPER check-po  zh_CN
+	) >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
 '
 
 test_expect_success "update zh_CN successfully" '
@@ -92,46 +94,50 @@ test_expect_success "update zh_CN successfully" '
 	)
 '
 
+cat >expect <<-\EOF
+level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
+EOF
+
 test_expect_success "check update of zh_CN.po" '
 	(
 		cd workdir &&
-
-		cat >expect <<-\EOF
-		[po/zh_CN.po] 2 translated messages, 5102 untranslated messages.
-		EOF
-		$HELPER check-po zh_CN >out 2>&1 &&
-		make_user_friendly_and_stable_output <out |
-			head -2 >actual &&
-		test_cmp expect actual
-	)
+		$HELPER check-po zh_CN
+	) >out 2>&1 &&
+	make_user_friendly_and_stable_output <out |
+		head -2 >actual &&
+	test_cmp expect actual
 '
+
+cat >expect <<-\EOF
+level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
+level=info msg="Creating core pot file in po-core/core.pot"
+level=info msg="[po-core/zh_CN.po]    2 translated messages, 479 untranslated messages."
+EOF
 
 test_expect_success "check core update of zh_CN.po" '
 	(
 		cd workdir &&
 
-		cat >expect <<-\EOF
-		level=info msg="Creating core pot file in po-core/core.pot"
-		[po-core/zh_CN.po] 2 translated messages, 479 untranslated messages.
-		EOF
-		$HELPER check-po --core zh_CN >out 2>&1 &&
-		grep -A1 "Creating core pot file" out >actual &&
-		test_cmp expect actual
-	)
+		$HELPER check-po --core zh_CN
+	) >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
 '
+
+cat >expect <<-\EOF
+level=warning msg="cannot find gettext 0.14 or 0.15, and couldn't run some checks. See:"
+level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
+level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
+EOF
+
 
 test_expect_success "show warning of old version of gettext not found issue" '
 	(
 		cd workdir &&
-
-		cat >expect <<-\EOF
-		level=warning msg="cannot find gettext 0.14 or 0.15, and couldn'"'"'t run some checks. See:"
-		level=warning msg="    https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
-		[po/zh_CN.po] 2 translated messages, 5102 untranslated messages.
-		EOF
-		NO_GETTEXT_14=1 git-po-helper check-po zh_CN >actual 2>&1 &&
-		test_cmp expect actual
-	)
+		NO_GETTEXT_14=1 git-po-helper check-po zh_CN
+	) >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
 '
 
 test_done

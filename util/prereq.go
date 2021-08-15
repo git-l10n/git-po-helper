@@ -13,10 +13,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-// BackCompatibleGetTextDir is installed dir for gettext 0.14
-var BackCompatibleGetTextDir string
+// DirGetText014 is installed dir for gettext 0.14
+var DirGetText014 string
 
-func isGetTextBackCompatible(execPath string) bool {
+func isGetText014(execPath string) bool {
 	cmd := exec.Command(execPath, "--version")
 	output, err := cmd.Output()
 	if err != nil {
@@ -29,7 +29,7 @@ func isGetTextBackCompatible(execPath string) bool {
 	return strings.Contains(line, " 0.14") || strings.Contains(line, " 0.15")
 }
 
-func getBackCompatibleGetTextDir() string {
+func getGetText014() string {
 	var getTextDir string
 
 	if viper.GetBool("no-gettext-back-compatible") {
@@ -40,7 +40,7 @@ func getBackCompatibleGetTextDir() string {
 	}
 	execPath, err := exec.LookPath("gettext")
 	if err == nil {
-		if isGetTextBackCompatible(execPath) {
+		if isGetText014(execPath) {
 			return filepath.Dir(execPath)
 		}
 	}
@@ -58,7 +58,7 @@ func getBackCompatibleGetTextDir() string {
 			}
 			execPath = filepath.Join(path, "bin", "gettext")
 			if fi, err := os.Stat(execPath); err == nil && fi.Mode().IsRegular() {
-				if isGetTextBackCompatible(execPath) {
+				if isGetText014(execPath) {
 					getTextDir = filepath.Dir(execPath)
 					return errors.New("found backward compatible gettext")
 				}
@@ -95,14 +95,14 @@ func CheckPrereq() error {
 		}
 	}
 
-	BackCompatibleGetTextDir = getBackCompatibleGetTextDir()
-	if BackCompatibleGetTextDir == "" {
+	DirGetText014 = getGetText014()
+	if DirGetText014 == "" {
 		if !viper.GetBool("no-gettext-back-compatible") {
 			log.Warnln("cannot find gettext 0.14 or 0.15, and couldn't run some checks. See:")
 			log.Warnf("    https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/")
 		}
 	} else {
-		log.Debugf(`find backward compatible gettext at "%s"`, BackCompatibleGetTextDir)
+		log.Debugf(`find backward compatible gettext at "%s"`, DirGetText014)
 	}
 	return nil
 }

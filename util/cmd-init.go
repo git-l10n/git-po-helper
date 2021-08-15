@@ -70,7 +70,7 @@ func CmdInit(fileName string, onlyCore bool) bool {
 	}
 
 	if onlyCore {
-		if !GenerateCorePot() {
+		if !genCorePot() {
 			return false
 		}
 		potFile = filepath.Join(PoCoreDir, CorePot)

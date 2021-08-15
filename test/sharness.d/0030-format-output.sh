@@ -11,9 +11,9 @@ make_user_friendly_and_stable_output () {
 		-e "/Please check your system clock/d" \
 		-e "s/  *\$//" \
 		-e "s/  */ /g" \
-		-e "s/'/\"/g" \
 		-e "s/	/    /g" \
 		-e "s/\\\\t/    /g" \
+		-e "s#/[a-zA-Z/]*/msgfmt#msgfmt#g" \
 		-e "s/(use \".*\" for backward compatible)/(use \"gettext 0.14\" for backward compatible)/" \
 		-e "s/$ZERO_OID/<ZERO-OID>/g" \
 		-e "s/commit [0-9a-f][0-9a-f]*:/commit <OID>:/g" \
