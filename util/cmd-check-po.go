@@ -13,15 +13,11 @@ import (
 func CmdCheckPo(args ...string) bool {
 	var (
 		ret       = true
-		prompt    Prompt
 		checkCore bool
 	)
 
 	if viper.GetBool("check--core") || viper.GetBool("check-po--core") {
 		checkCore = true
-	}
-	if checkCore {
-		prompt.PromptWidth = 18
 	}
 
 	if len(args) == 0 {
@@ -49,26 +45,12 @@ func CmdCheckPo(args ...string) bool {
 	}
 	for _, fileName := range args {
 		locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
-		localeFullName, err := GetPrettyLocaleName(locale)
-		if err != nil {
-			log.Error(err)
-			ret = false
-			continue
-		}
 		poFile := filepath.Join(PoDir, locale+".po")
-		if !Exist(poFile) {
-			log.Errorf(`fail to check "%s", does not exist`, poFile)
-			ret = false
-			continue
-		}
-		prompt.LongPrompt = localeFullName
-		prompt.ShortPrompt = poFile
-		if !CheckPoFile(poFile, prompt) {
+		if !CheckPoFile(locale, poFile) {
 			ret = false
 		}
 		if checkCore {
-			prompt.ShortPrompt = filepath.Join(PoCoreDir, locale+".po")
-			if !CheckCorePoFile(locale, prompt) {
+			if !CheckCorePoFile(locale) {
 				ret = false
 			}
 		}

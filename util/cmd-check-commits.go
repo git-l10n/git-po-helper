@@ -512,10 +512,10 @@ func checkCommitLog(commit string) bool {
 
 func checkCommitChanges(commit string) bool {
 	var (
-		err              error
-		badChanges       = []string{}
-		ret              = true
-		shouldCheckTeams = false
+		err            error
+		invalidChanges = []string{}
+		verifyChanges  = []string{}
+		ret            = true
 	)
 
 	cmd := exec.Command("git",
@@ -537,10 +537,11 @@ func checkCommitChanges(commit string) bool {
 		if idx := strings.Index(line, "\t"); idx >= 0 {
 			fileName := line[idx+1:]
 			if !strings.HasPrefix(fileName, PoDir+"/") {
-				badChanges = append(badChanges, line[idx+1:])
-			}
-			if fileName == "po/TEAMS" {
-				shouldCheckTeams = true
+				invalidChanges = append(invalidChanges, line[idx+1:])
+			} else if fileName == "po/TEAMS" {
+				verifyChanges = append(verifyChanges, fileName)
+			} else if strings.HasSuffix(fileName, ".po") {
+				verifyChanges = append(verifyChanges, fileName)
 			}
 		}
 		if err != nil {
@@ -551,34 +552,38 @@ func checkCommitChanges(commit string) bool {
 		log.Errorf("commit %s: fail to run git-diff-tree: %s", AbbrevCommit(commit), err)
 		return false
 	}
-	if len(badChanges) > 0 {
+	if len(invalidChanges) > 0 {
 		log.Errorf(`commit %s: found changes beyond "%s/" directory`,
 			AbbrevCommit(commit), PoDir)
-		for _, change := range badChanges {
+		for _, change := range invalidChanges {
 			log.Errorf("\t\t%s", change)
 		}
 		ret = false
 	}
-	if shouldCheckTeams {
-		teamFile := FileRevision{
+	for _, fileName := range verifyChanges {
+		tmpFile := FileRevision{
 			Revision: commit,
-			File:     filepath.Join("po", "TEAMS"),
+			File:     fileName,
 		}
-		if err := checkoutTmpfile(&teamFile); err != nil || teamFile.Tmpfile == "" {
+		if err := checkoutTmpfile(&tmpFile); err != nil || tmpFile.Tmpfile == "" {
 			log.Errorf("commit %s: fail to checkout %s of revision %s: %s",
-				AbbrevCommit(commit), teamFile.File, teamFile.Revision, err)
+				AbbrevCommit(commit), tmpFile.File, tmpFile.Revision, err)
+			continue
 		}
-		defer func() {
-			os.Remove(teamFile.Tmpfile)
-			teamFile.Tmpfile = ""
-		}()
-
-		if _, errors := ParseTeams(teamFile.Tmpfile); len(errors) > 0 {
-			for _, error := range errors {
-				log.Errorf("commit %s: %s", AbbrevCommit(commit), error)
+		if fileName == "po/TEAMS" {
+			if _, errors := ParseTeams(tmpFile.Tmpfile); len(errors) > 0 {
+				for _, error := range errors {
+					log.Errorf("commit %s: %s", AbbrevCommit(commit), error)
+				}
+				ret = false
 			}
-			ret = false
+		} else {
+			locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
+			if !CheckPoFile(locale, tmpFile.Tmpfile) {
+				ret = false
+			}
 		}
+		os.Remove(tmpFile.Tmpfile)
 	}
 	return ret
 }

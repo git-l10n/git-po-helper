@@ -129,13 +129,13 @@ func checkTyposInMoFile(moFile string) {
 			break
 		}
 		if len(msg.StrPlural) == 0 {
-			checkTypos(string(msg.Id), string(msg.Str))
+			checkTypos(string(msg.Id), string(msg.Str), msg)
 		} else {
 			for i := range msg.StrPlural {
 				if i == 0 {
-					checkTypos(string(msg.Id), string(msg.StrPlural[i]))
+					checkTypos(string(msg.Id), string(msg.StrPlural[i]), msg)
 				} else {
-					checkTypos(string(msg.IdPlural), string(msg.StrPlural[i]))
+					checkTypos(string(msg.IdPlural), string(msg.StrPlural[i]), msg)
 				}
 			}
 		}
@@ -216,7 +216,7 @@ func findUnmatchVariables(src, target string) []string {
 	return unmatched
 }
 
-func checkTypos(msgID, msgStr string) {
+func checkTypos(msgID, msgStr string, msg *gettext.Message) {
 	var (
 		unmatched  []string
 		origMsgID  = msgID
@@ -259,6 +259,12 @@ func runPoChecking(poFile string, prompt Prompt, backCompatible bool) bool {
 		bannerDisplayed bool
 	)
 
+	if !Exist(poFile) {
+		log.Errorf(`fail to check "%s", does not exist`, poFile)
+		ret = false
+		return ret
+	}
+
 	if backCompatible {
 		if BackCompatibleGetTextDir == "" {
 			log.Errorf("cannot find gettext 0.14, and won't run gettext backward compatible test")
@@ -289,7 +295,7 @@ func runPoChecking(poFile string, prompt Prompt, backCompatible bool) bool {
 			}
 		}
 		if err != nil {
-			log.Errorf(`Fail to check "%s": %s`, poFile, err)
+			log.Errorf(`Fail to check "%s": %s`, prompt.ShortPrompt, err)
 		}
 	}
 
@@ -354,9 +360,23 @@ func runPoChecking(poFile string, prompt Prompt, backCompatible bool) bool {
 }
 
 // CheckPoFile checks syntax of "po/xx.po"
-func CheckPoFile(poFile string, prompt Prompt) bool {
-	var ret = true
-
+func CheckPoFile(locale, poFile string) bool {
+	var (
+		prompt Prompt
+		ret    = true
+	)
+	locale = strings.TrimSuffix(filepath.Base(locale), ".po")
+	localeFullName, err := GetPrettyLocaleName(locale)
+	if err != nil {
+		log.Error(err)
+		ret = false
+		return ret
+	}
+	if viper.GetBool("check--core") || viper.GetBool("check-po--core") {
+		prompt.PromptWidth = 18
+	}
+	prompt.ShortPrompt = filepath.Join(PoDir, locale+".po")
+	prompt.LongPrompt = localeFullName
 	ret = runPoChecking(poFile, prompt, false)
 	if !ret {
 		return ret
@@ -374,7 +394,20 @@ func CheckPoFile(poFile string, prompt Prompt) bool {
 }
 
 // CheckCorePoFile checks syntax of "po/xx.po" against "po-core/core.pot"
-func CheckCorePoFile(locale string, prompt Prompt) bool {
+func CheckCorePoFile(locale string) bool {
+	var prompt Prompt
+
+	localeFullName, err := GetPrettyLocaleName(locale)
+	if err != nil {
+		log.Error(err)
+		return false
+	}
+	if viper.GetBool("check--core") || viper.GetBool("check-po--core") {
+		prompt.PromptWidth = 18
+	}
+	prompt.ShortPrompt = filepath.Join(PoCoreDir, locale+".po")
+	prompt.LongPrompt = localeFullName
+
 	log.Debugf(`Checking syntax of po file against %s for "%s"`, CorePot, prompt.LongPrompt)
 	if !GenerateCorePot() {
 		log.Errorf(`Fail to check core po file for "%s"`, prompt.LongPrompt)

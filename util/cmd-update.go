@@ -11,8 +11,6 @@ import (
 
 // CmdUpdate implements update sub command.
 func CmdUpdate(fileName string) bool {
-	var prompt Prompt
-
 	locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
 	localeFullName, err := GetPrettyLocaleName(locale)
 	potFile := filepath.Join(PoDir, GitPot)
@@ -43,7 +41,5 @@ func CmdUpdate(fileName string) bool {
 		log.Errorf(`fail to update "%s": %s`, poFile, err)
 		return false
 	}
-	prompt.ShortPrompt = poFile
-	prompt.LongPrompt = localeFullName
-	return CheckPoFile(poFile, prompt)
+	return CheckPoFile(locale, poFile)
 }
