@@ -530,10 +530,9 @@ func checkCommitChanges(commit string) bool {
 		log.Errorf("commit %s: fail to run git-diff-tree: %s", AbbrevCommit(commit), err)
 		return false
 	}
-	reader := bufio.NewReader(stdout)
-	for {
-		line, err := reader.ReadString('\n')
-		line = strings.TrimSpace(line)
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		line := scanner.Text()
 		if idx := strings.Index(line, "\t"); idx >= 0 {
 			fileName := line[idx+1:]
 			if !strings.HasPrefix(fileName, PoDir+"/") {
@@ -543,9 +542,6 @@ func checkCommitChanges(commit string) bool {
 			} else if strings.HasSuffix(fileName, ".po") {
 				verifyChanges = append(verifyChanges, fileName)
 			}
-		}
-		if err != nil {
-			break
 		}
 	}
 	if err = cmd.Wait(); err != nil {
@@ -579,7 +575,10 @@ func checkCommitChanges(commit string) bool {
 			}
 		} else {
 			locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
-			if !CheckPoFile(locale, tmpFile.Tmpfile) {
+			prompt := fmt.Sprintf("[%s@%s]",
+				filepath.Join(PoDir, locale+".po"),
+				AbbrevCommit(commit))
+			if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, prompt) {
 				ret = false
 			}
 		}
