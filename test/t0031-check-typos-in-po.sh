@@ -57,7 +57,7 @@ test_expect_success "mismatched shell variables" '
 	)
 '
 
-test_expect_success "trash variables in msgStr" '
+test_expect_success "trash variables in msgStr (--report-typos-as-errors)" '
 	(
 		cd workdir &&
 		cat >po/zh_CN.po <<-\EOF &&
@@ -80,14 +80,16 @@ test_expect_success "trash variables in msgStr" '
 
 		EOF
 
-		$HELPER check-po  zh_CN >out 2>&1 &&
+		test_must_fail $HELPER check-po --report-typos-as-errors zh_CN >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-\EOF &&
 		level=info msg="[po/zh_CN.po]    1 translated message."
-		level=warning msg="[po/zh_CN.po]    mismatch variable names: $command, $res"
-		level=warning msg="[po/zh_CN.po]    >> msgid: exit code %d from %s is < 0 or >= 128"
-		level=warning msg="[po/zh_CN.po]    >> msgstr: 命令 $command 的退出码 $res 应该 < 0 或 >= 128"
-		level=warning
+		level=error msg="[po/zh_CN.po]    mismatch variable names: $command, $res"
+		level=error msg="[po/zh_CN.po]    >> msgid: exit code %d from %s is < 0 or >= 128"
+		level=error msg="[po/zh_CN.po]    >> msgstr: 命令 $command 的退出码 $res 应该 < 0 或 >= 128"
+		level=error
+		
+		ERROR: fail to execute "git-po-helper check-po"
 		EOF
 		test_cmp expect actual
 	)

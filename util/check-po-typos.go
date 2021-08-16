@@ -86,11 +86,29 @@ var (
 	}
 )
 
-func checkTyposInPoFile(poFile string) (errs []error) {
+func shouldIgnoreTypos() bool {
+	return viper.GetBool("check-po--ignore-typos") ||
+		viper.GetBool("check-commits--ignore-typos") ||
+		viper.GetBool("check--ignore-typos")
+}
+
+func shouldReportTyposAsErrors() bool {
+	return viper.GetBool("check-po--report-typos-as-errors") ||
+		viper.GetBool("check-commits--report-typos-as-errors") ||
+		viper.GetBool("check--report-typos-as-errors")
+}
+
+func checkTyposInPoFile(poFile string) ([]error, bool) {
+	var errs []error
+
+	if shouldIgnoreTypos() {
+		return nil, true
+	}
+
 	moFile, err := ioutil.TempFile("", "mofile")
 	if err != nil {
 		errs = append(errs, err)
-		return
+		return errs, false
 	}
 	defer os.Remove(moFile.Name())
 	moFile.Close()
@@ -106,20 +124,22 @@ func checkTyposInPoFile(poFile string) (errs []error) {
 	fi, err := os.Stat(moFile.Name())
 	if err != nil || fi.Size() == 0 {
 		errs = append(errs, fmt.Errorf("no mofile generated, and no scan typos"))
-		return
+		return errs, false
 	}
 	return checkTyposInMoFile(moFile.Name())
 }
 
-func checkTyposInMoFile(moFile string) (errs []error) {
-	if viper.GetBool("check-po--ignore-typos") || viper.GetBool("check--ignore-typos") {
-		return
+func checkTyposInMoFile(moFile string) ([]error, bool) {
+	var errs []error
+
+	if shouldIgnoreTypos() {
+		return nil, true
 	}
 
 	f, err := os.Open(moFile)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("cannot open %s: %s", moFile, err))
-		return
+		return errs, false
 	}
 	defer f.Close()
 	iter := gettext.ReadMo(f)
@@ -146,7 +166,10 @@ func checkTyposInMoFile(moFile string) (errs []error) {
 			}
 		}
 	}
-	return
+	if shouldReportTyposAsErrors() && len(errs) > 0 {
+		return errs, false
+	}
+	return errs, true
 }
 
 func isUnicodeFragment(str, substr string) (bool, error) {

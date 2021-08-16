@@ -15,8 +15,8 @@ cat >expect <<-\EOF
 level=error msg="[po/zh_CN.po]    po/zh_CN.po:25: end-of-line within string"
 level=error msg="[po/zh_CN.po]    msgfmt: found 1 fatal error"
 level=error msg="[po/zh_CN.po]    fail to check po: exit status 1"
-level=warning msg="[po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1"
-level=warning msg="[po/zh_CN.po]    no mofile generated, and no scan typos"
+level=error msg="[po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1"
+level=error msg="[po/zh_CN.po]    no mofile generated, and no scan typos"
 
 ERROR: fail to execute "git-po-helper check-po"
 EOF

@@ -47,12 +47,25 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	}
 
 	// Check possible typos in a .po file.
-	for _, err := range checkTyposInPoFile(poFile) {
+	errs, typosOK := checkTyposInPoFile(poFile)
+	if !typosOK {
+		ret = typosOK
+	}
+	for _, err := range errs {
 		if err == nil {
-			log.Warnf("")
+			if !typosOK {
+				log.Error("")
+			} else {
+				log.Warn("")
+			}
 		} else {
-			log.Warnf("%s\t%s", prompt, err)
+			if !typosOK {
+				log.Errorf("%s\t%s", prompt, err)
+			} else {
+				log.Warnf("%s\t%s", prompt, err)
+			}
 		}
 	}
+
 	return ret
 }

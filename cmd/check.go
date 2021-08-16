@@ -36,10 +36,14 @@ func (v *checkCommand) Command() *cobra.Command {
 	v.cmd.Flags().Bool("ignore-typos",
 		false,
 		"do not check typos in .po file")
+	v.cmd.Flags().Bool("report-typos-as-errors",
+		false,
+		"consider typos as errors")
 	viper.BindPFlag("check--no-gpg", v.cmd.Flags().Lookup("no-gpg"))
 	viper.BindPFlag("check--force", v.cmd.Flags().Lookup("force"))
 	viper.BindPFlag("check--core", v.cmd.Flags().Lookup("core"))
 	viper.BindPFlag("check--ignore-typos", v.cmd.Flags().Lookup("ignore-typos"))
+	viper.BindPFlag("check--report-typos-as-errors", v.cmd.Flags().Lookup("report-typos-as-errors"))
 
 	return v.cmd
 }
