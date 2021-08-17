@@ -9,11 +9,11 @@ HELPER="git-po-helper --no-gettext-back-compatible"
 test_expect_success "setup" '
 	mkdir po &&
 	touch po/git.pot &&
-	cp ../examples/es.po po
+	cp "${PO_HELPER_TEST_REPOSITORY}/po/es.po" po
 '
 
 cat >expect <<-\EOF
-level=info msg="[po/es.po]    5204 translated messages."
+level=info msg="[po/es.po]    5104 translated messages."
 level=warning msg="[po/es.po]    mismatch variable names: herramienta.cmd"
 level=warning msg="[po/es.po]    >> msgid: '%s': path for unsupported man viewer.\nPlease consider using 'man.<tool>.cmd' instead."
 level=warning msg="[po/es.po]    >> msgstr: '%s': ruta para el visualizador del manual no soportada.\nPor favor considere usar 'man.<herramienta.cmd'."
@@ -46,13 +46,13 @@ level=warning msg="[po/es.po]    mismatch variable names: --shallow-since, --sha
 level=warning msg="[po/es.po]    >> msgid: Server does not support --shallow-since"
 level=warning msg="[po/es.po]    >> msgstr: El servidor no soporta --shalow-since"
 level=warning
+level=warning msg="[po/es.po]    mismatch variable names: --smtp-debug"
+level=warning msg="[po/es.po]    >> msgid: Unable to initialize SMTP properly. Check config and use --smtp-debug."
+level=warning msg="[po/es.po]    >> msgstr: No es posible inicializar SMTP adecuadamente. Verificar config y usar ---smtp-debug."
+level=warning
 level=warning msg="[po/es.po]    mismatch variable names: --allow-empty, --alow-empty"
 level=warning msg="[po/es.po]    >> msgid: You asked to amend the most recent commit, but doing so would make\nit empty. You can repeat your command with --allow-empty, or you can\nremove the commit entirely with \"git reset HEAD^\".\n"
-level=warning msg="[po/es.po]    >> msgstr: Has solicitado un amend en tu commit más reciente, pero hacerlo lo\nvaciaría. Puedes repetir el comando con --alow-empty, o puedes eliminar\nel commit completamente con \"git reset HEAD^\".\n"
-level=warning
-level=warning msg="[po/es.po]    mismatch variable names: --filter, usar--filter"
-level=warning msg="[po/es.po]    >> msgid: cannot use --filter with --stdin-packs"
-level=warning msg="[po/es.po]    >> msgstr: no se puede usar--filter con --stdin-packs"
+level=warning msg="[po/es.po]    >> msgstr: Has solicitado un amend en tu commit más reciente, pero hacerlo lo \nvaciaría. Puedes repetir el comando con --alow-empty, o puedes eliminar\nel commit completamente con \"git reset HEAD^\".\n"
 level=warning
 level=warning msg="[po/es.po]    mismatch variable names: --filter, usar--filter"
 level=warning msg="[po/es.po]    >> msgid: cannot use --filter without --stdout"
@@ -73,6 +73,10 @@ level=warning
 level=warning msg="[po/es.po]    mismatch variable names: git-apply"
 level=warning msg="[po/es.po]    >> msgid: passed to 'git apply'"
 level=warning msg="[po/es.po]    >> msgstr: pasado a 'git-apply'"
+level=warning
+level=warning msg="[po/es.po]    mismatch variable names: git-upload-archive, git-upload-archivo"
+level=warning msg="[po/es.po]    >> msgid: path to the remote git-upload-archive command"
+level=warning msg="[po/es.po]    >> msgstr: ruta para el comando git-upload-archivo remoto"
 level=warning
 level=warning msg="[po/es.po]    mismatch variable names: --sateged, --staged"
 level=warning msg="[po/es.po]    >> msgid: repository has been updated, but unable to write\nnew_index file. Check that disk is not full and quota is\nnot exceeded, and then \"git restore --staged :/\" to recover."

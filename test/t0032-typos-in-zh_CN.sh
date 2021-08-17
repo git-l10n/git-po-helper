@@ -9,11 +9,11 @@ HELPER="git-po-helper --no-gettext-back-compatible"
 test_expect_success "setup" '
 	mkdir po &&
 	touch po/git.pot &&
-	cp ../examples/zh_CN.po po
+	cp "${PO_HELPER_TEST_REPOSITORY}/po/zh_CN.po" po
 '
 
 cat >expect <<-\EOF
-level=info msg="[po/zh_CN.po]    5204 translated messages."
+level=info msg="[po/zh_CN.po]    5104 translated messages."
 level=warning msg="[po/zh_CN.po]    mismatch variable names: FSCK_IGNORE"
 level=warning msg="[po/zh_CN.po]    >> msgid: %d (FSCK_IGNORE?) should never trigger this callback"
 level=warning msg="[po/zh_CN.po]    >> msgstr: %d（忽略 FSCK?）不应该触发这个调用"

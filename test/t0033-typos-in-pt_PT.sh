@@ -9,7 +9,7 @@ HELPER="git-po-helper --no-gettext-back-compatible"
 test_expect_success "setup" '
 	mkdir po &&
 	touch po/git.pot &&
-	cp ../examples/pt_PT.po po
+	cp "${PO_HELPER_TEST_REPOSITORY}/po/pt_PT.po" po
 '
 
 cat >expect <<-\EOF

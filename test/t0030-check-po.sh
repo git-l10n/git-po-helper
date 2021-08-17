@@ -24,8 +24,6 @@ EOF
 test_expect_success "bad syntax of zh_CN.po" '
 	(
 		cd workdir &&
-		test ! -f po/zh_CN.po &&
-
 		cat >po/zh_CN.po <<-\EOF &&
 		msgid ""
 		msgstr ""

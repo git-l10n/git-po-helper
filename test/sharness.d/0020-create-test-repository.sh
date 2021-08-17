@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PO_HELPER_TEST_REPOSITORY_VERSION=2
+PO_HELPER_TEST_REPOSITORY_VERSION=3
 
 # Create test repository in .repository
 PO_HELPER_TEST_REPOSITORY="${SHARNESS_TEST_SRCDIR}/test-repository"
@@ -83,11 +83,7 @@ create_test_repository_real () {
 	git config --global init.defaultbranch master &&
 	git init "$PO_HELPER_TEST_REPOSITORY" &&
 	${TAR_CMD} --strip-components=1 -C test-repository -xf git.tar -- \
-		"git-*/po/git.pot" \
-		"git-*/po/bg.po" \
-		"git-*/po/ca.po" \
-		"git-*/po/de.po" \
-		"git-*/po/TEAMS" \
+		"git-*/po" \
 		"git-*/remote.c" \
 		"git-*/wt-status.c" \
 		"git-*/builtin/clone.c" \

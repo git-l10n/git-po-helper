@@ -9,11 +9,11 @@ HELPER="git-po-helper --no-gettext-back-compatible"
 test_expect_success "setup" '
 	mkdir po &&
 	touch po/git.pot &&
-	cp ../examples/vi.po po
+	cp "${PO_HELPER_TEST_REPOSITORY}/po/vi.po" po
 '
 
 cat >expect <<-\EOF
-level=info msg="[po/vi.po]    5204 translated messages."
+level=info msg="[po/vi.po]    5104 translated messages."
 level=warning msg="[po/vi.po]    mismatch variable names: --quiet"
 level=warning msg="[po/vi.po]    >> msgid: \nIt took %.2f seconds to enumerate unstaged changes after reset. You can\nuse '--quiet' to avoid this. Set the config setting reset.quiet to true\nto make this the default.\n"
 level=warning msg="[po/vi.po]    >> msgstr: \nCần %.2f giây để kiểm đếm các thay đổi chưa đưa lên bệ phóng sau khi đặt lại.\nBạn có thể sử dụng để tránh việc này. Đặt reset.quiet thành true trong\ncài đặt config nếu bạn muốn thực hiện nó như là mặc định.\n"

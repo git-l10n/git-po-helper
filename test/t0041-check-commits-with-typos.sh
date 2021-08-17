@@ -48,14 +48,14 @@ test_expect_success "create po/zh_CN with typos" '
 '
 
 cat >workdir/expect <<-\EOF
-level=info msg="[po/zh_CN.po@8907987]    2 translated messages."
-level=warning msg="[po/zh_CN.po@8907987]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
-level=warning msg="[po/zh_CN.po@8907987]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
-level=warning msg="[po/zh_CN.po@8907987]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
+level=info msg="[po/zh_CN.po@4e9d487]    2 translated messages."
+level=warning msg="[po/zh_CN.po@4e9d487]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
+level=warning msg="[po/zh_CN.po@4e9d487]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
+level=warning msg="[po/zh_CN.po@4e9d487]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
 level=warning
-level=warning msg="[po/zh_CN.po@8907987]    mismatch variable names: $command, $res"
-level=warning msg="[po/zh_CN.po@8907987]    >> msgid: exit code $res from $command is < 0 or >= 128"
-level=warning msg="[po/zh_CN.po@8907987]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
+level=warning msg="[po/zh_CN.po@4e9d487]    mismatch variable names: $command, $res"
+level=warning msg="[po/zh_CN.po@4e9d487]    >> msgid: exit code $res from $command is < 0 or >= 128"
+level=warning msg="[po/zh_CN.po@4e9d487]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
 level=warning
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 level=info msg="checking commits: 1 passed."
@@ -71,14 +71,14 @@ test_expect_success "check-commits show typos" '
 '
 
 cat >workdir/expect <<-\EOF
-level=info msg="[po/zh_CN.po@8907987]    2 translated messages."
-level=error msg="[po/zh_CN.po@8907987]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
-level=error msg="[po/zh_CN.po@8907987]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
-level=error msg="[po/zh_CN.po@8907987]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
+level=info msg="[po/zh_CN.po@4e9d487]    2 translated messages."
+level=error msg="[po/zh_CN.po@4e9d487]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
+level=error msg="[po/zh_CN.po@4e9d487]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
+level=error msg="[po/zh_CN.po@4e9d487]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
 level=error
-level=error msg="[po/zh_CN.po@8907987]    mismatch variable names: $command, $res"
-level=error msg="[po/zh_CN.po@8907987]    >> msgid: exit code $res from $command is < 0 or >= 128"
-level=error msg="[po/zh_CN.po@8907987]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
+level=error msg="[po/zh_CN.po@4e9d487]    mismatch variable names: $command, $res"
+level=error msg="[po/zh_CN.po@4e9d487]    >> msgid: exit code $res from $command is < 0 or >= 128"
+level=error msg="[po/zh_CN.po@4e9d487]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
 level=error
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 level=error msg="checking commits: 0 passed, 1 failed."
@@ -109,14 +109,14 @@ cat >workdir/expect <<-\EOF
 level=error msg="commit <OID>: bad syntax at line 79 (unknown key \"Respository\"): Respository:    https://github.com/l10n-tw/git-po"
 level=error msg="commit <OID>: bad syntax at line 80 (need two tabs between k/v): Leader:     Yi-Jyun Pan <pan93412 AT gmail.com>"
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-level=info msg="[po/zh_CN.po@8907987]    2 translated messages."
-level=warning msg="[po/zh_CN.po@8907987]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
-level=warning msg="[po/zh_CN.po@8907987]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
-level=warning msg="[po/zh_CN.po@8907987]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
+level=info msg="[po/zh_CN.po@4e9d487]    2 translated messages."
+level=warning msg="[po/zh_CN.po@4e9d487]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
+level=warning msg="[po/zh_CN.po@4e9d487]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
+level=warning msg="[po/zh_CN.po@4e9d487]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
 level=warning
-level=warning msg="[po/zh_CN.po@8907987]    mismatch variable names: $command, $res"
-level=warning msg="[po/zh_CN.po@8907987]    >> msgid: exit code $res from $command is < 0 or >= 128"
-level=warning msg="[po/zh_CN.po@8907987]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
+level=warning msg="[po/zh_CN.po@4e9d487]    mismatch variable names: $command, $res"
+level=warning msg="[po/zh_CN.po@4e9d487]    >> msgid: exit code $res from $command is < 0 or >= 128"
+level=warning msg="[po/zh_CN.po@4e9d487]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
 level=warning
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 level=error msg="checking commits: 1 passed, 1 failed."
