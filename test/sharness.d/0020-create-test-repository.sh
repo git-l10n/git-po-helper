@@ -15,6 +15,10 @@ Darwin)
 	;;
 esac
 
+cleanup_test_repository_lock () {
+       rm -f "${PO_HELPER_TEST_REPOSITORY}.lock"
+}
+
 create_test_repository () {
 	# create lock
 	lockmsg="locked by $$"
@@ -30,6 +34,7 @@ create_test_repository () {
 
 		else
 			echo "$lockmsg" >"${PO_HELPER_TEST_REPOSITORY}.lock"
+			trap cleanup_test_repository_lock exit
 		fi
 	done
 
@@ -44,7 +49,12 @@ create_test_repository () {
 		wget -O "${SHARNESS_TEST_SRCDIR}/git.tar.gz" \
 			--progress=dot:mega \
 			https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.31.1.tar.gz &&
-		gunzip "${SHARNESS_TEST_SRCDIR}/git.tar.gz" &&
+		gunzip "${SHARNESS_TEST_SRCDIR}/git.tar.gz"
+		if test $? -ne 0
+		then
+			echo >&2 "ERROR: fail to download or unzip git.tar.gz"
+			exit 1
+		fi
 		wget -O "${SHARNESS_TEST_SRCDIR}/git.tar.sign" \
 			https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.31.1.tar.sign &&
 		gpg --verify "${SHARNESS_TEST_SRCDIR}/git.tar.sign"
