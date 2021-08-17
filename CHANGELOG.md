@@ -2,6 +2,14 @@
 
 Changes of git-po-helper.
 
+## 0.3.0 (2021-8-17)
+
+* Running check-commits will check typos for each commit.
+* Try to reduce a certain false positives when checking typos.
+* test: run test on .po file from download git package.
+* New option "--report-typos-as-errors" when checking typos.
+
+
 ## 0.2.0 (2021-8-9)
 
 * check-po: do not check fragment keep words in a unicode string
