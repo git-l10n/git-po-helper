@@ -3,7 +3,3 @@ git-po-helper
 
 # Generated version file
 VERSION-FILE
-
-# Generated go source code
-data/iso-3166.go
-data/iso-639.go
