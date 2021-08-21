@@ -141,11 +141,15 @@ func (v *rootCommand) Command() *cobra.Command {
 	v.cmd.PersistentFlags().CountP("verbose",
 		"v",
 		"verbose mode")
+	v.cmd.PersistentFlags().Bool("github-action",
+		false,
+		"run with github-action")
 	v.cmd.PersistentFlags().Bool("no-gettext-back-compatible",
 		false,
 		"no check using gettext 0.14 for back compatible")
 	v.cmd.PersistentFlags().MarkHidden("dryrun")
 	v.cmd.PersistentFlags().MarkHidden("no-gettext-back-compatible")
+	v.cmd.PersistentFlags().MarkHidden("github-action")
 
 	viper.BindPFlag(
 		"dryrun",
@@ -159,6 +163,9 @@ func (v *rootCommand) Command() *cobra.Command {
 	viper.BindPFlag(
 		"no-gettext-back-compatible",
 		v.cmd.PersistentFlags().Lookup("no-gettext-back-compatible"))
+	viper.BindPFlag(
+		"github-action",
+		v.cmd.PersistentFlags().Lookup("github-action"))
 
 	return v.cmd
 }
