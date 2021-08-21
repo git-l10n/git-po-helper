@@ -17,7 +17,6 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/qiniu/iconv"
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -381,7 +380,7 @@ func (v *commitLog) checkBody() bool {
 func (v *commitLog) checkGpg() bool {
 	var ret = true
 
-	if viper.GetBool("check--no-gpg") || viper.GetBool("check-commits--no-gpg") {
+	if FlagNoGPG() {
 		return ret
 	}
 	if v.hasGpgSig() {
@@ -645,8 +644,7 @@ func CmdCheckCommits(args ...string) bool {
 			break
 		}
 	}
-	if len(commits) > int(maxCommits) &&
-		(!viper.GetBool("check--force") && !viper.GetBool("check-commits--force")) {
+	if len(commits) > int(maxCommits) && !FlagForce() {
 		if isatty.IsTerminal(os.Stdin.Fd()) && isatty.IsTerminal(os.Stdout.Fd()) {
 			answer := GetUserInput(fmt.Sprintf("too many commits to check (%d > %d), continue to run? (y/N)",
 				len(commits), maxCommits),

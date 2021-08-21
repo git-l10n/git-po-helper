@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 // DirGetText014 is installed dir for gettext 0.14
@@ -32,7 +31,7 @@ func isGetText014(execPath string) bool {
 func getGetText014() string {
 	var getTextDir string
 
-	if viper.GetBool("no-gettext-back-compatible") {
+	if FlagNoGettext14() {
 		return ""
 	}
 	if _, ok := os.LookupEnv("NO_GETTEXT_14"); ok {
@@ -97,7 +96,7 @@ func CheckPrereq() error {
 
 	DirGetText014 = getGetText014()
 	if DirGetText014 == "" {
-		if !viper.GetBool("no-gettext-back-compatible") {
+		if !FlagNoGettext14() {
 			log.Warnln("cannot find gettext 0.14 or 0.15, and couldn't run some checks. See:")
 			log.Warnf("    https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/")
 		}

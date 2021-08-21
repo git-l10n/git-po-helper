@@ -13,7 +13,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/gorilla/i18n/gettext"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -86,22 +85,10 @@ var (
 	}
 )
 
-func shouldIgnoreTypos() bool {
-	return viper.GetBool("check-po--ignore-typos") ||
-		viper.GetBool("check-commits--ignore-typos") ||
-		viper.GetBool("check--ignore-typos")
-}
-
-func shouldReportTyposAsErrors() bool {
-	return viper.GetBool("check-po--report-typos-as-errors") ||
-		viper.GetBool("check-commits--report-typos-as-errors") ||
-		viper.GetBool("check--report-typos-as-errors")
-}
-
 func checkTyposInPoFile(poFile string) ([]error, bool) {
 	var errs []error
 
-	if shouldIgnoreTypos() {
+	if FlagIgnoreTypos() {
 		return nil, true
 	}
 
@@ -132,7 +119,7 @@ func checkTyposInPoFile(poFile string) ([]error, bool) {
 func checkTyposInMoFile(moFile string) ([]error, bool) {
 	var errs []error
 
-	if shouldIgnoreTypos() {
+	if FlagIgnoreTypos() {
 		return nil, true
 	}
 
@@ -166,7 +153,7 @@ func checkTyposInMoFile(moFile string) ([]error, bool) {
 			}
 		}
 	}
-	if shouldReportTyposAsErrors() && len(errs) > 0 {
+	if FlagReportTyposAsErrors() && len(errs) > 0 {
 		return errs, false
 	}
 	return errs, true

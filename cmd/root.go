@@ -87,8 +87,8 @@ func (v *rootCommand) initLog() {
 	f.DisableLevelTruncation = true
 	f.ForceColors = false
 	log.SetFormatter(f)
-	verbose := viper.GetInt("verbose")
-	quiet := viper.GetInt("quiet")
+	verbose := util.FlagVerbose()
+	quiet := util.FlagQuiet()
 	if verbose == 1 {
 		log.SetLevel(log.DebugLevel)
 	} else if verbose > 1 {

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 // CheckPoFile checks syntax of "po/xx.po".
@@ -75,13 +74,8 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 // CmdCheckPo implements check-po sub command.
 func CmdCheckPo(args ...string) bool {
 	var (
-		ret       = true
-		checkCore bool
+		ret = true
 	)
-
-	if viper.GetBool("check--core") || viper.GetBool("check-po--core") {
-		checkCore = true
-	}
 
 	if len(args) == 0 {
 		filepath.Walk("po", func(path string, info os.FileInfo, err error) error {
@@ -112,7 +106,7 @@ func CmdCheckPo(args ...string) bool {
 		if !CheckPoFile(locale, poFile) {
 			ret = false
 		}
-		if checkCore {
+		if FlagCore() {
 			if !CheckCorePoFile(locale) {
 				ret = false
 			}
