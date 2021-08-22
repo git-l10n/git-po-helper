@@ -19,6 +19,7 @@ make_user_friendly_and_stable_output () {
 		-e "s/commit [0-9a-f][0-9a-f]*:/commit <OID>:/g" \
 		-e "s/$OID_REGEX/<OID>/g" \
 		-e "s/illegal byte sequence/<iconv failure message>.../" \
-		-e "s/invalid or incomplete multibyte or wide character/<iconv failure message>.../"
+		-e "s/invalid or incomplete multibyte or wide character/<iconv failure message>.../" |
+	perl -pe "s/\e\[[0-9;]*m//g"
 
 }

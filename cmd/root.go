@@ -85,7 +85,9 @@ func (v *rootCommand) initLog() {
 	f := new(log.TextFormatter)
 	f.DisableTimestamp = true
 	f.DisableLevelTruncation = true
-	f.ForceColors = false
+	if util.FlagGitHubAction() {
+		f.ForceColors = true
+	}
 	log.SetFormatter(f)
 	verbose := util.FlagVerbose()
 	quiet := util.FlagQuiet()

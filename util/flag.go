@@ -19,13 +19,14 @@ func FlagForce() bool {
 	return viper.GetBool("check--force") || viper.GetBool("check-commits--force")
 }
 
-func flagGitHubAction() bool {
+// FlagGitHubAction returns option "--github-action".
+func FlagGitHubAction() bool {
 	return viper.GetBool("github-action")
 }
 
 // FlagNoGPG returns option "--no-gpg".
 func FlagNoGPG() bool {
-	return flagGitHubAction() || viper.GetBool("check--no-gpg") || viper.GetBool("check-commits--no-gpg")
+	return FlagGitHubAction() || viper.GetBool("check--no-gpg") || viper.GetBool("check-commits--no-gpg")
 }
 
 // FlagReportTyposAsErrors returns option "--report-typos-as-errors".
@@ -49,5 +50,5 @@ func FlagCore() bool {
 
 // FlagNoGettext14 returns option "--no-gettext-back-compatible".
 func FlagNoGettext14() bool {
-	return flagGitHubAction() || viper.GetBool("no-gettext-back-compatible")
+	return FlagGitHubAction() || viper.GetBool("no-gettext-back-compatible")
 }
