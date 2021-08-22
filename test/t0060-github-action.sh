@@ -122,4 +122,24 @@ test_expect_success "check core update of zh_CN.po" '
 	test_cmp expect actual
 '
 
+cat >expect <<-\EOF
+WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
+ERROR commit <OID>: do not have prefix "l10n:" in subject
+ERROR commit <OID>: bad signature for line: "Add files from git"
+ERROR commit <OID>: cannot find "Signed-off-by:" signature
+ERROR checking commits: 0 passed, 1 failed.
+
+ERROR: fail to execute "git-po-helper check-commits"
+EOF
+
+test_expect_success "check-commits " '
+	(
+		cd workdir &&
+
+		test_must_fail $HELPER check-commits 0000000000000000000000000000000000000000..HEAD
+	) >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
+'
+
 test_done

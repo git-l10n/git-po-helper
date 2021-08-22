@@ -633,7 +633,13 @@ func CmdCheckCommits(args ...string) bool {
 		maxCommits = defaultMaxCommits
 	}
 	if len(args) > 0 {
-		cmdArgs = append(cmdArgs, args...)
+		re := regexp.MustCompile(`^(0{40,}\.\.)`)
+		for _, arg := range args {
+			if re.MatchString(arg) {
+				arg = re.ReplaceAllString(arg, "")
+			}
+			cmdArgs = append(cmdArgs, arg)
+		}
 	} else {
 		cmdArgs = append(cmdArgs, "HEAD@{u}..HEAD")
 	}
