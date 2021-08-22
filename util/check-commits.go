@@ -609,12 +609,13 @@ func CmdCheckCommits(args ...string) bool {
 			"git",
 			"rev-list",
 		}
-		maxCommits int64
+		maxCommits int
 		err        error
 	)
 
-	maxCommits, err = strconv.ParseInt(os.Getenv("MAX_COMMITS"), 10, 32)
-	if err != nil {
+	if max, err := strconv.ParseInt(os.Getenv("MAX_COMMITS"), 10, 32); err == nil {
+		maxCommits = int(max)
+	} else {
 		maxCommits = defaultMaxCommits
 	}
 	if len(args) > 0 {
@@ -644,31 +645,34 @@ func CmdCheckCommits(args ...string) bool {
 			break
 		}
 	}
-	if len(commits) > int(maxCommits) && !FlagForce() {
-		if isatty.IsTerminal(os.Stdin.Fd()) && isatty.IsTerminal(os.Stdout.Fd()) {
+	nr := len(commits)
+	if nr > maxCommits {
+		if FlagForce() {
+			nr = maxCommits
+		} else if !isatty.IsTerminal(os.Stdin.Fd()) || !isatty.IsTerminal(os.Stdout.Fd()) {
+			log.Warnf("too many commits to check (%d > %d), check args or use option --force",
+				len(commits), maxCommits)
+			nr = maxCommits
+		} else {
 			answer := GetUserInput(fmt.Sprintf("too many commits to check (%d > %d), continue to run? (y/N)",
 				len(commits), maxCommits),
 				"no")
 			if !AnswerIsTrue(answer) {
 				return false
 			}
-		} else {
-			log.Errorf("too many commits to check (%d > %d), check args or use option --force",
-				len(commits), maxCommits)
-			return false
 		}
 	}
 	pass := 0
 	fail := 0
-	for _, commit := range commits {
-		if !CheckCommit(commit) {
+	for i := 0; i < nr; i++ {
+		if !CheckCommit(commits[i]) {
 			ret = false
 			fail++
 		} else {
 			pass++
 		}
 	}
-	if len(commits) > 0 {
+	if nr > 0 {
 		if fail != 0 {
 			log.Errorf("checking commits: %d passed, %d failed.", pass, fail)
 		} else {
