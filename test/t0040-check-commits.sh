@@ -704,4 +704,19 @@ test_expect_success "bad utf-8 characters in commit log" '
 	)
 '
 
+test_expect_success "bad commit range" '
+	(
+		cd workdir &&
+
+		cat >expect <<-EOF &&
+		level=error msg="fail to run git-rev-list: exit status 128"
+
+		ERROR: fail to execute "git-po-helper check-commits"
+		EOF
+		test_must_fail $HELPER check-commits -qq non_exist_commit..HEAD >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
+		test_cmp expect actual
+	)
+'
+
 test_done

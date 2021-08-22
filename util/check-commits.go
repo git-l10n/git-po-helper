@@ -647,11 +647,11 @@ func CmdCheckCommits(args ...string) bool {
 	cmd.Dir = GitRootDir
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Errorf("Fail to run git-rev-list: %s", err)
+		log.Errorf("fail to run git-rev-list: %s", err)
 		return false
 	}
 	if err = cmd.Start(); err != nil {
-		log.Errorf("Fail to run git-rev-list: %s", err)
+		log.Errorf("fail to run git-rev-list: %s", err)
 		return false
 	}
 	reader := bufio.NewReader(stdout)
@@ -664,6 +664,11 @@ func CmdCheckCommits(args ...string) bool {
 		if err != nil {
 			break
 		}
+	}
+	err = cmd.Wait()
+	if err != nil {
+		log.Errorf("fail to run git-rev-list: %s", err)
+		return false
 	}
 	nr := len(commits)
 	if nr > maxCommits {
