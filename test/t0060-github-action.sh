@@ -181,6 +181,17 @@ test_expect_success "check-commits --github-action --github-action-event=pull_re
 	test_cmp expect actual
 '
 
+test_expect_success "check-commits --github-action-event=pull_request_target" '
+	(
+		cd workdir &&
+		test_must_fail git-po-helper check-commits \
+			--github-action-event=pull_request_target \
+			0000000000000000000000000000000000000000..HEAD
+	) >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
+'
+
 cat >expect <<-\EOF
 WARNING commit <OID>: found changes beyond "po/" directory:
         A.txt

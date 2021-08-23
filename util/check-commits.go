@@ -563,13 +563,18 @@ func checkCommitChanges(commit string) int {
 			msg.WriteString("\n")
 		}
 		if len(verifyChanges) == 0 && FlagGitHubAction() {
-			if FlagGitHubActionEvent() == "push" {
+			switch FlagGitHubActionEvent() {
+			case "push":
 				log.Warn(msg)
 				log.Warnf(`commit %s: break because this commit is not for git-l10n`,
 					AbbrevCommit(commit))
 				// Ignore this error for push event.
 				return checkResultBreak
-			} else {
+			case "pull_request":
+				fallthrough
+			case "pull_request_target":
+				fallthrough
+			default:
 				log.Error(msg)
 				log.Errorf(`commit %s: break because this commit is not for git-l10n`,
 					AbbrevCommit(commit))
