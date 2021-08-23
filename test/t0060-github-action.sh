@@ -127,16 +127,84 @@ WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O 
 ERROR commit <OID>: do not have prefix "l10n:" in subject
 ERROR commit <OID>: bad signature for line: "Add files from git"
 ERROR commit <OID>: cannot find "Signed-off-by:" signature
-ERROR checking commits: 0 passed, 1 failed.
+INFO checking commits: 0 passed, 1 failed.
 
 ERROR: fail to execute "git-po-helper check-commits"
 EOF
 
-test_expect_success "check-commits " '
+test_expect_success "check-commits (old-oid is zero)" '
 	(
 		cd workdir &&
 
 		test_must_fail $HELPER check-commits 0000000000000000000000000000000000000000..HEAD
+	) >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success "create new non-l10n commit" '
+	(
+		cd workdir &&
+		echo A >A.txt &&
+		git add A.txt &&
+		test_tick &&
+		git commit -m "A"
+	)
+'
+
+cat >expect <<-\EOF
+ERROR commit <OID>: found changes beyond "po/" directory:
+        A.txt
+ERROR commit <OID>: break because this commit is not for git-l10n
+INFO checking commits: 0 passed, 1 failed, 1 skipped.
+
+ERROR: fail to execute "git-po-helper check-commits"
+EOF
+
+test_expect_success "check-commits (non-l10n commit)" '
+	(
+		cd workdir &&
+		test_must_fail $HELPER check-commits 0000000000000000000000000000000000000000..HEAD
+	) >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success "check-commits --github-action --github-action-event=pull_request" '
+	(
+		cd workdir &&
+		test_must_fail $HELPER check-commits \
+			--github-action-event=pull_request \
+			0000000000000000000000000000000000000000..HEAD
+	) >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
+'
+
+cat >expect <<-\EOF
+WARNING commit <OID>: found changes beyond "po/" directory:
+        A.txt
+WARNING commit <OID>: break because this commit is not for git-l10n
+INFO checking commits: 0 passed, 0 failed, 2 skipped.
+EOF
+
+test_expect_success "check-commits --github-action --github-action-event=push" '
+	(
+		cd workdir &&
+		$HELPER check-commits \
+			--github-action-event push \
+			0000000000000000000000000000000000000000..HEAD
+	) >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success "check-commits --github-action-event=push" '
+	(
+		cd workdir &&
+		git-po-helper check-commits \
+			--github-action-event push \
+			0000000000000000000000000000000000000000..HEAD
 	) >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual

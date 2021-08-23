@@ -2,7 +2,7 @@ package util
 
 import (
 	"bufio"
-	"errors"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -29,9 +29,9 @@ const (
 	defaultEncoding       = "utf-8"
 )
 
-var (
-	ErrContinue = errors.New("continue")
-	ErrBreak    = errors.New("break")
+const (
+	checkResultBreak = 1 << iota
+	checkResultError
 )
 
 type commitLog struct {
@@ -515,12 +515,12 @@ func checkCommitLog(commit string) bool {
 	return ret
 }
 
-func checkCommitChanges(commit string) error {
+func checkCommitChanges(commit string) int {
 	var (
 		err            error
 		invalidChanges = []string{}
 		verifyChanges  = []string{}
-		ret            error
+		ret            int
 	)
 
 	cmd := exec.Command("git",
@@ -533,7 +533,7 @@ func checkCommitChanges(commit string) error {
 	}
 	if err != nil {
 		log.Errorf("commit %s: fail to run git-diff-tree: %s", AbbrevCommit(commit), err)
-		return ErrBreak
+		return checkResultError | checkResultBreak
 	}
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
@@ -551,20 +551,33 @@ func checkCommitChanges(commit string) error {
 	}
 	if err = cmd.Wait(); err != nil {
 		log.Errorf("commit %s: fail to run git-diff-tree: %s", AbbrevCommit(commit), err)
-		return ErrBreak
+		return checkResultError | checkResultBreak
 	}
 	if len(invalidChanges) > 0 {
-		log.Errorf(`commit %s: found changes beyond "%s/" directory`,
-			AbbrevCommit(commit), PoDir)
+		msg := bytes.NewBuffer(nil)
+		msg.WriteString(fmt.Sprintf("commit %s: found changes beyond \"%s/\" directory:\n",
+			AbbrevCommit(commit), PoDir))
 		for _, change := range invalidChanges {
-			log.Errorf("\t\t%s", change)
+			msg.WriteString("\t\t")
+			msg.WriteString(change)
+			msg.WriteString("\n")
 		}
 		if len(verifyChanges) == 0 && FlagGitHubAction() {
-			log.Errorf(`commit %s: break because the push or pull request is not for git-l10n`,
-				AbbrevCommit(commit))
-			return ErrBreak
+			if FlagGitHubActionEvent() == "push" {
+				log.Warn(msg)
+				log.Warnf(`commit %s: break because this commit is not for git-l10n`,
+					AbbrevCommit(commit))
+				// Ignore this error for push event.
+				return checkResultBreak
+			} else {
+				log.Error(msg)
+				log.Errorf(`commit %s: break because this commit is not for git-l10n`,
+					AbbrevCommit(commit))
+				return checkResultError | checkResultBreak
+			}
 		}
-		ret = ErrContinue
+		log.Error(msg)
+		ret |= checkResultError
 	}
 	for _, fileName := range verifyChanges {
 		tmpFile := FileRevision{
@@ -574,7 +587,7 @@ func checkCommitChanges(commit string) error {
 		if err := checkoutTmpfile(&tmpFile); err != nil || tmpFile.Tmpfile == "" {
 			log.Errorf("commit %s: fail to checkout %s of revision %s: %s",
 				AbbrevCommit(commit), tmpFile.File, tmpFile.Revision, err)
-			ret = ErrContinue
+			ret |= checkResultError
 			continue
 		}
 		if fileName == "po/TEAMS" {
@@ -582,7 +595,7 @@ func checkCommitChanges(commit string) error {
 				for _, error := range errors {
 					log.Errorf("commit %s: %s", AbbrevCommit(commit), error)
 				}
-				ret = ErrContinue
+				ret |= checkResultError
 			}
 		} else {
 			locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
@@ -590,7 +603,7 @@ func checkCommitChanges(commit string) error {
 				filepath.Join(PoDir, locale+".po"),
 				AbbrevCommit(commit))
 			if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, prompt) {
-				ret = ErrContinue
+				ret |= checkResultError
 			}
 		}
 		os.Remove(tmpFile.Tmpfile)
@@ -599,17 +612,17 @@ func checkCommitChanges(commit string) error {
 }
 
 // CheckCommit will run various checks for the given commit
-func CheckCommit(commit string) error {
+func CheckCommit(commit string) int {
 	var (
-		ret error
+		ret int
 	)
 
 	ret = checkCommitChanges(commit)
-	if ret == ErrBreak {
+	if ret&checkResultBreak != 0 {
 		return ret
 	}
 	if !checkCommitLog(commit) {
-		ret = ErrContinue
+		ret |= checkResultError
 	}
 	return ret
 }
@@ -617,7 +630,6 @@ func CheckCommit(commit string) error {
 // CmdCheckCommits implements check-commits sub command.
 func CmdCheckCommits(args ...string) bool {
 	var (
-		ret     = true
 		commits = []string{}
 		cmdArgs = []string{
 			"git",
@@ -690,21 +702,21 @@ func CmdCheckCommits(args ...string) bool {
 	pass := 0
 	fail := 0
 	for i := 0; i < nr; i++ {
-		if err = CheckCommit(commits[i]); err != nil {
-			ret = false
+		res := CheckCommit(commits[i])
+		if res&checkResultError != 0 {
 			fail++
-			if err == ErrBreak {
-				break
-			}
-		} else {
+		} else if res == 0 {
 			pass++
+		}
+		if res&checkResultBreak != 0 {
+			break
 		}
 	}
 	if nr > 0 {
 		if nr > pass+fail {
-			log.Errorf("checking commits: %d passed, %d failed, %d skipped.", pass, fail, nr-pass-fail)
+			log.Infof("checking commits: %d passed, %d failed, %d skipped.", pass, fail, nr-pass-fail)
 		} else if fail != 0 {
-			log.Errorf("checking commits: %d passed, %d failed.", pass, fail)
+			log.Infof("checking commits: %d passed, %d failed.", pass, fail)
 		} else {
 			log.Infof("checking commits: %d passed.", pass)
 		}
@@ -712,5 +724,5 @@ func CmdCheckCommits(args ...string) bool {
 		log.Infoln("no commit checked.")
 	}
 
-	return ret
+	return fail == 0
 }

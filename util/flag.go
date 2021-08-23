@@ -21,7 +21,15 @@ func FlagForce() bool {
 
 // FlagGitHubAction returns option "--github-action".
 func FlagGitHubAction() bool {
+	if viper.GetString("github-action-event") != "" {
+		return true
+	}
 	return viper.GetBool("github-action")
+}
+
+// FlagGitHubActionEvent returns option "--github-action-event".
+func FlagGitHubActionEvent() string {
+	return viper.GetString("github-action-event")
 }
 
 // FlagNoGPG returns option "--no-gpg".

@@ -26,11 +26,10 @@ test_expect_success "new commit with changes outside of po/" '
 		test_tick &&
 		git commit -F .git/commit-message &&
 
-		cat >expect <<-EOF &&
-		level=error msg="commit <OID>: found changes beyond \"po/\" directory"
-		level=error msg="        C.txt"
+		cat >expect <<-\EOF &&
+		level=error msg="commit <OID>: found changes beyond \"po/\" directory:\n        C.txt\n"
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
@@ -65,7 +64,7 @@ test_expect_success "new commit with unsupported hidden meta fields" '
 		level=error msg="commit <OID>: unknown commit header: note: i am a hacker"
 		level=error msg="commit <OID>: unknown commit header: note: happy coding"
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
@@ -100,7 +99,7 @@ test_expect_success "new commit with datetime in the future" '
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: bad author date: date is in the future, XX from now"
 		level=error msg="commit <OID>: bad committer date: date is in the future, XX from now"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
@@ -135,7 +134,7 @@ test_expect_success "new commit with bad email address" '
 		cat >expect <<-EOF &&
 		level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
 		level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
@@ -154,7 +153,7 @@ test_expect_success "too many commits to check" '
 		level=warning msg="too many commits to check (4 > 1), check args or use option --force"
 		level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
 		level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
@@ -171,7 +170,7 @@ test_expect_success "too many commits to check" '
 		cat >expect <<-\EOF &&
 		level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
 		level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
@@ -194,7 +193,7 @@ test_expect_success "long subject, exceed hard limit" '
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: subject is too long (74 > 72)"
 		level=warning msg="commit <OID>: subject length 74 > 72, about 98% commits have a subject less than 72 characters"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
@@ -239,7 +238,7 @@ test_expect_success "no empty line between subject and body" '
 		cat >expect <<-EOF &&
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: no blank line between subject and body of commit message"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
@@ -261,12 +260,13 @@ test_expect_success "no l10n prefix in subject" '
 		git commit --allow-empty -F .git/commit-message &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: do not have prefix \"l10n:\" in subject"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -284,12 +284,13 @@ test_expect_success "non-ascii characters in subject" '
 		git commit --allow-empty -F .git/commit-message &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: subject has non-ascii character \"简\""
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -307,12 +308,13 @@ test_expect_success "subject end with period" '
 		git commit --allow-empty -F .git/commit-message &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: subject should not end with period"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -331,12 +333,13 @@ test_expect_success "empty commit log" '
 		git update-ref refs/heads/master $cid &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: do not have any commit message"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -352,12 +355,13 @@ test_expect_success "oneline commit message" '
 		git commit --allow-empty -F .git/commit-message &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -376,13 +380,14 @@ test_expect_success "no s-o-b signature (has body message, but no s-o-b)" '
 		git commit --allow-empty -F .git/commit-message &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: bad signature for line: \"This is body of commit log.\""
 		level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -403,12 +408,13 @@ test_expect_success "no s-o-b signature (has body message, no s-o-b, but has oth
 		git commit --allow-empty -F .git/commit-message &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -425,7 +431,7 @@ test_expect_success "has s-o-b signature (only s-o-b, no body message)" '
 		test_tick &&
 		git commit --allow-empty -F .git/commit-message &&
 
-		$HELPER check-commits -qq HEAD~..HEAD
+		$HELPER check-commits HEAD~..HEAD
 	)
 '
 
@@ -441,7 +447,7 @@ test_expect_success "has s-o-b signature (only s-o-b and other signature, no bod
 		test_tick &&
 		git commit --allow-empty -F .git/commit-message &&
 
-		$HELPER check-commits -qq HEAD~..HEAD
+		$HELPER check-commits HEAD~..HEAD
 	)
 '
 
@@ -460,7 +466,7 @@ test_expect_success "has s-o-b signature (have s-o-b and other signature)" '
 		test_tick &&
 		git commit --allow-empty -F .git/commit-message &&
 
-		$HELPER check-commits -qq HEAD~..HEAD
+		$HELPER check-commits HEAD~..HEAD
 	)
 '
 
@@ -482,12 +488,13 @@ test_expect_success "no s-o-b signature (tailing trash message)" '
 		git commit --allow-empty -F .git/commit-message &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 		
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 
@@ -508,14 +515,15 @@ test_expect_success "too long message in commit log body" '
 		git commit --allow-empty -F .git/commit-message &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: commit log message is too long (84 > 72)"
 		level=error msg="commit <OID>: bad signature for line: \"Start body of commit log. This is is a very long commit log message, which exceed 72\""
 		level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -541,8 +549,9 @@ test_expect_success "merge commit" '
 		cat >expect <<-EOF &&
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+		level=info msg="checking commits: 2 passed."
 		EOF
-		$HELPER check-commits -q HEAD~..HEAD >out 2>&1 &&
+		$HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -566,12 +575,14 @@ test_expect_success "merge commit subject not start with Merge" '
 		git merge --no-ff -m "l10n: a merge commit" topic/2 &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: merge commit does not have prefix \"Merge\" in subject"
-		level=error msg="checking commits: 1 passed, 1 failed."
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+		level=info msg="checking commits: 1 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -593,8 +604,10 @@ test_expect_success "utf-8 characters in commit log" '
 		git cat-file commit HEAD >.git/commit-meta &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+		level=info msg="checking commits: 1 passed."
 		EOF
-		$HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		$HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -616,13 +629,14 @@ test_expect_success "utf-8 characters in commit log with wrong encoding" '
 		git cat-file commit HEAD >.git/commit-meta &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: bad iso-8859-6 characters in: \"使用 utf-8 编码的提交说明。\""
 		level=error msg="    <iconv failure message>..."
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -645,8 +659,10 @@ test_expect_success "gbk characters in commit log with proper encoding" '
 		git cat-file commit HEAD >.git/commit-meta &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+		level=info msg="checking commits: 1 passed."
 		EOF
-		$HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		$HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -669,13 +685,14 @@ test_expect_success "gbk characters in commit log with wrong encoding" '
 		git cat-file commit HEAD >.git/commit-meta &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: bad iso-8859-6 characters in: \"ʹ\xd3\xc3 gbk \xb1\xe0\xc2\xeb\xb5\xc4\xccύ˵\xc3\xf7\xa1\xa3\""
 		level=error msg="    <iconv failure message>..."
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)
@@ -693,12 +710,13 @@ test_expect_success "bad utf-8 characters in commit log" '
 		git update-ref refs/heads/master $cid &&
 
 		cat >expect <<-EOF &&
+		level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 		level=error msg="commit <OID>: bad UTF-8 characters in: \"ʹ\xd3\xc3 gbk \xb1\xe0\xc2\xeb\xb5\xc4\xccύ˵\xc3\xf7\xa1\xa3\""
-		level=error msg="checking commits: 0 passed, 1 failed."
+		level=info msg="checking commits: 0 passed, 1 failed."
 
 		ERROR: fail to execute "git-po-helper check-commits"
 		EOF
-		test_must_fail $HELPER check-commits -qq HEAD~..HEAD >out 2>&1 &&
+		test_must_fail $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
 		make_user_friendly_and_stable_output <out >actual &&
 		test_cmp expect actual
 	)

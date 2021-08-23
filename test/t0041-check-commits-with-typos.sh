@@ -81,7 +81,7 @@ level=error msg="[po/zh_CN.po@4e9d487]    >> msgid: exit code $res from $command
 level=error msg="[po/zh_CN.po@4e9d487]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
 level=error
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-level=error msg="checking commits: 0 passed, 1 failed."
+level=info msg="checking commits: 0 passed, 1 failed."
 
 ERROR: fail to execute "git-po-helper check-commits"
 EOF
@@ -119,7 +119,7 @@ level=warning msg="[po/zh_CN.po@4e9d487]    >> msgid: exit code $res from $comma
 level=warning msg="[po/zh_CN.po@4e9d487]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
 level=warning
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-level=error msg="checking commits: 1 passed, 1 failed."
+level=info msg="checking commits: 1 passed, 1 failed."
 
 ERROR: fail to execute "git-po-helper check-commits"
 EOF
