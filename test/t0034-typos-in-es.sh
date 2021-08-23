@@ -18,7 +18,7 @@ level=warning msg="[po/es.po]    mismatch variable names: herramienta.cmd"
 level=warning msg="[po/es.po]    >> msgid: '%s': path for unsupported man viewer.\nPlease consider using 'man.<tool>.cmd' instead."
 level=warning msg="[po/es.po]    >> msgstr: '%s': ruta para el visualizador del manual no soportada.\nPor favor considere usar 'man.<herramienta.cmd'."
 level=warning
-level=warning msg="[po/es.po]    mismatch variable names: --porcelain=, --procelain="
+level=warning msg="[po/es.po]    mismatch variable names: --porcelain=2, --procelain=2"
 level=warning msg="[po/es.po]    >> msgid: 'git status --porcelain=2' failed in submodule %s"
 level=warning msg="[po/es.po]    >> msgstr: 'git status --procelain=2' falló en el submódulo %s"
 level=warning
@@ -34,7 +34,7 @@ level=warning msg="[po/es.po]    mismatch variable names: --merge-base, --merge-
 level=warning msg="[po/es.po]    >> msgid: --stdin and --merge-base are mutually exclusive"
 level=warning msg="[po/es.po]    >> msgstr: --stdin and --merge-baseson mutuamente exclusivas"
 level=warning
-level=warning msg="[po/es.po]    mismatch variable names: --porcelain=, --procelain="
+level=warning msg="[po/es.po]    mismatch variable names: --porcelain=2, --procelain=2"
 level=warning msg="[po/es.po]    >> msgid: Could not run 'git status --porcelain=2' in submodule %s"
 level=warning msg="[po/es.po]    >> msgstr: No se pudo ejecutar 'git status --procelain=2' en el submódulo %s"
 level=warning

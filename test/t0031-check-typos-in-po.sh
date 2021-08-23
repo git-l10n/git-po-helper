@@ -185,4 +185,55 @@ test_expect_success "check typos of mismatched constant strings" '
 	)
 '
 
+test_expect_success "check typos of mismatched options" '
+	(
+		cd workdir &&
+		cat >po/zh_CN.po <<-\EOF &&
+		msgid ""
+		msgstr ""
+		"Project-Id-Version: Git\n"
+		"Report-Msgid-Bugs-To: Git Mailing List <git@vger.kernel.org>\n"
+		"POT-Creation-Date: 2021-03-04 22:41+0800\n"
+		"PO-Revision-Date: 2021-03-04 22:41+0800\n"
+		"Last-Translator: Automatically generated\n"
+		"Language-Team: none\n"
+		"Language: zh_CN\n"
+		"MIME-Version: 1.0\n"
+		"Content-Type: text/plain; charset=UTF-8\n"
+		"Content-Transfer-Encoding: 8bit\n"
+		"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+		msgid "--reject and --3way cannot be used together."
+		msgstr "--reject 和 -3way 不能同时使用。"
+
+		msgid "mark new files with `git add --intent-to-add`"
+		msgstr "使用命令 `git add --intent-to-addd` 标记新增文件"
+
+		msgid "equivalent to --word-diff=color --word-diff-regex=<regex>"
+		msgstr "相当于 --word-diff=color --word-diff-regex=正则"
+		EOF
+
+		$HELPER check-po  zh_CN >out 2>&1 &&
+		make_user_friendly_and_stable_output <out >actual &&
+
+		cat >expect <<-\EOF &&
+		level=info msg="[po/zh_CN.po]    3 translated messages."
+		level=warning msg="[po/zh_CN.po]    mismatch variable names: --3way"
+		level=warning msg="[po/zh_CN.po]    >> msgid: --reject and --3way cannot be used together."
+		level=warning msg="[po/zh_CN.po]    >> msgstr: --reject 和 -3way 不能同时使用。"
+		level=warning
+		level=warning msg="[po/zh_CN.po]    mismatch variable names: --word-diff-regex="
+		level=warning msg="[po/zh_CN.po]    >> msgid: equivalent to --word-diff=color --word-diff-regex=<regex>"
+		level=warning msg="[po/zh_CN.po]    >> msgstr: 相当于 --word-diff=color --word-diff-regex=正则"
+		level=warning
+		level=warning msg="[po/zh_CN.po]    mismatch variable names: --intent-to-add, --intent-to-addd"
+		level=warning msg="[po/zh_CN.po]    >> msgid: mark new files with `git add --intent-to-add`"
+		level=warning msg="[po/zh_CN.po]    >> msgstr: 使用命令 `git add --intent-to-addd` 标记新增文件"
+		level=warning
+		EOF
+		test_cmp expect actual
+	)
+'
+
+
 test_done
