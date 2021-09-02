@@ -632,6 +632,112 @@ func CheckCommit(commit string) int {
 	return ret
 }
 
+func fetchBlobsInPartialClone(args []string) error {
+	var (
+		maxCommits int
+		blobList   []string
+		cmd        *exec.Cmd
+		scanner    *bufio.Scanner
+		out        []byte
+	)
+
+	// Check if repo is partial clone
+	out, _ = exec.Command("git", "config", "remote.origin.promisor").Output()
+	out = bytes.TrimSpace(out)
+	if string(out) != "true" {
+		return nil
+	}
+
+	cmdArgs := []string{
+		"git",
+		"rev-list",
+		"--objects",
+		"--missing=print",
+	}
+
+	if max, err := strconv.ParseInt(os.Getenv("MAX_COMMITS"), 10, 32); err == nil {
+		maxCommits = int(max)
+	} else {
+		maxCommits = defaultMaxCommits
+	}
+	cmdArgs = append(cmdArgs, fmt.Sprintf("--max-count=%d", maxCommits))
+
+	if len(args) > 0 {
+		re := regexp.MustCompile(`^(0{40,}\.\.)`)
+		for _, arg := range args {
+			if re.MatchString(arg) {
+				arg = re.ReplaceAllString(arg, "")
+			}
+			cmdArgs = append(cmdArgs, arg)
+		}
+	} else {
+		cmdArgs = append(cmdArgs, "HEAD@{u}..HEAD")
+	}
+	cmdArgs = append(cmdArgs, "--", "po/")
+	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	stdout, err := cmd.StdoutPipe()
+	if err == nil {
+		err = cmd.Start()
+	}
+	if err != nil {
+		return err
+	}
+
+	scanner = bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "?") {
+			blobList = append(blobList, line[1:])
+		}
+	}
+	if err = cmd.Wait(); err != nil {
+		return err
+	}
+	if len(blobList) == 0 {
+		log.Infof("no missing blobs of po/* in partial clone")
+		return nil
+	}
+
+	cmd = exec.Command("git",
+		"-c", "fetch.negotiationAlgorithm=noop",
+		"fetch", "origin",
+		"--no-tags",
+		"--no-write-fetch-head",
+		"--recurse-submodules=no",
+		"--filter=blob:none",
+		"--stdin",
+	)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer stdin.Close()
+		for _, blob := range blobList {
+			io.WriteString(stdin, blob)
+			io.WriteString(stdin, "\n")
+		}
+	}()
+
+	out, err = cmd.CombinedOutput()
+	if err != nil {
+		return err
+	}
+	log.Infoln("fetched missing blobs in a batch successfully from partial clone")
+	scanner = bufio.NewScanner(bytes.NewReader(out))
+	if err != nil {
+		for scanner.Scan() {
+			log.Error(scanner.Text())
+		}
+		return err
+	}
+	for scanner.Scan() {
+		log.Info(scanner.Text())
+	}
+	return nil
+}
+
 // CmdCheckCommits implements check-commits sub command.
 func CmdCheckCommits(args ...string) bool {
 	var (
@@ -704,6 +810,12 @@ func CmdCheckCommits(args ...string) bool {
 			}
 		}
 	}
+
+	// Fetch missing objects ("po/*") in partial clone
+	if err = fetchBlobsInPartialClone(args); err != nil {
+		log.Warnf("fail to fetch missing blob in batch from partial clone: %s", err)
+	}
+
 	pass := 0
 	fail := 0
 	for i := 0; i < nr; i++ {
