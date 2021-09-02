@@ -562,7 +562,7 @@ func checkCommitChanges(commit string) int {
 			msg.WriteString(change)
 			msg.WriteString("\n")
 		}
-		if len(verifyChanges) == 0 && FlagGitHubAction() {
+		if len(verifyChanges) == 0 && FlagGitHubActionEvent() != "" {
 			switch FlagGitHubActionEvent() {
 			case "push":
 				log.Warn(msg)

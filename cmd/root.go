@@ -85,7 +85,7 @@ func (v *rootCommand) initLog() {
 	f := new(log.TextFormatter)
 	f.DisableTimestamp = true
 	f.DisableLevelTruncation = true
-	if util.FlagGitHubAction() {
+	if util.FlagGitHubActionEvent() != "" {
 		f.ForceColors = true
 	}
 	log.SetFormatter(f)
@@ -154,8 +154,9 @@ func (v *rootCommand) Command() *cobra.Command {
 		"no check using gettext 0.14 for back compatible")
 	v.cmd.PersistentFlags().MarkHidden("dryrun")
 	v.cmd.PersistentFlags().MarkHidden("no-gettext-back-compatible")
-	v.cmd.PersistentFlags().MarkHidden("github-action")
 	v.cmd.PersistentFlags().MarkHidden("github-action-event")
+	v.cmd.PersistentFlags().MarkDeprecated("github-action",
+		"flag '--github-action' is deprecated, use '--github-action-event' instead")
 
 	viper.BindPFlag(
 		"dryrun",
@@ -169,9 +170,6 @@ func (v *rootCommand) Command() *cobra.Command {
 	viper.BindPFlag(
 		"no-gettext-back-compatible",
 		v.cmd.PersistentFlags().Lookup("no-gettext-back-compatible"))
-	viper.BindPFlag(
-		"github-action",
-		v.cmd.PersistentFlags().Lookup("github-action"))
 	viper.BindPFlag(
 		"github-action-event",
 		v.cmd.PersistentFlags().Lookup("github-action-event"))

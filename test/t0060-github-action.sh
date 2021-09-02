@@ -4,7 +4,7 @@ test_description="check output for --github-action"
 
 . ./lib/sharness.sh
 
-HELPER="git-po-helper --github-action"
+HELPER="git-po-helper --github-action-event=pull_request_target"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -173,7 +173,7 @@ test_expect_success "check-commits (non-l10n commit)" '
 test_expect_success "check-commits --github-action --github-action-event=pull_request" '
 	(
 		cd workdir &&
-		test_must_fail $HELPER check-commits \
+		test_must_fail git-po-helper check-commits \
 			--github-action-event=pull_request \
 			0000000000000000000000000000000000000000..HEAD
 	) >out 2>&1 &&
@@ -202,7 +202,7 @@ EOF
 test_expect_success "check-commits --github-action --github-action-event=push" '
 	(
 		cd workdir &&
-		$HELPER check-commits \
+		git-po-helper check-commits \
 			--github-action-event push \
 			0000000000000000000000000000000000000000..HEAD
 	) >out 2>&1 &&

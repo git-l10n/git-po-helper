@@ -9,7 +9,7 @@ func FlagVerbose() int {
 	return viper.GetInt("verbose")
 }
 
-// FlagVerbose returns option "--quiet".
+// FlagQuiet returns option "--quiet".
 func FlagQuiet() int {
 	return viper.GetInt("quiet")
 }
@@ -19,14 +19,6 @@ func FlagForce() bool {
 	return viper.GetBool("check--force") || viper.GetBool("check-commits--force")
 }
 
-// FlagGitHubAction returns option "--github-action".
-func FlagGitHubAction() bool {
-	if viper.GetString("github-action-event") != "" {
-		return true
-	}
-	return viper.GetBool("github-action")
-}
-
 // FlagGitHubActionEvent returns option "--github-action-event".
 func FlagGitHubActionEvent() string {
 	return viper.GetString("github-action-event")
@@ -34,7 +26,7 @@ func FlagGitHubActionEvent() string {
 
 // FlagNoGPG returns option "--no-gpg".
 func FlagNoGPG() bool {
-	return FlagGitHubAction() || viper.GetBool("check--no-gpg") || viper.GetBool("check-commits--no-gpg")
+	return FlagGitHubActionEvent() != "" || viper.GetBool("check--no-gpg") || viper.GetBool("check-commits--no-gpg")
 }
 
 // FlagReportTyposAsErrors returns option "--report-typos-as-errors".
@@ -58,5 +50,5 @@ func FlagCore() bool {
 
 // FlagNoGettext14 returns option "--no-gettext-back-compatible".
 func FlagNoGettext14() bool {
-	return FlagGitHubAction() || viper.GetBool("no-gettext-back-compatible")
+	return FlagGitHubActionEvent() != "" || viper.GetBool("no-gettext-back-compatible")
 }
