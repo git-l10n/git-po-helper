@@ -2,6 +2,23 @@
 
 Changes of git-po-helper.
 
+## 0.4.0 (2021-9-4)
+
+* check-commits: can be run with bare repository
+* check-commits: fetch missing blobs in a batch from partial clone
+* Support new github-action event: `pull_request_target`
+* Scan typos for option name with numbers
+* check-commit: add new option "--github-action-event"
+* check-commits: raise an error if fail to run rev-list
+* check-commits: handle new branch action: <ZERO-OID>..<new-branch>
+* Stop scanning if find no git-l10n related commit
+* check-commits: fall back to threshold if too many commits
+* Force colored log output for github-action
+* refactor: use `util.Flag*` to get viper cached settings
+* Add "iso-\*.go" so we can use "go install"
+* test: exit with failure if downloading test repo fails
+
+
 ## 0.3.0 (2021-8-17)
 
 * Running check-commits will check typos for each commit.
