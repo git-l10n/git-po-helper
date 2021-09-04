@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/git-l10n/git-po-helper/version"
 	log "github.com/sirupsen/logrus"
@@ -103,11 +104,11 @@ func (v *rootCommand) initLog() {
 }
 
 func (v *rootCommand) preCheck() {
-	err := util.OpenRepository(".")
+	err := repository.OpenRepository(".")
 	if err != nil {
 		log.Fatalf("fail to open repo: %s", err)
 	}
-	if err = os.Chdir(util.GitRootDir); err != nil {
+	if err = os.Chdir(repository.WorkDir()); err != nil {
 		log.Fatalf("fail to chdir: %s", err)
 	}
 	err = util.CheckPrereq()

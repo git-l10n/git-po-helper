@@ -12,6 +12,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/gorilla/i18n/gettext"
 )
 
@@ -103,7 +104,7 @@ func checkTyposInPoFile(poFile string) ([]error, bool) {
 		"-o",
 		moFile.Name(),
 		poFile)
-	cmd.Dir = GitRootDir
+	cmd.Dir = repository.WorkDir()
 	err = cmd.Run()
 	if err != nil {
 		errs = append(errs, fmt.Errorf("fail to compile %s: %s", poFile, err))

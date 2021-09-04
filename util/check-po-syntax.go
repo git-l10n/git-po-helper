@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/git-l10n/git-po-helper/repository"
 )
 
 func checkPoSyntax(poFile string) ([]error, bool) {
@@ -37,7 +39,7 @@ func checkPoSyntax(poFile string) ([]error, bool) {
 			"--check",
 			"--statistics",
 			poFile)
-		cmd.Dir = GitRootDir
+		cmd.Dir = repository.WorkDir()
 		stderr, err := cmd.StderrPipe()
 		if err == nil {
 			err = cmd.Start()

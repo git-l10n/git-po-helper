@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -29,7 +30,7 @@ func CmdUpdate(fileName string) bool {
 		"-U",
 		poFile,
 		potFile)
-	cmd.Dir = GitRootDir
+	cmd.Dir = repository.WorkDir()
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		log.Errorf(`fail to update "%s": %s`, poFile, err)

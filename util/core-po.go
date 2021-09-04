@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -115,7 +116,7 @@ func genCorePot() bool {
 	}
 	cmdArgs = append(cmdArgs, localizedFiles...)
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	cmd.Dir = GitRootDir
+	cmd.Dir = repository.WorkDir()
 	cmd.Stderr = os.Stderr
 	log.Infof("Creating core pot file in %s", corePotFile)
 	if err := cmd.Run(); err != nil {

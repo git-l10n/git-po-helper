@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -94,7 +95,7 @@ func CmdInit(fileName string, onlyCore bool) bool {
 		potFile,
 		"-o",
 		"-")
-	cmd.Dir = GitRootDir
+	cmd.Dir = repository.WorkDir()
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Errorf("fail to init: %s", err)

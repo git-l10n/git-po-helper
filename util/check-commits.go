@@ -15,6 +15,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/mattn/go-isatty"
 	"github.com/qiniu/iconv"
 	log "github.com/sirupsen/logrus"
@@ -767,7 +768,7 @@ func CmdCheckCommits(args ...string) bool {
 		cmdArgs = append(cmdArgs, "HEAD@{u}..HEAD")
 	}
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	cmd.Dir = GitRootDir
+	cmd.Dir = repository.WorkDir()
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Errorf("fail to run git-rev-list: %s", err)
