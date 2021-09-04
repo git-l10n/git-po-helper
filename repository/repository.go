@@ -1,7 +1,11 @@
 package repository
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/jiangxin/goconfig"
+	log "github.com/sirupsen/logrus"
 )
 
 // Repository holds repository and error.
@@ -25,9 +29,9 @@ func OpenRepository(dir string) error {
 
 func assertRepositoryNotNil() {
 	if theRepository.error != nil {
-		panic(theRepository.error)
+		log.Fatal(theRepository.error)
 	} else if theRepository.repository == nil {
-		panic("TheRepository is nil")
+		log.Fatal("TheRepository is nil")
 	}
 }
 
@@ -41,4 +45,27 @@ func GitDir() string {
 func WorkDir() string {
 	assertRepositoryNotNil()
 	return theRepository.repository.WorkDir()
+}
+
+// IsGitProject checks current workdir is belong to git project.
+func IsGitProject() bool {
+	poFile := filepath.Join(WorkDir(), "po", "git.pot")
+	if _, err := os.Stat(poFile); err != nil {
+		log.Debugf("'%s' is not belong to git project: %s", WorkDir(), err)
+		return false
+	}
+	return true
+}
+
+// ChdirProjectRoot changes current dir to project root.
+func ChdirProjectRoot() {
+	if theRepository.repository.IsBare() {
+		log.Fatal("fail to change workdir, you are in a bare repository")
+	}
+	if !IsGitProject() {
+		log.Fatal("git-po-helper only works for git project.")
+	}
+	if err := os.Chdir(WorkDir()); err != nil {
+		log.Fatal(err)
+	}
 }

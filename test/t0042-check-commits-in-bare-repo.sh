@@ -1,15 +1,19 @@
 #!/bin/sh
 
-test_description="test git-po-helper check-commits with typos"
+test_description="test git-po-helper check-commits in bare repo"
 
 . ./lib/sharness.sh
 
 HELPER="git-po-helper --no-gettext-back-compatible"
 
 test_expect_success "setup" '
-	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
-	test -f workdir/po/git.pot &&
-	git -C workdir tag -m v1 v1
+	git clone --mirror "$PO_HELPER_TEST_REPOSITORY" repo.git &&
+	git clone repo.git workdir &&
+	(
+		cd workdir &&
+		git tag -m v1 v1 &&
+		git push origin --tags
+	)
 '
 
 test_expect_success "create po/zh_CN with typos" '
@@ -43,7 +47,8 @@ test_expect_success "create po/zh_CN with typos" '
 		git add "po/zh_CN.po" &&
 		test_tick &&
 		git commit -s -m "l10n: add po/zh_CN" &&
-		git tag -m v2 v2
+		git tag -m v2 v2 &&
+		git push origin --tags HEAD
 	)
 '
 
@@ -63,7 +68,7 @@ EOF
 
 test_expect_success "check-commits show typos" '
 	(
-		cd workdir &&
+		cd repo.git &&
 		$HELPER check-commits v1..
 	) >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
@@ -88,7 +93,7 @@ EOF
 
 test_expect_success "check-commits show typos (--report-typos-as-errors)" '
 	(
-		cd workdir &&
+		cd repo.git &&
 		test_must_fail $HELPER check-commits --report-typos-as-errors v1..
 	) >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
@@ -101,7 +106,8 @@ test_expect_success "update po/TEAMS" '
 		echo >>po/TEAMS &&
 		git add -u &&
 		test_tick &&
-		git commit -s -m "l10n: TEAMS: update for test"
+		git commit -s -m "l10n: TEAMS: update for test" &&
+		git push
 	)
 '
 
@@ -126,7 +132,7 @@ EOF
 
 test_expect_success "check-commits show typos and TEAMS file" '
 	(
-		cd workdir &&
+		cd repo.git &&
 		test_must_fail $HELPER check-commits v1..
 	) >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&

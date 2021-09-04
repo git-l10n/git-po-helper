@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"os"
 	"regexp"
 
 	"github.com/git-l10n/git-po-helper/repository"
@@ -103,16 +102,12 @@ func (v *rootCommand) initLog() {
 	}
 }
 
+func (v *rootCommand) initRepository() {
+	repository.OpenRepository("")
+}
+
 func (v *rootCommand) preCheck() {
-	err := repository.OpenRepository(".")
-	if err != nil {
-		log.Fatalf("fail to open repo: %s", err)
-	}
-	if err = os.Chdir(repository.WorkDir()); err != nil {
-		log.Fatalf("fail to chdir: %s", err)
-	}
-	err = util.CheckPrereq()
-	if err != nil {
+	if err := util.CheckPrereq(); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -201,5 +196,6 @@ func Execute() Response {
 
 func init() {
 	cobra.OnInitialize(rootCmd.initLog)
+	cobra.OnInitialize(rootCmd.initRepository)
 	cobra.OnInitialize(rootCmd.preCheck)
 }

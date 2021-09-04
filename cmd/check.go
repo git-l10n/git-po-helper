@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -50,6 +51,9 @@ func (v *checkCommand) Command() *cobra.Command {
 
 func (v checkCommand) Execute(args []string) error {
 	var err error
+
+	// Execute in root of worktree.
+	repository.ChdirProjectRoot()
 
 	if len(args) != 0 {
 		return newUserError("check command needs no arguments")

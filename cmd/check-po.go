@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -40,6 +41,9 @@ func (v *checkPoCommand) Command() *cobra.Command {
 }
 
 func (v checkPoCommand) Execute(args []string) error {
+	// Execute in root of worktree.
+	repository.ChdirProjectRoot()
+
 	if !util.CmdCheckPo(args...) {
 		return errExecute
 	}
