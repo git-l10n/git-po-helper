@@ -624,7 +624,7 @@ func CheckCommit(commit string) int {
 	)
 
 	ret = checkCommitChanges(commit)
-	if ret&checkResultBreak != 0 {
+	if (ret & checkResultBreak) != 0 {
 		return ret
 	}
 	if !checkCommitLog(commit) {
@@ -643,9 +643,7 @@ func fetchBlobsInPartialClone(args []string) error {
 	)
 
 	// Check if repo is partial clone
-	out, _ = exec.Command("git", "config", "remote.origin.promisor").Output()
-	out = bytes.TrimSpace(out)
-	if string(out) != "true" {
+	if !repository.Config().GetBool("remote.origin.promisor", false) {
 		return nil
 	}
 
@@ -769,7 +767,7 @@ func CmdCheckCommits(args ...string) bool {
 		cmdArgs = append(cmdArgs, "HEAD@{u}..HEAD")
 	}
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	cmd.Dir = repository.WorkDir()
+	cmd.Dir = repository.GitDir()
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Errorf("fail to run git-rev-list: %s", err)
@@ -822,12 +820,12 @@ func CmdCheckCommits(args ...string) bool {
 	fail := 0
 	for i := 0; i < nr; i++ {
 		res := CheckCommit(commits[i])
-		if res&checkResultError != 0 {
+		if (res & checkResultError) != 0 {
 			fail++
 		} else if res == 0 {
 			pass++
 		}
-		if res&checkResultBreak != 0 {
+		if (res & checkResultBreak) != 0 {
 			break
 		}
 	}

@@ -69,3 +69,8 @@ func ChdirProjectRoot() {
 		log.Fatal(err)
 	}
 }
+
+// Config is git config for the repository.
+func Config() goconfig.GitConfig {
+	return theRepository.repository.Config()
+}
