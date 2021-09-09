@@ -2,11 +2,12 @@
 
 Changes of git-po-helper.
 
-## 0.4.1 (2021-9-9)
+## 0.4.2 (2021-9-9)
 
 * t0043: add check-commits test cases for partial clone
 * Use goconfig to check git config for partial clone
 * Show number of missing blobs fetching from partial clone
+* Fix go 1.17 panic issue by update pkg golang.org/x/sys.
 
 
 ## 0.4.0 (2021-9-4)
