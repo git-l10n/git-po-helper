@@ -725,7 +725,8 @@ func fetchBlobsInPartialClone(args []string) error {
 	if err != nil {
 		return err
 	}
-	log.Infoln("fetched missing blobs in a batch successfully from partial clone")
+	log.Infof("successfully fetched %d missing blob(s) in a batch from partial clone",
+		len(blobList))
 	scanner = bufio.NewScanner(bytes.NewReader(out))
 	if err != nil {
 		for scanner.Scan() {
