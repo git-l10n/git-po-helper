@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 	"sort"
 	"strings"
 	"unicode"
@@ -16,7 +17,7 @@ import (
 	"github.com/gorilla/i18n/gettext"
 )
 
-func checkTyposInPoFile(poFile string) ([]error, bool) {
+func checkTyposInPoFile(locale, poFile string) ([]error, bool) {
 	var errs []error
 
 	if FlagIgnoreTypos() {
@@ -44,10 +45,10 @@ func checkTyposInPoFile(poFile string) ([]error, bool) {
 		errs = append(errs, fmt.Errorf("no mofile generated, and no scan typos"))
 		return errs, false
 	}
-	return checkTyposInMoFile(moFile.Name())
+	return checkTyposInMoFile(locale, moFile.Name())
 }
 
-func checkTyposInMoFile(moFile string) ([]error, bool) {
+func checkTyposInMoFile(locale, moFile string) ([]error, bool) {
 	var errs []error
 
 	if FlagIgnoreTypos() {
@@ -71,15 +72,15 @@ func checkTyposInMoFile(moFile string) ([]error, bool) {
 		}
 		if len(msg.StrPlural) == 0 {
 			errs = append(errs,
-				checkTypos(string(msg.Id), string(msg.Str), msg)...)
+				checkTypos(locale, string(msg.Id), string(msg.Str))...)
 		} else {
 			for i := range msg.StrPlural {
 				if i == 0 {
 					errs = append(errs,
-						checkTypos(string(msg.Id), string(msg.StrPlural[i]), msg)...)
+						checkTypos(locale, string(msg.Id), string(msg.StrPlural[i]))...)
 				} else {
 					errs = append(errs,
-						checkTypos(string(msg.IdPlural), string(msg.StrPlural[i]), msg)...)
+						checkTypos(locale, string(msg.IdPlural), string(msg.StrPlural[i]))...)
 				}
 			}
 		}
@@ -164,7 +165,7 @@ func findUnmatchVariables(src, target string) []string {
 	return unmatched
 }
 
-func checkTypos(msgID, msgStr string, msg *gettext.Message) (errs []error) {
+func checkTypos(locale, msgID, msgStr string) (errs []error) {
 	var (
 		unmatched  []string
 		origMsgID  = msgID
@@ -185,6 +186,16 @@ func checkTypos(msgID, msgStr string, msg *gettext.Message) (errs []error) {
 		}
 		if re.Pattern.MatchString(msgStr) {
 			msgStr = re.Pattern.ReplaceAllString(msgStr, re.Replace)
+		}
+	}
+
+	if smudgeMap, ok := dict.SmudgeMaps[locale]; ok {
+		for k, v := range smudgeMap {
+			if re, ok := k.(*regexp.Regexp); ok {
+				msgStr = re.ReplaceAllString(msgStr, v)
+			} else {
+				msgStr = strings.Replace(msgStr, k.(string), v, -1)
+			}
 		}
 	}
 

@@ -48,7 +48,7 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	}
 
 	// Check possible typos in a .po file.
-	errs, typosOK := checkTyposInPoFile(poFile)
+	errs, typosOK := checkTyposInPoFile(locale, poFile)
 	if !typosOK {
 		ret = typosOK
 	}
