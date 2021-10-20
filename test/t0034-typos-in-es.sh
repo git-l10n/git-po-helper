@@ -90,10 +90,6 @@ level=warning msg="[po/es.po]    mismatch variable names: --raw, --stat"
 level=warning msg="[po/es.po]    >> msgid: synonym for '-p --raw'"
 level=warning msg="[po/es.po]    >> msgstr: sinónimo para '-p --stat'"
 level=warning
-level=warning msg="[po/es.po]    mismatch variable names: --dirstat=archivos, --dirstat=files"
-level=warning msg="[po/es.po]    >> msgid: synonym for --dirstat=files,param1,param2..."
-level=warning msg="[po/es.po]    >> msgstr: sinonimo para --dirstat=archivos,param1,param2..."
-level=warning
 level=warning msg="[po/es.po]    mismatch variable names: --abort, s--abort"
 level=warning msg="[po/es.po]    >> msgid: try \"git cherry-pick (--continue | %s--abort | --quit)\""
 level=warning msg="[po/es.po]    >> msgstr: intenta \"git cherry-pick (--continue | --quit | %s --abort)\""
