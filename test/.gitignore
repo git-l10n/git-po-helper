@@ -1,5 +1,5 @@
-git.tar
-git.tar.sign
+git-*.tar
+git-*.tar.sign
 test-repository
 *.swp
 test-results/

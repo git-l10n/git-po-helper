@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PO_HELPER_TEST_REPOSITORY_VERSION=3
+PO_HELPER_TEST_REPOSITORY_VERSION=4
 
 # Create test repository in .repository
 PO_HELPER_TEST_REPOSITORY="${SHARNESS_TEST_SRCDIR}/test-repository"
@@ -40,29 +40,32 @@ create_test_repository () {
 
 	if test_repository_is_uptodate
 	then
-		return
+		return 0
 	fi
 
 	# Download git.tgz
-	if test ! -f "${SHARNESS_TEST_SRCDIR}/git.tar"
+	for gitver in 2.31.1 2.33.0
+	do
+	if test ! -f "${SHARNESS_TEST_SRCDIR}/git-$gitver.tar"
 	then
-		wget -O "${SHARNESS_TEST_SRCDIR}/git.tar.gz" \
+		wget -O "${SHARNESS_TEST_SRCDIR}/git-$gitver.tar.gz" \
 			--progress=dot:mega \
-			https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.31.1.tar.gz &&
-		gunzip "${SHARNESS_TEST_SRCDIR}/git.tar.gz"
+			https://mirrors.edge.kernel.org/pub/software/scm/git/git-$gitver.tar.gz &&
+		gunzip "${SHARNESS_TEST_SRCDIR}/git-$gitver.tar.gz"
 		if test $? -ne 0
 		then
-			echo >&2 "ERROR: fail to download or unzip git.tar.gz"
-			exit 1
+			echo >&2 "ERROR: fail to download or unzip git-$gitver.tar.gz"
+			return 1
 		fi
-		wget -O "${SHARNESS_TEST_SRCDIR}/git.tar.sign" \
-			https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.31.1.tar.sign &&
-		gpg --verify "${SHARNESS_TEST_SRCDIR}/git.tar.sign"
+		wget -O "${SHARNESS_TEST_SRCDIR}/git-$gitver.tar.sign" \
+			https://mirrors.edge.kernel.org/pub/software/scm/git/git-$gitver.tar.sign &&
+		gpg --verify "${SHARNESS_TEST_SRCDIR}/git-$gitver.tar.sign"
 		if test $? -ne 0
 		then
 			echo >&2 "WARNING: cannot verify the signature of the download git package"
 		fi
 	fi
+	done
 
 	# Remove whole shared repository
 	if test -d "$PO_HELPER_TEST_REPOSITORY"
@@ -72,12 +75,8 @@ create_test_repository () {
 	fi
 
 	# Start to create shared repository
-	create_test_repository_real
-
-	# create version file
-	echo ${PO_HELPER_TEST_REPOSITORY_VERSION} >${PO_HELPER_TEST_REPOSITORY_VERSION_FILE}
-
-	# release the lock
+	create_test_repository_real 2.31.1 2.33.0 &&
+	echo ${PO_HELPER_TEST_REPOSITORY_VERSION} >${PO_HELPER_TEST_REPOSITORY_VERSION_FILE} &&
 	rm -f "${PO_HELPER_TEST_REPOSITORY}.lock"
 }
 
@@ -90,27 +89,38 @@ test_repository_is_uptodate() {
 }
 
 create_test_repository_real () {
-	git config --global init.defaultbranch master &&
+	if test $# -eq 0
+	then
+		echo >&2 "Usage: create_test_repository_real <version> ..."
+		return 1
+	fi
+	git config --global init.defaultbranch main &&
 	git init "$PO_HELPER_TEST_REPOSITORY" &&
-	${TAR_CMD} --strip-components=1 -C test-repository -xf git.tar -- \
-		"git-*/po" \
-		"git-*/remote.c" \
-		"git-*/wt-status.c" \
-		"git-*/builtin/clone.c" \
-		"git-*/builtin/checkout.c" \
-		"git-*/builtin/index-pack.c" \
-		"git-*/builtin/push.c" \
-		"git-*/builtin/reset.c"
-	(
-		cd "$PO_HELPER_TEST_REPOSITORY" &&
-		git add -A &&
-		git commit -m "Add files from git"
-	)
+	while test $# -gt 0
+	do
+		${TAR_CMD} --strip-components=1 -C test-repository -xf git-$1.tar -- \
+			"git-$1/po" \
+			"git-$1/remote.c" \
+			"git-$1/wt-status.c" \
+			"git-$1/builtin/clone.c" \
+			"git-$1/builtin/checkout.c" \
+			"git-$1/builtin/index-pack.c" \
+			"git-$1/builtin/push.c" \
+			"git-$1/builtin/reset.c"
+		(
+			cd "$PO_HELPER_TEST_REPOSITORY" &&
+			git add -A &&
+			test_tick &&
+			git commit -m "Add files from git-$1" &&
+			git branch po-$1
+		) &&
+		shift
+	done
 }
 
 # Create test repository
 if ! test_repository_is_uptodate
 then
-	create_test_repository
+	create_test_repository || exit 1
 fi
 

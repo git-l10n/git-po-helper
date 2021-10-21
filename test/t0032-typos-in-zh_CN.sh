@@ -4,12 +4,11 @@ test_description="check typos in zh_CN.po"
 
 . ./lib/sharness.sh
 
-HELPER="git-po-helper --no-gettext-back-compatible"
+HELPER="po-helper --no-gettext-back-compatible"
 
-test_expect_success "setup" '
-	mkdir po &&
-	touch po/git.pot &&
-	cp "${PO_HELPER_TEST_REPOSITORY}/po/zh_CN.po" po
+test_expect_success "checkout po-2.31.1" '
+	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
+	git -C workdir checkout po-2.31.1
 '
 
 cat >expect <<-\EOF
@@ -69,9 +68,15 @@ level=warning
 EOF
 
 test_expect_success "check typos in zh_CN.po" '
-	$HELPER check-po zh_CN >out 2>&1 &&
+	git -C workdir $HELPER check-po zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
+'
+
+test_expect_success "no typos in main branch" '
+	git -C workdir checkout main &&
+	git -C workdir $HELPER \
+		check-po --report-typos-as-errors zh_CN
 '
 
 test_done
