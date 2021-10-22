@@ -2,6 +2,13 @@
 
 Changes of git-po-helper.
 
+## 0.4.3 (2021-10-22)
+
+* Smudge on msgStr to suppress false positive for checking typos..
+* Check unmatched "%(fieldname)" in format of git-for-each-ref.
+* Test on po files of git 2.31.1 and latest version.
+
+
 ## 0.4.2 (2021-9-9)
 
 * t0043: add check-commits test cases for partial clone
