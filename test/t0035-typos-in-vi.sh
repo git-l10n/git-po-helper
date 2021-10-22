@@ -73,6 +73,14 @@ level=warning msg="[po/vi.po]    mismatch variable names: git-upload-archive, gi
 level=warning msg="[po/vi.po]    >> msgid: path to the remote git-upload-archive command"
 level=warning msg="[po/vi.po]    >> msgstr: đường dẫn đến lệnh git-upload-pack trên máy chủ"
 level=warning
+level=warning msg="[po/vi.po]    mismatch variable names: %%(objectname), %%(objectsize)"
+level=warning msg="[po/vi.po]    >> msgid: unrecognized %%(objectsize) argument: %s"
+level=warning msg="[po/vi.po]    >> msgstr: tham số không được thừa nhận %%(objectname): %s"
+level=warning
+level=warning msg="[po/vi.po]    mismatch variable names: %%(color:%s), %%(màu:%s)"
+level=warning msg="[po/vi.po]    >> msgid: unrecognized color: %%(color:%s)"
+level=warning msg="[po/vi.po]    >> msgstr: không nhận ra màu: %%(màu:%s)"
+level=warning
 EOF
 
 test_expect_success "check typos in vi.po" '
@@ -81,7 +89,7 @@ test_expect_success "check typos in vi.po" '
 	test_cmp expect actual
 '
 
-test_expect_success "no typos in main branch" '
+test_expect_failure "no typos in main branch" '
 	git -C workdir checkout main &&
 	git -C workdir $HELPER \
 		check-po --report-typos-as-errors vi

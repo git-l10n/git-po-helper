@@ -77,6 +77,10 @@ level=warning msg="[po/es.po]    mismatch variable names: git-upload-archive, gi
 level=warning msg="[po/es.po]    >> msgid: path to the remote git-upload-archive command"
 level=warning msg="[po/es.po]    >> msgstr: ruta para el comando git-upload-archivo remoto"
 level=warning
+level=warning msg="[po/es.po]    mismatch variable names: %%(%s)"
+level=warning msg="[po/es.po]    >> msgid: positive value expected '%s' in %%(%s)"
+level=warning msg="[po/es.po]    >> msgstr: valor positivo esperado '%s' en %% (%s)"
+level=warning
 level=warning msg="[po/es.po]    mismatch variable names: --sateged, --staged"
 level=warning msg="[po/es.po]    >> msgid: repository has been updated, but unable to write\nnew_index file. Check that disk is not full and quota is\nnot exceeded, and then \"git restore --staged :/\" to recover."
 level=warning msg="[po/es.po]    >> msgstr: el repositorio ha sido actualizado, pero no se pudo escribir el archivo\nnew_index. Verifique que el disco no este lleno y la quota no ha\nsido superada, y luego \"git restore --sateged :/\" para recuperar."
@@ -100,6 +104,10 @@ level=warning
 level=warning msg="[po/es.po]    mismatch variable names: load_cache_entires, load_cache_entries"
 level=warning msg="[po/es.po]    >> msgid: unable to join load_cache_entries thread: %s"
 level=warning msg="[po/es.po]    >> msgstr: no es posible unir hilo load_cache_entires: %s"
+level=warning
+level=warning msg="[po/es.po]    mismatch variable names: %%(subject), %%(sujeto)"
+level=warning msg="[po/es.po]    >> msgid: unrecognized %%(subject) argument: %s"
+level=warning msg="[po/es.po]    >> msgstr: argumento %%(sujeto) no reconocido: %s"
 level=warning
 level=warning msg="[po/es.po]    mismatch variable names: --reference, usa--reference"
 level=warning msg="[po/es.po]    >> msgid: use --reference only while cloning"

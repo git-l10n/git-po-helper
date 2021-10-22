@@ -53,6 +53,10 @@ level=warning msg="[po/sv.po]    mismatch variable names: dimmed_zebra"
 level=warning msg="[po/sv.po]    >> msgid: color moved setting must be one of 'no', 'default', 'blocks', 'zebra', 'dimmed-zebra', 'plain'"
 level=warning msg="[po/sv.po]    >> msgstr: färginställningen för flyttade block måste vara en av \"no\", \"default\", \"blocks\", \"zebra\", \"dimmed_zebra\", \"plain\""
 level=warning
+level=warning msg="[po/sv.po]    mismatch variable names: %%(trailers:key=<...>), %%(trailers:nyckel=<...>)"
+level=warning msg="[po/sv.po]    >> msgid: expected %%(trailers:key=<value>)"
+level=warning msg="[po/sv.po]    >> msgstr: förvändate %%(trailers:nyckel=<värde>)"
+level=warning
 level=warning msg="[po/sv.po]    mismatch variable names: git bisect--helper, git-bisect--helper"
 level=warning msg="[po/sv.po]    >> msgid: git bisect--helper --bisect-terms [--term-good | --term-old | --term-bad | --term-new]"
 level=warning msg="[po/sv.po]    >> msgstr: git-bisect--helper --bisect-terms [--term-good | --term-old | --term-bad | --term-new]"

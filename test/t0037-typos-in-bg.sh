@@ -137,6 +137,18 @@ level=warning msg="[po/bg.po]    mismatch variable names: --word-diff-regex="
 level=warning msg="[po/bg.po]    >> msgid: equivalent to --word-diff=color --word-diff-regex=<regex>"
 level=warning msg="[po/bg.po]    >> msgstr: псевдоним на „--word-diff=color --word-diff-regex=РЕГУЛЯРЕН_ИЗРАЗ“"
 level=warning
+level=warning msg="[po/bg.po]    mismatch variable names: %%(trailers:key=<...>), %%(trailers:КЛЮЧ=СТОЙНОСТ)"
+level=warning msg="[po/bg.po]    >> msgid: expected %%(trailers:key=<value>)"
+level=warning msg="[po/bg.po]    >> msgstr: очаква се %%(trailers:КЛЮЧ=СТОЙНОСТ)"
+level=warning
+level=warning msg="[po/bg.po]    mismatch variable names: %%(align:<...>,<...>), %%(align:ШИРОЧИНА,ПОЗИЦИЯ)"
+level=warning msg="[po/bg.po]    >> msgid: expected format: %%(align:<width>,<position>)"
+level=warning msg="[po/bg.po]    >> msgstr: очакван формат: %%(align:ШИРОЧИНА,ПОЗИЦИЯ)"
+level=warning
+level=warning msg="[po/bg.po]    mismatch variable names: %%(color:<...>), %%(color:ЦВЯТ)"
+level=warning msg="[po/bg.po]    >> msgid: expected format: %%(color:<color>)"
+level=warning msg="[po/bg.po]    >> msgstr: очакван формат: %%(color:ЦВЯТ)"
+level=warning
 level=warning msg="[po/bg.po]    mismatch variable names: --quit, --skip"
 level=warning msg="[po/bg.po]    >> msgid: git am [<options>] (--continue | --skip | --abort)"
 level=warning msg="[po/bg.po]    >> msgstr: git am [ОПЦИЯ…] (--continue | --quit | --abort)"

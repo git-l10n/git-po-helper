@@ -37,6 +37,10 @@ level=warning msg="[po/pt_PT.po]    mismatch variable names: git-mailsplit"
 level=warning msg="[po/pt_PT.po]    >> msgid: pass --keep-cr flag to git-mailsplit for mbox format"
 level=warning msg="[po/pt_PT.po]    >> msgstr: passar a opção --keep-cr ao gitmailsplit para formato de mbox"
 level=warning
+level=warning msg="[po/pt_PT.po]    mismatch variable names: %%(algn), %%(align)"
+level=warning msg="[po/pt_PT.po]    >> msgid: positive width expected with the %%(align) atom"
+level=warning msg="[po/pt_PT.po]    >> msgstr: largura positiva esperada com o átomo %%(algn)"
+level=warning
 EOF
 
 test_expect_success "check typos in pt_PT.po" '
@@ -45,7 +49,7 @@ test_expect_success "check typos in pt_PT.po" '
 	test_cmp expect actual
 '
 
-test_expect_success "no typos in main branch" '
+test_expect_failure "no typos in main branch" '
 	git -C workdir checkout main &&
 	git -C workdir $HELPER \
 		check-po --report-typos-as-errors pt_PT

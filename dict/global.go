@@ -19,6 +19,8 @@ var KeepWordsPattern = regexp.MustCompile(`(` +
 	`\b[a-z-]+--[a-z-]+` + // match helper commands: bisect--helper, ...
 	`|` +
 	`--[a-zA-Z0-9-=]+` + // match git options: --option, --option=value, ...
+	`|` +
+	`%%\(.*?\)` + // match %(fieldname) in format argument of git-for-each-ref, ...
 	`)`)
 
 // GlobalSkipPatterns defines words we want to ignore for check globally.
@@ -57,9 +59,14 @@ var GlobalSkipPatterns = []struct {
 		Replace: "[...]",
 	},
 	{
-		// %2$s, %3$d, %2$.*1$s, %1$0.1f
-		Pattern: regexp.MustCompile(`%[0-9]+(\$\.\*[0-9]*)?\$`),
-		Replace: "%...",
+		// Complex placeholders in fprintf, such as: %2$.*1$s
+		Pattern: regexp.MustCompile(`%[0-9]+\$\.\*[0-9]+\$`),
+		Replace: "%.*",
+	},
+	{
+		// Simple placeholders in fprintf, such as: %2$s, %3$d, %1$0.1f
+		Pattern: regexp.MustCompile(`%[0-9]+\$`),
+		Replace: "%",
 	},
 	{
 		// email: user@example.com, usuari@domini.com
