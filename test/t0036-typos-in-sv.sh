@@ -37,14 +37,6 @@ level=warning msg="[po/sv.po]    mismatch variable names: --source=HEAD"
 level=warning msg="[po/sv.po]    >> msgid: Clone succeeded, but checkout failed.\nYou can inspect what was checked out with 'git status'\nand retry with 'git restore --source=HEAD :/'\n"
 level=warning msg="[po/sv.po]    >> msgstr: Klonen lyckades, men utcheckningen misslyckades.\nDu kan inspektera det som checkades ut med \"git status\"\noch försöka med \"git restore -source=HEAD :/\"\n"
 level=warning
-level=warning msg="[po/sv.po]    mismatch variable names: git-arkivversion"
-level=warning msg="[po/sv.po]    >> msgid: Expected git repo version <= %d, found %d"
-level=warning msg="[po/sv.po]    >> msgstr: Förväntade git-arkivversion <= %d, hittade %d"
-level=warning
-level=warning msg="[po/sv.po]    mismatch variable names: git-branch"
-level=warning msg="[po/sv.po]    >> msgid: Specific git-branch actions:"
-level=warning msg="[po/sv.po]    >> msgstr: Specifika git-branch-åtgärder:"
-level=warning
 level=warning msg="[po/sv.po]    mismatch variable names: add_cacheinfo, add_cahceinfo"
 level=warning msg="[po/sv.po]    >> msgid: add_cacheinfo failed for path '%s'; merge aborting."
 level=warning msg="[po/sv.po]    >> msgstr: add_cahceinfo misslyckades för sökvägen \"%s\"; avslutar sammanslagningen."
