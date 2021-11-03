@@ -1,6 +1,6 @@
 #!/bin/sh
 
-test_description="check output for --github-action"
+test_description="check output for --github-action-event"
 
 . ./lib/sharness.sh
 
@@ -159,7 +159,7 @@ test_expect_success "check-commits (non-l10n commit)" '
 	test_cmp expect actual
 '
 
-test_expect_success "check-commits --github-action --github-action-event=pull_request" '
+test_expect_success "check-commits --github-action-event=pull_request" '
 	test_must_fail git -C workdir po-helper \
 		check-commits \
 		--github-action-event=pull_request \
@@ -184,7 +184,7 @@ WARNING commit <OID>: break because this commit is not for git-l10n
 INFO checking commits: 0 passed, 0 failed, 2 skipped.
 EOF
 
-test_expect_success "check-commits --github-action --github-action-event=push" '
+test_expect_success "check-commits --github-action-event=push" '
 	git -C workdir po-helper \
 		check-commits \
 		--github-action-event push \

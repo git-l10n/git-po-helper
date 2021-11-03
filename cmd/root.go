@@ -139,9 +139,6 @@ func (v *rootCommand) Command() *cobra.Command {
 	v.cmd.PersistentFlags().CountP("verbose",
 		"v",
 		"verbose mode")
-	v.cmd.PersistentFlags().Bool("github-action",
-		false,
-		"run with github-action")
 	v.cmd.PersistentFlags().String("github-action-event",
 		"",
 		"github-action event name")
@@ -151,8 +148,6 @@ func (v *rootCommand) Command() *cobra.Command {
 	v.cmd.PersistentFlags().MarkHidden("dryrun")
 	v.cmd.PersistentFlags().MarkHidden("no-gettext-back-compatible")
 	v.cmd.PersistentFlags().MarkHidden("github-action-event")
-	v.cmd.PersistentFlags().MarkDeprecated("github-action",
-		"flag '--github-action' is deprecated, use '--github-action-event' instead")
 
 	viper.BindPFlag(
 		"dryrun",
