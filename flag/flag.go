@@ -24,6 +24,11 @@ func GitHubActionEvent() string {
 	return viper.GetString("github-action-event")
 }
 
+// GitHubActionTryInstall returns option "--github-action-try-install".
+func GitHubActionTryInstall() string {
+	return viper.GetString("github-action-try-install")
+}
+
 // NoGPG returns option "--no-gpg".
 func NoGPG() bool {
 	return GitHubActionEvent() != "" || viper.GetBool("check--no-gpg") || viper.GetBool("check-commits--no-gpg")
