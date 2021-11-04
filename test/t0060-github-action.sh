@@ -4,7 +4,7 @@ test_description="check output for --github-action-event"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --github-action-event=pull_request_target"
+HELPER="po-helper --github-action-event=pull_request_target --github-action-try-install=no"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -92,14 +92,18 @@ test_expect_success "update zh_CN successfully" '
 '
 
 cat >expect <<-\EOF
+WARNING Need gettext 0.14 for some checks, see:
+WARNING https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/
+INFO [po/zh_CN.po]    fail to install gettext-0.14.x ...
 INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
 EOF
 
 test_expect_success "check update of zh_CN.po" '
-	git -C workdir $HELPER \
+	git -C workdir po-helper \
+		--github-action-event=pull_request_target \
+		--github-action-try-install=error \
 		check-po zh_CN >out 2>&1 &&
-	make_user_friendly_and_stable_output <out |
-		head -2 >actual &&
+	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
 
@@ -163,6 +167,7 @@ test_expect_success "check-commits --github-action-event=pull_request" '
 	test_must_fail git -C workdir po-helper \
 		check-commits \
 		--github-action-event=pull_request \
+		--github-action-try-install=no \
 		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
@@ -172,6 +177,7 @@ test_expect_success "check-commits --github-action-event=pull_request_target" '
 	test_must_fail git -C workdir po-helper \
 		check-commits \
 		--github-action-event=pull_request_target \
+		--github-action-try-install=no \
 		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
@@ -188,6 +194,7 @@ test_expect_success "check-commits --github-action-event=push" '
 	git -C workdir po-helper \
 		check-commits \
 		--github-action-event push \
+		--github-action-try-install=no \
 		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
@@ -197,6 +204,7 @@ test_expect_success "check-commits --github-action-event=push" '
 	git -C workdir po-helper \
 		check-commits \
 		--github-action-event push \
+		--github-action-try-install=no \
 		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual

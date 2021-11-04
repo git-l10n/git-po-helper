@@ -143,12 +143,16 @@ func (v *rootCommand) Command() *cobra.Command {
 	v.cmd.PersistentFlags().String("github-action-event",
 		"",
 		"github-action event name")
+	v.cmd.PersistentFlags().String("github-action-try-install",
+		"yes",
+		"try to install gettext for github-actions")
 	v.cmd.PersistentFlags().Bool("no-special-gettext-versions",
 		false,
 		"no check using gettext 0.14 for back compatible")
 	v.cmd.PersistentFlags().MarkHidden("dryrun")
 	v.cmd.PersistentFlags().MarkHidden("no-special-gettext-versions")
 	v.cmd.PersistentFlags().MarkHidden("github-action-event")
+	v.cmd.PersistentFlags().MarkHidden("github-action-try-install")
 
 	viper.BindPFlag(
 		"dryrun",
@@ -165,6 +169,9 @@ func (v *rootCommand) Command() *cobra.Command {
 	viper.BindPFlag(
 		"github-action-event",
 		v.cmd.PersistentFlags().Lookup("github-action-event"))
+	viper.BindPFlag(
+		"github-action-try-install",
+		v.cmd.PersistentFlags().Lookup("github-action-try-install"))
 
 	return v.cmd
 }

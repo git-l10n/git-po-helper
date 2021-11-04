@@ -24,7 +24,23 @@ func checkPoSyntax(poFile string) ([]error, bool) {
 		return errs, false
 	}
 
-	if flag.GitHubActionEvent() == "" {
+	// If this program is called in github actions, try to install gettext-0.14.x
+	// to find backward incompatible issues.  Otherwise, try to find and use
+	// gettext-0.14.x if it already exists.
+	if flag.GitHubActionEvent() != "" {
+		switch flag.GitHubActionTryInstall() {
+		case "no":
+			break
+		case "yes":
+			if err := gettext.InstallGettext(gettext.Version0_14); err != nil {
+				msgs = append(msgs, err.Error())
+			}
+			gettext.ShowHints()
+		default:
+			msgs = append(msgs, "fail to install gettext-0.14.x ...")
+			gettext.ShowHints()
+		}
+	} else {
 		gettext.ShowHints()
 	}
 

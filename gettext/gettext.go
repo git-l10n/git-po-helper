@@ -2,6 +2,10 @@ package gettext
 
 import (
 	"bytes"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -76,9 +80,13 @@ func findGettext() {
 		if version, err := gettextVersion(execPath); err == nil {
 			switch version {
 			case Version0_14:
-				GettextAppMap[Version0_14] = gettextApp{Path: filepath.Dir(execPath)}
+				GettextAppMap[Version0_14] = gettextApp{
+					Path: filepath.Dir(execPath),
+				}
 			default:
-				GettextAppMap[VersionAny] = gettextApp{Path: filepath.Dir(execPath)}
+				GettextAppMap[VersionAny] = gettextApp{
+					Path: filepath.Dir(execPath),
+				}
 			}
 		}
 	}
@@ -131,6 +139,115 @@ func findGettext() {
 			return filepath.SkipDir
 		})
 	}
+}
+
+var (
+	installStatus = map[string]bool{}
+)
+
+// InstallGettext installs special gettext versions in temporary directory.
+func InstallGettext(version string) error {
+	var (
+		gettextURL    string
+		gettextSrcDir string
+	)
+
+	// Already installed
+	if _, ok := GettextAppMap[version]; ok {
+		return nil
+	}
+	// No such version
+	if _, ok := GettextAppHints[version]; !ok {
+		return fmt.Errorf("don't know how to install gettext version: %s", version)
+	}
+	// Only try to install once.
+	if _, ok := installStatus[version]; ok {
+		return nil
+	}
+	defer func() {
+		installStatus[version] = false
+	}()
+
+	// Create temporary directory
+	dirName, err := ioutil.TempDir("", "gettext")
+	if err != nil {
+		return err
+	}
+
+	// Download gettext
+	targetFile := "gettext.tar.gz"
+	out, err := os.Create(filepath.Join(dirName, targetFile))
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	log.Infof("downloading gettext %s", version)
+	switch version {
+	case Version0_14:
+		gettextURL = "https://ftp.gnu.org/gnu/gettext/gettext-0.14.6.tar.gz"
+		gettextSrcDir = filepath.Join(dirName, "gettext-0.14.6")
+	default:
+		return fmt.Errorf("unknown gettext version: %s", version)
+	}
+
+	resp, err := http.Get(gettextURL)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad status: %s", resp.Status)
+	}
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return err
+	}
+	out.Close()
+
+	// Extrace gettext tar.gz
+	log.Infof("extracting gettext %s", version)
+	cmd := exec.Command("tar", "-xzf", targetFile)
+	cmd.Dir = dirName
+	if err = cmd.Run(); err != nil {
+		return err
+	}
+
+	// Build and install gettext in temporary directory.
+	log.Infoln("running ./configure")
+	cmd = exec.Command("sh", "./configure", "--prefix="+dirName)
+	cmd.Dir = gettextSrcDir
+	if err = cmd.Run(); err != nil {
+		return err
+	}
+
+	log.Infoln("running: make")
+	cmd = exec.Command("make")
+	cmd.Dir = gettextSrcDir
+	if err = cmd.Run(); err != nil {
+		return err
+	}
+
+	log.Infoln("running: make install")
+	cmd = exec.Command("make", "install")
+	cmd.Dir = gettextSrcDir
+	if err = cmd.Run(); err != nil {
+		return err
+	}
+
+	// Add gettext to PATH
+	GettextAppMap[version] = gettextApp{
+		Path: filepath.Join(dirName, "bin"),
+		// Cleanup temporary directory
+		Defer: func() {
+			log.Printf("removing temporary installed gettext at %s", dirName)
+			os.RemoveAll(dirName)
+		},
+	}
+	installStatus[version] = true
+	return nil
 }
 
 func init() {

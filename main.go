@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/git-l10n/git-po-helper/cmd"
+	"github.com/git-l10n/git-po-helper/gettext"
 )
 
 const (
@@ -13,6 +14,13 @@ const (
 
 func main() {
 	resp := cmd.Execute()
+
+	// Do cleanups
+	for _, app := range gettext.GettextAppMap {
+		if app.Defer != nil {
+			app.Defer()
+		}
+	}
 
 	if resp.Err != nil {
 		if resp.IsUserError() {
