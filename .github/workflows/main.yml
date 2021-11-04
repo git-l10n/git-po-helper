@@ -38,7 +38,6 @@ jobs:
       - name: "Test: prerequsites"
         run: |
           sudo test/install-prereq.sh
-          make it DEFAULT_TEST_TARGET=test
 
       - name: "Test: Integration test"
         run: make it DEFAULT_TEST_TARGET=test
@@ -84,7 +83,6 @@ jobs:
       - name: "Test: prerequsites"
         run: |
           sudo test/install-prereq.sh
-          make it DEFAULT_TEST_TARGET=test
 
       - name: "Test: Integration test"
         run: make it DEFAULT_TEST_TARGET=test
