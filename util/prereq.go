@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/git-l10n/git-po-helper/flag"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,7 +32,7 @@ func isGetText014(execPath string) bool {
 func getGetText014() string {
 	var getTextDir string
 
-	if FlagNoGettext14() {
+	if flag.NoGettext14() {
 		return ""
 	}
 	if _, ok := os.LookupEnv("NO_GETTEXT_14"); ok {
@@ -96,7 +97,7 @@ func CheckPrereq() error {
 
 	DirGetText014 = getGetText014()
 	if DirGetText014 == "" {
-		if !FlagNoGettext14() {
+		if !flag.NoGettext14() {
 			log.Warnln("cannot find gettext 0.14 or 0.15, and couldn't run some checks. See:")
 			log.Warnf("    https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/")
 		}

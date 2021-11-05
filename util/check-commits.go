@@ -15,6 +15,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/git-l10n/git-po-helper/flag"
 	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/mattn/go-isatty"
 	"github.com/qiniu/iconv"
@@ -387,7 +388,7 @@ func (v *commitLog) checkBody() bool {
 func (v *commitLog) checkGpg() bool {
 	var ret = true
 
-	if FlagNoGPG() {
+	if flag.NoGPG() {
 		return ret
 	}
 	if v.hasGpgSig() {
@@ -563,8 +564,8 @@ func checkCommitChanges(commit string) int {
 			msg.WriteString(change)
 			msg.WriteString("\n")
 		}
-		if len(verifyChanges) == 0 && FlagGitHubActionEvent() != "" {
-			switch FlagGitHubActionEvent() {
+		if len(verifyChanges) == 0 && flag.GitHubActionEvent() != "" {
+			switch flag.GitHubActionEvent() {
 			case "push":
 				log.Warn(msg)
 				log.Warnf(`commit %s: break because this commit is not for git-l10n`,
@@ -795,7 +796,7 @@ func CmdCheckCommits(args ...string) bool {
 	}
 	nr := len(commits)
 	if nr > maxCommits {
-		if FlagForce() {
+		if flag.Force() {
 			nr = maxCommits
 		} else if !isatty.IsTerminal(os.Stdin.Fd()) || !isatty.IsTerminal(os.Stdout.Fd()) {
 			log.Warnf("too many commits to check (%d > %d), check args or use option --force",

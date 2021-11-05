@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/git-l10n/git-po-helper/flag"
 	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/git-l10n/git-po-helper/version"
@@ -85,12 +86,12 @@ func (v *rootCommand) initLog() {
 	f := new(log.TextFormatter)
 	f.DisableTimestamp = true
 	f.DisableLevelTruncation = true
-	if util.FlagGitHubActionEvent() != "" {
+	if flag.GitHubActionEvent() != "" {
 		f.ForceColors = true
 	}
 	log.SetFormatter(f)
-	verbose := util.FlagVerbose()
-	quiet := util.FlagQuiet()
+	verbose := flag.Verbose()
+	quiet := flag.Quiet()
 	if verbose == 1 {
 		log.SetLevel(log.DebugLevel)
 	} else if verbose > 1 {

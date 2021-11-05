@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/git-l10n/git-po-helper/flag"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -106,7 +107,7 @@ func CmdCheckPo(args ...string) bool {
 		if !CheckPoFile(locale, poFile) {
 			ret = false
 		}
-		if FlagCore() {
+		if flag.Core() {
 			if !CheckCorePoFile(locale) {
 				ret = false
 			}

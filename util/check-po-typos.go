@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/git-l10n/git-po-helper/dict"
+	"github.com/git-l10n/git-po-helper/flag"
 	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/gorilla/i18n/gettext"
 )
@@ -20,7 +21,7 @@ import (
 func checkTyposInPoFile(locale, poFile string) ([]error, bool) {
 	var errs []error
 
-	if FlagIgnoreTypos() {
+	if flag.IgnoreTypos() {
 		return nil, true
 	}
 
@@ -51,7 +52,7 @@ func checkTyposInPoFile(locale, poFile string) ([]error, bool) {
 func checkTyposInMoFile(locale, moFile string) ([]error, bool) {
 	var errs []error
 
-	if FlagIgnoreTypos() {
+	if flag.IgnoreTypos() {
 		return nil, true
 	}
 
@@ -85,7 +86,7 @@ func checkTyposInMoFile(locale, moFile string) ([]error, bool) {
 			}
 		}
 	}
-	if FlagReportTyposAsErrors() && len(errs) > 0 {
+	if flag.ReportTyposAsErrors() && len(errs) > 0 {
 		return errs, false
 	}
 	return errs, true
