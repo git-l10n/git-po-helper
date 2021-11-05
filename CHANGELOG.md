@@ -2,6 +2,12 @@
 
 Changes of git-po-helper.
 
+## 0.4.4 (2021-11-5)
+
+* Try to install gettext 0.14 when running by github actions
+* Add more entries in smudge map for sv.po
+
+
 ## 0.4.3 (2021-10-22)
 
 * Smudge on msgStr to suppress false positive for checking typos..
