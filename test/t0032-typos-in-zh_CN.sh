@@ -73,8 +73,8 @@ test_expect_success "check typos in zh_CN.po" '
 	test_cmp expect actual
 '
 
-test_expect_success "no typos in main branch" '
-	git -C workdir checkout main &&
+test_expect_success "no typos in master branch" '
+	git -C workdir checkout master &&
 	git -C workdir $HELPER \
 		check-po --report-typos-as-errors zh_CN
 '

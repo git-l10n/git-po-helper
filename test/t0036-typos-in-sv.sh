@@ -97,8 +97,8 @@ test_expect_success "check typos in sv.po" '
 	test_cmp expect actual
 '
 
-test_expect_failure "no typos in main branch" '
-	git -C workdir checkout main &&
+test_expect_failure "no typos in master branch" '
+	git -C workdir checkout master &&
 	git -C workdir $HELPER \
 		check-po --report-typos-as-errors sv
 '

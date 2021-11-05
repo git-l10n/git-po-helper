@@ -61,7 +61,7 @@ test_expect_success "new commit with unsupported hidden meta fields" '
 		     <.git/commit-meta >.git/commit-hacked-meta &&
 
 		cid=$(git hash-object -w -t commit .git/commit-hacked-meta) &&
-		git update-ref refs/heads/main $cid
+		git update-ref refs/heads/master $cid
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
@@ -100,7 +100,7 @@ test_expect_success "new commit with datetime in the future" '
 			<.git/commit-meta >.git/commit-hacked-meta &&
 
 		cid=$(git hash-object -w -t commit .git/commit-hacked-meta) &&
-		git update-ref refs/heads/main $cid
+		git update-ref refs/heads/master $cid
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
@@ -138,7 +138,7 @@ test_expect_success "new commit with bad email address" '
 			<.git/commit-meta >.git/commit-hacked-meta &&
 
 		cid=$(git hash-object -w -t commit .git/commit-hacked-meta) &&
-		git update-ref refs/heads/main $cid
+		git update-ref refs/heads/master $cid
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
@@ -360,7 +360,7 @@ test_expect_success "empty commit log" '
 			>.git/commit-hacked-meta &&
 
 		cid=$(git hash-object -w -t commit .git/commit-hacked-meta) &&
-		git update-ref refs/heads/main $cid
+		git update-ref refs/heads/master $cid
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
@@ -590,7 +590,7 @@ test_expect_success "merge commit" '
 		test_tick &&
 		git commit --allow-empty -F .git/commit-message &&
 
-		git checkout main &&
+		git checkout master &&
 		git merge --no-ff topic/1
 	) &&
 
@@ -621,7 +621,7 @@ test_expect_success "merge commit subject not start with Merge" '
 		test_tick &&
 		git commit --allow-empty -F .git/commit-message &&
 
-		git checkout main &&
+		git checkout master &&
 		git merge --no-ff -m "l10n: a merge commit" topic/2
 	) &&
 
@@ -771,7 +771,7 @@ test_expect_success "bad utf-8 characters in commit log" '
 			>.git/commit-hacked-meta &&
 
 		cid=$(git hash-object -w -t commit .git/commit-hacked-meta) &&
-		git update-ref refs/heads/main $cid
+		git update-ref refs/heads/master $cid
 	) &&
 
 	test_must_fail git -C workdir $HELPER \

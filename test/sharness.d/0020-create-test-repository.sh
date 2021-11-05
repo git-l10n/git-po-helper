@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PO_HELPER_TEST_REPOSITORY_VERSION=4
+PO_HELPER_TEST_REPOSITORY_VERSION=5
 
 # Create test repository in .repository
 PO_HELPER_TEST_REPOSITORY="${SHARNESS_TEST_SRCDIR}/test-repository"
@@ -94,7 +94,7 @@ create_test_repository_real () {
 		echo >&2 "Usage: create_test_repository_real <version> ..."
 		return 1
 	fi
-	git config --global init.defaultbranch main &&
+	git config --global init.defaultbranch master &&
 	git init "$PO_HELPER_TEST_REPOSITORY" &&
 	while test $# -gt 0
 	do
