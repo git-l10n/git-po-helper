@@ -4,7 +4,7 @@ test_description="test git-po-helper check-commits in partial clone"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-gettext-back-compatible"
+HELPER="po-helper --no-special-gettext-versions"
 
 test_expect_success "setup" '
 	git clone --mirror "$PO_HELPER_TEST_REPOSITORY" bare.git &&
@@ -78,6 +78,8 @@ test_expect_success "creater partial clone" '
 '
 
 cat >expect <<-\EOF
+level=warning msg="Need gettext 0.14 for some checks, see:"
+level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="successfully fetched 1 missing blob(s) in a batch from partial clone"
 level=info msg="[po/zh_CN.po@rev]    2 translated messages."
 level=warning msg="[po/zh_CN.po@rev]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
@@ -100,6 +102,8 @@ test_expect_success "check-commits show typos" '
 '
 
 cat >expect <<-\EOF
+level=warning msg="Need gettext 0.14 for some checks, see:"
+level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="no missing blobs of po/* in partial clone"
 level=info msg="[po/zh_CN.po@rev]    2 translated messages."
 level=error msg="[po/zh_CN.po@rev]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
@@ -136,6 +140,8 @@ test_expect_success "update po/TEAMS" '
 '
 
 cat >expect <<-\EOF
+level=warning msg="Need gettext 0.14 for some checks, see:"
+level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="successfully fetched 1 missing blob(s) in a batch from partial clone"
 level=error msg="commit <OID>: bad syntax at line 79 (unknown key \"Respository\"): Respository:    https://github.com/l10n-tw/git-po"
 level=error msg="commit <OID>: bad syntax at line 80 (need two tabs between k/v): Leader:     Yi-Jyun Pan <pan93412 AT gmail.com>"

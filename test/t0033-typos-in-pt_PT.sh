@@ -4,7 +4,7 @@ test_description="check typos in pt_PT.po"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-gettext-back-compatible"
+HELPER="po-helper --no-special-gettext-versions"
 
 test_expect_success "checkout po-2.31.1" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -12,6 +12,8 @@ test_expect_success "checkout po-2.31.1" '
 '
 
 cat >expect <<-\EOF
+level=warning msg="Need gettext 0.14 for some checks, see:"
+level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="[po/pt_PT.po]    2876 translated messages, 1320 fuzzy translations, 842 untranslated messages."
 level=warning msg="[po/pt_PT.po]    mismatch variable names: --contains, --no-contains"
 level=warning msg="[po/pt_PT.po]    >> msgid: --no-contains option is only allowed in list mode"

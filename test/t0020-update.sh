@@ -4,7 +4,7 @@ test_description="test git-po-helper update"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-gettext-back-compatible"
+HELPER="po-helper --no-special-gettext-versions"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -17,6 +17,8 @@ test_expect_success "update: zh_CN.po not exist" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
+	level=warning msg="Need gettext 0.14 for some checks, see:"
+	level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 	level=error msg="fail to update \"po/zh_CN.po\", does not exist"
 
 	ERROR: fail to execute "git-po-helper update"
