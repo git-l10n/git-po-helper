@@ -4,7 +4,7 @@ test_description="test git-po-helper version"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-gettext-back-compatible"
+HELPER="po-helper --no-special-gettext-versions"
 
 test_expect_success "git-po-helper version output test" '
 	git $HELPER version >out &&

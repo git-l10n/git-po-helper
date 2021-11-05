@@ -32,10 +32,7 @@ func isGetText014(execPath string) bool {
 func getGetText014() string {
 	var getTextDir string
 
-	if flag.NoGettext14() {
-		return ""
-	}
-	if _, ok := os.LookupEnv("NO_GETTEXT_14"); ok {
+	if flag.NoSpecialGettextVersions() {
 		return ""
 	}
 	execPath, err := exec.LookPath("gettext")
@@ -97,8 +94,8 @@ func CheckPrereq() error {
 
 	DirGetText014 = getGetText014()
 	if DirGetText014 == "" {
-		if !flag.NoGettext14() {
-			log.Warnln("cannot find gettext 0.14 or 0.15, and couldn't run some checks. See:")
+		if flag.GitHubActionEvent() == "" {
+			log.Warnln("Need gettext 0.14 for some checks, see:")
 			log.Warnf("    https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/")
 		}
 	} else {

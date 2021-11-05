@@ -4,7 +4,7 @@ test_description="test git-po-helper update"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-gettext-back-compatible"
+HELPER="po-helper --no-special-gettext-versions"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -16,6 +16,8 @@ test_expect_success "setup" '
 '
 
 cat >expect <<-\EOF
+level=warning msg="Need gettext 0.14 for some checks, see:"
+level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=error msg="[po/zh_CN.po]    po/zh_CN.po:25: end-of-line within string"
 level=error msg="[po/zh_CN.po]    msgfmt: found 1 fatal error"
 level=error msg="[po/zh_CN.po]    fail to check po: exit status 1"
@@ -91,17 +93,21 @@ test_expect_success "update zh_CN successfully" '
 '
 
 cat >expect <<-\EOF
+level=warning msg="Need gettext 0.14 for some checks, see:"
+level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
 EOF
 
 test_expect_success "check update of zh_CN.po" '
 	git -C workdir $HELPER check-po zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
-		head -2 >actual &&
+		head -3 >actual &&
 	test_cmp expect actual
 '
 
 cat >expect <<-\EOF
+level=warning msg="Need gettext 0.14 for some checks, see:"
+level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
 level=info msg="Creating core pot file in po-core/core.pot"
 level=info msg="[po-core/zh_CN.po]    2 translated messages, 479 untranslated messages."
@@ -109,19 +115,6 @@ EOF
 
 test_expect_success "check core update of zh_CN.po" '
 	git -C workdir $HELPER check-po --core zh_CN >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
-	test_cmp expect actual
-'
-
-cat >expect <<-\EOF
-level=warning msg="cannot find gettext 0.14 or 0.15, and couldn't run some checks. See:"
-level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
-level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
-EOF
-
-
-test_expect_success "show warning of old version of gettext not found issue" '
-	NO_GETTEXT_14=1 git -C workdir po-helper check-po zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

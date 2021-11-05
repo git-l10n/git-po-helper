@@ -4,7 +4,7 @@ test_description="test git-po-helper team"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-gettext-back-compatible"
+HELPER="po-helper --no-special-gettext-versions"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -20,6 +20,8 @@ test_expect_success "check syntax of po/TEAMS" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	level=warning msg="Need gettext 0.14 for some checks, see:"
+	level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 	level=error msg="bad syntax at line 79 (unknown key \"Respository\"): Respository:    https://github.com/l10n-tw/git-po"
 	level=error msg="bad syntax at line 80 (need two tabs between k/v): Leader:     Yi-Jyun Pan <pan93412 AT gmail.com>"
 
@@ -42,6 +44,8 @@ test_expect_success "fixed po/TEAMS" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	level=warning msg="Need gettext 0.14 for some checks, see:"
+	level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 	EOF
 
 	test_cmp expect actual

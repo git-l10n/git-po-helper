@@ -4,7 +4,7 @@ test_description="check typos in po files"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-gettext-back-compatible"
+HELPER="po-helper --no-special-gettext-versions"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -42,6 +42,8 @@ test_expect_success "mismatched shell variables" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
+	level=warning msg="Need gettext 0.14 for some checks, see:"
+	level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 	level=info msg="[po/zh_CN.po]    2 translated messages."
 	level=warning msg="[po/zh_CN.po]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
 	level=warning msg="[po/zh_CN.po]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
@@ -82,6 +84,8 @@ test_expect_success "trash variables in msgStr (--report-typos-as-errors)" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
+	level=warning msg="Need gettext 0.14 for some checks, see:"
+	level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 	level=info msg="[po/zh_CN.po]    1 translated message."
 	level=error msg="[po/zh_CN.po]    mismatch variable names: $command, $res"
 	level=error msg="[po/zh_CN.po]    >> msgid: exit code %d from %s is < 0 or >= 128"
@@ -144,6 +148,8 @@ test_expect_success "check typos of mismatched constant strings" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
+	level=warning msg="Need gettext 0.14 for some checks, see:"
+	level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 	level=info msg="[po/zh_CN.po]    9 translated messages."
 	level=warning msg="[po/zh_CN.po]    mismatch variable names: CHERRY_PICK_HEAD, CHERRY_PICK_HEADS"
 	level=warning msg="[po/zh_CN.po]    >> msgid: CHERRY_PICK_HEAD exists"
@@ -211,6 +217,8 @@ test_expect_success "check typos of mismatched options" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
+	level=warning msg="Need gettext 0.14 for some checks, see:"
+	level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 	level=info msg="[po/zh_CN.po]    3 translated messages."
 	level=warning msg="[po/zh_CN.po]    mismatch variable names: --3way"
 	level=warning msg="[po/zh_CN.po]    >> msgid: --reject and --3way cannot be used together."

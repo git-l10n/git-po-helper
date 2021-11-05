@@ -4,7 +4,7 @@ test_description="test git-po-helper check-commits with typos"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-gettext-back-compatible"
+HELPER="po-helper --no-special-gettext-versions"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -53,6 +53,8 @@ test_expect_success "create po/zh_CN with typos" '
 '
 
 cat >expect <<-\EOF
+level=warning msg="Need gettext 0.14 for some checks, see:"
+level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="[po/zh_CN.po@rev]    2 translated messages."
 level=warning msg="[po/zh_CN.po@rev]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
 level=warning msg="[po/zh_CN.po@rev]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
@@ -74,6 +76,8 @@ test_expect_success "check-commits show typos" '
 '
 
 cat >expect <<-\EOF
+level=warning msg="Need gettext 0.14 for some checks, see:"
+level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="[po/zh_CN.po@rev]    2 translated messages."
 level=error msg="[po/zh_CN.po@rev]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
 level=error msg="[po/zh_CN.po@rev]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
@@ -107,6 +111,8 @@ test_expect_success "update po/TEAMS" '
 '
 
 cat >expect <<-\EOF
+level=warning msg="Need gettext 0.14 for some checks, see:"
+level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=error msg="commit <OID>: bad syntax at line 79 (unknown key \"Respository\"): Respository:    https://github.com/l10n-tw/git-po"
 level=error msg="commit <OID>: bad syntax at line 80 (need two tabs between k/v): Leader:     Yi-Jyun Pan <pan93412 AT gmail.com>"
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"

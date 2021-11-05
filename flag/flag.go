@@ -48,7 +48,7 @@ func Core() bool {
 	return viper.GetBool("check--core") || viper.GetBool("check-po--core")
 }
 
-// NoGettext14 returns option "--no-gettext-back-compatible".
-func NoGettext14() bool {
-	return GitHubActionEvent() != "" || viper.GetBool("no-gettext-back-compatible")
+// NoSpecialGettextVersions returns option "--no-special-gettext-versions".
+func NoSpecialGettextVersions() bool {
+	return GitHubActionEvent() != "" || viper.GetBool("no-special-gettext-versions")
 }
