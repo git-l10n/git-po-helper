@@ -50,5 +50,5 @@ func Core() bool {
 
 // NoSpecialGettextVersions returns option "--no-special-gettext-versions".
 func NoSpecialGettextVersions() bool {
-	return GitHubActionEvent() != "" || viper.GetBool("no-special-gettext-versions")
+	return viper.GetBool("no-special-gettext-versions")
 }

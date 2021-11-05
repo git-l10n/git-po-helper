@@ -1,78 +1,12 @@
 package util
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 
-	"github.com/git-l10n/git-po-helper/flag"
-	log "github.com/sirupsen/logrus"
+	"github.com/git-l10n/git-po-helper/gettext"
 )
-
-// DirGetText014 is installed dir for gettext 0.14
-var DirGetText014 string
-
-func isGetText014(execPath string) bool {
-	cmd := exec.Command(execPath, "--version")
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	line, err := bytes.NewBuffer(output).ReadString('\n')
-	if err != nil {
-		return false
-	}
-	return strings.Contains(line, " 0.14") || strings.Contains(line, " 0.15")
-}
-
-func getGetText014() string {
-	var getTextDir string
-
-	if flag.NoSpecialGettextVersions() {
-		return ""
-	}
-	execPath, err := exec.LookPath("gettext")
-	if err == nil {
-		if isGetText014(execPath) {
-			return filepath.Dir(execPath)
-		}
-	}
-
-	for _, rootDir := range []string{
-		"/opt/gettext",
-		"/usr/local/Cellar/gettext",
-	} {
-		filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
-			if info == nil {
-				return filepath.SkipDir
-			}
-			if !info.IsDir() {
-				return nil
-			}
-			execPath = filepath.Join(path, "bin", "gettext")
-			if fi, err := os.Stat(execPath); err == nil && fi.Mode().IsRegular() {
-				if isGetText014(execPath) {
-					getTextDir = filepath.Dir(execPath)
-					return errors.New("found backward compatible gettext")
-				}
-			}
-			if path == rootDir {
-				return nil
-			}
-			return filepath.SkipDir
-		})
-
-		if getTextDir != "" {
-			break
-		}
-	}
-
-	return getTextDir
-}
 
 // CheckPrereq checks prerequisites for po-helper.
 func CheckPrereq() error {
@@ -81,7 +15,6 @@ func CheckPrereq() error {
 		cmd     string
 		prereqs = []string{
 			"git",
-			"gettext",
 		}
 	)
 
@@ -92,14 +25,10 @@ func CheckPrereq() error {
 		}
 	}
 
-	DirGetText014 = getGetText014()
-	if DirGetText014 == "" {
-		if flag.GitHubActionEvent() == "" {
-			log.Warnln("Need gettext 0.14 for some checks, see:")
-			log.Warnf("    https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/")
-		}
-	} else {
-		log.Debugf(`find backward compatible gettext at "%s"`, DirGetText014)
+	gettext.FindGettext()
+	if len(gettext.GettextAppMap) == 0 {
+		return errors.New("gettext is not installed")
 	}
+
 	return nil
 }
