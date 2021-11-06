@@ -4,13 +4,37 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/git-l10n/git-po-helper/flag"
 	"github.com/git-l10n/git-po-helper/gettext"
 	"github.com/git-l10n/git-po-helper/repository"
 )
+
+func checkGettextIncompatibleIssues(poFile string) error {
+	f, err := os.Open(poFile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	reader := bufio.NewReader(f)
+	for {
+		line, err := reader.ReadString('\n')
+		if strings.HasPrefix(line, "#~| msgid ") {
+			return fmt.Errorf("remove lines that start with '#~| msgid', for they are not compatible with gettext 0.14")
+		}
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+	}
+	return nil
+}
 
 func checkPoSyntax(poFile string) ([]error, bool) {
 	var (
@@ -82,5 +106,10 @@ func checkPoSyntax(poFile string) ([]error, bool) {
 		}
 		msgs = []string{}
 	}
+	if err := checkGettextIncompatibleIssues(poFile); err != nil {
+		errs = append(errs, err)
+		return errs, false
+	}
+
 	return errs, true
 }
