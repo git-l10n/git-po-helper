@@ -2,6 +2,15 @@
 
 Changes of git-po-helper.
 
+## 0.4.5 (2021-11-6)
+
+* Only turn on hints if set gettext.useMultipleVersions
+* Check gettext 0.14 incompatible issues
+* refactor: add standalone package "gettext" to collect gettext
+  versions and show hints
+* dict: update smudge map for sv.po
+
+
 ## 0.4.3 (2021-10-22)
 
 * Smudge on msgStr to suppress false positive for checking typos..
