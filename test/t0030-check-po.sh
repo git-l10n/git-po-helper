@@ -16,8 +16,6 @@ test_expect_success "setup" '
 '
 
 cat >expect <<-\EOF
-level=warning msg="Need gettext 0.14 for some checks, see:"
-level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=error msg="[po/zh_CN.po]    po/zh_CN.po:25: end-of-line within string"
 level=error msg="[po/zh_CN.po]    msgfmt: found 1 fatal error"
 level=error msg="[po/zh_CN.po]    fail to check po: exit status 1"
@@ -93,8 +91,6 @@ test_expect_success "update zh_CN successfully" '
 '
 
 cat >expect <<-\EOF
-level=warning msg="Need gettext 0.14 for some checks, see:"
-level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
 EOF
 
@@ -106,8 +102,6 @@ test_expect_success "check update of zh_CN.po" '
 '
 
 cat >expect <<-\EOF
-level=warning msg="Need gettext 0.14 for some checks, see:"
-level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
 level=info msg="Creating core pot file in po-core/core.pot"
 level=info msg="[po-core/zh_CN.po]    2 translated messages, 479 untranslated messages."

@@ -12,8 +12,6 @@ test_expect_success "checkout po-2.31.1" '
 '
 
 cat >expect <<-\EOF
-level=warning msg="Need gettext 0.14 for some checks, see:"
-level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="[po/sv.po]    5104 translated messages."
 level=warning msg="[po/sv.po]    mismatch variable names: --chmod, --chmod-parametern"
 level=warning msg="[po/sv.po]    >> msgid: --chmod param '%s' must be either -x or +x"

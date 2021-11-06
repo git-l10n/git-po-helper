@@ -12,8 +12,6 @@ test_expect_success "checkout po-2.31.1" '
 '
 
 cat >expect <<-\EOF
-level=warning msg="Need gettext 0.14 for some checks, see:"
-level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="[po/bg.po]    5104 translated messages."
 level=warning msg="[po/bg.po]    mismatch variable names: example.com"
 level=warning msg="[po/bg.po]    >> msgid: \n*** Please tell me who you are.\n\nRun\n\n git config --global user.email \"you@example.com\"\n git config --global user.name \"Your Name\"\n\nto set your account's default identity.\nOmit --global to set the identity only in this repository.\n\n"

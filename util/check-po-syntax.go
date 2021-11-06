@@ -48,7 +48,7 @@ func checkPoSyntax(poFile string) ([]error, bool) {
 		return errs, false
 	}
 
-	if flag.GitHubActionEvent() == "" {
+	if flag.GettextUseMultipleVersions() {
 		gettext.ShowHints()
 	}
 

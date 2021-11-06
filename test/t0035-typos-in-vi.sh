@@ -12,8 +12,6 @@ test_expect_success "checkout po-2.31.1" '
 '
 
 cat >expect <<-\EOF
-level=warning msg="Need gettext 0.14 for some checks, see:"
-level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=info msg="[po/vi.po]    5104 translated messages."
 level=warning msg="[po/vi.po]    mismatch variable names: --quiet"
 level=warning msg="[po/vi.po]    >> msgid: \nIt took %.2f seconds to enumerate unstaged changes after reset. You can\nuse '--quiet' to avoid this. Set the config setting reset.quiet to true\nto make this the default.\n"

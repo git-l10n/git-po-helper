@@ -132,3 +132,13 @@ func FindGettext() {
 		})
 	}
 }
+
+func init() {
+	cmd := exec.Command("git", "config", "--bool", "gettext.useMultipleVersions")
+	out, _ := cmd.Output()
+	if strings.TrimSpace(string(out)) == "true" {
+		flag.SetGettextUseMultipleVersions(true)
+	} else {
+		flag.SetGettextUseMultipleVersions(false)
+	}
+}

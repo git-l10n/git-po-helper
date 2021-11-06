@@ -1,6 +1,6 @@
 #!/bin/sh
 
-test_description="show gettext 0.14 incompatible errors"
+test_description="show hints for missing gettext 0.14"
 
 . ./lib/sharness.sh
 
@@ -55,14 +55,16 @@ test_expect_success "setup" '
 '
 
 cat >expect <<-\EOF
+level=warning msg="Need gettext 0.14 for some checks, see:"
+level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/"
 level=error msg="[po/fr.po]    2 translated messages."
 level=error msg="[po/fr.po]    remove lines that start with '#~| msgid', for they are not compatible with gettext 0.14"
 
 ERROR: fail to execute "git-po-helper check-po"
 EOF
 
-test_expect_success "show gettext 0.14 incompatible errors" '
-	test_must_fail git -C workdir $HELPER check-po fr >out 2>&1 &&
+test_expect_success "show hints and errors for gettext 014" '
+	test_must_fail git -c gettext.useMultipleVersions=1 -C workdir $HELPER check-po fr >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
