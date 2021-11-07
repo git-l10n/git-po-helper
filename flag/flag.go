@@ -53,12 +53,12 @@ func NoSpecialGettextVersions() bool {
 	return viper.GetBool("no-special-gettext-versions")
 }
 
-// SetGettextUseMultipleVersions sets option "use-multiple-versions".
+// SetGettextUseMultipleVersions sets option "gettext-use-multiple-versions".
 func SetGettextUseMultipleVersions(value bool) {
-	viper.Set("use-multiple-versions", value)
+	viper.Set("gettext-use-multiple-versions", value)
 }
 
-// GettextUseMultipleVersions returns option "use-multiple-versions".
+// GettextUseMultipleVersions returns option "gettext-use-multiple-versions".
 func GettextUseMultipleVersions() bool {
-	return viper.GetBool("use-multiple-versions")
+	return viper.GetBool("gettext-use-multiple-versions")
 }

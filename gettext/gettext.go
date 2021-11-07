@@ -19,8 +19,8 @@ type gettextApp struct {
 
 // Versions of gettext available in the system.
 const (
-	Version0_14 = "0.14"
-	VersionAny  = "any"
+	Version0_14    = "0.14"
+	VersionDefault = "default"
 )
 
 var (
@@ -59,15 +59,17 @@ func gettextVersion(execPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	line, err := bytes.NewBuffer(output).ReadString('\n')
+	version, err := bytes.NewBuffer(output).ReadString('\n')
 	if err != nil {
 		return "", err
 	}
-
-	if strings.Contains(line, " 0.14") || strings.Contains(line, " 0.15") {
+	version = strings.TrimSpace(version)
+	items := strings.Split(version, " ")
+	version = items[len(items)-1]
+	if strings.HasPrefix(version, "0.14") || strings.HasPrefix(version, "0.15") {
 		return Version0_14, nil
 	}
-	return VersionAny, nil
+	return version, nil
 }
 
 func FindGettext() {
@@ -78,22 +80,12 @@ func FindGettext() {
 			case Version0_14:
 				GettextAppMap[Version0_14] = gettextApp{Path: filepath.Dir(execPath)}
 			default:
-				GettextAppMap[VersionAny] = gettextApp{Path: filepath.Dir(execPath)}
+				GettextAppMap[VersionDefault] = gettextApp{Path: filepath.Dir(execPath)}
 			}
 		}
 	}
 
 	if flag.NoSpecialGettextVersions() {
-		return
-	}
-
-	doSearch := false
-	for version := range GettextAppHints {
-		if _, ok := GettextAppMap[version]; !ok {
-			doSearch = true
-		}
-	}
-	if !doSearch {
 		return
 	}
 
@@ -116,11 +108,9 @@ func FindGettext() {
 						if _, ok := GettextAppMap[Version0_14]; !ok {
 							GettextAppMap[Version0_14] = gettextApp{Path: filepath.Dir(execPath)}
 						}
-					case VersionAny:
-						fallthrough
 					default:
-						if _, ok := GettextAppMap[VersionAny]; !ok {
-							GettextAppMap[VersionAny] = gettextApp{Path: filepath.Dir(execPath)}
+						if _, ok := GettextAppMap[version]; !ok {
+							GettextAppMap[version] = gettextApp{Path: filepath.Dir(execPath)}
 						}
 					}
 				}

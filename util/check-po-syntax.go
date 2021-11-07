@@ -58,11 +58,26 @@ func checkPoSyntax(poFile string) ([]error, bool) {
 	//
 	//     https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.com/
 	//
-	if app, ok := gettext.GettextAppMap[gettext.VersionAny]; ok {
+	if app, ok := gettext.GettextAppMap[gettext.VersionDefault]; ok {
 		progs = append(progs, app.Program("msgfmt"))
 	}
-	if app, ok := gettext.GettextAppMap[gettext.Version0_14]; ok {
-		progs = append(progs, app.Program("msgfmt"))
+	for version := range gettext.GettextAppHints {
+		if app, ok := gettext.GettextAppMap[version]; ok {
+			progs = append(progs, app.Program("msgfmt"))
+		}
+	}
+	for version := range gettext.GettextAppMap {
+		if version == gettext.VersionDefault {
+			continue
+		}
+		if _, ok := gettext.GettextAppHints[version]; ok {
+			continue
+		}
+		progs = append(progs, gettext.GettextAppMap[version].Program("msgfmt"))
+	}
+	if len(progs) == 0 {
+		errs = append(errs, fmt.Errorf("no gettext programs found"))
+		return errs, false
 	}
 
 	for idx, prog := range progs {
