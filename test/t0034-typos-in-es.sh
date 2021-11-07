@@ -45,7 +45,7 @@ level=warning msg="[po/es.po]    mismatch variable names: --shallow-since, --sha
 level=warning msg="[po/es.po]    >> msgid: Server does not support --shallow-since"
 level=warning msg="[po/es.po]    >> msgstr: El servidor no soporta --shalow-since"
 level=warning
-level=warning msg="[po/es.po]    mismatch variable names: --smtp-debug"
+level=warning msg="[po/es.po]    mismatch variable names: ---smtp-debug, --smtp-debug"
 level=warning msg="[po/es.po]    >> msgid: Unable to initialize SMTP properly. Check config and use --smtp-debug."
 level=warning msg="[po/es.po]    >> msgstr: No es posible inicializar SMTP adecuadamente. Verificar config y usar ---smtp-debug."
 level=warning

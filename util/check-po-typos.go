@@ -181,14 +181,6 @@ func checkTypos(locale, msgID, msgStr string) (errs []error) {
 	if len(msgStr) == 0 {
 		return
 	}
-	for _, re := range dict.GlobalSkipPatterns {
-		if re.Pattern.MatchString(msgID) {
-			msgID = re.Pattern.ReplaceAllString(msgID, re.Replace)
-		}
-		if re.Pattern.MatchString(msgStr) {
-			msgStr = re.Pattern.ReplaceAllString(msgStr, re.Replace)
-		}
-	}
 
 	if smudgeMap, ok := dict.SmudgeMaps[locale]; ok {
 		for k, v := range smudgeMap {
@@ -197,6 +189,15 @@ func checkTypos(locale, msgID, msgStr string) (errs []error) {
 			} else {
 				msgStr = strings.Replace(msgStr, k.(string), v, -1)
 			}
+		}
+	}
+
+	for _, re := range dict.GlobalSkipPatterns {
+		if re.Pattern.MatchString(msgID) {
+			msgID = re.Pattern.ReplaceAllString(msgID, re.Replace)
+		}
+		if re.Pattern.MatchString(msgStr) {
+			msgStr = re.Pattern.ReplaceAllString(msgStr, re.Replace)
 		}
 	}
 

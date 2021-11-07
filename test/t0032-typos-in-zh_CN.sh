@@ -73,10 +73,22 @@ test_expect_success "check typos in zh_CN.po" '
 	test_cmp expect actual
 '
 
-test_expect_success "no typos in master branch" '
+cat >expect <<-\EOF
+level=info msg="[po/zh_CN.po]    5230 translated messages."
+level=error msg="[po/zh_CN.po]    mismatch variable names: ---pickaxe-all"
+level=error msg="[po/zh_CN.po]    >> msgid: --pickaxe-all and --find-object are mutually exclusive, use --pickaxe-all with -G and -S"
+level=error msg="[po/zh_CN.po]    >> msgstr: ---pickaxe-all 和 --find-object 互斥，使用 --pickaxe-all 与 -G 和 -S"
+level=error
+
+ERROR: fail to execute "git-po-helper check-po"
+EOF
+
+test_expect_success "check typos in master branch" '
 	git -C workdir checkout master &&
-	git -C workdir $HELPER \
-		check-po --report-typos-as-errors zh_CN
+	test_must_fail git -C workdir $HELPER \
+		check-po --report-typos-as-errors zh_CN >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
 '
 
 test_done

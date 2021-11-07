@@ -30,21 +30,11 @@ var GlobalSkipPatterns = []struct {
 }{
 	{
 		Pattern: regexp.MustCompile(`\b(` +
-			`git-directories` +
+			"git-directories" +
 			`|` +
 			`e\.g\.?` +
 			`|` +
 			`i\.e\.?` +
-			`|` +
-			`t\.ex\.?` + // "e.g." in Swedish
-			`|` +
-			`p\.e\.?` + // "e.g." in Portuguese
-			`|` +
-			`z\.B\.?` + // "e.g." in German
-			`|` +
-			`v\.d\.?` + // "e.g." in Vietnamese
-			`|` +
-			`v\.v\.?` + // "etc." in Vietnamese
 			`)\b`),
 		Replace: "...",
 	},
@@ -67,15 +57,5 @@ var GlobalSkipPatterns = []struct {
 		// Simple placeholders in fprintf, such as: %2$s, %3$d, %1$0.1f
 		Pattern: regexp.MustCompile(`%[0-9]+\$`),
 		Replace: "%",
-	},
-	{
-		// email: user@example.com, usuari@domini.com
-		Pattern: regexp.MustCompile(`[0-9a-za-z.-]+@[0-9a-za-z-]+\.[0-9a-zA-Z.-]+`),
-		Replace: "user@email",
-	},
-	{
-		// ---
-		Pattern: regexp.MustCompile(`---+`),
-		Replace: "——",
 	},
 }
