@@ -244,6 +244,36 @@ func (v *commitLog) checkAuthorCommitter() bool {
 	return ret
 }
 
+func abbrevMsg(line string) string {
+	var (
+		pos   = 0
+		begin = 0
+		width = len(line)
+	)
+
+	for ; pos < width; pos++ {
+	inner:
+		switch line[pos] {
+		case ' ':
+			fallthrough
+		case '(':
+			fallthrough
+		case '"':
+			break inner
+		default:
+			begin++
+			continue
+		}
+		if begin > 0 && pos > 7 {
+			break
+		}
+	}
+	if pos == width {
+		return line
+	}
+	return line[:pos] + " ..."
+}
+
 func (v *commitLog) checkSubject() bool {
 	var (
 		ret     = true
@@ -272,14 +302,19 @@ func (v *commitLog) checkSubject() bool {
 			ret = false
 		}
 	} else if !strings.HasPrefix(subject, commitSubjectPrefix+" ") {
-		log.Errorf(`commit %s: do not have prefix "%s" in subject`,
-			v.CommitID(), commitSubjectPrefix)
+		log.Errorf(`commit %s: subject ("%s") does not have prefix "%s"`,
+			v.CommitID(),
+			abbrevMsg(subject),
+			commitSubjectPrefix)
 		ret = false
 	}
 
 	if width > subjectWidthHardLimit {
-		log.Errorf(`commit %s: subject is too long (%d > %d)`,
-			v.CommitID(), width, subjectWidthHardLimit)
+		log.Errorf(`commit %s: subject ("%s") is too long: %d > %d`,
+			v.CommitID(),
+			abbrevMsg(subject),
+			width,
+			subjectWidthHardLimit)
 		ret = false
 	}
 	for _, info := range []struct {
@@ -326,62 +361,115 @@ func (v *commitLog) checkBody() bool {
 		ret       = true
 		nr        = len(v.Msg)
 		width     int
-		bodyStart int
+		bodyStart = 0
+		bodyEnd   = 0
 		sigStart  = 0
 	)
 
 	if nr == 0 {
+		// Already checked this case when checking subject.
 		return false
-	} else if nr > 1 {
-		if v.Msg[1] != "" {
-			// Error about no empty line between subject and body is raised
-			// when checking subject of commit og.
-			bodyStart = 1
-		} else if nr == 2 {
-			log.Errorf("commit %s: empty body of commit message", v.CommitID())
-			return false
+	}
+	if nr == 1 {
+		if v.isMergeCommit() {
+			log.Errorf("commit %s: empty body of the commit message, set merge.log=true",
+				v.CommitID())
 		} else {
-			bodyStart = 2
+			log.Errorf("commit %s: empty body of the commit message, no s-o-b signature",
+				v.CommitID())
 		}
-
-		for i := bodyStart; i < nr; i++ {
-			width = len(v.Msg[i])
-			if width > bodyWidthHardLimit {
-				log.Errorf(`commit %s: commit log message is too long (%d > %d)`,
-					v.CommitID(), width, bodyWidthHardLimit)
-				ret = false
-			} else if width == 0 {
-				sigStart = i + 1
-			}
+		return false
+	}
+	if v.Msg[nr-1] == "" {
+		log.Errorf("commit %s: empty line at the end of the commit message", v.CommitID())
+		return false
+	}
+	emptyLines := 0
+	for idx, line := range v.Msg {
+		if line == "" {
+			emptyLines++
+		} else {
+			emptyLines = 0
+		}
+		if emptyLines > 1 {
+			log.Errorf("commit %s: too many empty lines found at line #%d",
+				v.CommitID(),
+				idx)
+			return false
 		}
 	}
 
-	// For a merge commit, do not check s-o-b signature
+	// For a merge commit, do not check s-o-b signature and width of body.
 	if v.isMergeCommit() {
 		return ret
 	}
 
-	hasSobPrefix := false
-	if sigStart == 0 {
-		sigStart = bodyStart
+	if v.Msg[1] != "" {
+		// Error about no empty line between subject and body has been reported
+		// when checking subject of commit log.
+		bodyStart = 1
+	} else {
+		bodyStart = 2
 	}
+
+	// Signature is at the last part of the body, and has an empty line before it.
+	sigStart = bodyStart
+	for i := bodyStart; i < nr; i++ {
+		if len(v.Msg[i]) == 0 {
+			sigStart = i + 1
+		}
+	}
+
+	// Check if has a s-o-b signature
+	hasSobPrefix := false
 	for i := sigStart; i < nr; i++ {
 		if strings.HasPrefix(v.Msg[i], sobPrefix+" ") {
 			hasSobPrefix = true
-			continue
-		}
-		if !strings.Contains(v.Msg[i], ": ") {
-			log.Errorf(`commit %s: bad signature for line: "%s"`,
-				v.CommitID(), v.Msg[i])
-			ret = false
 			break
 		}
 	}
+	if hasSobPrefix {
+		// Signature may have a email address longer than 80 characters, ignore them.
+		bodyEnd = sigStart
+	} else {
+		// No signature, so needs to scan width of lines to end of the body.
+		bodyEnd = nr
+	}
 	if !hasSobPrefix {
 		log.Errorf(`commit %s: cannot find "%s" signature`,
-			v.CommitID(), sobPrefix)
+			v.CommitID(),
+			sobPrefix)
 		ret = false
 	}
+
+	// Scan width of lines.
+	for i := bodyStart; i < bodyEnd; i++ {
+		width = len(v.Msg[i])
+		if width > bodyWidthHardLimit {
+			log.Errorf(`commit %s: line #%d ("%s") is too long: %d > %d`,
+				v.CommitID(),
+				i+1,
+				abbrevMsg(v.Msg[i]),
+				width,
+				bodyWidthHardLimit)
+			ret = false
+		}
+	}
+
+	// Make sure all signatures are in format "key: value".
+	if hasSobPrefix {
+		for i := sigStart; i < nr; i++ {
+			if !strings.Contains(v.Msg[i], ": ") {
+				log.Errorf(`commit %s: no colon in signature at line #%d: "%s"`,
+					v.CommitID(),
+					i+1,
+					abbrevMsg(v.Msg[i]))
+				ret = false
+				break
+			}
+		}
+	}
+
 	return ret
 }
 

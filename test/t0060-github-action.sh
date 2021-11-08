@@ -118,9 +118,8 @@ test_expect_success "check core update of zh_CN.po" '
 
 cat >expect <<-\EOF
 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-ERROR commit <OID>: do not have prefix "l10n:" in subject
-ERROR commit <OID>: bad signature for line: "Add files from git-2.31.1"
-ERROR commit <OID>: cannot find "Signed-off-by:" signature
+ERROR commit <OID>: subject ("Add files ...") does not have prefix "l10n:"
+ERROR commit <OID>: empty body of the commit message, no s-o-b signature
 INFO checking commits: 0 passed, 1 failed.
 
 ERROR: fail to execute "git-po-helper check-commits"

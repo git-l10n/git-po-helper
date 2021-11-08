@@ -208,7 +208,7 @@ test_expect_success "long subject, exceed hard limit" '
 
 	cat >expect <<-EOF &&
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-	level=error msg="commit <OID>: subject is too long (74 > 72)"
+	level=error msg="commit <OID>: subject (\"l10n: this ...\") is too long: 74 > 72"
 	level=warning msg="commit <OID>: subject length 74 > 72, about 98% commits have a subject less than 72 characters"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
@@ -287,7 +287,7 @@ test_expect_success "no l10n prefix in subject" '
 
 	cat >expect <<-EOF &&
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-	level=error msg="commit <OID>: do not have prefix \"l10n:\" in subject"
+	level=error msg="commit <OID>: subject (\"test: no ...\") does not have prefix \"l10n:\""
 	level=info msg="checking commits: 0 passed, 1 failed."
 
 	ERROR: fail to execute "git-po-helper check-commits"
@@ -394,7 +394,7 @@ test_expect_success "oneline commit message" '
 
 	cat >expect <<-EOF &&
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-	level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
+	level=error msg="commit <OID>: empty body of the commit message, no s-o-b signature"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
 	ERROR: fail to execute "git-po-helper check-commits"
@@ -422,7 +422,6 @@ test_expect_success "no s-o-b signature (has body message, but no s-o-b)" '
 
 	cat >expect <<-EOF &&
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-	level=error msg="commit <OID>: bad signature for line: \"This is body of commit log.\""
 	level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
@@ -565,9 +564,8 @@ test_expect_success "too long message in commit log body" '
 
 	cat >expect <<-EOF &&
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-	level=error msg="commit <OID>: commit log message is too long (84 > 72)"
-	level=error msg="commit <OID>: bad signature for line: \"Start body of commit log. This is is a very long commit log message, which exceed 72\""
 	level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
+	level=error msg="commit <OID>: line #3 (\"Start body ...\") is too long: 84 > 72"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
 	ERROR: fail to execute "git-po-helper check-commits"
@@ -576,10 +574,10 @@ test_expect_success "too long message in commit log body" '
 	test_cmp expect actual
 '
 
-test_expect_success "merge commit" '
+test_expect_success "merge commit with details" '
 	(
 		cd workdir &&
-		git checkout -b topic/1 &&
+		git checkout -b topic/1 master &&
 		cat >.git/commit-message <<-\EOF &&
 		l10n: topic/1
 
@@ -591,7 +589,7 @@ test_expect_success "merge commit" '
 		git commit --allow-empty -F .git/commit-message &&
 
 		git checkout master &&
-		git merge --no-ff topic/1
+		git -c merge.log=true merge --no-ff topic/1
 	) &&
 
 	git -C workdir $HELPER \
@@ -607,10 +605,10 @@ test_expect_success "merge commit" '
 	test_cmp expect actual
 '
 
-test_expect_success "merge commit subject not start with Merge" '
+test_expect_success "merge commit subject not start with Merge and no details" '
 	(
 		cd workdir &&
-		git checkout -b topic/2 &&
+		git checkout -b topic/2 master &&
 		cat >.git/commit-message <<-\EOF &&
 		l10n: topic/2
 
@@ -622,7 +620,7 @@ test_expect_success "merge commit subject not start with Merge" '
 		git commit --allow-empty -F .git/commit-message &&
 
 		git checkout master &&
-		git merge --no-ff -m "l10n: a merge commit" topic/2
+		git -c merge.log=false merge --no-ff -m "l10n: a merge commit" topic/2
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
@@ -632,6 +630,7 @@ test_expect_success "merge commit subject not start with Merge" '
 	cat >expect <<-EOF &&
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 	level=error msg="commit <OID>: merge commit does not have prefix \"Merge\" in subject"
+	level=error msg="commit <OID>: empty body of the commit message, set merge.log=true"
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 	level=info msg="checking commits: 1 passed, 1 failed."
 
