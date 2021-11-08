@@ -42,14 +42,6 @@ func newUserErrorF(format string, a ...interface{}) commandError {
 	return commandError{s: fmt.Sprintf(format, a...), userError: true}
 }
 
-func newSystemError(a ...interface{}) commandError {
-	return commandError{s: fmt.Sprintln(a...), userError: false}
-}
-
-func newSystemErrorF(format string, a ...interface{}) commandError {
-	return commandError{s: fmt.Sprintf(format, a...), userError: false}
-}
-
 // Catch some of the obvious user errors from Cobra.
 // We don't want to show the usage message for every error.
 // The below may be to generic. Time will show.
@@ -146,23 +138,23 @@ func (v *rootCommand) Command() *cobra.Command {
 	v.cmd.PersistentFlags().Bool("no-special-gettext-versions",
 		false,
 		"no check using gettext 0.14 for back compatible")
-	v.cmd.PersistentFlags().MarkHidden("dryrun")
-	v.cmd.PersistentFlags().MarkHidden("no-special-gettext-versions")
-	v.cmd.PersistentFlags().MarkHidden("github-action-event")
+	_ = v.cmd.PersistentFlags().MarkHidden("dryrun")
+	_ = v.cmd.PersistentFlags().MarkHidden("no-special-gettext-versions")
+	_ = v.cmd.PersistentFlags().MarkHidden("github-action-event")
 
-	viper.BindPFlag(
+	_ = viper.BindPFlag(
 		"dryrun",
 		v.cmd.PersistentFlags().Lookup("dryrun"))
-	viper.BindPFlag(
+	_ = viper.BindPFlag(
 		"quiet",
 		v.cmd.PersistentFlags().Lookup("quiet"))
-	viper.BindPFlag(
+	_ = viper.BindPFlag(
 		"verbose",
 		v.cmd.PersistentFlags().Lookup("verbose"))
-	viper.BindPFlag(
+	_ = viper.BindPFlag(
 		"no-special-gettext-versions",
 		v.cmd.PersistentFlags().Lookup("no-special-gettext-versions"))
-	viper.BindPFlag(
+	_ = viper.BindPFlag(
 		"github-action-event",
 		v.cmd.PersistentFlags().Lookup("github-action-event"))
 

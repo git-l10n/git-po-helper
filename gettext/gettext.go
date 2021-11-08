@@ -94,7 +94,7 @@ func FindGettext() {
 		"/opt/gettext",
 		"/usr/local/Cellar/gettext",
 	} {
-		filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+		_ = filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 			if info == nil {
 				return filepath.SkipDir
 			}

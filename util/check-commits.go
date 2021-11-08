@@ -84,13 +84,6 @@ func (v *commitLog) hasGpgSig() bool {
 	return false
 }
 
-func (v *commitLog) hasMergeTag() bool {
-	if val, ok := v.Meta["mergetag"]; ok {
-		return val.(bool)
-	}
-	return false
-}
-
 // Parse reads and parse raw commit object
 func (v *commitLog) Parse(r io.Reader) bool {
 	var (
@@ -137,17 +130,19 @@ func (v *commitLog) Parse(r io.Reader) bool {
 				v.Meta[kv[0]] = true
 				for {
 					peek, err := reader.Peek(1)
+					if err == nil {
+						if peek[0] == ' ' {
+							// Consume one line
+							_, err = reader.ReadString('\n')
+						} else {
+							// Next header
+							break
+						}
+					}
 					if err != nil {
 						log.Errorf(`commit %s: header "%s" is too short, early EOF: %s`,
 							v.CommitID(), kv[0], err)
 						ret = false
-						break
-					}
-					if peek[0] == ' ' {
-						// Consume one line
-						reader.ReadString('\n')
-					} else {
-						// Next header
 						break
 					}
 				}
@@ -361,9 +356,9 @@ func (v *commitLog) checkBody() bool {
 		ret       = true
 		nr        = len(v.Msg)
 		width     int
-		bodyStart = 0
-		bodyEnd   = 0
-		sigStart  = 0
+		bodyStart int
+		bodyEnd   int
+		sigStart  int
 	)
 
 	if nr == 0 {
@@ -803,8 +798,12 @@ func fetchBlobsInPartialClone(args []string) error {
 	go func() {
 		defer stdin.Close()
 		for _, blob := range blobList {
-			io.WriteString(stdin, blob)
-			io.WriteString(stdin, "\n")
+			if _, err := io.WriteString(stdin, blob); err != nil {
+				log.Fatalf("fail to write blob id to git-fetch: %s", err)
+			}
+			if _, err := io.WriteString(stdin, "\n"); err != nil {
+				log.Fatalf("fail to write blob id to git-fetch: %s", err)
+			}
 		}
 	}()
 

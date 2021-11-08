@@ -58,8 +58,7 @@ func generateLangCode() error {
 		return err
 	}
 	defer out.Close()
-	t.Execute(out, tmpMap)
-	return nil
+	return t.Execute(out, tmpMap)
 }
 
 func generateLocationCode() error {
@@ -105,8 +104,7 @@ func generateLocationCode() error {
 		return err
 	}
 	defer out.Close()
-	t.Execute(out, tmpMap)
-	return nil
+	return t.Execute(out, tmpMap)
 }
 
 func main() {

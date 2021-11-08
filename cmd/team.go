@@ -36,9 +36,9 @@ func (v *teamCommand) Command() *cobra.Command {
 		"c",
 		false,
 		"show all users")
-	viper.BindPFlag("team-leader", v.cmd.Flags().Lookup("leader"))
-	viper.BindPFlag("team-members", v.cmd.Flags().Lookup("members"))
-	viper.BindPFlag("team-check", v.cmd.Flags().Lookup("check"))
+	_ = viper.BindPFlag("team-leader", v.cmd.Flags().Lookup("leader"))
+	_ = viper.BindPFlag("team-members", v.cmd.Flags().Lookup("members"))
+	_ = viper.BindPFlag("team-check", v.cmd.Flags().Lookup("check"))
 	return v.cmd
 }
 

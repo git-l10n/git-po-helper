@@ -140,7 +140,9 @@ func DiffFiles(src string, dest string) bool {
 			break
 		}
 	}
-	cmd.Wait()
+	if err = cmd.Wait(); err != nil {
+		log.Fatalf("fail to wait msgcmp: %s", err)
+	}
 	diffStat := ""
 	if add != 0 {
 		diffStat = fmt.Sprintf("%d new", add)

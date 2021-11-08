@@ -45,6 +45,7 @@ data/iso-639.go: data/iso-639.csv data/iso-639.t
 golint:
 	$(call message,Testing git-po-helper using golint for coding style)
 	@golint $(LOCAL_PACKAGES)
+	$(call message,TODO: run 'golangci-lint ./...' to find more issues)
 
 test: golint ut it
 

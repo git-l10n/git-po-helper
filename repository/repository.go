@@ -23,8 +23,9 @@ func (v *Repository) Open(dir string) error {
 }
 
 // OpenRepository will try to find repository in dir.
-func OpenRepository(dir string) error {
-	return theRepository.Open(dir)
+func OpenRepository(dir string) {
+	// Will check error in assertRepositoryNotNil
+	_ = theRepository.Open(dir)
 }
 
 func assertRepositoryNotNil() {
