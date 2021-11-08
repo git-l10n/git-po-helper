@@ -72,6 +72,7 @@ func gettextVersion(execPath string) (string, error) {
 	return version, nil
 }
 
+// FindGettext finds different versions of gettext installed.
 func FindGettext() {
 	execPath, err := exec.LookPath("gettext")
 	if err == nil {
