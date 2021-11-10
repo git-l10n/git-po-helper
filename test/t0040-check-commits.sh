@@ -80,21 +80,20 @@ test_expect_success "new commit with unsupported hidden meta fields" '
 	test_cmp expect actual
 '
 
-test_expect_success "new commit with datetime in the future" '
+test_expect_success "new commits with datetime in the future" '
 	(
 		cd workdir &&
 		echo AAA >po/A.txt &&
-		echo BBB >po/B.txt &&
 		git add -u &&
 		cat >.git/commit-message <<-\EOF &&
-		l10n: test: commit with datetime in the future
+		l10n: test: 1 hour ahead in the future
 
 		Signed-off-by: Author <author@example.com>
 		EOF
 		test_tick &&
 		git commit -F .git/commit-message &&
 		git cat-file commit HEAD >.git/commit-meta &&
-		future=$(($(date -u +"%s")+100)) &&
+		future=$(($(date -u +"%s")+3600)) &&
 		sed -e "s/^author .*/author Jiang Xin <worldhello.net@gmail.com> $future +0000/" \
 		    -e "s/^committer .*/committer Jiang Xin <worldhello.net@gmail.com> $future +0000/" \
 			<.git/commit-meta >.git/commit-hacked-meta &&
@@ -102,17 +101,58 @@ test_expect_success "new commit with datetime in the future" '
 		cid=$(git hash-object -w -t commit .git/commit-hacked-meta) &&
 		git update-ref refs/heads/master $cid
 	) &&
+	(
+		cd workdir &&
+		echo BBB >po/B.txt &&
+		git add -u &&
+		cat >.git/commit-message <<-\EOF &&
+		l10n: test: 5 minutes ahead in the future
 
+		Signed-off-by: Author <author@example.com>
+		EOF
+		test_tick &&
+		git commit -F .git/commit-message &&
+		git cat-file commit HEAD >.git/commit-meta &&
+		future=$(($(date -u +"%s")+300)) &&
+		sed -e "s/^author .*/author Jiang Xin <worldhello.net@gmail.com> $future +0000/" \
+		    -e "s/^committer .*/committer Jiang Xin <worldhello.net@gmail.com> $future +0000/" \
+			<.git/commit-meta >.git/commit-hacked-meta &&
+
+		cid=$(git hash-object -w -t commit .git/commit-hacked-meta) &&
+		git update-ref refs/heads/master $cid
+	)
+'
+
+test_expect_success "show errors of commit-date drift" '
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits HEAD~2..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
 		sed -e "s/in the future, .* from now/in the future, XX from now/g" >actual &&
 
 	cat >expect <<-EOF &&
 	level=error msg="commit <OID>: bad author date: date is in the future, XX from now"
 	level=error msg="commit <OID>: bad committer date: date is in the future, XX from now"
-	level=info msg="checking commits: 0 passed, 1 failed."
+	level=error msg="commit <OID>: bad author date: date is in the future, XX from now"
+	level=error msg="commit <OID>: bad committer date: date is in the future, XX from now"
+	level=info msg="checking commits: 0 passed, 2 failed."
 
+	ERROR: fail to execute "git-po-helper check-commits"
+	EOF
+
+	test_cmp expect actual
+'
+
+test_expect_success "suppress errors of commit-date drift for github actions" '
+	test_must_fail git -C workdir $HELPER --github-action-event=pull_request_target \
+		check-commits HEAD~2..HEAD >out 2>&1 &&
+	make_user_friendly_and_stable_output <out |
+		sed -e "s/in the future, .* from now/in the future, XX from now/g" >actual &&
+
+	cat >expect <<-EOF &&
+	ERROR commit <OID>: bad author date: date is in the future, XX from now
+	ERROR commit <OID>: bad committer date: date is in the future, XX from now
+	INFO checking commits: 1 passed, 1 failed.
+	
 	ERROR: fail to execute "git-po-helper check-commits"
 	EOF
 
@@ -162,7 +202,7 @@ test_expect_success "too many commits to check" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	level=warning msg="too many commits to check (4 > 1), check args or use option --force"
+	level=warning msg="too many commits to check (5 > 1), check args or use option --force"
 	level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
 	level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
 	level=info msg="checking commits: 0 passed, 1 failed."

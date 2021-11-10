@@ -178,8 +178,11 @@ func (v *commitLog) checkCommitDate(date string) error {
 	}
 	currentTs := time.Now().UTC().Unix()
 	if ts > currentTs {
-		return fmt.Errorf("date is in the future, %s from now",
-			getDuration(ts-currentTs))
+		// Allow 15 minutes' drift for github actions
+		if flag.GitHubActionEvent() == "" || ts-currentTs > 900 {
+			return fmt.Errorf("date is in the future, %s from now",
+				getDuration(ts-currentTs))
+		}
 	} else if currentTs-ts > 3600*24*180 /* a half year earlier */ {
 		log.Warnf("commit %s: too old commit date (%s earlier). Please check your system clock!",
 			v.CommitID(), getDuration(currentTs-ts))
