@@ -181,10 +181,6 @@ level=warning msg="[po/bg.po]    mismatch variable names: update_ref"
 level=warning msg="[po/bg.po]    >> msgid: update_ref failed for ref '%s': %s"
 level=warning msg="[po/bg.po]    >> msgstr: неуспешно обновяване на указателя „%s“: %s"
 level=warning
-level=warning msg="[po/bg.po]    mismatch variable names: git merge-base"
-level=warning msg="[po/bg.po]    >> msgid: use 'merge-base --fork-point' to refine upstream"
-level=warning msg="[po/bg.po]    >> msgstr: за доуточняването на следения клон, използвайте:\n\n git merge-base --fork-point"
-level=warning
 EOF
 
 test_expect_success "check typos in bg.po" '

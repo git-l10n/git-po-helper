@@ -16,6 +16,8 @@ func init() {
 		"--extcmd=КОМАНДА":       "--extcmd=<КОМАНДА>",
 		"--tool=ПРОГРАМА":        "--tool=<ПРОГРАМА>",
 		"--schedule=ЧЕСТОТА":     "--schedule=<ЧЕСТОТА>",
+		"trailers:key=СТОЙНОСТ":  "trailers:key=<СТОЙНОСТ>",
+
 		// Upstream may need to add "<>" around "files"
 		"--dirstat=ФАЙЛОВЕ": "--dirstat=files",
 		"--dirstat=ФАЙЛ…,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2,": "--dirstat=files,param1,param2",
@@ -38,6 +40,7 @@ func init() {
 		"командата „git index-pack“ не завърши успешно":                              "index-pack died",
 		"Командата „git pack-objects“ не завърши успешно":                            "pack-objects died",
 		"указателят „%s“ не е бил включен поради опциите зададени на „git rev-list“": "ref '%s' is excluded by the rev-list options",
+		"    git merge-base --fork-point":                                            "    merge-base --fork-point",
 
 		// Typos ?
 		"зареждане на разширенията на индекса":  "load_index_extensions",
