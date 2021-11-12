@@ -16,7 +16,7 @@ func init() {
 		"--extcmd=КОМАНДА":       "--extcmd=<КОМАНДА>",
 		"--tool=ПРОГРАМА":        "--tool=<ПРОГРАМА>",
 		"--schedule=ЧЕСТОТА":     "--schedule=<ЧЕСТОТА>",
-		"trailers:key=СТОЙНОСТ":  "trailers:key=<СТОЙНОСТ>",
+		"trailers:key=ЕПИЛОГ":    "trailers:key=<ЕПИЛОГ>",
 
 		// Upstream may need to add "<>" around "files"
 		"--dirstat=ФАЙЛОВЕ": "--dirstat=files",
