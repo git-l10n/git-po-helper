@@ -2,6 +2,21 @@
 
 Changes of git-po-helper.
 
+## 0.4.6 (2021-12-16)
+
+* go mod: upgrade goconfig to 1.1.1
+* dict: change 1 entry for bg smudge table
+* dict: add 2 entries for bg smudge table
+* dict: add smudge table for Korean language
+* Suppress errors of commit-date drift for github actions
+* refactor: check using golangci-lint
+* Fix golint warnings
+* Do not check line width for signatures and merge commit
+* Use all versions of gettext installed to check po files
+* dict: more entries for smudge table of bg language
+* refactor: move global replace dict to seperate smuge maps
+
+
 ## 0.4.5 (2021-11-6)
 
 * Only turn on hints if set gettext.useMultipleVersions
