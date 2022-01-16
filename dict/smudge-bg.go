@@ -41,10 +41,5 @@ func init() {
 		"Командата „git pack-objects“ не завърши успешно":                            "pack-objects died",
 		"указателят „%s“ не е бил включен поради опциите зададени на „git rev-list“": "ref '%s' is excluded by the rev-list options",
 		"    git merge-base --fork-point":                                            "    merge-base --fork-point",
-
-		// Typos ?
-		"зареждане на разширенията на индекса":  "load_index_extensions",
-		"зареждане на обектите от кеша":         "load_cache_entries",
-		"новият индекс не може да бъде записан": "unable to write new_index file",
 	}
 }

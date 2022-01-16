@@ -169,9 +169,29 @@ level=warning msg="[po/bg.po]    mismatch variable names: lazy_name"
 level=warning msg="[po/bg.po]    >> msgid: unable to create lazy_name thread: %s"
 level=warning msg="[po/bg.po]    >> msgstr: не може да се създаде нишка за имена: %s"
 level=warning
+level=warning msg="[po/bg.po]    mismatch variable names: load_cache_entries"
+level=warning msg="[po/bg.po]    >> msgid: unable to create load_cache_entries thread: %s"
+level=warning msg="[po/bg.po]    >> msgstr: не може да се създаде нишка за зареждане на обектите от кеша: %s"
+level=warning
+level=warning msg="[po/bg.po]    mismatch variable names: load_index_extensions"
+level=warning msg="[po/bg.po]    >> msgid: unable to create load_index_extensions thread: %s"
+level=warning msg="[po/bg.po]    >> msgstr: не може да се създаде нишка за зареждане на разширенията на индекса: %s"
+level=warning
 level=warning msg="[po/bg.po]    mismatch variable names: lazy_name"
 level=warning msg="[po/bg.po]    >> msgid: unable to join lazy_name thread: %s"
 level=warning msg="[po/bg.po]    >> msgstr: не може да се изчака нишка за имена: %s"
+level=warning
+level=warning msg="[po/bg.po]    mismatch variable names: load_cache_entries"
+level=warning msg="[po/bg.po]    >> msgid: unable to join load_cache_entries thread: %s"
+level=warning msg="[po/bg.po]    >> msgstr: не може да се изчака нишка за зареждане на обектите от кеша: %s"
+level=warning
+level=warning msg="[po/bg.po]    mismatch variable names: load_index_extensions"
+level=warning msg="[po/bg.po]    >> msgid: unable to join load_index_extensions thread: %s"
+level=warning msg="[po/bg.po]    >> msgstr: не може да се създаде нишка за зареждане на разширенията на индекса: %s"
+level=warning
+level=warning msg="[po/bg.po]    mismatch variable names: new_index"
+level=warning msg="[po/bg.po]    >> msgid: unable to write new_index file"
+level=warning msg="[po/bg.po]    >> msgstr: новият индекс не може да бъде записан"
 level=warning
 level=warning msg="[po/bg.po]    mismatch variable names: --patch"
 level=warning msg="[po/bg.po]    >> msgid: unknown --patch mode: %s"
