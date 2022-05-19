@@ -1,0 +1,2 @@
+[filter "gettext-no-location"]
+	clean = msgcat --no-location -
