@@ -1,2 +1,2 @@
-*.po diff=gettext-uniq
-*.pot diff=gettext-uniq
+*.po diff=gettext-fmt
+*.pot diff=gettext-fmt

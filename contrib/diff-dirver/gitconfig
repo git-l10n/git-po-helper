@@ -1,3 +1,2 @@
-[diff "gettext-uniq"]
-	textconv = msguniq -i --no-location --strict -s
-	cachetextconv = true
+[diff "gettext-fmt"]
+	textconv = msgcat --indent --add-location=file --sort-by-file --no-wrap
