@@ -44,6 +44,11 @@ func IgnoreTypos() bool {
 		viper.GetBool("check--ignore-typos")
 }
 
+// CheckFileLocations returns option "--check-file-locations".
+func CheckFileLocations() bool {
+	return viper.GetBool("check-po--check-file-locations")
+}
+
 // Core returns option "--core".
 func Core() bool {
 	return viper.GetBool("check--core") || viper.GetBool("check-po--core")

@@ -43,6 +43,11 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	ReportInfoAndErrors(errs, prompt, ok)
 	ret = ret && ok
 
+	// No file locations in "po/XX.po".
+	errs, ok = checkPoNoFileLocations(poFile)
+	ReportInfoAndErrors(errs, prompt, ok)
+	ret = ret && ok
+
 	// Check possible typos in a .po file.
 	errs, ok = checkTyposInPoFile(locale, poFile)
 	ReportWarnAndErrors(errs, prompt, ok)
