@@ -1,3 +1,4 @@
+// Package gettext provides utils for gettext.
 package gettext
 
 import (

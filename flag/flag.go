@@ -1,3 +1,4 @@
+// Package flag provides viper flags.
 package flag
 
 import (

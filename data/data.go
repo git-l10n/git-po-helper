@@ -1,3 +1,4 @@
+// Package data provides ISO 639 and ISO 3166 data for locales.
 package data
 
 var (

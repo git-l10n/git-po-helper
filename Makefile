@@ -42,12 +42,14 @@ data/iso-639.go: data/iso-639.csv data/iso-639.t
 	$(call message,Generate code for iso-639 and iso-3166)
 	go generate github.com/git-l10n/git-po-helper/data/...
 
-golint:
-	$(call message,Testing git-po-helper using golint for coding style)
-	@golint $(LOCAL_PACKAGES)
-	$(call message,TODO: run 'golangci-lint ./...' to find more issues)
+.PHONY: golint lint
+golint: lint
+lint:
+	$(call message,Testing using static analysis tools for better coding style)
+	go vet ./...
+	staticcheck -checks all ./...
 
-test: golint ut it
+test: lint ut it
 
 ut: $(TARGET)
 	$(call message,Testing git-po-helper for unit tests)

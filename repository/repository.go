@@ -1,3 +1,4 @@
+// Package repository provides model for repository.
 package repository
 
 import (

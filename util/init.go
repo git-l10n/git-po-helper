@@ -1,3 +1,4 @@
+// Package util provides libs for git-po-helper implementation.
 package util
 
 import (

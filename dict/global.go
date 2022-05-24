@@ -1,3 +1,4 @@
+// Package dict provides dictionary to fix typos.
 package dict
 
 import "regexp"

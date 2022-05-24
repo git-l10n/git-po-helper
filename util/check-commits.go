@@ -176,16 +176,16 @@ func (v *commitLog) checkCommitDate(date string) error {
 	if err != nil {
 		return fmt.Errorf("bad timestamp: %s", date)
 	}
-	currentTs := time.Now().UTC().Unix()
-	if ts > currentTs {
+	currentTS := time.Now().UTC().Unix()
+	if ts > currentTS {
 		// Allow 15 minutes' drift for github actions
-		if flag.GitHubActionEvent() == "" || ts-currentTs > 900 {
+		if flag.GitHubActionEvent() == "" || ts-currentTS > 900 {
 			return fmt.Errorf("date is in the future, %s from now",
-				getDuration(ts-currentTs))
+				getDuration(ts-currentTS))
 		}
-	} else if currentTs-ts > 3600*24*180 /* a half year earlier */ {
+	} else if currentTS-ts > 3600*24*180 /* a half year earlier */ {
 		log.Warnf("commit %s: too old commit date (%s earlier). Please check your system clock!",
-			v.CommitID(), getDuration(currentTs-ts))
+			v.CommitID(), getDuration(currentTS-ts))
 	}
 	return nil
 }
