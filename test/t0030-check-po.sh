@@ -4,7 +4,7 @@ test_description="test git-po-helper update"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-special-gettext-versions"
+HELPER="po-helper --no-special-gettext-versions --check-pot-file=no"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -55,7 +55,7 @@ test_expect_success "bad syntax of zh_CN.po" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz""
 	EOF
 
-	test_must_fail git -C workdir $HELPER check-po  zh_CN >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER check-po zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	test_cmp expect actual

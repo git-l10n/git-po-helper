@@ -887,9 +887,11 @@ func CmdCheckCommits(args ...string) bool {
 
 func checkCommits(commits ...string) bool {
 	var (
-		pass = 0
-		fail = 0
-		nr   = len(commits)
+		pass      = 0
+		fail      = 0
+		nr        = len(commits)
+		tipCommit = commits[0]
+		poMaps    = make(map[string]bool)
 	)
 
 	for i := 0; i < nr; i++ {
@@ -913,6 +915,7 @@ func checkCommits(commits ...string) bool {
 				l10nChanges = append(l10nChanges, change)
 			} else if strings.HasSuffix(change, ".po") {
 				l10nChanges = append(l10nChanges, change)
+				poMaps[change] = true
 			}
 		}
 
@@ -941,6 +944,16 @@ func checkCommits(commits ...string) bool {
 		log.Infof("checking commits: %d passed, %d failed.", pass, fail)
 	} else {
 		log.Infof("checking commits: %d passed.", pass)
+	}
+
+	if flag.CheckPotFile() != flag.CheckPotFileNone {
+		poFiles := []string{}
+		for file := range poMaps {
+			poFiles = append(poFiles, file)
+		}
+		if ok := CheckUnfinishedPoFiles(tipCommit, poFiles); !ok {
+			return false
+		}
 	}
 
 	return fail == 0

@@ -4,7 +4,7 @@ test_description="show hints for missing gettext 0.14"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-special-gettext-versions"
+HELPER="po-helper --no-special-gettext-versions --check-pot-file=no"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -65,7 +65,8 @@ ERROR: fail to execute "git-po-helper check-po"
 EOF
 
 test_expect_success "show hints and errors for gettext 014" '
-	test_must_fail git -c gettext.useMultipleVersions=1 -C workdir $HELPER check-po fr >out 2>&1 &&
+	test_must_fail git -c gettext.useMultipleVersions=1 -C workdir \
+		$HELPER check-po fr >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

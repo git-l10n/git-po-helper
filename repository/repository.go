@@ -51,9 +51,9 @@ func WorkDir() string {
 
 // IsGitProject checks current workdir is belong to git project.
 func IsGitProject() bool {
-	poFile := filepath.Join(WorkDir(), "po", "git.pot")
-	if _, err := os.Stat(poFile); err != nil {
-		log.Debugf("'%s' is not belong to git project: %s", WorkDir(), err)
+	poDir := filepath.Join(WorkDir(), "po")
+	if _, err := os.Stat(poDir); err != nil {
+		log.Errorf("cannot find 'po/' in your worktree '%s': %s", WorkDir(), err)
 		return false
 	}
 	return true

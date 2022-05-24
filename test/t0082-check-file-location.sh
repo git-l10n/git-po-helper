@@ -4,7 +4,7 @@ test_description="check file-locations in po file"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-special-gettext-versions"
+HELPER="po-helper --no-special-gettext-versions --check-pot-file=no"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&

@@ -4,7 +4,7 @@ test_description="check output for --github-action-event"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --github-action-event=pull_request_target"
+HELPER="po-helper --github-action-event=pull_request_target --check-pot-file=no"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -61,7 +61,7 @@ test_expect_success "bad syntax of zh_CN.po" '
 	EOF
 
 	test_must_fail git -C workdir $HELPER \
-		check-po  zh_CN >out 2>&1 &&
+		check-po zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	test_cmp expect actual
@@ -192,7 +192,7 @@ test_expect_success "check-commits (non-l10n commit)" '
 
 test_expect_success "check-commits --github-action-event=pull_request" '
 	test_must_fail git -C workdir po-helper \
-		check-commits \
+		check-commits --check-pot-file=no \
 		--github-action-event=pull_request \
 		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
@@ -201,7 +201,7 @@ test_expect_success "check-commits --github-action-event=pull_request" '
 
 test_expect_success "check-commits --github-action-event=pull_request_target" '
 	test_must_fail git -C workdir po-helper \
-		check-commits \
+		check-commits --check-pot-file=no \
 		--github-action-event=pull_request_target \
 		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
@@ -217,7 +217,7 @@ EOF
 
 test_expect_success "check-commits --github-action-event=push" '
 	git -C workdir po-helper \
-		check-commits \
+		check-commits --check-pot-file=no \
 		--github-action-event push \
 		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
@@ -226,7 +226,7 @@ test_expect_success "check-commits --github-action-event=push" '
 
 test_expect_success "check-commits --github-action-event=push" '
 	git -C workdir po-helper \
-		check-commits \
+		check-commits --check-pot-file=no \
 		--github-action-event push \
 		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&

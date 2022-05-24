@@ -4,7 +4,7 @@ test_description="check typos in po files"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-special-gettext-versions"
+HELPER="po-helper --no-special-gettext-versions --check-pot-file=no"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -37,7 +37,7 @@ test_expect_success "mismatched shell variables" '
 	"无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
 	EOF
 
-	git -C workdir $HELPER check-po  zh_CN >out 2>&1 &&
+	git -C workdir $HELPER check-po zh_CN >out 2>&1 &&
 
 	make_user_friendly_and_stable_output <out >actual &&
 
@@ -144,7 +144,7 @@ test_expect_success "check typos of mismatched constant strings" '
 	msgstr "git-credential-helper [参数]"
 	EOF
 
-	git -C workdir $HELPER check-po  zh_CN >out 2>&1 &&
+	git -C workdir $HELPER check-po zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
@@ -213,7 +213,7 @@ test_expect_success "check typos of mismatched options" '
 	msgstr "相当于 --word-diff=color --word-diff-regex=正则"
 	EOF
 
-	git -C workdir $HELPER check-po  zh_CN >out 2>&1 &&
+	git -C workdir $HELPER check-po zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&

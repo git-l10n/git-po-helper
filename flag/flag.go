@@ -2,6 +2,9 @@
 package flag
 
 import (
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -48,6 +51,40 @@ func IgnoreTypos() bool {
 func CheckFileLocations() bool {
 	return GitHubActionEvent() != "" ||
 		viper.GetBool("check-po--check-file-locations")
+}
+
+const (
+	CheckPotFileNone = iota
+	CheckPotFileCurrent
+	CheckPotFileUpdate
+	CheckPotFileDownload
+)
+
+// CheckPotFile returns option "--check-pot-file".
+func CheckPotFile() int {
+	var (
+		ret int
+		opt = strings.ToLower(viper.GetString("check-pot-file"))
+	)
+
+	if opt == "" {
+		opt = "download"
+	}
+
+	switch opt {
+	case "no", "none", "false", "0":
+		ret = CheckPotFileNone
+	case "update", "make", "build":
+		ret = CheckPotFileUpdate
+	case "current":
+		ret = CheckPotFileCurrent
+	default:
+		log.Warnf("unknown value for --check-pot-file=%s, fallback to 'download'", opt)
+		fallthrough
+	case "download", "yes", "true", "1":
+		ret = CheckPotFileDownload
+	}
+	return ret
 }
 
 // Core returns option "--core".

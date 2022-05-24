@@ -59,7 +59,8 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 // CmdCheckPo implements check-po sub command.
 func CmdCheckPo(args ...string) bool {
 	var (
-		ret = true
+		ret     = true
+		poFiles []string
 	)
 
 	if len(args) == 0 {
@@ -89,9 +90,10 @@ func CmdCheckPo(args ...string) bool {
 		log.Errorf(`cannot find any ".po" files to check`)
 		ret = false
 	}
-	for _, fileName := range args {
-		locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
+	for _, arg := range args {
+		locale := strings.TrimSuffix(filepath.Base(arg), ".po")
 		poFile := filepath.Join(PoDir, locale+".po")
+		poFiles = append(poFiles, poFile)
 		if !CheckPoFile(locale, poFile) {
 			ret = false
 		}
@@ -100,6 +102,9 @@ func CmdCheckPo(args ...string) bool {
 				ret = false
 			}
 		}
+	}
+	if flag.CheckPotFile() != flag.CheckPotFileNone {
+		ret = CheckUnfinishedPoFiles("HEAD", poFiles) && ret
 	}
 	return ret
 }
