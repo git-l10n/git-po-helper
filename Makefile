@@ -49,7 +49,7 @@ lint:
 	go vet ./...
 	staticcheck -checks all ./...
 
-test: lint ut it
+test: $(TARGET) lint ut it
 
 ut: $(TARGET)
 	$(call message,Testing git-po-helper for unit tests)
