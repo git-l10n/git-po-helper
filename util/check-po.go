@@ -18,7 +18,8 @@ func CheckPoFile(locale, poFile string) bool {
 // CheckPoFileWithPrompt checks syntax of "po/xx.po", and use specific prompt.
 func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	var (
-		ret  bool
+		ret  = true
+		ok   = true
 		errs []error
 	)
 
@@ -38,35 +39,14 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	}
 
 	// Run msgfmt to check syntax of a .po file
-	errs, ret = checkPoSyntax(poFile)
-	for _, err := range errs {
-		if !ret {
-			log.Errorf("%s\t%s", prompt, err)
-		} else {
-			log.Printf("%s\t%s", prompt, err)
-		}
-	}
+	errs, ok = checkPoSyntax(poFile)
+	ReportInfoAndErrors(errs, prompt, ok)
+	ret = ret && ok
 
 	// Check possible typos in a .po file.
-	errs, typosOK := checkTyposInPoFile(locale, poFile)
-	if !typosOK {
-		ret = false
-	}
-	for _, err := range errs {
-		if err == nil {
-			if !typosOK {
-				log.Error("")
-			} else {
-				log.Warn("")
-			}
-		} else {
-			if !typosOK {
-				log.Errorf("%s\t%s", prompt, err)
-			} else {
-				log.Warnf("%s\t%s", prompt, err)
-			}
-		}
-	}
+	errs, ok = checkTyposInPoFile(locale, poFile)
+	ReportWarnAndErrors(errs, prompt, ok)
+	ret = ret && ok
 
 	return ret
 }

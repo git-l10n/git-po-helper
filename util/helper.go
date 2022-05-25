@@ -122,3 +122,46 @@ func AbbrevCommit(oid string) string {
 	}
 	return oid
 }
+
+func ReportInfoAndErrors(errs []error, prompt string, notError bool) {
+	if notError {
+		reportResultMessages(errs, prompt, log.InfoLevel)
+	} else {
+		reportResultMessages(errs, prompt, log.ErrorLevel)
+	}
+}
+
+func ReportWarnAndErrors(errs []error, prompt string, notError bool) {
+	if notError {
+		reportResultMessages(errs, prompt, log.WarnLevel)
+	} else {
+		reportResultMessages(errs, prompt, log.ErrorLevel)
+	}
+}
+
+func reportResultMessages(errs []error, prompt string, level log.Level) {
+	if len(errs) == 0 {
+		return
+	}
+	for _, err := range errs {
+		if err == nil {
+			switch level {
+			case log.InfoLevel:
+				log.Info("")
+			case log.WarnLevel:
+				log.Warn("")
+			default:
+				log.Error("")
+			}
+		} else {
+			switch level {
+			case log.InfoLevel:
+				log.Printf("%s\t%s", prompt, err)
+			case log.WarnLevel:
+				log.Warnf("%s\t%s", prompt, err)
+			default:
+				log.Errorf("%s\t%s", prompt, err)
+			}
+		}
+	}
+}
