@@ -856,6 +856,10 @@ func CmdCheckCommits(args ...string) bool {
 		return false
 	}
 	nr := len(commits)
+	if nr == 0 {
+		log.Infoln("no commit checked.")
+		return true
+	}
 	if nr > maxCommits {
 		if flag.Force() {
 			nr = maxCommits

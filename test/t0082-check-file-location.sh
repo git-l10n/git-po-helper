@@ -21,7 +21,7 @@ level=info msg="[po/zh_CN.po]    5282 translated messages."
 level=error msg=---------------------------------------------------------------------------
 level=error msg="[po/zh_CN.po]    Found file-location comments in po file."
 level=error msg="[po/zh_CN.po]    "
-level=error msg="[po/zh_CN.po]    Please commit <OID> location-less \"po/XX.po\" file to save repository size."
+level=error msg="[po/zh_CN.po]    Please commit a location-less \"po/XX.po\" file to save repository size."
 level=error msg="[po/zh_CN.po]    See: [Updating a \"XX.po\" file] section in \"po/README.md\" for reference."
 
 ERROR: fail to execute "git-po-helper check-po"

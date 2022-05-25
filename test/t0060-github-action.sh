@@ -21,6 +21,11 @@ ERROR [po/zh_CN.po]    po/zh_CN.po:25: end-of-line within string
 ERROR [po/zh_CN.po]    msgfmt: found 1 fatal error
 ERROR [po/zh_CN.po]    fail to check po: exit status 1
 ERROR ---------------------------------------------------------------------------
+ERROR [po/zh_CN.po]    Found file-location comments in po file.
+ERROR [po/zh_CN.po]
+ERROR [po/zh_CN.po]    Please commit a location-less "po/XX.po" file to save repository size.
+ERROR [po/zh_CN.po]    See: [Updating a "XX.po" file] section in "po/README.md" for reference.
+ERROR ---------------------------------------------------------------------------
 ERROR [po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1
 ERROR [po/zh_CN.po]    no mofile generated, and no scan typos
 
@@ -103,7 +108,10 @@ test_expect_success "update zh_CN (with file-location)" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz"
 	EOF
 
-	git -C workdir $HELPER update zh_CN
+	test_must_fail git -C workdir $HELPER update zh_CN 2>&1 |
+		make_user_friendly_and_stable_output |
+		sed "/^\.\./ d" >actual &&
+	test_cmp expect actual
 '
 
 cat >expect <<-\EOF
@@ -112,7 +120,7 @@ INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
 EOF
 
 test_expect_success "check update of zh_CN.po" '
-	git -C workdir $HELPER \
+	test_must_fail git -C workdir $HELPER \
 		check-po zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
 		head -2 >actual &&
@@ -122,12 +130,19 @@ test_expect_success "check update of zh_CN.po" '
 cat >expect <<-\EOF
 INFO ---------------------------------------------------------------------------
 INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
+ERROR ---------------------------------------------------------------------------
+ERROR [po/zh_CN.po]    Found file-location comments in po file.
+ERROR [po/zh_CN.po]
+ERROR [po/zh_CN.po]    Please commit a location-less "po/XX.po" file to save repository size.
+ERROR [po/zh_CN.po]    See: [Updating a "XX.po" file] section in "po/README.md" for reference.
 INFO creating po/git-core.pot: xgettext ...
 INFO [po/zh_CN.po]    2 translated messages, 479 untranslated messages.
+
+ERROR: fail to execute "git-po-helper check-po"
 EOF
 
 test_expect_success "check core update of zh_CN.po" '
-	git -C workdir $HELPER \
+	test_must_fail git -C workdir $HELPER \
 		check-po --core zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
