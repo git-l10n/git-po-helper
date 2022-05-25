@@ -13,6 +13,23 @@ ifeq ($(shell uname), Darwin)
     CC := clang
 endif
 
+## Exhaustive lists of our source files, either dynamically generated,
+## or hardcoded.
+SOURCES_CMD = ( \
+        git ls-files \
+                '*.go' \
+                ':!test' \
+                ':!contrib' \
+                2>/dev/null || \
+        $(FIND) . \
+                \( -name .git -type d -prune \) \
+                -o \( -name test -type d -prune \) \
+                -o \( -name contrib -type d -prune \) \
+                -o \( -name '*.go' -type f -print \) \
+                | sed -e 's|^\./||' \
+        )
+FOUND_SOURCE_FILES := $(shell $(SOURCES_CMD))
+
 # Returns a list of all non-vendored (local packages)
 LOCAL_PACKAGES = $(shell go list ./... | grep -v -e '^$(PKG)/vendor/')
 
@@ -30,7 +47,7 @@ VERSION-FILE: FORCE
 # Define LDFLAGS after include of REPO-VERSION-FILE
 LDFLAGS := -ldflags "-X $(PKG)/version.Version=$(VERSION)"
 
-git-po-helper: $(shell find . \( -name '*.go' -not -name 'iso-*.go' \) ) data/iso-3166.go data/iso-639.go | VERSION-FILE
+git-po-helper: $(FOUND_SOURCE_FILES) data/iso-3166.go data/iso-639.go | VERSION-FILE
 	$(call message,Building $@)
 	$(GOBUILD) $(LDFLAGS) -o $@
 
