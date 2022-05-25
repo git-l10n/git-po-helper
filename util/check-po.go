@@ -20,7 +20,7 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	var (
 		ret  = true
 		ok   = true
-		errs []error
+		errs []string
 	)
 
 	locale = strings.TrimSuffix(filepath.Base(locale), ".po")

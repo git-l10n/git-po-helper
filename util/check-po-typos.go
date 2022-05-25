@@ -18,8 +18,8 @@ import (
 	"github.com/gorilla/i18n/gettext"
 )
 
-func checkTyposInPoFile(locale, poFile string) ([]error, bool) {
-	var errs []error
+func checkTyposInPoFile(locale, poFile string) ([]string, bool) {
+	var errs []string
 
 	if flag.IgnoreTypos() {
 		return nil, true
@@ -27,7 +27,7 @@ func checkTyposInPoFile(locale, poFile string) ([]error, bool) {
 
 	moFile, err := ioutil.TempFile("", "mofile")
 	if err != nil {
-		errs = append(errs, err)
+		errs = append(errs, err.Error())
 		return errs, false
 	}
 	defer os.Remove(moFile.Name())
@@ -39,18 +39,18 @@ func checkTyposInPoFile(locale, poFile string) ([]error, bool) {
 	cmd.Dir = repository.WorkDir()
 	err = cmd.Run()
 	if err != nil {
-		errs = append(errs, fmt.Errorf("fail to compile %s: %s", poFile, err))
+		errs = append(errs, fmt.Sprintf("fail to compile %s: %s", poFile, err))
 	}
 	fi, err := os.Stat(moFile.Name())
 	if err != nil || fi.Size() == 0 {
-		errs = append(errs, fmt.Errorf("no mofile generated, and no scan typos"))
+		errs = append(errs, "no mofile generated, and no scan typos")
 		return errs, false
 	}
 	return checkTyposInMoFile(locale, moFile.Name())
 }
 
-func checkTyposInMoFile(locale, moFile string) ([]error, bool) {
-	var errs []error
+func checkTyposInMoFile(locale, moFile string) ([]string, bool) {
+	var errs []string
 
 	if flag.IgnoreTypos() {
 		return nil, true
@@ -58,7 +58,7 @@ func checkTyposInMoFile(locale, moFile string) ([]error, bool) {
 
 	f, err := os.Open(moFile)
 	if err != nil {
-		errs = append(errs, fmt.Errorf("cannot open %s: %s", moFile, err))
+		errs = append(errs, fmt.Sprintf("cannot open %s: %s", moFile, err))
 		return errs, false
 	}
 	defer f.Close()
@@ -67,7 +67,7 @@ func checkTyposInMoFile(locale, moFile string) ([]error, bool) {
 		msg, err := iter.Next()
 		if err != nil {
 			if err != io.EOF {
-				errs = append(errs, fmt.Errorf("fail to iterator: %s", err))
+				errs = append(errs, fmt.Sprintf("fail to iterator: %s", err))
 			}
 			break
 		}
@@ -166,7 +166,7 @@ func findUnmatchVariables(src, target string) []string {
 	return unmatched
 }
 
-func checkTypos(locale, msgID, msgStr string) (errs []error) {
+func checkTypos(locale, msgID, msgStr string) (errs []string) {
 	var (
 		unmatched  []string
 		origMsgID  = msgID
@@ -204,11 +204,11 @@ func checkTypos(locale, msgID, msgStr string) (errs []error) {
 	unmatched = findUnmatchVariables(msgID, msgStr)
 	if len(unmatched) > 0 {
 		errs = append(errs,
-			fmt.Errorf("mismatch variable names: %s",
+			fmt.Sprintf("mismatch variable names: %s",
 				strings.Join(unmatched, ", ")))
-		errs = append(errs, fmt.Errorf(">> msgid: %s", origMsgID))
-		errs = append(errs, fmt.Errorf(">> msgstr: %s", origMsgStr))
-		errs = append(errs, nil)
+		errs = append(errs, fmt.Sprintf(">> msgid: %s", origMsgID))
+		errs = append(errs, fmt.Sprintf(">> msgstr: %s", origMsgStr))
+		errs = append(errs, "")
 	}
 	return
 }

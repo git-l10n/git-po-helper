@@ -14,8 +14,10 @@ test_expect_success "checkout po-2.31.1" '
 cat >expect <<-\EOF
 level=info msg="[po/es.po]    5104 translated messages."
 level=warning msg="[po/es.po]    mismatch variable names: herramienta.cmd"
-level=warning msg="[po/es.po]    >> msgid: '%s': path for unsupported man viewer.\nPlease consider using 'man.<tool>.cmd' instead."
-level=warning msg="[po/es.po]    >> msgstr: '%s': ruta para el visualizador del manual no soportada.\nPor favor considere usar 'man.<herramienta.cmd'."
+level=warning msg="[po/es.po]    >> msgid: '%s': path for unsupported man viewer."
+level=warning msg="[po/es.po]    Please consider using 'man.<tool>.cmd' instead."
+level=warning msg="[po/es.po]    >> msgstr: '%s': ruta para el visualizador del manual no soportada."
+level=warning msg="[po/es.po]    Por favor considere usar 'man.<herramienta.cmd'."
 level=warning
 level=warning msg="[po/es.po]    mismatch variable names: --porcelain=2, --procelain=2"
 level=warning msg="[po/es.po]    >> msgid: 'git status --porcelain=2' failed in submodule %s"
@@ -50,8 +52,14 @@ level=warning msg="[po/es.po]    >> msgid: Unable to initialize SMTP properly. C
 level=warning msg="[po/es.po]    >> msgstr: No es posible inicializar SMTP adecuadamente. Verificar config y usar ---smtp-debug."
 level=warning
 level=warning msg="[po/es.po]    mismatch variable names: --allow-empty, --alow-empty"
-level=warning msg="[po/es.po]    >> msgid: You asked to amend the most recent commit, but doing so would make\nit empty. You can repeat your command with --allow-empty, or you can\nremove the commit entirely with \"git reset HEAD^\".\n"
-level=warning msg="[po/es.po]    >> msgstr: Has solicitado un amend en tu commit más reciente, pero hacerlo lo \nvaciaría. Puedes repetir el comando con --alow-empty, o puedes eliminar\nel commit completamente con \"git reset HEAD^\".\n"
+level=warning msg="[po/es.po]    >> msgid: You asked to amend the most recent commit, but doing so would make"
+level=warning msg="[po/es.po]    it empty. You can repeat your command with --allow-empty, or you can"
+level=warning msg="[po/es.po]    remove the commit entirely with \"git reset HEAD^\"."
+level=warning msg="[po/es.po]    "
+level=warning msg="[po/es.po]    >> msgstr: Has solicitado un amend en tu commit más reciente, pero hacerlo lo "
+level=warning msg="[po/es.po]    vaciaría. Puedes repetir el comando con --alow-empty, o puedes eliminar"
+level=warning msg="[po/es.po]    el commit completamente con \"git reset HEAD^\"."
+level=warning msg="[po/es.po]    "
 level=warning
 level=warning msg="[po/es.po]    mismatch variable names: --filter, usar--filter"
 level=warning msg="[po/es.po]    >> msgid: cannot use --filter without --stdout"
@@ -82,8 +90,12 @@ level=warning msg="[po/es.po]    >> msgid: positive value expected '%s' in %%(%s
 level=warning msg="[po/es.po]    >> msgstr: valor positivo esperado '%s' en %% (%s)"
 level=warning
 level=warning msg="[po/es.po]    mismatch variable names: --sateged, --staged"
-level=warning msg="[po/es.po]    >> msgid: repository has been updated, but unable to write\nnew_index file. Check that disk is not full and quota is\nnot exceeded, and then \"git restore --staged :/\" to recover."
-level=warning msg="[po/es.po]    >> msgstr: el repositorio ha sido actualizado, pero no se pudo escribir el archivo\nnew_index. Verifique que el disco no este lleno y la quota no ha\nsido superada, y luego \"git restore --sateged :/\" para recuperar."
+level=warning msg="[po/es.po]    >> msgid: repository has been updated, but unable to write"
+level=warning msg="[po/es.po]    new_index file. Check that disk is not full and quota is"
+level=warning msg="[po/es.po]    not exceeded, and then \"git restore --staged :/\" to recover."
+level=warning msg="[po/es.po]    >> msgstr: el repositorio ha sido actualizado, pero no se pudo escribir el archivo"
+level=warning msg="[po/es.po]    new_index. Verifique que el disco no este lleno y la quota no ha"
+level=warning msg="[po/es.po]    sido superada, y luego \"git restore --sateged :/\" para recuperar."
 level=warning
 level=warning msg="[po/es.po]    mismatch variable names: submodule--helper, subomdule--helper"
 level=warning msg="[po/es.po]    >> msgid: submodule--helper print-default-remote takes no arguments"

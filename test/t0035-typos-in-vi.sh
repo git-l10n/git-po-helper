@@ -14,8 +14,16 @@ test_expect_success "checkout po-2.31.1" '
 cat >expect <<-\EOF
 level=info msg="[po/vi.po]    5104 translated messages."
 level=warning msg="[po/vi.po]    mismatch variable names: --quiet"
-level=warning msg="[po/vi.po]    >> msgid: \nIt took %.2f seconds to enumerate unstaged changes after reset. You can\nuse '--quiet' to avoid this. Set the config setting reset.quiet to true\nto make this the default.\n"
-level=warning msg="[po/vi.po]    >> msgstr: \nCần %.2f giây để kiểm đếm các thay đổi chưa đưa lên bệ phóng sau khi đặt lại.\nBạn có thể sử dụng để tránh việc này. Đặt reset.quiet thành true trong\ncài đặt config nếu bạn muốn thực hiện nó như là mặc định.\n"
+level=warning msg="[po/vi.po]    >> msgid: "
+level=warning msg="[po/vi.po]    It took %.2f seconds to enumerate unstaged changes after reset. You can"
+level=warning msg="[po/vi.po]    use '--quiet' to avoid this. Set the config setting reset.quiet to true"
+level=warning msg="[po/vi.po]    to make this the default."
+level=warning msg="[po/vi.po]    "
+level=warning msg="[po/vi.po]    >> msgstr: "
+level=warning msg="[po/vi.po]    Cần %.2f giây để kiểm đếm các thay đổi chưa đưa lên bệ phóng sau khi đặt lại."
+level=warning msg="[po/vi.po]    Bạn có thể sử dụng để tránh việc này. Đặt reset.quiet thành true trong"
+level=warning msg="[po/vi.po]    cài đặt config nếu bạn muốn thực hiện nó như là mặc định."
+level=warning msg="[po/vi.po]    "
 level=warning
 level=warning msg="[po/vi.po]    mismatch variable names: $HOME"
 level=warning msg="[po/vi.po]    >> msgid: $HOME not set"

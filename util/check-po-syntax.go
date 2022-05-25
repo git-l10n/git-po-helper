@@ -2,7 +2,6 @@ package util
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -36,15 +35,15 @@ func checkGettextIncompatibleIssues(poFile string) error {
 	return nil
 }
 
-func checkPoSyntax(poFile string) ([]error, bool) {
+func checkPoSyntax(poFile string) ([]string, bool) {
 	var (
 		progs []string
-		errs  []error
+		errs  []string
 		msgs  []string
 	)
 
 	if !Exist(poFile) {
-		errs = append(errs, fmt.Errorf(`fail to check "%s", does not exist`, poFile))
+		errs = append(errs, fmt.Sprintf(`fail to check "%s", does not exist`, poFile))
 		return errs, false
 	}
 
@@ -76,7 +75,7 @@ func checkPoSyntax(poFile string) ([]error, bool) {
 		progs = append(progs, gettext.GettextAppMap[version].Program("msgfmt"))
 	}
 	if len(progs) == 0 {
-		errs = append(errs, fmt.Errorf("no gettext programs found"))
+		errs = append(errs, "no gettext programs found")
 		return errs, false
 	}
 
@@ -93,7 +92,7 @@ func checkPoSyntax(poFile string) ([]error, bool) {
 			err = cmd.Start()
 		}
 		if err != nil {
-			errs = append(errs, err)
+			errs = append(errs, err.Error())
 			return errs, false
 		}
 
@@ -105,24 +104,20 @@ func checkPoSyntax(poFile string) ([]error, bool) {
 			}
 		}
 		if err = cmd.Wait(); err != nil {
-			for _, line := range msgs {
-				errs = append(errs, errors.New(line))
-			}
-			errs = append(errs, fmt.Errorf("fail to check po: %s", err))
+			errs = append(errs, msgs...)
+			errs = append(errs, fmt.Sprintf("fail to check po: %s", err))
 			return errs, false
 		}
 		// We may check syntax using different versions of gettext, Eg:
 		// gettext 0.14 and new version. Do not report duplicate output
 		// messages, such as statistics.
 		if idx == 0 {
-			for _, line := range msgs {
-				errs = append(errs, errors.New(line))
-			}
+			errs = append(errs, msgs...)
 		}
 		msgs = []string{}
 	}
 	if err := checkGettextIncompatibleIssues(poFile); err != nil {
-		errs = append(errs, err)
+		errs = append(errs, err.Error())
 		return errs, false
 	}
 

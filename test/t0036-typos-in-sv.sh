@@ -18,8 +18,10 @@ level=warning msg="[po/sv.po]    >> msgid: --chmod param '%s' must be either -x 
 level=warning msg="[po/sv.po]    >> msgstr: --chmod-parametern \"%s\" måste antingen vara -x eller +x"
 level=warning
 level=warning msg="[po/sv.po]    mismatch variable names: --dump-alias, --dump-aliases"
-level=warning msg="[po/sv.po]    >> msgid: --dump-aliases incompatible with other options\n"
-level=warning msg="[po/sv.po]    >> msgstr: --dump-alias är inkompatibelt med andra flaggor\n"
+level=warning msg="[po/sv.po]    >> msgid: --dump-aliases incompatible with other options"
+level=warning msg="[po/sv.po]    "
+level=warning msg="[po/sv.po]    >> msgstr: --dump-alias är inkompatibelt med andra flaggor"
+level=warning msg="[po/sv.po]    "
 level=warning
 level=warning msg="[po/sv.po]    mismatch variable names: --unpack-unreachable"
 level=warning msg="[po/sv.po]    >> msgid: --keep-unreachable and --unpack-unreachable are incompatible"
@@ -34,8 +36,14 @@ level=warning msg="[po/sv.po]    >> msgid: --separate-git-dir incompatible with 
 level=warning msg="[po/sv.po]    >> msgstr: --separatebgit-dir är inkompatibelt med naket arkiv"
 level=warning
 level=warning msg="[po/sv.po]    mismatch variable names: --source=HEAD"
-level=warning msg="[po/sv.po]    >> msgid: Clone succeeded, but checkout failed.\nYou can inspect what was checked out with 'git status'\nand retry with 'git restore --source=HEAD :/'\n"
-level=warning msg="[po/sv.po]    >> msgstr: Klonen lyckades, men utcheckningen misslyckades.\nDu kan inspektera det som checkades ut med \"git status\"\noch försöka med \"git restore -source=HEAD :/\"\n"
+level=warning msg="[po/sv.po]    >> msgid: Clone succeeded, but checkout failed."
+level=warning msg="[po/sv.po]    You can inspect what was checked out with 'git status'"
+level=warning msg="[po/sv.po]    and retry with 'git restore --source=HEAD :/'"
+level=warning msg="[po/sv.po]    "
+level=warning msg="[po/sv.po]    >> msgstr: Klonen lyckades, men utcheckningen misslyckades."
+level=warning msg="[po/sv.po]    Du kan inspektera det som checkades ut med \"git status\""
+level=warning msg="[po/sv.po]    och försöka med \"git restore -source=HEAD :/\""
+level=warning msg="[po/sv.po]    "
 level=warning
 level=warning msg="[po/sv.po]    mismatch variable names: add_cacheinfo, add_cahceinfo"
 level=warning msg="[po/sv.po]    >> msgid: add_cacheinfo failed for path '%s'; merge aborting."

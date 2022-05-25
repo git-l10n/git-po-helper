@@ -18,8 +18,10 @@ level=warning msg="[po/pt_PT.po]    >> msgid: --no-contains option is only allow
 level=warning msg="[po/pt_PT.po]    >> msgstr: a opção --contains só é permitida no modo lista"
 level=warning
 level=warning msg="[po/pt_PT.po]    mismatch variable names: --no-write-bitmap-index"
-level=warning msg="[po/pt_PT.po]    >> msgid: Incremental repacks are incompatible with bitmap indexes. Use\n--no-write-bitmap-index or disable the pack.writebitmaps configuration."
-level=warning msg="[po/pt_PT.po]    >> msgstr: Repacks incrementais são incompatíveis com bitmap indexes. Usa\n--no-write-bitmap-índex ou desative a configuração pack.writebitmaps."
+level=warning msg="[po/pt_PT.po]    >> msgid: Incremental repacks are incompatible with bitmap indexes. Use"
+level=warning msg="[po/pt_PT.po]    --no-write-bitmap-index or disable the pack.writebitmaps configuration."
+level=warning msg="[po/pt_PT.po]    >> msgstr: Repacks incrementais são incompatíveis com bitmap indexes. Usa"
+level=warning msg="[po/pt_PT.po]    --no-write-bitmap-índex ou desative a configuração pack.writebitmaps."
 level=warning
 level=warning msg="[po/pt_PT.po]    mismatch variable names: $n"
 level=warning msg="[po/pt_PT.po]    >> msgid: The commit message #${n} will be skipped:"

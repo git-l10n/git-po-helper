@@ -123,7 +123,7 @@ func AbbrevCommit(oid string) string {
 	return oid
 }
 
-func ReportInfoAndErrors(errs []error, prompt string, notError bool) {
+func ReportInfoAndErrors(errs []string, prompt string, notError bool) {
 	if notError {
 		reportResultMessages(errs, prompt, log.InfoLevel)
 	} else {
@@ -131,7 +131,7 @@ func ReportInfoAndErrors(errs []error, prompt string, notError bool) {
 	}
 }
 
-func ReportWarnAndErrors(errs []error, prompt string, notError bool) {
+func ReportWarnAndErrors(errs []string, prompt string, notError bool) {
 	if notError {
 		reportResultMessages(errs, prompt, log.WarnLevel)
 	} else {
@@ -139,29 +139,29 @@ func ReportWarnAndErrors(errs []error, prompt string, notError bool) {
 	}
 }
 
-func reportResultMessages(errs []error, prompt string, level log.Level) {
+func reportResultMessages(errs []string, prompt string, level log.Level) {
+	var fn func(format string, args ...interface{})
+
 	if len(errs) == 0 {
 		return
 	}
+
+	switch level {
+	case log.InfoLevel:
+		fn = log.Printf
+	case log.WarnLevel:
+		fn = log.Warnf
+	default:
+		fn = log.Errorf
+	}
+
 	for _, err := range errs {
-		if err == nil {
-			switch level {
-			case log.InfoLevel:
-				log.Info("")
-			case log.WarnLevel:
-				log.Warn("")
-			default:
-				log.Error("")
-			}
-		} else {
-			switch level {
-			case log.InfoLevel:
-				log.Printf("%s\t%s", prompt, err)
-			case log.WarnLevel:
-				log.Warnf("%s\t%s", prompt, err)
-			default:
-				log.Errorf("%s\t%s", prompt, err)
-			}
+		if err == "" {
+			fn("")
+			continue
+		}
+		for _, line := range strings.Split(err, "\n") {
+			fn("%s\t%s", prompt, line)
 		}
 	}
 }
