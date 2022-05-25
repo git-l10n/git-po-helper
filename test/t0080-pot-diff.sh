@@ -22,7 +22,7 @@ test_expect_success "diff old version of po/git.pot" '
 		sed -e "s#from .* for git vN.N.N#from **** for git vN.N.N#" >actual &&
 
 	cat >expect <<-\EOF &&
-	l10n: git.pot: vN.N.N round N (47 new, 173 removed)
+	l10n: git.pot: vN.N.N round N (395 new, 573 removed)
 
 	Generate po/git.pot from **** for git vN.N.N l10n round N.
 	EOF
@@ -41,7 +41,7 @@ test_expect_success "diff new version of po/git.pot" '
 		sed -e "s#from .* for git vN.N.N#from **** for git vN.N.N#" >actual &&
 
 	cat >expect <<-\EOF &&
-	l10n: git.pot: vN.N.N round N (173 new, 47 removed)
+	l10n: git.pot: vN.N.N round N (573 new, 395 removed)
 
 	Generate po/git.pot from **** for git vN.N.N l10n round N.
 	EOF

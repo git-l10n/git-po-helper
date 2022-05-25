@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PO_HELPER_TEST_REPOSITORY_VERSION=5
+PO_HELPER_TEST_REPOSITORY_VERSION=6
 
 # Create test repository in .repository
 PO_HELPER_TEST_REPOSITORY="${SHARNESS_TEST_SRCDIR}/test-repository"
@@ -44,7 +44,7 @@ create_test_repository () {
 	fi
 
 	# Download git.tgz
-	for gitver in 2.31.1 2.33.0
+	for gitver in 2.31.1 2.36.0
 	do
 	if test ! -f "${SHARNESS_TEST_SRCDIR}/git-$gitver.tar"
 	then
@@ -75,7 +75,7 @@ create_test_repository () {
 	fi
 
 	# Start to create shared repository
-	create_test_repository_real 2.31.1 2.33.0 &&
+	create_test_repository_real 2.31.1 2.36.0 &&
 	echo ${PO_HELPER_TEST_REPOSITORY_VERSION} >${PO_HELPER_TEST_REPOSITORY_VERSION_FILE} &&
 	rm -f "${PO_HELPER_TEST_REPOSITORY}.lock"
 }
