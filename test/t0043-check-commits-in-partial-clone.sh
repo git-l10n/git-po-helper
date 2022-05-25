@@ -79,7 +79,9 @@ test_expect_success "creater partial clone" '
 
 cat >expect <<-\EOF
 level=info msg="successfully fetched 1 missing blob(s) in a batch from partial clone"
+level=info msg=---------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po@rev]    2 translated messages."
+level=warning msg=---------------------------------------------------------------------------
 level=warning msg="[po/zh_CN.po@rev]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
 level=warning msg="[po/zh_CN.po@rev]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
 level=warning msg="[po/zh_CN.po@rev]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
@@ -101,7 +103,9 @@ test_expect_success "check-commits show typos" '
 
 cat >expect <<-\EOF
 level=info msg="no missing blobs of po/* in partial clone"
+level=info msg=---------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po@rev]    2 translated messages."
+level=error msg=---------------------------------------------------------------------------
 level=error msg="[po/zh_CN.po@rev]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
 level=error msg="[po/zh_CN.po@rev]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
 level=error msg="[po/zh_CN.po@rev]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
@@ -140,7 +144,9 @@ level=info msg="successfully fetched 1 missing blob(s) in a batch from partial c
 level=error msg="commit <OID>: bad syntax at line 79 (unknown key \"Respository\"): Respository:    https://github.com/l10n-tw/git-po"
 level=error msg="commit <OID>: bad syntax at line 80 (need two tabs between k/v): Leader:     Yi-Jyun Pan <pan93412 AT gmail.com>"
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+level=info msg=---------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po@rev]    2 translated messages."
+level=warning msg=---------------------------------------------------------------------------
 level=warning msg="[po/zh_CN.po@rev]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
 level=warning msg="[po/zh_CN.po@rev]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
 level=warning msg="[po/zh_CN.po@rev]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"

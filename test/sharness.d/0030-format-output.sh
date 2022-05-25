@@ -23,3 +23,9 @@ make_user_friendly_and_stable_output () {
 	perl -pe "s/\e\[[0-9;]*m//g"
 
 }
+
+show_separator () {
+	cat <<EOF
+level=info msg=---------------------------------------------------------------------------
+EOF
+}

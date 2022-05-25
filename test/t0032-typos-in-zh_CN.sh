@@ -12,7 +12,9 @@ test_expect_success "checkout po-2.31.1" '
 '
 
 cat >expect <<-\EOF
+level=info msg=---------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po]    5104 translated messages."
+level=warning msg=---------------------------------------------------------------------------
 level=warning msg="[po/zh_CN.po]    mismatch variable names: FSCK_IGNORE"
 level=warning msg="[po/zh_CN.po]    >> msgid: %d (FSCK_IGNORE?) should never trigger this callback"
 level=warning msg="[po/zh_CN.po]    >> msgstr: %d（忽略 FSCK?）不应该触发这个调用"
@@ -74,6 +76,7 @@ test_expect_success "check typos in zh_CN.po" '
 '
 
 cat >expect <<-\EOF
+level=info msg=---------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po]    5282 translated messages."
 EOF
 

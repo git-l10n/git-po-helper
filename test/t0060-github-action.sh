@@ -16,9 +16,11 @@ test_expect_success "setup" '
 '
 
 cat >expect <<-\EOF
+ERROR ---------------------------------------------------------------------------
 ERROR [po/zh_CN.po]    po/zh_CN.po:25: end-of-line within string
 ERROR [po/zh_CN.po]    msgfmt: found 1 fatal error
 ERROR [po/zh_CN.po]    fail to check po: exit status 1
+ERROR ---------------------------------------------------------------------------
 ERROR [po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1
 ERROR [po/zh_CN.po]    no mofile generated, and no scan typos
 
@@ -92,6 +94,7 @@ test_expect_success "update zh_CN successfully" '
 '
 
 cat >expect <<-\EOF
+INFO ---------------------------------------------------------------------------
 INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
 EOF
 
@@ -104,6 +107,7 @@ test_expect_success "check update of zh_CN.po" '
 '
 
 cat >expect <<-\EOF
+INFO ---------------------------------------------------------------------------
 INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
 INFO Creating core pot file in po-core/core.pot
 INFO [po-core/zh_CN.po]    2 translated messages, 479 untranslated messages.

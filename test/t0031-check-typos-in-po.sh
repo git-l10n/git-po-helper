@@ -42,7 +42,9 @@ test_expect_success "mismatched shell variables" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
+	level=info msg=---------------------------------------------------------------------------
 	level=info msg="[po/zh_CN.po]    2 translated messages."
+	level=warning msg=---------------------------------------------------------------------------
 	level=warning msg="[po/zh_CN.po]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
 	level=warning msg="[po/zh_CN.po]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
 	level=warning msg="[po/zh_CN.po]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
@@ -82,7 +84,9 @@ test_expect_success "trash variables in msgStr (--report-typos-as-errors)" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
+	level=info msg=---------------------------------------------------------------------------
 	level=info msg="[po/zh_CN.po]    1 translated message."
+	level=error msg=---------------------------------------------------------------------------
 	level=error msg="[po/zh_CN.po]    mismatch variable names: $command, $res"
 	level=error msg="[po/zh_CN.po]    >> msgid: exit code %d from %s is < 0 or >= 128"
 	level=error msg="[po/zh_CN.po]    >> msgstr: 命令 $command 的退出码 $res 应该 < 0 或 >= 128"
@@ -144,7 +148,9 @@ test_expect_success "check typos of mismatched constant strings" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
+	level=info msg=---------------------------------------------------------------------------
 	level=info msg="[po/zh_CN.po]    9 translated messages."
+	level=warning msg=---------------------------------------------------------------------------
 	level=warning msg="[po/zh_CN.po]    mismatch variable names: CHERRY_PICK_HEAD, CHERRY_PICK_HEADS"
 	level=warning msg="[po/zh_CN.po]    >> msgid: CHERRY_PICK_HEAD exists"
 	level=warning msg="[po/zh_CN.po]    >> msgstr: 已存在 CHERRY_PICK_HEADS"
@@ -211,7 +217,9 @@ test_expect_success "check typos of mismatched options" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
+	level=info msg=---------------------------------------------------------------------------
 	level=info msg="[po/zh_CN.po]    3 translated messages."
+	level=warning msg=---------------------------------------------------------------------------
 	level=warning msg="[po/zh_CN.po]    mismatch variable names: --3way"
 	level=warning msg="[po/zh_CN.po]    >> msgid: --reject and --3way cannot be used together."
 	level=warning msg="[po/zh_CN.po]    >> msgstr: --reject 和 -3way 不能同时使用。"

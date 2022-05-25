@@ -12,7 +12,9 @@ test_expect_success "checkout po-2.31.1" '
 '
 
 cat >expect <<-\EOF
+level=info msg=---------------------------------------------------------------------------
 level=info msg="[po/sv.po]    5104 translated messages."
+level=warning msg=---------------------------------------------------------------------------
 level=warning msg="[po/sv.po]    mismatch variable names: --chmod, --chmod-parametern"
 level=warning msg="[po/sv.po]    >> msgid: --chmod param '%s' must be either -x or +x"
 level=warning msg="[po/sv.po]    >> msgstr: --chmod-parametern \"%s\" måste antingen vara -x eller +x"

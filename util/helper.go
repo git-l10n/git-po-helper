@@ -123,16 +123,16 @@ func AbbrevCommit(oid string) string {
 	return oid
 }
 
-func ReportInfoAndErrors(errs []string, prompt string, notError bool) {
-	if notError {
+func ReportInfoAndErrors(errs []string, prompt string, ok bool) {
+	if ok {
 		reportResultMessages(errs, prompt, log.InfoLevel)
 	} else {
 		reportResultMessages(errs, prompt, log.ErrorLevel)
 	}
 }
 
-func ReportWarnAndErrors(errs []string, prompt string, notError bool) {
-	if notError {
+func ReportWarnAndErrors(errs []string, prompt string, ok bool) {
+	if ok {
 		reportResultMessages(errs, prompt, log.WarnLevel)
 	} else {
 		reportResultMessages(errs, prompt, log.ErrorLevel)
@@ -154,6 +154,9 @@ func reportResultMessages(errs []string, prompt string, level log.Level) {
 	default:
 		fn = log.Errorf
 	}
+
+	// Show horizontal line as a separator.
+	fn(strings.Repeat("-", 75))
 
 	for _, err := range errs {
 		if err == "" {
