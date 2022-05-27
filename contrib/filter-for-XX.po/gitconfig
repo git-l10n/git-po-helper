@@ -1,2 +1,4 @@
-[filter "gettext-no-location"]
+[filter "gettext-no-reference"]
 	clean = msgcat --no-location -
+[filter "gettext-no-location"]
+	clean = msgcat --add-location=file -

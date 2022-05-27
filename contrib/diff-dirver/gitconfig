@@ -1,2 +1,2 @@
 [diff "gettext-fmt"]
-	textconv = msgcat --indent --add-location=file --sort-by-file --no-wrap
+	textconv = msgcat --add-location=file --sort-by-file --no-wrap
