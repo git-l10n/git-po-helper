@@ -12,31 +12,73 @@ import (
 
 // CmdUpdate implements update sub command.
 func CmdUpdate(fileName string) bool {
-	locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
-	localeFullName, err := GetPrettyLocaleName(locale)
-	potFile := filepath.Join(PoDir, GitPot)
-	poFile := filepath.Join(PoDir, locale+".po")
-	if err != nil {
-		log.Errorf(`fail to update "%s": %s`, poFile, err)
+	var (
+		cmd            *exec.Cmd
+		locale         string
+		localeFullName string
+		err            error
+		poFile         string
+		cmdArgs        []string
+	)
+
+	locale = strings.TrimSuffix(filepath.Base(fileName), ".po")
+	if localeFullName, err = GetPrettyLocaleName(locale); err != nil {
+		log.Errorf("fail to update: %s", err)
+		return false
+	}
+	poFile = filepath.Join(PoDir, locale+".po")
+
+	cmd = exec.Command("make", "-n", "po-update", "PO_FILE="+poFile)
+	cmd.Dir = repository.WorkDir()
+	if err = cmd.Run(); err != nil {
+		return cmdUpdateObsolete(locale, localeFullName)
+	}
+
+	cmdArgs = []string{"make", "po-update", "PO_FILE=" + poFile}
+	log.Infof(`updating po file for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
+	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	cmd.Dir = repository.WorkDir()
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	if cmd.Run() != nil {
+		return false
+	}
+	return CheckPoFile(locale, poFile)
+}
+
+func cmdUpdateObsolete(locale, localeFullName string) bool {
+	var (
+		cmd             *exec.Cmd
+		potFile, poFile string
+		cmdArgs         []string
+	)
+
+	poFile = filepath.Join(PoDir, locale+".po")
+	potFile = filepath.Join(PoDir, GitPot)
+	if !Exist(potFile) {
+		log.Errorf(`fail to update "%s", pot file does not exist`, poFile)
 		return false
 	}
 	if !Exist(poFile) {
 		log.Errorf(`fail to update "%s", does not exist`, poFile)
 		return false
 	}
-	cmd := exec.Command("msgmerge",
+
+	cmdArgs = []string{"msgmerge",
 		"--add-location",
 		"--backup=off",
 		"-U",
 		poFile,
-		potFile)
+		potFile,
+	}
+	log.Infof(`updating po file for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
+	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = repository.WorkDir()
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		log.Errorf(`fail to update "%s": %s`, poFile, err)
 		return false
 	}
-	log.Infof(`updating po file for "%s": %s`, localeFullName, strings.Join(cmd.Args, " "))
 	if err := cmd.Wait(); err != nil {
 		log.Errorf(`fail to update "%s": %s`, poFile, err)
 		return false
