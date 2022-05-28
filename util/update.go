@@ -36,8 +36,7 @@ func CmdUpdate(fileName string) bool {
 		log.Errorf(`fail to update "%s": %s`, poFile, err)
 		return false
 	}
-	log.Infof(`Updating .po file for "%s":`, localeFullName)
-	log.Infof("\t%s ...", strings.Join(cmd.Args, " "))
+	log.Infof(`updating po file for "%s": %s`, localeFullName, strings.Join(cmd.Args, " "))
 	if err := cmd.Wait(); err != nil {
 		log.Errorf(`fail to update "%s": %s`, poFile, err)
 		return false

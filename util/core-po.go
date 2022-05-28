@@ -7,14 +7,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
-// CheckCorePoFile checks syntax of "po/xx.po" against "po-core/core.pot"
+// CheckCorePoFile checks syntax of "po/xx.po" against "po/git-core.pot"
 func CheckCorePoFile(locale string) bool {
-	var prompt = fmt.Sprintf("[%s]", filepath.Join(PoCoreDir, locale+".po"))
+	var prompt = fmt.Sprintf("[%s]", filepath.Join(PoDir, locale+".po"))
 
 	localeFullName, err := GetPrettyLocaleName(locale)
 	if err != nil {
@@ -51,7 +52,7 @@ func CheckCorePoFile(locale string) bool {
 		"--backup=off",
 		"-U",
 		fout.Name(),
-		filepath.Join(PoCoreDir, CorePot))
+		filepath.Join(PoDir, CorePot))
 	if err = cmd.Run(); err != nil {
 		log.Errorf("%s\tfail to update core po file: %s", prompt, err)
 		ShowExecError(err)
@@ -79,34 +80,38 @@ func CheckCorePoFile(locale string) bool {
 // genCorePot will generate "po-core/core.pot"
 func genCorePot() bool {
 	var (
-		corePotFile    = filepath.Join(PoCoreDir, CorePot)
+		corePotFile    = filepath.Join(PoDir, CorePot)
 		err            error
 		localizedFiles = []string{
-			"remote.c",
-			"wt-status.c",
-			"builtin/clone.c",
 			"builtin/checkout.c",
+			"builtin/clone.c",
 			"builtin/index-pack.c",
 			"builtin/push.c",
 			"builtin/reset.c",
+			"remote.c",
+			"wt-status.c",
 		}
+		cmdArgs []string
+		cmd     *exec.Cmd
 	)
-	if !Exist(PoCoreDir) {
-		err = os.MkdirAll(PoCoreDir, 0755)
-		if err != nil {
-			log.Error(err)
-			return false
-		}
+
+	cmd = exec.Command("make", "-n", "po/git-core.pot")
+	if err = cmd.Run(); err == nil {
+		cmdArgs = []string{"make", "po/git-core.pot"}
+		log.Infof(`creating %s: %s`, corePotFile, strings.Join(cmdArgs, " "))
+		cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return cmd.Run() == nil
 	}
-	if IsFile(corePotFile) {
-		log.Debugf(`"%s" is already exist, not overwrite`, corePotFile)
-		return true
-	}
-	cmdArgs := []string{
+
+	cmdArgs = []string{
 		"xgettext",
 		"--force-po",
 		"--add-comments=TRANSLATORS:",
-		"--from-code=UTF-8",
+		"--package-name=Git",
+		"--msgid-bugs-address",
+		"Git Mailing List <git@vger.kernel.org>",
 		"--language=C",
 		"--keyword=_",
 		"--keyword=N_",
@@ -115,10 +120,10 @@ func genCorePot() bool {
 		corePotFile,
 	}
 	cmdArgs = append(cmdArgs, localizedFiles...)
-	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	log.Infof(`creating %s: %s`, corePotFile, "xgettext ...")
+	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = repository.WorkDir()
 	cmd.Stderr = os.Stderr
-	log.Infof("Creating core pot file in %s", corePotFile)
 	if err := cmd.Run(); err != nil {
 		log.Errorf(`fail to create "%s": %s`, corePotFile, err)
 		os.Remove(corePotFile)

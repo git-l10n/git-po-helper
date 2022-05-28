@@ -17,7 +17,7 @@ test_expect_success "fail to init: zh_CN.po already exist" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	level=error msg="fail to init, \"po/zh_CN.po\" is already exist"
+	level=error msg="\"po/zh_CN.po\" exists already"
 
 	ERROR: fail to execute "git-po-helper init"
 	EOF
@@ -65,11 +65,11 @@ test_expect_success "init with invalid locale" '
 test_expect_success "init --core en_GB" '
 	(
 		cd workdir &&
-		test ! -f po-core/core.pot &&
-		test ! -f po-core/en_GB.po &&
+		test ! -f po/git-core.pot &&
+		test ! -f po/en_GB.po &&
 		git $HELPER init --core en_GB &&
-		test -f po-core/core.pot &&
-		test -f po-core/en_GB.po
+		test -f po/git-core.pot &&
+		test -f po/en_GB.po
 	) >actual &&
 
 	cat >expect <<-\EOF &&

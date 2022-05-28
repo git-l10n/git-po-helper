@@ -62,7 +62,20 @@ test_expect_success "bad syntax of zh_CN.po" '
 	test_cmp expect actual
 '
 
-test_expect_success "update zh_CN successfully" '
+cat >expect <<-EOF
+INFO updating po file for "Chinese - China": msgmerge --add-location --backup=off -U po/zh_CN.po po/git.pot
+INFO ---------------------------------------------------------------------------
+INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
+ERROR ---------------------------------------------------------------------------
+ERROR [po/zh_CN.po]    Found file-location comments in po file.
+ERROR [po/zh_CN.po]
+ERROR [po/zh_CN.po]    Please commit a location-less "po/XX.po" file to save repository size.
+ERROR [po/zh_CN.po]    See: [Updating a "XX.po" file] section in "po/README.md" for reference.
+
+ERROR: fail to execute "git-po-helper update"
+EOF
+
+test_expect_success "update zh_CN (with file-location)" '
 	cat >workdir/po/zh_CN.po <<-\EOF &&
 	msgid ""
 	msgstr ""
@@ -109,8 +122,8 @@ test_expect_success "check update of zh_CN.po" '
 cat >expect <<-\EOF
 INFO ---------------------------------------------------------------------------
 INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
-INFO Creating core pot file in po-core/core.pot
-INFO [po-core/zh_CN.po]    2 translated messages, 479 untranslated messages.
+INFO creating po/git-core.pot: xgettext ...
+INFO [po/zh_CN.po]    2 translated messages, 479 untranslated messages.
 EOF
 
 test_expect_success "check core update of zh_CN.po" '

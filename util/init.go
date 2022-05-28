@@ -57,11 +57,12 @@ Notes for core po file:
 // CmdInit implements init sub command.
 func CmdInit(fileName string, onlyCore bool) bool {
 	var (
-		potFile        string
-		poFile         string
 		locale         string
 		localeFullName string
+		poFile         string
 		err            error
+		cmd            *exec.Cmd
+		cmdArgs        []string
 	)
 
 	locale = strings.TrimSuffix(filepath.Base(fileName), ".po")
@@ -70,40 +71,103 @@ func CmdInit(fileName string, onlyCore bool) bool {
 		log.Errorf("fail to init: %s", err)
 		return false
 	}
+	poFile = fmt.Sprintf("po/%s.po", locale)
+	if Exist(poFile) {
+		log.Errorf(`"%s" exists already`, poFile)
+		return false
+	}
+	cmd = exec.Command("make", "-n", "po-init", "PO_FILE="+poFile)
+	cmd.Dir = repository.WorkDir()
+	if err = cmd.Run(); err != nil {
+		return cmdInitObsolete(locale, localeFullName, onlyCore)
+	}
 
+	if onlyCore {
+		cmdArgs = []string{"make", "po-init", "PO_FILE=" + poFile}
+		log.Infof(`creating po file for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
+		cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
+		cmd.Dir = repository.WorkDir()
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		return cmd.Run() == nil
+	}
+
+	cmdArgs = []string{"make", "pot"}
+	log.Infof(`creating pot file: %s`, strings.Join(cmdArgs, " "))
+	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	if cmd.Run() != nil {
+		return false
+	}
+
+	cmdArgs = []string{"msginit",
+		"--input",
+		"po/git.pot",
+		"--output",
+		poFile,
+		"--no-translator",
+		"--locale",
+		locale,
+	}
+	log.Infof(`creating po file for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
+	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	if cmd.Run() != nil {
+		return false
+	}
+
+	if onlyCore {
+		notesForCorePoFile(locale)
+	} else {
+		notesForL10nTeamLeader(locale)
+	}
+	return true
+}
+
+func cmdInitObsolete(locale string, localeFullName string, onlyCore bool) bool {
+	var (
+		potFile string
+		poFile  string
+		err     error
+		cmdArgs []string
+		cmd     *exec.Cmd
+	)
+
+	poFile = filepath.Join(PoDir, locale+".po")
+	potFile = filepath.Join(PoDir, GitPot)
 	if onlyCore {
 		if !genCorePot() {
 			return false
 		}
-		potFile = filepath.Join(PoCoreDir, CorePot)
-		poFile = filepath.Join(PoCoreDir, locale+".po")
-	} else {
-		potFile = filepath.Join(PoDir, GitPot)
-		poFile = filepath.Join(PoDir, locale+".po")
+		potFile = filepath.Join(PoDir, CorePot)
 	}
 	if Exist(poFile) {
-		log.Errorf(`fail to init, "%s" is already exist`, poFile)
+		log.Errorf(`"%s" exists already`, poFile)
 		return false
 	}
 	if !Exist(potFile) {
-		log.Errorf(`fail to init, "%s" is not exist`, potFile)
+		log.Errorf(`"%s" does not exist`, potFile)
 		return false
 	}
-	cmd := exec.Command("msginit",
-		"--locale="+locale,
+
+	cmdArgs = []string{"msginit",
+		"--locale=" + locale,
 		"--no-translator",
 		"-i",
 		potFile,
 		"-o",
-		"-")
+		"-",
+	}
+	log.Infof(`creating po file for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
+	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = repository.WorkDir()
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Errorf("fail to init: %s", err)
 		return false
 	}
-	log.Infof(`Creating .po file for "%s":`, localeFullName)
-	log.Infof("\t%s ...", strings.Join(cmd.Args, " "))
 	if err = cmd.Start(); err != nil {
 		log.Errorf("fail to init: %s", err)
 		ShowExecError(err)
