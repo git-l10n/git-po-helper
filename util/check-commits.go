@@ -31,11 +31,6 @@ const (
 	defaultEncoding       = "utf-8"
 )
 
-const (
-	checkResultBreak = 1 << iota
-	checkResultError
-)
-
 type commitLog struct {
 	// Meta holds header of a raw commit
 	Meta map[string]interface{}
@@ -560,7 +555,7 @@ func (v *commitLog) checkEncoding() bool {
 
 func checkCommitLog(commit string) bool {
 	var (
-		ret       = true
+		ok        = true
 		commitLog = newCommitLog(commit)
 	)
 	cmd := exec.Command("git",
@@ -568,52 +563,38 @@ func checkCommitLog(commit string) bool {
 		"commit",
 		commit)
 	stdout, err := cmd.StdoutPipe()
+	if err == nil {
+		err = cmd.Start()
+	}
 	if err != nil {
 		log.Errorf("Fail to get commit log of %s", commit)
 		return false
 	}
-	if err = cmd.Start(); err != nil {
-		log.Errorf("Fail to get commit log of %s", commit)
-		return false
-	}
 	if !commitLog.Parse(stdout) {
-		ret = false
+		ok = false
 	}
 	if err = cmd.Wait(); err != nil {
 		log.Errorf("Fail to get commit log of %s", commit)
-		ret = false
+		ok = false
 	}
 
-	if !commitLog.checkAuthorCommitter() {
-		ret = false
-	}
-	if !commitLog.checkSubject() {
-		ret = false
-	}
-	if !commitLog.checkBody() {
-		ret = false
-	}
-	if !commitLog.checkEncoding() {
-		ret = false
-	}
-	if !commitLog.checkGpg() {
-		ret = false
-	}
+	ok = commitLog.checkAuthorCommitter() && ok
+	ok = commitLog.checkSubject() && ok
+	ok = commitLog.checkBody() && ok
+	ok = commitLog.checkEncoding() && ok
+	ok = commitLog.checkGpg() && ok
 
-	return ret
+	return ok
 }
 
-func checkCommitChanges(commit string) int {
-	var (
-		err            error
-		invalidChanges = []string{}
-		verifyChanges  = []string{}
-		ret            int
-	)
+func getCommitChanges(commit string) ([]string, bool) {
+	var changes []string
 
 	cmd := exec.Command("git",
 		"diff-tree",
 		"-r",
+		"-z",
+		"--name-only",
 		commit)
 	stdout, err := cmd.StdoutPipe()
 	if err == nil {
@@ -621,43 +602,47 @@ func checkCommitChanges(commit string) int {
 	}
 	if err != nil {
 		log.Errorf("commit %s: fail to run git-diff-tree: %s", AbbrevCommit(commit), err)
-		return checkResultError | checkResultBreak
+		return nil, false
 	}
-	scanner := bufio.NewScanner(stdout)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if idx := strings.Index(line, "\t"); idx >= 0 {
-			fileName := line[idx+1:]
-			if !strings.HasPrefix(fileName, PoDir+"/") {
-				invalidChanges = append(invalidChanges, line[idx+1:])
-			} else if fileName == "po/TEAMS" {
-				verifyChanges = append(verifyChanges, fileName)
-			} else if strings.HasSuffix(fileName, ".po") {
-				verifyChanges = append(verifyChanges, fileName)
-			}
+	buffer, err := io.ReadAll(stdout)
+	if err != nil {
+		return nil, false
+	}
+	for i, file := range strings.Split(string(buffer), "\000") {
+		if i == 0 || file == "" {
+			continue
 		}
+		changes = append(changes, file)
 	}
 	if err = cmd.Wait(); err != nil {
 		log.Errorf("commit %s: fail to run git-diff-tree: %s", AbbrevCommit(commit), err)
-		return checkResultError | checkResultBreak
+		return nil, false
 	}
-	if len(invalidChanges) > 0 {
+	return changes, true
+}
+
+func checkCommitChanges(commit string, notL10nChanges, l10nChanges []string) (ok, brk bool) {
+	// commit is OK, if no error is found.
+	ok = true
+	// If brk is true, will stop parsing other commits.
+	brk = false
+
+	if len(notL10nChanges) > 0 {
 		msg := bytes.NewBuffer(nil)
 		msg.WriteString(fmt.Sprintf("commit %s: found changes beyond \"%s/\" directory:\n",
 			AbbrevCommit(commit), PoDir))
-		for _, change := range invalidChanges {
+		for _, change := range notL10nChanges {
 			msg.WriteString("\t\t")
 			msg.WriteString(change)
 			msg.WriteString("\n")
 		}
-		if len(verifyChanges) == 0 && flag.GitHubActionEvent() != "" {
+		if len(l10nChanges) == 0 && flag.GitHubActionEvent() != "" {
+			brk = true // not l10n commit, and stop parsing other commits.
 			switch flag.GitHubActionEvent() {
 			case "push":
 				log.Warn(msg)
 				log.Warnf(`commit %s: break because this commit is not for git-l10n`,
 					AbbrevCommit(commit))
-				// Ignore this error for push event.
-				return checkResultBreak
 			case "pull_request":
 				fallthrough
 			case "pull_request_target":
@@ -666,13 +651,15 @@ func checkCommitChanges(commit string) int {
 				log.Error(msg)
 				log.Errorf(`commit %s: break because this commit is not for git-l10n`,
 					AbbrevCommit(commit))
-				return checkResultError | checkResultBreak
+				ok = false
 			}
+			return
 		}
 		log.Error(msg)
-		ret |= checkResultError
+		ok = false
 	}
-	for _, fileName := range verifyChanges {
+
+	for _, fileName := range l10nChanges {
 		tmpFile := FileRevision{
 			Revision: commit,
 			File:     fileName,
@@ -680,7 +667,7 @@ func checkCommitChanges(commit string) int {
 		if err := checkoutTmpfile(&tmpFile); err != nil || tmpFile.Tmpfile == "" {
 			log.Errorf("commit %s: fail to checkout %s of revision %s: %s",
 				AbbrevCommit(commit), tmpFile.File, tmpFile.Revision, err)
-			ret |= checkResultError
+			ok = false
 			continue
 		}
 		if fileName == "po/TEAMS" {
@@ -688,7 +675,7 @@ func checkCommitChanges(commit string) int {
 				for _, error := range errors {
 					log.Errorf("commit %s: %s", AbbrevCommit(commit), error)
 				}
-				ret |= checkResultError
+				ok = false
 			}
 		} else {
 			locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
@@ -696,28 +683,12 @@ func checkCommitChanges(commit string) int {
 				filepath.Join(PoDir, locale+".po"),
 				AbbrevCommit(commit))
 			if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, prompt) {
-				ret |= checkResultError
+				ok = false
 			}
 		}
 		os.Remove(tmpFile.Tmpfile)
 	}
-	return ret
-}
-
-// CheckCommit will run various checks for the given commit
-func CheckCommit(commit string) int {
-	var (
-		ret int
-	)
-
-	ret = checkCommitChanges(commit)
-	if (ret & checkResultBreak) != 0 {
-		return ret
-	}
-	if !checkCommitLog(commit) {
-		ret |= checkResultError
-	}
-	return ret
+	return
 }
 
 func fetchBlobsInPartialClone(args []string) error {
@@ -907,29 +878,65 @@ func CmdCheckCommits(args ...string) bool {
 		log.Warnf("fail to fetch missing blob in batch from partial clone: %s", err)
 	}
 
-	pass := 0
-	fail := 0
+	return checkCommits(commits[0:nr]...)
+}
+
+func checkCommits(commits ...string) bool {
+	var (
+		pass = 0
+		fail = 0
+		nr   = len(commits)
+	)
+
 	for i := 0; i < nr; i++ {
-		res := CheckCommit(commits[i])
-		if (res & checkResultError) != 0 {
-			fail++
-		} else if res == 0 {
-			pass++
-		}
-		if (res & checkResultBreak) != 0 {
+		var (
+			commit         = commits[i]
+			changes        []string
+			notL10nChanges []string
+			l10nChanges    []string
+			ok             = true
+			brk            = false
+		)
+
+		changes, ok = getCommitChanges(commit)
+		if !ok {
 			break
 		}
-	}
-	if nr > 0 {
-		if nr > pass+fail {
-			log.Infof("checking commits: %d passed, %d failed, %d skipped.", pass, fail, nr-pass-fail)
-		} else if fail != 0 {
-			log.Infof("checking commits: %d passed, %d failed.", pass, fail)
-		} else {
-			log.Infof("checking commits: %d passed.", pass)
+		for _, change := range changes {
+			if !strings.HasPrefix(change, PoDir+"/") {
+				notL10nChanges = append(notL10nChanges, change)
+			} else if change == "po/TEAMS" {
+				l10nChanges = append(l10nChanges, change)
+			} else if strings.HasSuffix(change, ".po") {
+				l10nChanges = append(l10nChanges, change)
+			}
 		}
+
+		ok, brk = checkCommitChanges(commit, notL10nChanges, l10nChanges)
+
+		if !brk {
+			ok = checkCommitLog(commit) && ok
+		}
+		if brk {
+			if !ok {
+				fail++
+			}
+			break
+		} else {
+			if ok {
+				pass++
+			} else {
+				fail++
+			}
+		}
+	}
+
+	if nr > pass+fail {
+		log.Infof("checking commits: %d passed, %d failed, %d skipped.", pass, fail, nr-pass-fail)
+	} else if fail != 0 {
+		log.Infof("checking commits: %d passed, %d failed.", pass, fail)
 	} else {
-		log.Infoln("no commit checked.")
+		log.Infof("checking commits: %d passed.", pass)
 	}
 
 	return fail == 0
