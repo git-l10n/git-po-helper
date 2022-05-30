@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -604,7 +605,7 @@ func getCommitChanges(commit string) ([]string, bool) {
 		log.Errorf("commit %s: fail to run git-diff-tree: %s", AbbrevCommit(commit), err)
 		return nil, false
 	}
-	buffer, err := io.ReadAll(stdout)
+	buffer, err := ioutil.ReadAll(stdout)
 	if err != nil {
 		return nil, false
 	}
