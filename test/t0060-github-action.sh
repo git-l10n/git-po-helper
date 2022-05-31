@@ -24,11 +24,11 @@ ERROR [po/zh_CN.po]    fail to check po: exit status 1
 ERROR [po/zh_CN.po]    Found file-location comments in po file. By submitting a location-less
 ERROR [po/zh_CN.po]    "po/XX.po" file, the size of the Git repository can be greatly reduced.
 ERROR [po/zh_CN.po]    See the discussion below:
-ERROR
+ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
-ERROR
+ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]    As how to commit a location-less "po/XX.po" file, See:
-ERROR
+ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
 ------------------------------------------------------------------------------
 ERROR [po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1
@@ -80,11 +80,11 @@ INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
 ERROR [po/zh_CN.po]    Found file-location comments in po file. By submitting a location-less
 ERROR [po/zh_CN.po]    "po/XX.po" file, the size of the Git repository can be greatly reduced.
 ERROR [po/zh_CN.po]    See the discussion below:
-ERROR
+ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
-ERROR
+ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]    As how to commit a location-less "po/XX.po" file, See:
-ERROR
+ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
 
 ERROR: fail to execute "git-po-helper update"
@@ -144,11 +144,11 @@ INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
 ERROR [po/zh_CN.po]    Found file-location comments in po file. By submitting a location-less
 ERROR [po/zh_CN.po]    "po/XX.po" file, the size of the Git repository can be greatly reduced.
 ERROR [po/zh_CN.po]    See the discussion below:
-ERROR
+ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
-ERROR
+ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]    As how to commit a location-less "po/XX.po" file, See:
-ERROR
+ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
 ------------------------------------------------------------------------------
 INFO [zh_CN.po (core)]    2 translated messages, 479 untranslated messages.

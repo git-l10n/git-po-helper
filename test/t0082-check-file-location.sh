@@ -22,11 +22,11 @@ level=info msg="[po/zh_CN.po]    5282 translated messages."
 level=error msg="[po/zh_CN.po]    Found file-location comments in po file. By submitting a location-less"
 level=error msg="[po/zh_CN.po]    \"po/XX.po\" file, the size of the Git repository can be greatly reduced."
 level=error msg="[po/zh_CN.po]    See the discussion below:"
-level=error
+level=error msg="[po/zh_CN.po]"
 level=error msg="[po/zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/"
-level=error
+level=error msg="[po/zh_CN.po]"
 level=error msg="[po/zh_CN.po]    As how to commit a location-less \"po/XX.po\" file, See:"
-level=error
+level=error msg="[po/zh_CN.po]"
 level=error msg="[po/zh_CN.po]     the [Updating a \"XX.po\" file] section in \"po/README.md\""
 
 ERROR: fail to execute "git-po-helper check-po"

@@ -159,12 +159,14 @@ func reportResultMessages(errs []string, prompt string, level log.Level) {
 
 	for _, err := range errs {
 		if err == "" {
-			fn("")
+			fn("%s", prompt)
 			continue
 		}
 		for _, line := range strings.Split(err, "\n") {
 			if prompt == "" {
 				fn("%s", line)
+			} else if line == "" {
+				fn("%s", prompt)
 			} else {
 				fn("%s\t%s", prompt, line)
 			}
