@@ -20,8 +20,8 @@ test_expect_success "check syntax of po/TEAMS" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
-	level=error msg="bad syntax at line 79 (unknown key \"Respository\"): Respository:    https://github.com/l10n-tw/git-po"
-	level=error msg="bad syntax at line 80 (need two tabs between k/v): Leader:     Yi-Jyun Pan <pan93412 AT gmail.com>"
+	level=error msg="bad syntax at po/TEAMS:79 (unknown key \"Respository\"): Respository:    https://github.com/l10n-tw/git-po"
+	level=error msg="bad syntax at po/TEAMS:80 (need two tabs between k/v): Leader:     Yi-Jyun Pan <pan93412 AT gmail.com>"
 
 	ERROR: fail to execute "git-po-helper team"
 	EOF

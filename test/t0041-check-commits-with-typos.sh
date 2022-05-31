@@ -114,8 +114,8 @@ test_expect_success "update po/TEAMS" '
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
-level=error msg="commit <OID>: bad syntax at line 79 (unknown key \"Respository\"): Respository:    https://github.com/l10n-tw/git-po"
-level=error msg="commit <OID>: bad syntax at line 80 (need two tabs between k/v): Leader:     Yi-Jyun Pan <pan93412 AT gmail.com>"
+level=error msg="commit <OID>: bad syntax at po/TEAMS:79 (unknown key \"Respository\"): Respository:    https://github.com/l10n-tw/git-po"
+level=error msg="commit <OID>: bad syntax at po/TEAMS:80 (need two tabs between k/v): Leader:     Yi-Jyun Pan <pan93412 AT gmail.com>"
 ------------------------------------------------------------------------------
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 ------------------------------------------------------------------------------

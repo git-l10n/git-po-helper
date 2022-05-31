@@ -73,36 +73,47 @@ func ParseTeams(fileName string) ([]Team, []error) {
 			continue
 		}
 		if !utf8.ValidString(line) {
-			errors = append(errors, fmt.Errorf(`invalid utf-8 in: %s`, line))
+			errors = append(errors,
+				fmt.Errorf(`invalid utf-8 in: %s`, line))
 		}
 		kv := strings.SplitN(line, ":", 2)
 		if len(kv) != 2 {
 			if isHead {
 				continue
 			} else {
-				errors = append(errors, fmt.Errorf(`bad syntax at line %d (no column): %s`, nr, line))
+				errors = append(errors,
+					fmt.Errorf(`bad syntax at po/TEAMS:%d (no column): %s`,
+						nr, line))
 				break
 			}
 		}
 		if len(kv[1]) < 2 {
-			errors = append(errors, fmt.Errorf(`bad syntax at line %d (too short value): %s`, nr, line))
+			errors = append(errors,
+				fmt.Errorf(`bad syntax at po/TEAMS:%d (too short value): %s`,
+					nr, line))
 		} else if kv[0] == "Leader" { // Skip two tabs
 			if kv[1][0] != '\t' || kv[1][1] != '\t' {
-				errors = append(errors, fmt.Errorf(`bad syntax at line %d (need two tabs between k/v): %s`, nr, line))
+				errors = append(errors,
+					fmt.Errorf(`bad syntax at po/TEAMS:%d (need two tabs between k/v): %s`,
+						nr, line))
 				kv[1] = strings.TrimSpace(kv[1])
 			} else {
 				kv[1] = kv[1][2:]
 			}
 		} else { // skip one tab
 			if kv[1][0] != '\t' {
-				errors = append(errors, fmt.Errorf(`bad syntax at line %d (need tab between k/v): %s`, nr, line))
+				errors = append(errors,
+					fmt.Errorf(`bad syntax at po/TEAMS:%d (need tab between k/v): %s`,
+						nr, line))
 				kv[1] = strings.TrimSpace(kv[1])
 			} else {
 				kv[1] = kv[1][1:]
 			}
 		}
 		if strings.TrimSpace(kv[1]) != kv[1] {
-			errors = append(errors, fmt.Errorf(`bad syntax at line %d (too many spaces): %s`, nr, line))
+			errors = append(errors,
+				fmt.Errorf(`bad syntax at po/TEAMS:%d (too many spaces): %s`,
+					nr, line))
 		}
 
 		switch kv[0] {
@@ -118,16 +129,20 @@ func ParseTeams(fileName string) ([]Team, []error) {
 		case "Leader":
 			user, err := parseUser(kv[1])
 			if err != nil {
-				errors = append(errors, fmt.Errorf(`bad syntax at line %d (fail to parse user): %s`, nr, line))
-				errors = append(errors, fmt.Errorf("\t%s", err))
+				errors = append(errors,
+					fmt.Errorf(`bad syntax at po/TEAMS:%d (fail to parse user): %s`,
+						nr, line),
+					fmt.Errorf("\t%s", err))
 			} else {
 				team.Leader = user
 			}
 		case "Members":
 			user, err := parseUser(kv[1])
 			if err != nil {
-				errors = append(errors, fmt.Errorf(`bad syntax at line %d (fail to parse user): %s`, nr, line))
-				errors = append(errors, fmt.Errorf("\t%s", err))
+				errors = append(errors,
+					fmt.Errorf(`bad syntax at po/TEAMS:%d (fail to parse user): %s`,
+						nr, line),
+					fmt.Errorf("\t%s", err))
 			} else {
 				team.Members = append(team.Members, user)
 			}
@@ -140,7 +155,9 @@ func ParseTeams(fileName string) ([]Team, []error) {
 				line = line[2:]
 				user, err := parseUser(line)
 				if err != nil {
-					errors = append(errors, fmt.Errorf(`bad syntax at line %d (fail to parse user): %s`, nr, line))
+					errors = append(errors,
+						fmt.Errorf(`bad syntax at po/TEAMS:%d (fail to parse user): %s`,
+							nr, line))
 				} else {
 					team.Members = append(team.Members, user)
 				}
@@ -149,7 +166,9 @@ func ParseTeams(fileName string) ([]Team, []error) {
 			if isHead {
 				continue
 			} else {
-				errors = append(errors, fmt.Errorf(`bad syntax at line %d (unknown key "%s"): %s`, nr, kv[0], line))
+				errors = append(errors,
+					fmt.Errorf(`bad syntax at po/TEAMS:%d (unknown key "%s"): %s`,
+						nr, kv[0], line))
 			}
 		}
 		isHead = false
