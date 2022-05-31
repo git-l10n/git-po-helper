@@ -188,54 +188,72 @@ func (v *commitLog) checkCommitDate(date string) error {
 
 func (v *commitLog) checkAuthorCommitter() bool {
 	var (
-		ret               = true
 		re                = regexp.MustCompile(`^(.+ <.+@.+\..+>) ([0-9]+)( ([+-][0-9]+))?$`)
 		m                 []string
 		value             string
 		author, committer string
 		err               error
+		errs              []string
+		warns             []string
 	)
 
+	defer func() {
+		if len(warns) > 0 {
+			reportResultMessages(warns, "", log.WarnLevel)
+		}
+		if len(errs) > 0 {
+			reportResultMessages(errs, "", log.ErrorLevel)
+		}
+	}()
+
 	if _, ok := v.Meta["author"]; !ok {
-		log.Errorf("commit %s: cannot find author field in commit", v.CommitID())
+		errs = append(errs,
+			fmt.Sprintf("commit %s: cannot find author field in commit",
+				v.CommitID()))
 		return false
 	}
 	if _, ok := v.Meta["committer"]; !ok {
-		log.Errorf("commit %s: cannot find committer field in commit", v.CommitID())
+		errs = append(errs,
+			fmt.Sprintf("commit %s: cannot find committer field in commit",
+				v.CommitID()))
 		return false
 	}
 
 	value = v.Meta["author"].(string)
 	m = re.FindStringSubmatch(value)
 	if len(m) == 0 {
-		log.Errorf("commit %s: bad format for author field: %s", v.CommitID(), value)
-		ret = false
+		errs = append(errs,
+			fmt.Sprintf("commit %s: bad format for author field: %s",
+				v.CommitID(), value))
 	} else {
 		author = m[1]
 		if err = v.checkCommitDate(m[2]); err != nil {
-			log.Errorf("commit %s: bad author date: %s", v.CommitID(), err)
-			ret = false
+			errs = append(errs,
+				fmt.Sprintf("commit %s: bad author date: %s",
+					v.CommitID(), err))
 		}
 	}
 
 	value = v.Meta["committer"].(string)
 	m = re.FindStringSubmatch(value)
 	if len(m) == 0 {
-		log.Errorf("commit %s: bad format for committer field: %s", v.CommitID(), value)
-		ret = false
+		errs = append(errs,
+			fmt.Sprintf("commit %s: bad format for committer field: %s",
+				v.CommitID(), value))
 	} else {
 		committer = m[1]
 		if err = v.checkCommitDate(m[2]); err != nil {
-			log.Errorf("commit %s: bad committer date: %s", v.CommitID(), err)
-			ret = false
+			errs = append(errs,
+				fmt.Sprintf("commit %s: bad committer date: %s", v.CommitID(), err))
 		}
 	}
 	if author != committer {
-		log.Warnf("commit %s: author (%s) and committer (%s) are different",
-			v.CommitID(), author, committer)
+		warns = append(warns,
+			fmt.Sprintf("commit %s: author (%s) and committer (%s) are different",
+				v.CommitID(), author, committer))
 	}
 
-	return ret
+	return len(errs) == 0
 }
 
 func abbrevMsg(line string) string {
@@ -270,20 +288,31 @@ func abbrevMsg(line string) string {
 
 func (v *commitLog) checkSubject() bool {
 	var (
-		ret     = true
 		nr      = len(v.Msg)
 		subject string
 		width   int
+		errs    []string
+		warns   []string
 	)
 
-	if nr > 1 {
-		if v.Msg[1] != "" {
-			log.Errorf("commit %s: no blank line between subject and body of commit message", v.CommitID())
-			ret = false
+	defer func() {
+		if len(warns) > 0 {
+			reportResultMessages(warns, "", log.WarnLevel)
 		}
-	} else if nr == 0 {
-		log.Errorf("commit %s: do not have any commit message", v.CommitID())
+		if len(errs) > 0 {
+			reportResultMessages(errs, "", log.ErrorLevel)
+		}
+	}()
+
+	if nr == 0 {
+		errs = append(errs,
+			fmt.Sprintf("commit %s: do not have any commit message",
+				v.CommitID()))
 		return false
+	} else if nr > 1 && v.Msg[1] != "" {
+		errs = append(errs,
+			fmt.Sprintf("commit %s: no blank line between subject and body of commit message",
+				v.CommitID()))
 	}
 
 	subject = v.Msg[0]
@@ -291,25 +320,25 @@ func (v *commitLog) checkSubject() bool {
 
 	if v.isMergeCommit() {
 		if !strings.HasPrefix(subject, "Merge ") {
-			log.Errorf(`commit %s: merge commit does not have prefix "Merge" in subject`,
-				v.CommitID())
-			ret = false
+			errs = append(errs,
+				fmt.Sprintf(`commit %s: merge commit does not have prefix "Merge" in subject`,
+					v.CommitID()))
 		}
 	} else if !strings.HasPrefix(subject, commitSubjectPrefix+" ") {
-		log.Errorf(`commit %s: subject ("%s") does not have prefix "%s"`,
-			v.CommitID(),
-			abbrevMsg(subject),
-			commitSubjectPrefix)
-		ret = false
+		errs = append(errs,
+			fmt.Sprintf(`commit %s: subject ("%s") does not have prefix "%s"`,
+				v.CommitID(),
+				abbrevMsg(subject),
+				commitSubjectPrefix))
 	}
 
 	if width > subjectWidthHardLimit {
-		log.Errorf(`commit %s: subject ("%s") is too long: %d > %d`,
-			v.CommitID(),
-			abbrevMsg(subject),
-			width,
-			subjectWidthHardLimit)
-		ret = false
+		errs = append(errs,
+			fmt.Sprintf(`commit %s: subject ("%s") is too long: %d > %d`,
+				v.CommitID(),
+				abbrevMsg(subject),
+				width,
+				subjectWidthHardLimit))
 	}
 	for _, info := range []struct {
 		Width   int
@@ -320,62 +349,82 @@ func (v *commitLog) checkSubject() bool {
 		{50, 63},
 	} {
 		if width > info.Width {
-			log.Warnf(`commit %s: subject length %d > %d, about %d%% commits have a subject less than %d characters`,
-				v.CommitID(),
-				width,
-				info.Width,
-				info.Percent,
-				info.Width)
+			warns = append(warns,
+				fmt.Sprintf(`commit %s: subject length %d > %d, about %d%% commits have a subject less than %d characters`,
+					v.CommitID(),
+					width,
+					info.Width,
+					info.Percent,
+					info.Width))
 			break
 		}
 	}
 	if width == 0 {
-		log.Errorf(`commit %s: subject is empty`, v.CommitID())
+		errs = append(errs,
+			fmt.Sprintf(`commit %s: subject is empty`,
+				v.CommitID()))
 		return false
 	}
 
 	if subject[width-1] == '.' {
-		log.Errorf("commit %s: subject should not end with period", v.CommitID())
-		ret = false
+		errs = append(errs,
+			fmt.Sprintf("commit %s: subject should not end with period",
+				v.CommitID()))
 	}
 
 	for _, c := range subject {
 		if c > unicode.MaxASCII || !unicode.IsPrint(c) {
-			log.Errorf(`commit %s: subject has non-ascii character "%c"`, v.CommitID(), c)
-			ret = false
+			errs = append(errs,
+				fmt.Sprintf(`commit %s: subject has non-ascii character "%c"`,
+					v.CommitID(), c))
 			break
 		}
 	}
 
-	return ret
+	return len(errs) == 0
 }
 
 func (v *commitLog) checkBody() bool {
 	var (
-		ret       = true
 		nr        = len(v.Msg)
 		width     int
 		bodyStart int
 		bodyEnd   int
 		sigStart  int
+		errs      []string
+		warns     []string
 	)
+
+	defer func() {
+		if len(warns) > 0 {
+			reportResultMessages(warns, "", log.WarnLevel)
+		}
+		if len(errs) > 0 {
+			reportResultMessages(errs, "", log.ErrorLevel)
+		}
+	}()
 
 	if nr == 0 {
 		// Already checked this case when checking subject.
 		return false
 	}
+
 	if nr == 1 {
 		if v.isMergeCommit() {
-			log.Errorf("commit %s: empty body of the commit message, set merge.log=true",
-				v.CommitID())
+			errs = append(errs,
+				fmt.Sprintf("commit %s: empty body of the commit message, set merge.log=true",
+					v.CommitID()))
 		} else {
-			log.Errorf("commit %s: empty body of the commit message, no s-o-b signature",
-				v.CommitID())
+			errs = append(errs,
+				fmt.Sprintf("commit %s: empty body of the commit message, no s-o-b signature",
+					v.CommitID()))
 		}
 		return false
 	}
 	if v.Msg[nr-1] == "" {
-		log.Errorf("commit %s: empty line at the end of the commit message", v.CommitID())
+		errs = append(errs,
+			fmt.Sprintf("commit %s: empty line at the end of the commit message",
+				v.CommitID()))
 		return false
 	}
 	emptyLines := 0
@@ -386,16 +435,18 @@ func (v *commitLog) checkBody() bool {
 			emptyLines = 0
 		}
 		if emptyLines > 1 {
-			log.Errorf("commit %s: too many empty lines found at line #%d",
-				v.CommitID(),
-				idx)
+			errs = append(errs,
+				fmt.Sprintf("commit %s: too many empty lines found at line #%d",
+					v.CommitID(),
+					idx))
 			return false
 		}
 	}
 
 	// For a merge commit, do not check s-o-b signature and width of body.
 	if v.isMergeCommit() {
-		return ret
+		// no news is good news
+		return len(errs) == 0
 	}
 
 	if v.Msg[1] != "" {
@@ -430,23 +481,23 @@ func (v *commitLog) checkBody() bool {
 		bodyEnd = nr
 	}
 	if !hasSobPrefix {
-		log.Errorf(`commit %s: cannot find "%s" signature`,
-			v.CommitID(),
-			sobPrefix)
-		ret = false
+		errs = append(errs,
+			fmt.Sprintf(`commit %s: cannot find "%s" signature`,
+				v.CommitID(),
+				sobPrefix))
 	}
 
 	// Scan width of lines.
 	for i := bodyStart; i < bodyEnd; i++ {
 		width = len(v.Msg[i])
 		if width > bodyWidthHardLimit {
-			log.Errorf(`commit %s: line #%d ("%s") is too long: %d > %d`,
-				v.CommitID(),
-				i+1,
-				abbrevMsg(v.Msg[i]),
-				width,
-				bodyWidthHardLimit)
-			ret = false
+			errs = append(errs,
+				fmt.Sprintf(`commit %s: line #%d ("%s") is too long: %d > %d`,
+					v.CommitID(),
+					i+1,
+					abbrevMsg(v.Msg[i]),
+					width,
+					bodyWidthHardLimit))
 		}
 	}
 
@@ -454,35 +505,45 @@ func (v *commitLog) checkBody() bool {
 	if hasSobPrefix {
 		for i := sigStart; i < nr; i++ {
 			if !strings.Contains(v.Msg[i], ": ") {
-				log.Errorf(`commit %s: no colon in signature at line #%d: "%s"`,
-					v.CommitID(),
-					i+1,
-					abbrevMsg(v.Msg[i]))
-				ret = false
+				errs = append(errs,
+					fmt.Sprintf(`commit %s: no colon in signature at line #%d: "%s"`,
+						v.CommitID(),
+						i+1,
+						abbrevMsg(v.Msg[i])))
 				break
 			}
 		}
 	}
 
-	return ret
+	return len(errs) == 0
 }
 
 func (v *commitLog) checkGpg() bool {
-	var ret = true
+	var (
+		errs []string
+	)
+
+	defer func() {
+		if len(errs) > 0 {
+			reportResultMessages(errs, "", log.ErrorLevel)
+		}
+	}()
 
 	if flag.NoGPG() {
-		return ret
+		return true
 	}
 	if v.hasGpgSig() {
 		cmd := exec.Command("git",
 			"verify-commit",
 			v.CommitID())
 		if err := cmd.Run(); err != nil {
-			log.Errorf("commit %s: cannot verify gpg-sig: %s", v.CommitID(), err)
-			ret = false
+			errs = append(errs,
+				fmt.Sprintf("commit %s: cannot verify gpg-sig: %s",
+					v.CommitID(), err))
 		}
 	}
-	return ret
+
+	return len(errs) == 0
 }
 
 func sameEncoding(enc1, enc2 string) bool {
@@ -493,28 +554,37 @@ func sameEncoding(enc1, enc2 string) bool {
 
 func (v *commitLog) checkEncoding() bool {
 	var (
-		ret      = true
 		err      error
 		out      = make([]byte, 1024)
 		useIconv = true
 		cd       iconv.Iconv
+		errs     []string
+		warns    []string
 	)
+
+	defer func() {
+		if len(warns) > 0 {
+			reportResultMessages(warns, "", log.WarnLevel)
+		}
+		if len(errs) > 0 {
+			reportResultMessages(errs, "", log.ErrorLevel)
+		}
+	}()
 
 	if sameEncoding(defaultEncoding, v.Encoding()) {
 		useIconv = false
 	} else {
 		cd, err = iconv.Open(defaultEncoding, v.Encoding())
 		if err != nil {
-			log.Errorf("iconv.Open failed: %s", err)
+			errs = append(errs, fmt.Sprintf("iconv.Open failed: %s", err))
 			return false
 		}
 		defer cd.Close()
 	}
 
-	doEncodingCheck := func(list ...string) bool {
+	doEncodingCheck := func(list ...string) {
 		var (
-			err    error
-			retVal = true
+			err error
 		)
 		for _, line := range list {
 			if useIconv {
@@ -523,35 +593,31 @@ func (v *commitLog) checkEncoding() bool {
 				for nLeft > 0 {
 					_, nLeft, err = cd.Do([]byte(line[lineWidth-nLeft:]), nLeft, out)
 					if err != nil {
-						log.Errorf(`commit %s: bad %s characters in: "%s"`,
-							v.CommitID(), v.Encoding(), line)
-						log.Errorf("\t%s", err)
-						retVal = false
+						errs = append(errs,
+							fmt.Sprintf(`commit %s: bad %s characters in: "%s"`,
+								v.CommitID(), v.Encoding(), line),
+							fmt.Sprintf("\t%s", err),
+						)
 						break
 					}
 				}
 			} else {
 				if !utf8.ValidString(line) {
-					log.Errorf(`commit %s: bad UTF-8 characters in: "%s"`,
-						v.CommitID(), line)
-					retVal = false
+					errs = append(errs,
+						fmt.Sprintf(`commit %s: bad UTF-8 characters in: "%s"`,
+							v.CommitID(), line))
 				}
 			}
 		}
-		return retVal
 	}
 
 	// Check author, committer
-	if !doEncodingCheck(v.Meta["author"].(string), v.Meta["committer"].(string)) {
-		ret = false
-	}
+	doEncodingCheck(v.Meta["author"].(string), v.Meta["committer"].(string))
 
 	// Check commit log
-	if !doEncodingCheck(v.Msg...) {
-		ret = false
-	}
+	doEncodingCheck(v.Msg...)
 
-	return ret
+	return len(errs) == 0
 }
 
 func checkCommitLog(commit string) bool {
@@ -623,10 +689,25 @@ func getCommitChanges(commit string) ([]string, bool) {
 }
 
 func checkCommitChanges(commit string, notL10nChanges, l10nChanges []string) (ok, brk bool) {
+	var (
+		errs  []string
+		warns []string
+	)
+
 	// commit is OK, if no error is found.
 	ok = true
 	// If brk is true, will stop parsing other commits.
 	brk = false
+
+	defer func() {
+		if len(warns) > 0 {
+			reportResultMessages(warns, "", log.WarnLevel)
+		}
+		if len(errs) > 0 {
+			ok = false
+			reportResultMessages(errs, "", log.ErrorLevel)
+		}
+	}()
 
 	if len(notL10nChanges) > 0 {
 		msg := bytes.NewBuffer(nil)
@@ -641,23 +722,23 @@ func checkCommitChanges(commit string, notL10nChanges, l10nChanges []string) (ok
 			brk = true // not l10n commit, and stop parsing other commits.
 			switch flag.GitHubActionEvent() {
 			case "push":
-				log.Warn(msg)
-				log.Warnf(`commit %s: break because this commit is not for git-l10n`,
-					AbbrevCommit(commit))
+				warns = append(warns,
+					msg.String(),
+					fmt.Sprintf(`commit %s: break because this commit is not for git-l10n`,
+						AbbrevCommit(commit)))
 			case "pull_request":
 				fallthrough
 			case "pull_request_target":
 				fallthrough
 			default:
-				log.Error(msg)
-				log.Errorf(`commit %s: break because this commit is not for git-l10n`,
-					AbbrevCommit(commit))
-				ok = false
+				errs = append(errs,
+					msg.String(),
+					fmt.Sprintf(`commit %s: break because this commit is not for git-l10n`,
+						AbbrevCommit(commit)))
 			}
 			return
 		}
-		log.Error(msg)
-		ok = false
+		errs = append(errs, msg.String())
 	}
 
 	for _, fileName := range l10nChanges {
@@ -666,17 +747,18 @@ func checkCommitChanges(commit string, notL10nChanges, l10nChanges []string) (ok
 			File:     fileName,
 		}
 		if err := checkoutTmpfile(&tmpFile); err != nil || tmpFile.Tmpfile == "" {
-			log.Errorf("commit %s: fail to checkout %s of revision %s: %s",
-				AbbrevCommit(commit), tmpFile.File, tmpFile.Revision, err)
-			ok = false
+			errs = append(errs,
+				fmt.Sprintf("commit %s: fail to checkout %s of revision %s: %s",
+					AbbrevCommit(commit), tmpFile.File, tmpFile.Revision, err))
 			continue
 		}
 		if fileName == "po/TEAMS" {
 			if _, errors := ParseTeams(tmpFile.Tmpfile); len(errors) > 0 {
 				for _, error := range errors {
-					log.Errorf("commit %s: %s", AbbrevCommit(commit), error)
+					errs = append(errs,
+						fmt.Sprintf("commit %s: %s",
+							AbbrevCommit(commit), error))
 				}
-				ok = false
 			}
 		} else {
 			locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
@@ -684,6 +766,8 @@ func checkCommitChanges(commit string, notL10nChanges, l10nChanges []string) (ok
 				filepath.Join(PoDir, locale+".po"),
 				AbbrevCommit(commit))
 			if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, prompt) {
+				// Error errs in CheckPoFileWithPrompt() have been output already,
+				// mark ok as false
 				ok = false
 			}
 		}

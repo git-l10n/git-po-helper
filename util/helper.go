@@ -155,8 +155,7 @@ func reportResultMessages(errs []string, prompt string, level log.Level) {
 		fn = log.Errorf
 	}
 
-	// Show horizontal line as a separator.
-	fn(strings.Repeat("-", 75))
+	showHorizontalLine()
 
 	for _, err := range errs {
 		if err == "" {
@@ -164,7 +163,15 @@ func reportResultMessages(errs []string, prompt string, level log.Level) {
 			continue
 		}
 		for _, line := range strings.Split(err, "\n") {
-			fn("%s\t%s", prompt, line)
+			if prompt == "" {
+				fn("%s", line)
+			} else {
+				fn("%s\t%s", prompt, line)
+			}
 		}
 	}
+}
+
+func showHorizontalLine() {
+	fmt.Fprintln(os.Stderr, strings.Repeat("-", 78))
 }

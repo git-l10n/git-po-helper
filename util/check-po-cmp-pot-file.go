@@ -40,6 +40,7 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 		tmpfile.Close()
 		potFile = tmpfile.Name()
 		defer os.Remove(potFile)
+		showHorizontalLine()
 		log.Infof("downloading pot file from %s", PotFileURL)
 		if err := httpDownload(PotFileURL, potFile, true); err != nil {
 			log.Warn(err)
@@ -51,6 +52,7 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 		potFile = "po/git.pot"
 		if !Exist(potFile) || opt == flag.CheckPotFileUpdate {
 			cmd := exec.Command("make", "pot")
+			showHorizontalLine()
 			log.Info("update pot file by running: make pot")
 			cmd.Dir = repository.WorkDir()
 			cmd.Stderr = os.Stderr
@@ -74,6 +76,7 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 				File:     fileName,
 			}
 			if err := checkoutTmpfile(&tmpFile); err != nil || tmpFile.Tmpfile == "" {
+				showHorizontalLine()
 				log.Errorf("commit %s: fail to checkout %s of revision %s: %s",
 					AbbrevCommit(commit), tmpFile.File, tmpFile.Revision, err)
 				ok = false

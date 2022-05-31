@@ -12,9 +12,9 @@ test_expect_success "checkout po-2.31.1" '
 '
 
 cat >expect <<-\EOF
-level=info msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=info msg="[po/es.po]    5104 translated messages."
-level=warning msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=warning msg="[po/es.po]    mismatch variable names: herramienta.cmd"
 level=warning msg="[po/es.po]    >> msgid: '%s': path for unsupported man viewer."
 level=warning msg="[po/es.po]    Please consider using 'man.<tool>.cmd' instead."

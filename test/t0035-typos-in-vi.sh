@@ -12,9 +12,9 @@ test_expect_success "checkout po-2.31.1" '
 '
 
 cat >expect <<-\EOF
-level=info msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=info msg="[po/vi.po]    5104 translated messages."
-level=warning msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=warning msg="[po/vi.po]    mismatch variable names: --quiet"
 level=warning msg="[po/vi.po]    >> msgid: "
 level=warning msg="[po/vi.po]    It took %.2f seconds to enumerate unstaged changes after reset. You can"

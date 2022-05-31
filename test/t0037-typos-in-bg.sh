@@ -12,9 +12,9 @@ test_expect_success "checkout po-2.31.1" '
 '
 
 cat >expect <<-\EOF
-level=info msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=info msg="[po/bg.po]    5104 translated messages."
-level=warning msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=warning msg="[po/bg.po]    mismatch variable names: $HOME"
 level=warning msg="[po/bg.po]    >> msgid: $HOME not set"
 level=warning msg="[po/bg.po]    >> msgstr: променливата „HOME“ не е зададена"

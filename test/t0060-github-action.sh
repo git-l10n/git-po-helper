@@ -16,16 +16,16 @@ test_expect_success "setup" '
 '
 
 cat >expect <<-\EOF
-ERROR ---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 ERROR [po/zh_CN.po]    po/zh_CN.po:25: end-of-line within string
 ERROR [po/zh_CN.po]    msgfmt: found 1 fatal error
 ERROR [po/zh_CN.po]    fail to check po: exit status 1
-ERROR ---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 ERROR [po/zh_CN.po]    Found file-location comments in po file.
 ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]    Please commit a location-less "po/XX.po" file to save repository size.
 ERROR [po/zh_CN.po]    See: [Updating a "XX.po" file] section in "po/README.md" for reference.
-ERROR ---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 ERROR [po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1
 ERROR [po/zh_CN.po]    no mofile generated, and no scan typos
 
@@ -69,9 +69,9 @@ test_expect_success "bad syntax of zh_CN.po" '
 
 cat >expect <<-EOF
 INFO updating po file for "Chinese - China": msgmerge --add-location --backup=off -U po/zh_CN.po po/git.pot
-INFO ---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
-ERROR ---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 ERROR [po/zh_CN.po]    Found file-location comments in po file.
 ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]    Please commit a location-less "po/XX.po" file to save repository size.
@@ -115,7 +115,7 @@ test_expect_success "update zh_CN (with file-location)" '
 '
 
 cat >expect <<-\EOF
-INFO ---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
 EOF
 
@@ -128,9 +128,9 @@ test_expect_success "check update of zh_CN.po" '
 '
 
 cat >expect <<-\EOF
-INFO ---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
-ERROR ---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 ERROR [po/zh_CN.po]    Found file-location comments in po file.
 ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]    Please commit a location-less "po/XX.po" file to save repository size.
@@ -149,8 +149,11 @@ test_expect_success "check core update of zh_CN.po" '
 '
 
 cat >expect <<-\EOF
+------------------------------------------------------------------------------
 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
+------------------------------------------------------------------------------
 ERROR commit <OID>: subject ("Add files ...") does not have prefix "l10n:"
+------------------------------------------------------------------------------
 ERROR commit <OID>: empty body of the commit message, no s-o-b signature
 INFO checking commits: 0 passed, 1 failed.
 
@@ -175,8 +178,10 @@ test_expect_success "create new non-l10n commit" '
 '
 
 cat >expect <<-\EOF
+------------------------------------------------------------------------------
 ERROR commit <OID>: found changes beyond "po/" directory:
-        A.txt
+ERROR         A.txt
+ERROR
 ERROR commit <OID>: break because this commit is not for git-l10n
 INFO checking commits: 0 passed, 1 failed, 1 skipped.
 
@@ -209,8 +214,10 @@ test_expect_success "check-commits --github-action-event=pull_request_target" '
 '
 
 cat >expect <<-\EOF
+------------------------------------------------------------------------------
 WARNING commit <OID>: found changes beyond "po/" directory:
-        A.txt
+WARNING         A.txt
+WARNING
 WARNING commit <OID>: break because this commit is not for git-l10n
 INFO checking commits: 0 passed, 0 failed, 2 skipped.
 EOF

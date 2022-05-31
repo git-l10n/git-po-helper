@@ -55,7 +55,7 @@ test_expect_success "setup" '
 '
 
 cat >expect <<-\EOF
-level=error msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=error msg="[po/fr.po]    2 translated messages."
 level=error msg="[po/fr.po]    remove lines that start with '#~| msgid', for they are not compatible with gettext 0.14"
 

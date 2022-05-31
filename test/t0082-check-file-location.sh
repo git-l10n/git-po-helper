@@ -16,9 +16,9 @@ test_expect_success "setup" '
 '
 
 cat >expect <<-\EOF
-level=info msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po]    5282 translated messages."
-level=error msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=error msg="[po/zh_CN.po]    Found file-location comments in po file."
 level=error msg="[po/zh_CN.po]    "
 level=error msg="[po/zh_CN.po]    Please commit a location-less \"po/XX.po\" file to save repository size."
@@ -35,7 +35,7 @@ test_expect_success "zh_CN.po: has file-locations" '
 '
 
 cat >expect <<-\EOF
-level=info msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po]    5282 translated messages."
 EOF
 

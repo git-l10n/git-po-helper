@@ -32,7 +32,11 @@ test_expect_success "new commit with changes outside of po/" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	level=error msg="commit <OID>: found changes beyond \"po/\" directory:\n        C.txt\n"
+	------------------------------------------------------------------------------
+	level=error msg="commit <OID>: found changes beyond \"po/\" directory:"
+	level=error msg="        C.txt"
+	level=error
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
@@ -71,6 +75,7 @@ test_expect_success "new commit with unsupported hidden meta fields" '
 	cat >expect <<-EOF &&
 	level=error msg="commit <OID>: unknown commit header: note: i am a hacker"
 	level=error msg="commit <OID>: unknown commit header: note: happy coding"
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
@@ -130,8 +135,10 @@ test_expect_success "show errors of commit-date drift" '
 		sed -e "s/in the future, .* from now/in the future, XX from now/g" >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: bad author date: date is in the future, XX from now"
 	level=error msg="commit <OID>: bad committer date: date is in the future, XX from now"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: bad author date: date is in the future, XX from now"
 	level=error msg="commit <OID>: bad committer date: date is in the future, XX from now"
 	level=info msg="checking commits: 0 passed, 2 failed."
@@ -149,6 +156,7 @@ test_expect_success "suppress errors of commit-date drift for github actions" '
 		sed -e "s/in the future, .* from now/in the future, XX from now/g" >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	ERROR commit <OID>: bad author date: date is in the future, XX from now
 	ERROR commit <OID>: bad committer date: date is in the future, XX from now
 	INFO checking commits: 1 passed, 1 failed.
@@ -186,6 +194,7 @@ test_expect_success "new commit with bad email address" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
 	level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
 	level=info msg="checking commits: 0 passed, 1 failed."
@@ -203,6 +212,7 @@ test_expect_success "too many commits to check" '
 
 	cat >expect <<-\EOF &&
 	level=warning msg="too many commits to check (5 > 1), check args or use option --force"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
 	level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
 	level=info msg="checking commits: 0 passed, 1 failed."
@@ -220,6 +230,7 @@ test_expect_success "too many commits to check" '
 		sed -e "s/in the future, .* from now/in the future, XX from now/g" >actual &&
 
 	cat >expect <<-\EOF &&
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
 	level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
 	level=info msg="checking commits: 0 passed, 1 failed."
@@ -247,9 +258,12 @@ test_expect_success "long subject, exceed hard limit" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
-	level=error msg="commit <OID>: subject (\"l10n: this ...\") is too long: 74 > 72"
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: subject length 74 > 72, about 98% commits have a subject less than 72 characters"
+	------------------------------------------------------------------------------
+	level=error msg="commit <OID>: subject (\"l10n: this ...\") is too long: 74 > 72"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
 	ERROR: fail to execute "git-po-helper check-commits"
@@ -275,7 +289,9 @@ test_expect_success "long subject, exceed soft limit" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: subject length 58 > 50, about 63% commits have a subject less than 50 characters"
 	level=info msg="checking commits: 1 passed."
 	EOF
@@ -299,7 +315,9 @@ test_expect_success "no empty line between subject and body" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: no blank line between subject and body of commit message"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
@@ -326,7 +344,9 @@ test_expect_success "no l10n prefix in subject" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: subject (\"test: no ...\") does not have prefix \"l10n:\""
 	level=info msg="checking commits: 0 passed, 1 failed."
 
@@ -353,7 +373,9 @@ test_expect_success "non-ascii characters in subject" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: subject has non-ascii character \"简\""
 	level=info msg="checking commits: 0 passed, 1 failed."
 
@@ -380,7 +402,9 @@ test_expect_success "subject end with period" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: subject should not end with period"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
@@ -408,7 +432,9 @@ test_expect_success "empty commit log" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: do not have any commit message"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
@@ -433,7 +459,9 @@ test_expect_success "oneline commit message" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: empty body of the commit message, no s-o-b signature"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
@@ -461,7 +489,9 @@ test_expect_success "no s-o-b signature (has body message, but no s-o-b)" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
@@ -491,7 +521,9 @@ test_expect_success "no s-o-b signature (has body message, no s-o-b, but has oth
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
 	level=info msg="checking commits: 0 passed, 1 failed."
 
@@ -574,7 +606,9 @@ test_expect_success "no s-o-b signature (tailing trash message)" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
 	level=info msg="checking commits: 0 passed, 1 failed."
 	
@@ -603,7 +637,9 @@ test_expect_success "too long message in commit log body" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
 	level=error msg="commit <OID>: line #3 (\"Start body ...\") is too long: 84 > 72"
 	level=info msg="checking commits: 0 passed, 1 failed."
@@ -637,7 +673,9 @@ test_expect_success "merge commit with details" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 	level=info msg="checking commits: 2 passed."
 	EOF
@@ -668,9 +706,13 @@ test_expect_success "merge commit subject not start with Merge and no details" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: merge commit does not have prefix \"Merge\" in subject"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: empty body of the commit message, set merge.log=true"
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 	level=info msg="checking commits: 1 passed, 1 failed."
 
@@ -701,6 +743,7 @@ test_expect_success "utf-8 characters in commit log" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 	level=info msg="checking commits: 1 passed."
 	EOF
@@ -729,7 +772,9 @@ test_expect_success "utf-8 characters in commit log with wrong encoding" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: bad iso-8859-6 characters in: \"使用 utf-8 编码的提交说明。\""
 	level=error msg="    <iconv failure message>..."
 	level=info msg="checking commits: 0 passed, 1 failed."
@@ -761,6 +806,7 @@ test_expect_success "gbk characters in commit log with proper encoding" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 	level=info msg="checking commits: 1 passed."
 	EOF
@@ -790,7 +836,9 @@ test_expect_success "gbk characters in commit log with wrong encoding" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: bad iso-8859-6 characters in: \"ʹ\xd3\xc3 gbk \xb1\xe0\xc2\xeb\xb5\xc4\xccύ˵\xc3\xf7\xa1\xa3\""
 	level=error msg="    <iconv failure message>..."
 	level=info msg="checking commits: 0 passed, 1 failed."
@@ -818,7 +866,9 @@ test_expect_success "bad utf-8 characters in commit log" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
+	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: bad UTF-8 characters in: \"ʹ\xd3\xc3 gbk \xb1\xe0\xc2\xeb\xb5\xc4\xccύ˵\xc3\xf7\xa1\xa3\""
 	level=info msg="checking commits: 0 passed, 1 failed."
 

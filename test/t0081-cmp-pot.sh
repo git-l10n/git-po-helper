@@ -16,7 +16,7 @@ test_expect_success "setup" '
 '
 
 cat >expect <<-\EOF
-level=info msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po]    5282 translated messages."
 EOF
 
@@ -28,9 +28,9 @@ test_expect_success "zh_CN.po: all translated" '
 '
 
 cat >expect <<-\EOF
-level=info msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=info msg="[po/ko.po]    3608 translated messages."
-level=error msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=error msg="[po/ko.po]    There are 2242 new strings in 'po/git.pot' missing in your translation."
 level=error msg="[po/ko.po]    "
 level=error msg="[po/ko.po]    Please run \"make po-update PO_FILE=po/ko.po\" to update your po file,"

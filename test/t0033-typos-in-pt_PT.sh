@@ -12,9 +12,9 @@ test_expect_success "checkout po-2.31.1" '
 '
 
 cat >expect <<-\EOF
-level=info msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=info msg="[po/pt_PT.po]    2876 translated messages, 1320 fuzzy translations, 842 untranslated messages."
-level=warning msg=---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=warning msg="[po/pt_PT.po]    mismatch variable names: --contains, --no-contains"
 level=warning msg="[po/pt_PT.po]    >> msgid: --no-contains option is only allowed in list mode"
 level=warning msg="[po/pt_PT.po]    >> msgstr: a opção --contains só é permitida no modo lista"
