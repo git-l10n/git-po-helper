@@ -137,7 +137,10 @@ func cmdInitObsolete(locale string, localeFullName string, onlyCore bool) bool {
 	poFile = filepath.Join(PoDir, locale+".po")
 	potFile = filepath.Join(PoDir, GitPot)
 	if onlyCore {
-		if !genCorePot() {
+		if msgs, ok := genCorePot(); !ok {
+			for _, msg := range msgs {
+				log.Errorf(msg)
+			}
 			return false
 		}
 		potFile = filepath.Join(PoDir, CorePot)

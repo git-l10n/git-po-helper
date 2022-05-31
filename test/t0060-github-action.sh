@@ -150,8 +150,8 @@ ERROR
 ERROR [po/zh_CN.po]    As how to commit a location-less "po/XX.po" file, See:
 ERROR
 ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
-INFO creating po/git-core.pot: xgettext ...
-INFO [po/zh_CN.po]    2 translated messages, 479 untranslated messages.
+------------------------------------------------------------------------------
+INFO [zh_CN.po (core)]    2 translated messages, 479 untranslated messages.
 
 ERROR: fail to execute "git-po-helper check-po"
 EOF
@@ -162,7 +162,7 @@ test_expect_success "check core update of zh_CN.po" '
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
-
+test_done
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different

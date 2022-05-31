@@ -107,8 +107,8 @@ test_expect_success "check update of zh_CN.po" '
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
-level=info msg="creating po/git-core.pot: xgettext ..."
-level=info msg="[po/zh_CN.po]    2 translated messages, 479 untranslated messages."
+------------------------------------------------------------------------------
+level=info msg="[zh_CN.po (core)]    2 translated messages, 479 untranslated messages."
 EOF
 
 test_expect_success "check core update of zh_CN.po" '
