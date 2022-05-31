@@ -33,7 +33,7 @@ level=info msg="[po/ko.po]    3608 translated messages."
 ------------------------------------------------------------------------------
 level=error msg="[po/ko.po]    There are 2242 new strings in 'po/git.pot' missing in your translation."
 level=error msg="[po/ko.po]"
-level=error msg="[po/ko.po]    Please run \"make po-update PO_FILE=po/ko.po\" to update your po file,"
+level=error msg="[po/ko.po]    Please run \"make po-update PO_FILE=po/XX.po\" to update your po file,"
 level=error msg="[po/ko.po]    and translate the new strings in it."
 level=error msg="[po/ko.po]"
 level=error msg="[po/ko.po]     > po/git.pot:24: this message is used but not defined in po/ko.po"

@@ -148,10 +148,10 @@ func checkUnfinishedPoFile(poFile, potFile string) []string {
 					"There are %d new strings in 'po/git.pot' missing in your translation.\n",
 					count))
 			}
-			errs = append(errs, fmt.Sprintf(
-				"Please run \"make po-update PO_FILE=%s\" to update your po file,\n"+
-					"and translate the new strings in it.\n",
-				poFile))
+			errs = append(errs,
+				"Please run \"make po-update PO_FILE=po/XX.po\" to update your po file,",
+				"and translate the new strings in it.",
+				"")
 
 		case flag.CheckPotFileDownload:
 			fallthrough
@@ -165,14 +165,14 @@ func checkUnfinishedPoFile(poFile, potFile string) []string {
 					"There are %d new strings missing in your translation.\n",
 					count))
 			}
-			errs = append(errs, fmt.Sprintf(
-				"You can download the latest \"po/git.pot\" file from:\n\n\t%s\n",
-				PotFileURL))
-			errs = append(errs, fmt.Sprintf(
-				"Please rebase your branch to the latest upstream branch,\n"+
-					"run \"make po-update PO_FILE=%s\" to update your po file,\n"+
-					"and translate the new strings in it.\n",
-				poFile))
+			errs = append(errs,
+				fmt.Sprintf(
+					"You can download the latest \"po/git.pot\" file from:\n\n\t%s\n",
+					PotFileURL),
+				"Please rebase your branch to the latest upstream branch,",
+				"run \"make po-update PO_FILE=po/XX.po\" to update your po file,",
+				"and translate the new strings in it.",
+				"")
 
 		}
 
