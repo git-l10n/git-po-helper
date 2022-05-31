@@ -77,7 +77,7 @@ func CheckCorePoFile(locale string) bool {
 	return ret
 }
 
-// genCorePot will generate "po-core/core.pot"
+// genCorePot will generate "po/git-core.pot"
 func genCorePot() bool {
 	var (
 		corePotFile    = filepath.Join(PoDir, CorePot)

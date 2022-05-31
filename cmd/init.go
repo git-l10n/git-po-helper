@@ -31,7 +31,7 @@ func (v *initCommand) Command() *cobra.Command {
 	v.cmd.Flags().BoolVar(&v.O.OnlyCore,
 		"core",
 		false,
-		"generate a small XX.po only includes core l10n entries in po-core/")
+		"generate a small XX.po based on 'po/git-core.pot'")
 
 	return v.cmd
 }

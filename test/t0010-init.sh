@@ -79,17 +79,16 @@ test_expect_success "init --core en_GB" '
 
 	    To contribute a new l10n translation for Git, make a full
 	    translation is not a piece of cake.  A small part of "po/git.pot"
-	    is marked and saved in "po-core/core.pot".
+	    is marked and saved in "po/git-core.pot".
 
 	    The new generated po file for locale "en_GB" is stored in
-	    "po-core/en_GB.po" which includes core l10n entries.
+	    "po/en_GB.po" which includes core l10n entries.
 
-	    After translate this core po file, you can merge it to
-	    "po/en_GB.po" using the following commands:
+	    After translate this core po file, send a pull request to
+	    the l10n coordinator repository.
 
-	        msgcat po-core/en_GB.po po/en_GB.po -s -o /tmp/en_GB.po
-	        mv /tmp/en_GB.po po/en_GB.po
-	        msgmerge --add-location --backup=off -U po/en_GB.po po/git.pot
+	        https://github.com/git-l10n/git-po/
+
 	========================================================================
 	EOF
 

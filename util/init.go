@@ -37,17 +37,16 @@ Notes for core po file:
 
     To contribute a new l10n translation for Git, make a full
     translation is not a piece of cake.  A small part of "po/git.pot"
-    is marked and saved in "po-core/core.pot".
+    is marked and saved in "po/git-core.pot".
 
     The new generated po file for locale "XX" is stored in
-    "po-core/XX.po" which includes core l10n entries.
+    "po/XX.po" which includes core l10n entries.
 
-    After translate this core po file, you can merge it to
-    "po/XX.po" using the following commands:
+    After translate this core po file, send a pull request to
+    the l10n coordinator repository.
 
-        msgcat po-core/XX.po po/XX.po -s -o /tmp/XX.po
-        mv /tmp/XX.po po/XX.po
-        msgmerge --add-location --backup=off -U po/XX.po po/git.pot
+        https://github.com/git-l10n/git-po/
+
 ========================================================================
 `
 	msg = strings.Replace(msg, "XX", locale, -1)

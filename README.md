@@ -2,45 +2,77 @@
 
 **A helper program to check conventions for git l10n contributions**
 
-`git-po-helper` is a helper program for git l10n coordinator and git l10n contributors to check conventions for git l10n contributions. Pull request to [git-l10n/git-po](https://github.com/git-l10n/git-po) must comply with the following conventions.
+## Conventions
 
-* Only change files in the `po/` directory. Any l10n commit that violates this rule will be rejected.
+`git-po-helper` is a helper program for git l10n coordinator and git l10n
+contributors to check conventions for git l10n contributions. Pull request to
+[git-l10n/git-po](https://github.com/git-l10n/git-po) must comply with the
+following conventions.
 
-  - Changes to the `git-gui/po` and `gitk-git/po` directories belong to the sub-projects "git-gui" and "gitk", which have their own workflows. Please DO NOT send pull requests for these projects here. See [Documentation/SubmittingPatches](https://github.com/git/git/blob/v2.31.0/Documentation/SubmittingPatches#L387-L393).
+* Only change files in the `po/` directory. Any l10n commit that violates this
+  rule will be rejected.
+
+  - Changes to the `git-gui/po` and `gitk-git/po` directories belong to the
+    sub-projects "git-gui" and "gitk", which have their own workflows. Please
+    DO NOT send pull requests for these projects here. See
+    [Documentation/SubmittingPatches](https://github.com/git/git/blob/v2.31.0/Documentation/SubmittingPatches#L387-L393).
 
 * Write a decent commit log for every l10n commit:
 
   - Add a prefix ("l10n:" followed by a space) in the subject of the commit log.
     Take history commits as an example: `git log --no-merges -- po/`.
+
   - Do not use non-ASCII chracters in the subject of a commit.
+
   - The subject (the first line) of the commit log should have characters no more than 50.
+
   - Other lines of the commit log should not exceed 72 characters.
+
   - Like other git commits, add a "Signed-off-by:" signature in the trailer of the commit log.
 
     Add a "Signed-off-by:" signature automatically by running `git commit -s`.
 
-* Squash trivial commits so that the pull request for each git l10n update window contains a clear and small number of commits.
-* Check the "XX.po" file using the `msgfmt` command to make sure it has correct syntax.
+  - Do not skew your clock to ensure accurate commit datetime.
 
-To contribute for a new l10n language, contributor should follow additional conventions:
+* Squash trivial commits so that the pull request for each git l10n update
+  window contains a clear and small number of commits.
 
-* Initialize proper filename of the "XX.po" file conforming to iso-639 and iso-3166.
-* Must complete a minimal translation based on the `po-core/core.pot` template. Using the following command to initialize the minimal `po-core/XX.po` file:
+* Check the "XX.po" file using the `msgfmt` command to make sure it has correct
+  syntax.
 
-      git-po-helper init --core <your-language>
+* All translatable strings are present in your "po/XX.po". You can download
+  the latest pot file from:
+
+	https://github.com/git-l10n/git-po/raw/pot/main/po/git.pot
+
+* Remove file-locations from your "po/XX.po" before submitting it to your
+  commit. See the [Updating a "XX.po" file] section for reference in
+  "po/README.md" of the Git repository.
+
+
+To contribute for a new l10n language, contributor should follow additional
+conventions:
+
+* Initialize proper filename of the "XX.po" file conforming to iso-639 and
+  iso-3166.
+
+* Must complete a minimal translation based on the `po/git-core.pot` template.
+  Using the following command to initialize the minimal `po/XX.po` file:
+
+        make po-init PO_FILE="po/XX.po"
 
 * Add a new entry in the `po/TEAMS` file with proper format.
 
 
 ## Prerequsites
 
-`git-po-helper` is written in [golang](https://golang.org/), golang must be installed before compiling.
+`git-po-helper` is written in [golang](https://golang.org/), golang must be
+installed before compiling.
 
 Additional prerequsites need by `git-po-helper`:
 
 * git
-* gettext (latest version)
-* gettext (version 0.14.x), which is used to check "XX.po" syntax for backward compatiblity.
+* gettext
 * iconv, which is used to check commit log encoding.
 * gpg, which is used to verify commit with gpg signature.
 
@@ -61,6 +93,13 @@ Install `git-po-helper`:
 ```
 $ cp git-po-helper /usr/local/bin/
 ```
+
+
+## Workflows
+
+See [po/README.md](https://github.com/git/git/tree/master/po#readme) of
+the Git project.
+
 
 ## Usage of git-po-helper
 
