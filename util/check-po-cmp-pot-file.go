@@ -156,18 +156,18 @@ func checkUnfinishedPoFile(poFile, potFile string) []string {
 		case flag.CheckPotFileDownload:
 			fallthrough
 		default:
-			errs = append(errs, fmt.Sprintf(
-				"The latest \"po/git.pot\" file can be downloaded from:\n\n\t%s\n",
-				PotFileURL))
 			if count == 1 {
 				errs = append(errs, fmt.Sprintf(
-					", and there is %d new string in it missing in your translation.\n",
+					"There is %d new string missing in your translation.\n",
 					count))
 			} else {
 				errs = append(errs, fmt.Sprintf(
-					", and there are %d new strings in it missing in your translation.\n",
+					"There are %d new strings missing in your translation.\n",
 					count))
 			}
+			errs = append(errs, fmt.Sprintf(
+				"You can download the latest \"po/git.pot\" file from:\n\n\t%s\n",
+				PotFileURL))
 			errs = append(errs, fmt.Sprintf(
 				"Please rebase your branch to the latest upstream branch,\n"+
 					"run \"make po-update PO_FILE=%s\" to update your po file,\n"+
