@@ -136,7 +136,6 @@ func httpDownload(URL string, fileName string, showProgress bool) error {
 	if showProgress {
 		done <- 1
 		wg.Wait()
-
 	}
 	return err
 }

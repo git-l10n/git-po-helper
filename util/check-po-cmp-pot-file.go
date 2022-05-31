@@ -32,6 +32,7 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 	}
 	// Try to download pot file.
 	if opt == flag.CheckPotFileDownload {
+		showProgress := flag.GitHubActionEvent() == ""
 		tmpfile, err := ioutil.TempFile("", "git.pot-*")
 		if err != nil {
 			log.Error(err)
@@ -42,7 +43,7 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 		defer os.Remove(potFile)
 		showHorizontalLine()
 		log.Infof("downloading pot file from %s", PotFileURL)
-		if err := httpDownload(PotFileURL, potFile, true); err != nil {
+		if err := httpDownload(PotFileURL, potFile, showProgress); err != nil {
 			log.Warn(err)
 			opt = flag.CheckPotFileCurrent
 		}
