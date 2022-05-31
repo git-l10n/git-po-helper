@@ -43,9 +43,15 @@ func checkPoNoFileLocations(poFile string) ([]string, bool) {
 		locations := strings.Split(line[3:], " ")
 		if pattern.MatchString(locations[0]) {
 			errs = append(errs,
-				"Found file-location comments in po file.\n",
-				"Please commit a location-less \"po/XX.po\" file to save repository size.",
-				"See: [Updating a \"XX.po\" file] section in \"po/README.md\" for reference.",
+				"Found file-location comments in po file. By submitting a location-less",
+				"\"po/XX.po\" file, the size of the Git repository can be greatly reduced.",
+				"See the discussion below:",
+				"",
+				"    https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/",
+				"",
+				"As how to commit a location-less \"po/XX.po\" file, See:",
+				"",
+				"    the [Updating a \"XX.po\" file] section in \"po/README.md\"",
 			)
 			return errs, false
 		}

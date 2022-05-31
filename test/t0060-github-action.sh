@@ -21,10 +21,15 @@ ERROR [po/zh_CN.po]    po/zh_CN.po:25: end-of-line within string
 ERROR [po/zh_CN.po]    msgfmt: found 1 fatal error
 ERROR [po/zh_CN.po]    fail to check po: exit status 1
 ------------------------------------------------------------------------------
-ERROR [po/zh_CN.po]    Found file-location comments in po file.
-ERROR [po/zh_CN.po]
-ERROR [po/zh_CN.po]    Please commit a location-less "po/XX.po" file to save repository size.
-ERROR [po/zh_CN.po]    See: [Updating a "XX.po" file] section in "po/README.md" for reference.
+ERROR [po/zh_CN.po]    Found file-location comments in po file. By submitting a location-less
+ERROR [po/zh_CN.po]    "po/XX.po" file, the size of the Git repository can be greatly reduced.
+ERROR [po/zh_CN.po]    See the discussion below:
+ERROR
+ERROR [po/zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ERROR
+ERROR [po/zh_CN.po]    As how to commit a location-less "po/XX.po" file, See:
+ERROR
+ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
 ------------------------------------------------------------------------------
 ERROR [po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1
 ERROR [po/zh_CN.po]    no mofile generated, and no scan typos
@@ -72,10 +77,15 @@ INFO updating po file for "Chinese - China": msgmerge --add-location --backup=of
 ------------------------------------------------------------------------------
 INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
 ------------------------------------------------------------------------------
-ERROR [po/zh_CN.po]    Found file-location comments in po file.
-ERROR [po/zh_CN.po]
-ERROR [po/zh_CN.po]    Please commit a location-less "po/XX.po" file to save repository size.
-ERROR [po/zh_CN.po]    See: [Updating a "XX.po" file] section in "po/README.md" for reference.
+ERROR [po/zh_CN.po]    Found file-location comments in po file. By submitting a location-less
+ERROR [po/zh_CN.po]    "po/XX.po" file, the size of the Git repository can be greatly reduced.
+ERROR [po/zh_CN.po]    See the discussion below:
+ERROR
+ERROR [po/zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ERROR
+ERROR [po/zh_CN.po]    As how to commit a location-less "po/XX.po" file, See:
+ERROR
+ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
 
 ERROR: fail to execute "git-po-helper update"
 EOF
@@ -131,10 +141,15 @@ cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
 ------------------------------------------------------------------------------
-ERROR [po/zh_CN.po]    Found file-location comments in po file.
-ERROR [po/zh_CN.po]
-ERROR [po/zh_CN.po]    Please commit a location-less "po/XX.po" file to save repository size.
-ERROR [po/zh_CN.po]    See: [Updating a "XX.po" file] section in "po/README.md" for reference.
+ERROR [po/zh_CN.po]    Found file-location comments in po file. By submitting a location-less
+ERROR [po/zh_CN.po]    "po/XX.po" file, the size of the Git repository can be greatly reduced.
+ERROR [po/zh_CN.po]    See the discussion below:
+ERROR
+ERROR [po/zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ERROR
+ERROR [po/zh_CN.po]    As how to commit a location-less "po/XX.po" file, See:
+ERROR
+ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
 INFO creating po/git-core.pot: xgettext ...
 INFO [po/zh_CN.po]    2 translated messages, 479 untranslated messages.
 
