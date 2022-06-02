@@ -21,7 +21,7 @@ level=info msg="[po/zh_CN.po]    5282 translated messages."
 EOF
 
 test_expect_success "zh_CN.po: all translated" '
-	git -C workdir $HELPER check-po  --check-pot-file=current \
+	git -C workdir $HELPER check-po  --pot-file=po/git.pot \
 		po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
@@ -45,7 +45,7 @@ ERROR: fail to execute "git-po-helper check-po"
 EOF
 
 test_expect_success "ko.po: has untranslated strings" '
-	test_must_fail git -C workdir $HELPER check-po --check-pot-file=current \
+	test_must_fail git -C workdir $HELPER check-po --pot-file=po/git.pot \
 		po/ko.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual

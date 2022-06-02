@@ -139,13 +139,12 @@ func (v *rootCommand) Command() *cobra.Command {
 	v.cmd.PersistentFlags().Bool("no-special-gettext-versions",
 		false,
 		"no check using gettext 0.14 for back compatible")
-	v.cmd.PersistentFlags().String("check-pot-file",
-		"",
-		"way to get latest pot file for check: no, current, update, and download")
+	v.cmd.PersistentFlags().String("pot-file",
+		"download",
+		"way to get latest pot file: 'download', 'build', 'no' or filename such as po/git.pot")
 	_ = v.cmd.PersistentFlags().MarkHidden("dryrun")
 	_ = v.cmd.PersistentFlags().MarkHidden("no-special-gettext-versions")
 	_ = v.cmd.PersistentFlags().MarkHidden("github-action-event")
-	_ = v.cmd.PersistentFlags().MarkHidden("check-pot-file")
 
 	_ = viper.BindPFlag(
 		"dryrun",
@@ -163,8 +162,8 @@ func (v *rootCommand) Command() *cobra.Command {
 		"github-action-event",
 		v.cmd.PersistentFlags().Lookup("github-action-event"))
 	_ = viper.BindPFlag(
-		"check-pot-file",
-		v.cmd.PersistentFlags().Lookup("check-pot-file"))
+		"pot-file",
+		v.cmd.PersistentFlags().Lookup("pot-file"))
 
 	return v.cmd
 }

@@ -54,17 +54,33 @@ func CheckFileLocations() bool {
 }
 
 const (
-	CheckPotFileNone = iota
-	CheckPotFileCurrent
-	CheckPotFileUpdate
-	CheckPotFileDownload
+	PotFileFlagNone = iota
+	PotFileFlagLocation
+	PotFileFlagUpdate
+	PotFileFlagDownload
 )
 
-// CheckPotFile returns option "--check-pot-file".
-func CheckPotFile() int {
+// GetPotFileLocation returns option "--pot-file".
+func GetPotFileLocation() string {
+	value := viper.GetString("pot-file")
+
+	switch GetPotFileFlag() {
+	case PotFileFlagNone:
+		log.Fatalf("unknown location for opt: %s", value)
+	case PotFileFlagUpdate:
+		value = "po/git.pot"
+	case PotFileFlagLocation:
+		fallthrough
+	default:
+	}
+	return value
+}
+
+// GetPotFileFlag returns option "--pot-file".
+func GetPotFileFlag() int {
 	var (
 		ret int
-		opt = strings.ToLower(viper.GetString("check-pot-file"))
+		opt = strings.ToLower(viper.GetString("pot-file"))
 	)
 
 	if opt == "" {
@@ -72,17 +88,18 @@ func CheckPotFile() int {
 	}
 
 	switch opt {
-	case "no", "none", "false", "0":
-		ret = CheckPotFileNone
-	case "update", "make", "build":
-		ret = CheckPotFileUpdate
-	case "current":
-		ret = CheckPotFileCurrent
+	case "no", "false":
+		ret = PotFileFlagNone
+	case "build", "make", "update":
+		ret = PotFileFlagUpdate
+	case "download":
+		ret = PotFileFlagDownload
 	default:
-		log.Warnf("unknown value for --check-pot-file=%s, fallback to 'download'", opt)
-		fallthrough
-	case "download", "yes", "true", "1":
-		ret = CheckPotFileDownload
+		if strings.Contains(opt, "/") {
+			ret = PotFileFlagLocation
+		} else {
+			log.Fatalf("unknown value for --pot-file: %s", opt)
+		}
 	}
 	return ret
 }

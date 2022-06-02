@@ -11,21 +11,23 @@ import (
 	"github.com/git-l10n/git-po-helper/flag"
 	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 // UpdatePotFile creates or update pot file. If the returned
 // pot filename is not empty, it's caller's duty to remove it.
 func UpdatePotFile() (string, bool) {
 	var (
-		opt = flag.CheckPotFile()
+		opt = flag.GetPotFileFlag()
 	)
 
-	if opt == flag.CheckPotFileNone {
+	// We can disable this check using "--pot-file=no".
+	if opt == flag.PotFileFlagNone {
 		return "", true
 	}
 
 	// Try to download pot file.
-	if opt == flag.CheckPotFileDownload {
+	if opt == flag.PotFileFlagDownload {
 		showProgress := flag.GitHubActionEvent() == ""
 		tmpfile, err := ioutil.TempFile("", "git.pot-*")
 		if err != nil {
@@ -44,7 +46,7 @@ func UpdatePotFile() (string, bool) {
 				"",
 				fmt.Sprintf("\t%s", err),
 				"",
-				"you can use option '--check-pot-file=update' to build pot file from",
+				"you can use option '--pot-file=build' to build the pot file from",
 				"the source instead of downloading",
 			} {
 				log.Error(msg)
@@ -54,23 +56,52 @@ func UpdatePotFile() (string, bool) {
 		return potFile, true
 	}
 
-	// If fail to download, try to use current pot file.
-	if opt == flag.CheckPotFileCurrent || opt == flag.CheckPotFileUpdate {
-		if !Exist(filepath.Join(PoDir, GitPot)) || opt == flag.CheckPotFileUpdate {
-			cmd := exec.Command("make", "pot")
+	// Try to use the specific pot file in location.
+	if opt == flag.PotFileFlagLocation {
+		potFile := flag.GetPotFileLocation()
+		if !Exist(potFile) {
 			showHorizontalLine()
-			log.Info("update pot file by running: make pot")
-			cmd.Dir = repository.WorkDir()
-			cmd.Stderr = os.Stderr
-			if err := cmd.Run(); err != nil {
-				log.Error(err)
-				return "", false
+			for _, msg := range []string{
+				fmt.Sprintf("pot file '%s' does not exist", potFile),
+				"",
+				"you can use option '--pot-file=download' to download pot file from",
+				"the l10n coordinator's repository,",
+				"or use option '--pot-file=build' to build the pot file from the source",
+				"instead of downloading",
+			} {
+				log.Error(msg)
 			}
+
+			return "", false
+		}
+		return "", true
+	}
+
+	// Try to build pot file from source.
+	if opt == flag.PotFileFlagUpdate {
+		cmd := exec.Command("make", "pot")
+		showHorizontalLine()
+		log.Info("update pot file by running: make pot")
+		cmd.Dir = repository.WorkDir()
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			for _, msg := range []string{
+				"fail to build the pot file from source",
+				"",
+				fmt.Sprintf("\t%s", err),
+				"",
+				"you can use option '--pot-file=download' to download pot file from",
+				"the l10n coordinator's repository",
+			} {
+				log.Error(msg)
+			}
+			return "", false
 		}
 		return "", true
 	}
 
 	// Unknown option.
+	log.Errorf("bad '--pot-file' option: %s", viper.GetString("pot-file"))
 	return "", false
 }
 

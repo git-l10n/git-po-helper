@@ -4,7 +4,7 @@ test_description="test git-po-helper check-commits in bare repo"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-special-gettext-versions --check-pot-file=no"
+HELPER="po-helper --no-special-gettext-versions --pot-file=no"
 
 test_expect_success "setup" '
 	git clone --mirror "$PO_HELPER_TEST_REPOSITORY" repo.git &&

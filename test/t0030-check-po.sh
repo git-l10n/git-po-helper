@@ -4,7 +4,7 @@ test_description="test git-po-helper update"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-special-gettext-versions --check-pot-file=no"
+HELPER="po-helper --no-special-gettext-versions --pot-file=po/git.pot"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&

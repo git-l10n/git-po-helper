@@ -1031,7 +1031,8 @@ func checkCommits(commits ...string) bool {
 		log.Infof("checking commits: %d passed.", pass)
 	}
 
-	if flag.CheckPotFile() != flag.CheckPotFileNone {
+	// We can disable this check using "--pot-file=no".
+	if flag.GetPotFileFlag() != flag.PotFileFlagNone {
 		poFiles := []string{}
 		for file := range poMaps {
 			poFiles = append(poFiles, file)

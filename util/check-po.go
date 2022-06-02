@@ -90,6 +90,7 @@ func CmdCheckPo(args ...string) bool {
 		log.Errorf(`cannot find any ".po" files to check`)
 		ret = false
 	}
+
 	for _, arg := range args {
 		locale := strings.TrimSuffix(filepath.Base(arg), ".po")
 		poFile := filepath.Join(PoDir, locale+".po")
@@ -103,7 +104,9 @@ func CmdCheckPo(args ...string) bool {
 			}
 		}
 	}
-	if flag.CheckPotFile() != flag.CheckPotFileNone {
+
+	// We can disable this check using "--pot-file=no".
+	if flag.GetPotFileFlag() != flag.PotFileFlagNone {
 		ret = CheckUnfinishedPoFiles("HEAD", poFiles) && ret
 	}
 	return ret

@@ -22,11 +22,10 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 	var (
 		ok         = true
 		poTemplate string
-		opt        = flag.CheckPotFile()
 	)
 
-	// Build or update pot file.
-	if opt == flag.CheckPotFileNone {
+	// We can disable this check using "--pot-file=no".
+	if flag.GetPotFileFlag() == flag.PotFileFlagNone {
 		return true
 	}
 
@@ -35,7 +34,7 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 		return false
 	}
 	if poTemplate == "" {
-		poTemplate = filepath.Join(PoDir, GitPot)
+		poTemplate = flag.GetPotFileLocation()
 	} else {
 		defer os.Remove(poTemplate)
 	}
@@ -109,27 +108,27 @@ func checkUnfinishedPoFile(poFile, poTemplate string) []string {
 		}
 	}
 	if count > 0 {
-		switch flag.CheckPotFile() {
-		case flag.CheckPotFileNone:
-			return nil
-		case flag.CheckPotFileCurrent:
+		switch flag.GetPotFileFlag() {
+		case flag.PotFileFlagLocation:
 			fallthrough
-		case flag.CheckPotFileUpdate:
+		case flag.PotFileFlagUpdate:
 			if count == 1 {
 				errs = append(errs, fmt.Sprintf(
-					"There is %d new string in 'po/git.pot' missing in your translation.\n",
-					count))
+					"There is %d new string in '%s' missing in your translation.\n",
+					count,
+					flag.GetPotFileLocation()))
 			} else {
 				errs = append(errs, fmt.Sprintf(
-					"There are %d new strings in 'po/git.pot' missing in your translation.\n",
-					count))
+					"There are %d new strings in '%s' missing in your translation.\n",
+					count,
+					flag.GetPotFileLocation()))
 			}
 			errs = append(errs,
 				"Please run \"make po-update PO_FILE=po/XX.po\" to update your po file,",
 				"and translate the new strings in it.",
 				"")
 
-		case flag.CheckPotFileDownload:
+		case flag.PotFileFlagDownload:
 			fallthrough
 		default:
 			if count == 1 {

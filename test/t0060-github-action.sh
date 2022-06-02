@@ -4,7 +4,7 @@ test_description="check output for --github-action-event"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --github-action-event=pull_request_target --check-pot-file=no"
+HELPER="po-helper --github-action-event=pull_request_target --pot-file=po/git.pot"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -162,7 +162,7 @@ test_expect_success "check core update of zh_CN.po" '
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
-test_done
+
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
@@ -212,7 +212,7 @@ test_expect_success "check-commits (non-l10n commit)" '
 
 test_expect_success "check-commits --github-action-event=pull_request" '
 	test_must_fail git -C workdir po-helper \
-		check-commits --check-pot-file=no \
+		check-commits --pot-file=no \
 		--github-action-event=pull_request \
 		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
@@ -221,7 +221,7 @@ test_expect_success "check-commits --github-action-event=pull_request" '
 
 test_expect_success "check-commits --github-action-event=pull_request_target" '
 	test_must_fail git -C workdir po-helper \
-		check-commits --check-pot-file=no \
+		check-commits --pot-file=no \
 		--github-action-event=pull_request_target \
 		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
@@ -239,7 +239,7 @@ EOF
 
 test_expect_success "check-commits --github-action-event=push" '
 	git -C workdir po-helper \
-		check-commits --check-pot-file=no \
+		check-commits --pot-file=no \
 		--github-action-event push \
 		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
@@ -248,7 +248,7 @@ test_expect_success "check-commits --github-action-event=push" '
 
 test_expect_success "check-commits --github-action-event=push" '
 	git -C workdir po-helper \
-		check-commits --check-pot-file=no \
+		check-commits --pot-file=no \
 		--github-action-event push \
 		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
