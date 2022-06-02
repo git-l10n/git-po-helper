@@ -3,7 +3,6 @@ package util
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,47 +20,24 @@ var (
 
 func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 	var (
-		ok      = true
-		potFile string
-		opt     = flag.CheckPotFile()
+		ok         = true
+		poTemplate string
+		opt        = flag.CheckPotFile()
 	)
 
 	// Build or update pot file.
 	if opt == flag.CheckPotFileNone {
 		return true
 	}
-	// Try to download pot file.
-	if opt == flag.CheckPotFileDownload {
-		showProgress := flag.GitHubActionEvent() == ""
-		tmpfile, err := ioutil.TempFile("", "git.pot-*")
-		if err != nil {
-			log.Error(err)
-			return false
-		}
-		tmpfile.Close()
-		potFile = tmpfile.Name()
-		defer os.Remove(potFile)
-		showHorizontalLine()
-		log.Infof("downloading pot file from %s", PotFileURL)
-		if err := httpDownload(PotFileURL, potFile, showProgress); err != nil {
-			log.Warn(err)
-			opt = flag.CheckPotFileCurrent
-		}
+
+	// Update pot file.
+	if poTemplate, ok = UpdatePotFile(); !ok {
+		return false
 	}
-	// If fail to download, try to use current pot file.
-	if opt == flag.CheckPotFileCurrent || opt == flag.CheckPotFileUpdate {
-		potFile = "po/git.pot"
-		if !Exist(potFile) || opt == flag.CheckPotFileUpdate {
-			cmd := exec.Command("make", "pot")
-			showHorizontalLine()
-			log.Info("update pot file by running: make pot")
-			cmd.Dir = repository.WorkDir()
-			cmd.Stderr = os.Stderr
-			if err := cmd.Run(); err != nil {
-				log.Error(err)
-				return false
-			}
-		}
+	if poTemplate == "" {
+		poTemplate = filepath.Join(PoDir, GitPot)
+	} else {
+		defer os.Remove(poTemplate)
 	}
 
 	// Check po file with pot file.
@@ -93,7 +69,7 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 		}
 
 		// Check po file with pot file for missing translations.
-		if msgs := checkUnfinishedPoFile(poFile, potFile); len(msgs) > 0 {
+		if msgs := checkUnfinishedPoFile(poFile, poTemplate); len(msgs) > 0 {
 			reportResultMessages(msgs, prompt, log.ErrorLevel)
 			ok = false
 		}
@@ -101,11 +77,11 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 	return ok
 }
 
-func checkUnfinishedPoFile(poFile, potFile string) []string {
+func checkUnfinishedPoFile(poFile, poTemplate string) []string {
 	var errs []string
 
 	// Run msgcmp to find untranslated missing entries in pot file.
-	cmd := exec.Command("msgcmp", "-N", poFile, potFile)
+	cmd := exec.Command("msgcmp", "-N", poFile, poTemplate)
 	cmd.Env = append(os.Environ(), "LC_ALL=C")
 	cmd.Dir = repository.WorkDir()
 	stderr, err := cmd.StderrPipe()

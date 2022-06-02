@@ -1,14 +1,66 @@
 package util
 
 import (
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/git-l10n/git-po-helper/flag"
 	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
+
+// UpdatePotFile creates or update pot file. If the returned
+// pot filename is not empty, it's caller's duty to remove it.
+func UpdatePotFile() (string, bool) {
+	var (
+		opt     = flag.CheckPotFile()
+		potFile string
+	)
+
+	if opt == flag.CheckPotFileNone {
+		return "", true
+	}
+
+	// Try to download pot file.
+	if opt == flag.CheckPotFileDownload {
+		showProgress := flag.GitHubActionEvent() == ""
+		tmpfile, err := ioutil.TempFile("", "git.pot-*")
+		if err != nil {
+			log.Error(err)
+			return "", false
+		}
+		tmpfile.Close()
+		potFile = tmpfile.Name()
+		showHorizontalLine()
+		log.Infof("downloading pot file from %s", PotFileURL)
+		if err := httpDownload(PotFileURL, potFile, showProgress); err != nil {
+			os.Remove(potFile)
+			potFile = ""
+			log.Warn(err)
+			opt = flag.CheckPotFileCurrent
+		}
+	}
+
+	// If fail to download, try to use current pot file.
+	if opt == flag.CheckPotFileCurrent || opt == flag.CheckPotFileUpdate {
+		if !Exist(filepath.Join(PoDir, GitPot)) || opt == flag.CheckPotFileUpdate {
+			cmd := exec.Command("make", "pot")
+			showHorizontalLine()
+			log.Info("update pot file by running: make pot")
+			cmd.Dir = repository.WorkDir()
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				log.Error(err)
+				return "", false
+			}
+		}
+	}
+
+	return potFile, true
+}
 
 // CmdUpdate implements update sub command.
 func CmdUpdate(fileName string) bool {
