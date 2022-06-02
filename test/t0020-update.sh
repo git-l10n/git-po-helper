@@ -13,7 +13,8 @@ test_expect_success "setup" '
 
 test_expect_success "update: zh_CN.po not exist" '
 	rm workdir/po/zh_CN.po &&
-	test_must_fail git -C workdir $HELPER  update zh_CN >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER --check-pot-file=none \
+		update zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
@@ -53,7 +54,8 @@ test_expect_success "fail to update zh_CN: bad syntax of zh_CN.po" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz""
 	EOF
 
-	test_must_fail git -C workdir $HELPER update zh_CN >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER --check-pot-file=no \
+		update zh_CN >out 2>&1 &&
 	grep "po/zh_CN.po:25: end-of-line within string" out >actual &&
 	grep "^level=error" out >>actual &&
 
@@ -93,7 +95,8 @@ test_expect_success "update zh_CN successfully" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz"
 	EOF
 
-	git -C workdir $HELPER update zh_CN
+	git -C workdir $HELPER --check-pot-file=no \
+		update zh_CN
 '
 
 test_expect_success "check update of zh_CN.po" '

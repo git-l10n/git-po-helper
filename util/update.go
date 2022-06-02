@@ -83,6 +83,8 @@ func CmdUpdate(fileName string) bool {
 		err            error
 		poFile         string
 		cmdArgs        []string
+		poTemplate     string
+		ok             bool
 	)
 
 	locale = strings.TrimSuffix(filepath.Base(fileName), ".po")
@@ -92,34 +94,17 @@ func CmdUpdate(fileName string) bool {
 	}
 	poFile = filepath.Join(PoDir, locale+".po")
 
-	cmd = exec.Command("make", "-n", "po-update", "PO_FILE="+poFile)
-	cmd.Dir = repository.WorkDir()
-	if err = cmd.Run(); err != nil {
-		return cmdUpdateObsolete(locale, localeFullName)
-	}
-
-	cmdArgs = []string{"make", "po-update", "PO_FILE=" + poFile}
-	log.Infof(`updating po file for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
-	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	cmd.Dir = repository.WorkDir()
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	if cmd.Run() != nil {
+	// Update pot file.
+	if poTemplate, ok = UpdatePotFile(); !ok {
 		return false
 	}
-	return CheckPoFile(locale, poFile)
-}
+	if poTemplate == "" {
+		poTemplate = filepath.Join(PoDir, GitPot)
+	} else {
+		defer os.Remove(poTemplate)
+	}
 
-func cmdUpdateObsolete(locale, localeFullName string) bool {
-	var (
-		cmd             *exec.Cmd
-		potFile, poFile string
-		cmdArgs         []string
-	)
-
-	poFile = filepath.Join(PoDir, locale+".po")
-	potFile = filepath.Join(PoDir, GitPot)
-	if !Exist(potFile) {
+	if !Exist(poTemplate) {
 		log.Errorf(`fail to update "%s", pot file does not exist`, poFile)
 		return false
 	}
@@ -133,7 +118,7 @@ func cmdUpdateObsolete(locale, localeFullName string) bool {
 		"--backup=off",
 		"-U",
 		poFile,
-		potFile,
+		poTemplate,
 	}
 	log.Infof(`updating po file for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
 	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
