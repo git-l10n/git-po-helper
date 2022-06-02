@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -16,8 +17,7 @@ import (
 // pot filename is not empty, it's caller's duty to remove it.
 func UpdatePotFile() (string, bool) {
 	var (
-		opt     = flag.CheckPotFile()
-		potFile string
+		opt = flag.CheckPotFile()
 	)
 
 	if opt == flag.CheckPotFileNone {
@@ -33,15 +33,25 @@ func UpdatePotFile() (string, bool) {
 			return "", false
 		}
 		tmpfile.Close()
-		potFile = tmpfile.Name()
+		potFile := tmpfile.Name()
 		showHorizontalLine()
 		log.Infof("downloading pot file from %s", PotFileURL)
 		if err := httpDownload(PotFileURL, potFile, showProgress); err != nil {
 			os.Remove(potFile)
 			potFile = ""
-			log.Warn(err)
-			opt = flag.CheckPotFileCurrent
+			for _, msg := range []string{
+				fmt.Sprintf("fail to download latest pot file from %s.", PotFileURL),
+				"",
+				fmt.Sprintf("\t%s", err),
+				"",
+				"you can use option '--check-pot-file=update' to build pot file from",
+				"the source instead of downloading",
+			} {
+				log.Error(msg)
+			}
+			return "", false
 		}
+		return potFile, true
 	}
 
 	// If fail to download, try to use current pot file.
@@ -57,9 +67,11 @@ func UpdatePotFile() (string, bool) {
 				return "", false
 			}
 		}
+		return "", true
 	}
 
-	return potFile, true
+	// Unknown option.
+	return "", false
 }
 
 // CmdUpdate implements update sub command.
