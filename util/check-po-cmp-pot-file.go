@@ -68,16 +68,42 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 		}
 
 		// Check po file with pot file for missing translations.
-		if msgs := checkUnfinishedPoFile(poFile, poTemplate); len(msgs) > 0 {
-			reportResultMessages(msgs, prompt, log.ErrorLevel)
-			ok = false
+		msgs, ret := checkUnfinishedPoFile(poFile, poTemplate)
+		if len(msgs) > 0 {
+			ReportWarnAndErrors(msgs, prompt, ret)
 		}
+		ok = ok && ret
 	}
 	return ok
 }
 
-func checkUnfinishedPoFile(poFile, poTemplate string) []string {
-	var errs []string
+func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
+	const (
+		kindMissing = iota
+		kindFuzzy
+		kindUntrans
+		kindUnused
+	)
+	var (
+		errs       []string
+		ok         = true
+		patternMap = make(map[int]*regexp.Regexp)
+		countMap   = make(map[int]int)
+		msgMap     = make(map[int][]string)
+	)
+
+	patternMap[kindMissing] = regexp.MustCompile(`[0-9]+: this message is used but not defined in .*`)
+	patternMap[kindFuzzy] = regexp.MustCompile(`[0-9]+: this message needs to be reviewed by the translator`)
+	patternMap[kindUntrans] = regexp.MustCompile(`[0-9]+: this message is untranslated`)
+	patternMap[kindUnused] = regexp.MustCompile(`[0-9]+: warning: this message is not used`)
+	countMap[kindMissing] = 0
+	countMap[kindFuzzy] = 0
+	countMap[kindUntrans] = 0
+	countMap[kindUnused] = 0
+	msgMap[kindMissing] = make([]string, 0)
+	msgMap[kindFuzzy] = make([]string, 0)
+	msgMap[kindUntrans] = make([]string, 0)
+	msgMap[kindUnused] = make([]string, 0)
 
 	// Run msgcmp to find untranslated missing entries in pot file.
 	cmd := exec.Command("msgcmp", "-N", poFile, poTemplate)
@@ -89,73 +115,87 @@ func checkUnfinishedPoFile(poFile, poTemplate string) []string {
 	}
 	if err != nil {
 		errs = append(errs, err.Error())
-		return errs
+		return errs, false
 	}
 	scanner := bufio.NewScanner(stderr)
-	pattern := regexp.MustCompile(`[0-9]+: this message is used but not defined in .*`)
-	msgs := []string{}
-	count := 0
+
 	for scanner.Scan() {
 		line := scanner.Text()
-		m := pattern.FindStringSubmatch(line)
-		if len(m) > 0 {
-			if count < 3 {
-				msgs = append(msgs, "po/git.pot:"+m[0])
-			} else if count == 3 {
-				msgs = append(msgs, "...")
+		for _, kind := range []int{kindMissing, kindFuzzy, kindUntrans, kindUnused} {
+			m := patternMap[kind].FindStringSubmatch(line)
+			if len(m) > 0 {
+				if countMap[kind] < 3 {
+					if kind == kindMissing {
+						msgMap[kind] = append(msgMap[kind], "po/git.pot:"+m[0])
+					} else {
+						msgMap[kind] = append(msgMap[kind], "po/XX.po:"+m[0])
+					}
+				} else if countMap[kindMissing] == 3 {
+					msgMap[kind] = append(msgMap[kind], "...")
+				}
+				countMap[kind]++
+				break
 			}
-			count++
 		}
 	}
-	if count > 0 {
+	countMap[kindUnused] = countMap[kindUnused] - countMap[kindFuzzy] - countMap[kindUntrans]
+
+	for _, kind := range []int{kindMissing, kindFuzzy, kindUntrans, kindUnused} {
+		if countMap[kind] == 0 {
+			continue
+		}
+		switch kind {
+		case kindMissing:
+			errs = append(errs, fmt.Sprintf(
+				"%d new string(s) in 'po/git.pot', but not in your 'po/XX.po'",
+				countMap[kind]))
+		case kindFuzzy:
+			errs = append(errs, fmt.Sprintf(
+				"%d fuzzy string(s) in your 'po/XX.po'",
+				countMap[kind]))
+		case kindUntrans:
+			errs = append(errs, fmt.Sprintf(
+				"%d untranslated string(s) in your 'po/XX.po'",
+				countMap[kind]))
+		case kindUnused:
+			errs = append(errs, fmt.Sprintf(
+				"%d obsolete string(s) in your 'po/XX.po', which must be removed",
+				countMap[kind]))
+		}
+		errs = append(errs, "")
+		for _, line := range msgMap[kind] {
+			errs = append(errs, fmt.Sprintf("  > %s", line))
+		}
+		errs = append(errs, "")
+	}
+	if countMap[kindUnused] > 0 {
+		ok = false
+	}
+	if countMap[kindMissing] > 0 {
+		ok = false
+
 		switch flag.GetPotFileFlag() {
 		case flag.PotFileFlagLocation:
 			fallthrough
 		case flag.PotFileFlagUpdate:
-			if count == 1 {
-				errs = append(errs, fmt.Sprintf(
-					"There is %d new string in '%s' missing in your translation.\n",
-					count,
-					flag.GetPotFileLocation()))
-			} else {
-				errs = append(errs, fmt.Sprintf(
-					"There are %d new strings in '%s' missing in your translation.\n",
-					count,
-					flag.GetPotFileLocation()))
-			}
 			errs = append(errs,
-				"Please run \"make po-update PO_FILE=po/XX.po\" to update your po file,",
+				"Please run \"git-po-helper update po/XX.po\" to update your po file,",
 				"and translate the new strings in it.",
 				"")
 
 		case flag.PotFileFlagDownload:
 			fallthrough
 		default:
-			if count == 1 {
-				errs = append(errs, fmt.Sprintf(
-					"There is %d new string missing in your translation.\n",
-					count))
-			} else {
-				errs = append(errs, fmt.Sprintf(
-					"There are %d new strings missing in your translation.\n",
-					count))
-			}
 			errs = append(errs,
 				fmt.Sprintf(
 					"You can download the latest \"po/git.pot\" file from:\n\n\t%s\n",
 					PotFileURL),
 				"Please rebase your branch to the latest upstream branch,",
-				"run \"make po-update PO_FILE=po/XX.po\" to update your po file,",
+				"run \"git-po-helper update po/XX.po\" to update your po file,",
 				"and translate the new strings in it.",
 				"")
-
 		}
-
-		for _, line := range msgs {
-			errs = append(errs, fmt.Sprintf("  > %s", line))
-		}
-		return errs
 	}
 
-	return nil
+	return errs, ok
 }

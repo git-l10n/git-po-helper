@@ -152,6 +152,13 @@ ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
 ------------------------------------------------------------------------------
 INFO [zh_CN.po (core)]    2 translated messages, 479 untranslated messages.
+------------------------------------------------------------------------------
+WARNING [po/zh_CN.po]    5102 untranslated string(s) in your 'po/XX.po'
+WARNING [po/zh_CN.po]
+WARNING [po/zh_CN.po]     > po/XX.po:18: this message is untranslated
+WARNING [po/zh_CN.po]     > po/XX.po:24: this message is untranslated
+WARNING [po/zh_CN.po]     > po/XX.po:29: this message is untranslated
+WARNING [po/zh_CN.po]
 
 ERROR: fail to execute "git-po-helper check-po"
 EOF

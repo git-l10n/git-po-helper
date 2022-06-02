@@ -95,6 +95,7 @@ test_expect_success "update zh_CN successfully" '
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
+------------------------------------------------------------------------------
 EOF
 
 test_expect_success "check update of zh_CN.po" '
@@ -109,6 +110,13 @@ cat >expect <<-\EOF
 level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
 ------------------------------------------------------------------------------
 level=info msg="[zh_CN.po (core)]    2 translated messages, 479 untranslated messages."
+------------------------------------------------------------------------------
+level=warning msg="[po/zh_CN.po]    5102 untranslated string(s) in your 'po/XX.po'"
+level=warning msg="[po/zh_CN.po]"
+level=warning msg="[po/zh_CN.po]     > po/XX.po:18: this message is untranslated"
+level=warning msg="[po/zh_CN.po]     > po/XX.po:24: this message is untranslated"
+level=warning msg="[po/zh_CN.po]     > po/XX.po:29: this message is untranslated"
+level=warning msg="[po/zh_CN.po]"
 EOF
 
 test_expect_success "check core update of zh_CN.po" '

@@ -31,15 +31,22 @@ cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=info msg="[po/ko.po]    3608 translated messages."
 ------------------------------------------------------------------------------
-level=error msg="[po/ko.po]    There are 2242 new strings in 'po/git.pot' missing in your translation."
-level=error msg="[po/ko.po]"
-level=error msg="[po/ko.po]    Please run \"make po-update PO_FILE=po/XX.po\" to update your po file,"
-level=error msg="[po/ko.po]    and translate the new strings in it."
+level=error msg="[po/ko.po]    2242 new string(s) in 'po/git.pot', but not in your 'po/XX.po'"
 level=error msg="[po/ko.po]"
 level=error msg="[po/ko.po]     > po/git.pot:24: this message is used but not defined in po/ko.po"
 level=error msg="[po/ko.po]     > po/git.pot:54: this message is used but not defined in po/ko.po"
 level=error msg="[po/ko.po]     > po/git.pot:84: this message is used but not defined in po/ko.po"
 level=error msg="[po/ko.po]     > ..."
+level=error msg="[po/ko.po]"
+level=error msg="[po/ko.po]    568 obsolete string(s) in your 'po/XX.po', which must be removed"
+level=error msg="[po/ko.po]"
+level=error msg="[po/ko.po]     > po/XX.po:147: warning: this message is not used"
+level=error msg="[po/ko.po]     > po/XX.po:172: warning: this message is not used"
+level=error msg="[po/ko.po]     > po/XX.po:176: warning: this message is not used"
+level=error msg="[po/ko.po]"
+level=error msg="[po/ko.po]    Please run \"git-po-helper update po/XX.po\" to update your po file,"
+level=error msg="[po/ko.po]    and translate the new strings in it."
+level=error msg="[po/ko.po]"
 
 ERROR: fail to execute "git-po-helper check-po"
 EOF
