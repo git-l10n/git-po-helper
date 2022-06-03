@@ -3,7 +3,6 @@ package util
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -13,26 +12,44 @@ import (
 	"github.com/git-l10n/git-po-helper/repository"
 )
 
-func checkGettextIncompatibleIssues(poFile string) error {
+func checkPoCommentEntries(poFile string) ([]string, bool) {
+	var (
+		errs            []string
+		ok              = true
+		msgCount        = 0
+		commentMsgCount = 0
+		badMsgCount     = 0
+	)
+
 	f, err := os.Open(poFile)
 	if err != nil {
-		return err
+		errs = append(errs, err.Error())
+		return errs, false
 	}
 	defer f.Close()
-	reader := bufio.NewReader(f)
-	for {
-		line, err := reader.ReadString('\n')
-		if strings.HasPrefix(line, "#~| msgid ") {
-			return fmt.Errorf("remove lines that start with '#~| msgid', for they are not compatible with gettext 0.14")
-		}
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "msgid ") {
+			msgCount++
+		} else if strings.HasPrefix(line, "#~ msgid ") {
+			commentMsgCount++
+		} else if strings.HasPrefix(line, "#~| msgid ") {
+			badMsgCount++
 		}
 	}
-	return nil
+	if 100*commentMsgCount/msgCount > 1 {
+		ok = false
+		errs = append(errs, fmt.Sprintf(
+			"too many obsolete entries (%d) in comments, please remove them",
+			commentMsgCount))
+	}
+	if badMsgCount > 0 {
+		ok = false
+		errs = append(errs,
+			"remove lines that start with '#~| msgid', for they are not compatible with gettext 0.14")
+	}
+	return errs, ok
 }
 
 func checkPoSyntax(poFile string) ([]string, bool) {
@@ -116,8 +133,8 @@ func checkPoSyntax(poFile string) ([]string, bool) {
 		}
 		msgs = []string{}
 	}
-	if err := checkGettextIncompatibleIssues(poFile); err != nil {
-		errs = append(errs, err.Error())
+	if msgs, ok := checkPoCommentEntries(poFile); !ok {
+		errs = append(errs, msgs...)
 		return errs, false
 	}
 

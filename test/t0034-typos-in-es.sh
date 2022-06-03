@@ -13,7 +13,8 @@ test_expect_success "checkout po-2.31.1" '
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
-level=info msg="[po/es.po]    5104 translated messages."
+level=error msg="[po/es.po]    5104 translated messages."
+level=error msg="[po/es.po]    too many obsolete entries (235) in comments, please remove them"
 ------------------------------------------------------------------------------
 level=warning msg="[po/es.po]    mismatch variable names: herramienta.cmd"
 level=warning msg="[po/es.po]    >> msgid: '%s': path for unsupported man viewer."
@@ -131,17 +132,30 @@ level=warning msg="[po/es.po]    mismatch variable names: --group, --group=trail
 level=warning msg="[po/es.po]    >> msgid: using --group=trailer with stdin is not supported"
 level=warning msg="[po/es.po]    >> msgstr: el uso de --group = trailer con stdin no es compatible"
 level=warning msg="[po/es.po]"
+
+ERROR: fail to execute "git-po-helper check-po"
 EOF
 
 test_expect_success "check typos in es.po" '
-	git -C workdir $HELPER check-po es >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER check-po es >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
 
+cat >expect <<-\EOF
+------------------------------------------------------------------------------
+level=error msg="[po/es.po]    5210 translated messages."
+level=error msg="[po/es.po]    too many obsolete entries (125) in comments, please remove them"
+
+ERROR: fail to execute "git-po-helper check-po"
+EOF
+
 test_expect_success "no typos in master branch" '
 	git -C workdir checkout master &&
-	git -C workdir $HELPER \
-		check-po --report-typos-as-errors es
+	test_must_fail git -C workdir $HELPER \
+		check-po --report-typos-as-errors es >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
 '
+
 test_done

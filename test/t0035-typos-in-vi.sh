@@ -13,7 +13,8 @@ test_expect_success "checkout po-2.31.1" '
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
-level=info msg="[po/vi.po]    5104 translated messages."
+level=error msg="[po/vi.po]    5104 translated messages."
+level=error msg="[po/vi.po]    too many obsolete entries (466) in comments, please remove them"
 ------------------------------------------------------------------------------
 level=warning msg="[po/vi.po]    mismatch variable names: --quiet"
 level=warning msg="[po/vi.po]    >> msgid: "
@@ -91,10 +92,12 @@ level=warning msg="[po/vi.po]    mismatch variable names: %%(color:%s), %%(màu:
 level=warning msg="[po/vi.po]    >> msgid: unrecognized color: %%(color:%s)"
 level=warning msg="[po/vi.po]    >> msgstr: không nhận ra màu: %%(màu:%s)"
 level=warning msg="[po/vi.po]"
+
+ERROR: fail to execute "git-po-helper check-po"
 EOF
 
 test_expect_success "check typos in vi.po" '
-	git -C workdir $HELPER check-po vi >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER check-po vi >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

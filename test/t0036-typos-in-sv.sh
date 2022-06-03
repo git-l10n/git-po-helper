@@ -13,7 +13,8 @@ test_expect_success "checkout po-2.31.1" '
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
-level=info msg="[po/sv.po]    5104 translated messages."
+level=error msg="[po/sv.po]    5104 translated messages."
+level=error msg="[po/sv.po]    too many obsolete entries (475) in comments, please remove them"
 ------------------------------------------------------------------------------
 level=warning msg="[po/sv.po]    mismatch variable names: --chmod, --chmod-parametern"
 level=warning msg="[po/sv.po]    >> msgid: --chmod param '%s' must be either -x or +x"
@@ -99,18 +100,39 @@ level=warning msg="[po/sv.po]    mismatch variable names: --group, --group-flagg
 level=warning msg="[po/sv.po]    >> msgid: using multiple --group options with stdin is not supported"
 level=warning msg="[po/sv.po]    >> msgstr: mer än en --group-flagga stöds inte med standard in"
 level=warning msg="[po/sv.po]"
+
+ERROR: fail to execute "git-po-helper check-po"
 EOF
 
 test_expect_success "check typos in sv.po" '
-	git -C workdir $HELPER check-po sv >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER check-po sv >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
 
-test_expect_failure "no typos in master branch" '
+cat >expect <<-\EOF
+------------------------------------------------------------------------------
+level=error msg="[po/sv.po]    5282 translated messages."
+level=error msg="[po/sv.po]    too many obsolete entries (768) in comments, please remove them"
+------------------------------------------------------------------------------
+level=error msg="[po/sv.po]    mismatch variable names: git-krokar"
+level=error msg="[po/sv.po]    >> msgid: Run git hooks"
+level=error msg="[po/sv.po]    >> msgstr: Kör git-krokar"
+level=error msg="[po/sv.po]"
+level=error msg="[po/sv.po]    mismatch variable names: --buffer"
+level=error msg="[po/sv.po]    >> msgid: flush is only for --buffer mode"
+level=error msg="[po/sv.po]    >> msgstr: flush är endast till för --buffer-läge"
+level=error msg="[po/sv.po]"
+
+ERROR: fail to execute "git-po-helper check-po"
+EOF
+
+test_expect_success "no typos in master branch" '
 	git -C workdir checkout master &&
-	git -C workdir $HELPER \
-		check-po --report-typos-as-errors sv
+	test_must_fail git -C workdir $HELPER \
+		check-po --report-typos-as-errors sv >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
 '
 
 test_done

@@ -13,7 +13,8 @@ test_expect_success "checkout po-2.31.1" '
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
-level=info msg="[po/pt_PT.po]    2876 translated messages, 1320 fuzzy translations, 842 untranslated messages."
+level=error msg="[po/pt_PT.po]    2876 translated messages, 1320 fuzzy translations, 842 untranslated messages."
+level=error msg="[po/pt_PT.po]    too many obsolete entries (225) in comments, please remove them"
 ------------------------------------------------------------------------------
 level=warning msg="[po/pt_PT.po]    mismatch variable names: --contains, --no-contains"
 level=warning msg="[po/pt_PT.po]    >> msgid: --no-contains option is only allowed in list mode"
@@ -45,10 +46,12 @@ level=warning msg="[po/pt_PT.po]    mismatch variable names: %%(algn), %%(align)
 level=warning msg="[po/pt_PT.po]    >> msgid: positive width expected with the %%(align) atom"
 level=warning msg="[po/pt_PT.po]    >> msgstr: largura positiva esperada com o átomo %%(algn)"
 level=warning msg="[po/pt_PT.po]"
+
+ERROR: fail to execute "git-po-helper check-po"
 EOF
 
 test_expect_success "check typos in pt_PT.po" '
-	git -C workdir $HELPER check-po pt_PT >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER check-po pt_PT >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
