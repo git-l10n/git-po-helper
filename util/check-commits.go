@@ -661,6 +661,8 @@ func getCommitChanges(commit string) ([]string, bool) {
 		"diff-tree",
 		"-r",
 		"-z",
+		"--no-renames",
+		"--diff-filter=ACM",
 		"--name-only",
 		commit)
 	stdout, err := cmd.StdoutPipe()
