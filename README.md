@@ -43,7 +43,7 @@ following conventions.
 * All translatable strings are present in your "po/XX.po". You can download
   the latest pot file from:
 
-	https://github.com/git-l10n/git-po/raw/pot/main/po/git.pot
+	https://github.com/git-l10n/pot-changes/raw/pot/main/po/git.pot
 
 * Remove file-locations from your "po/XX.po" before submitting it to your
   commit. See the [Updating a "XX.po" file] section for reference in
