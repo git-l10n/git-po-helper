@@ -4,10 +4,17 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
+)
+
+const (
+	EightSpaces = "        "
 )
 
 var (
@@ -81,20 +88,6 @@ func getConfigsFromOneManpage(filename string, onlyCamelCase bool) ([]string, er
 	return configs, err
 }
 
-func getConfigsFromL10n() ([]string, error) {
-	var (
-		potFile = filepath.Join(PoDir, GitPot)
-		err     error
-		configs []string
-	)
-
-	if !IsFile(potFile) {
-		return nil, fmt.Errorf("cannot find file %s", potFile)
-	}
-
-	return configs, err
-}
-
 func ShowManpageConfigs(onlyCamelCase bool) error {
 	configs, err := getConfigsFromManpage(onlyCamelCase)
 	if err != nil {
@@ -106,13 +99,66 @@ func ShowManpageConfigs(onlyCamelCase bool) error {
 	return nil
 }
 
-func ShowL10nConfigs() error {
-	configs, err := getConfigsFromL10n()
+func CheckCamelCaseConfigVariableInPotFile() error {
+	var (
+		potFile   = filepath.Join(PoDir, GitPot)
+		configs   []string
+		err       error
+		unmatched = 0
+	)
+
+	if !IsFile(potFile) {
+		return fmt.Errorf("cannot find file %s", potFile)
+	}
+
+	configs, err = getConfigsFromManpage(false)
 	if err != nil {
 		return err
 	}
-	for _, item := range configs {
-		fmt.Println(item)
+
+	// Make sure pot file is pretty formatted.
+	cmd := exec.Command("msgcat", "--no-wrap", "--indent", potFile)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	if err = cmd.Start(); err != nil {
+		return err
+	}
+
+	// Scan msgid, which has prefix "msgid", "msgid_plural", and 8 spaces.
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
+		} else if line[0] == '#' {
+			continue
+		} else if strings.HasPrefix(line, "msgstr") {
+			continue
+		}
+
+		for _, item := range configs {
+			for len(line) > 0 {
+				lowerLine := strings.ToLower(line)
+				if idx := strings.Index(lowerLine, strings.ToLower(item)); idx != -1 {
+					if strings.HasPrefix(line[idx:], item) {
+						log.Debugf("'%s' is found in: %s", item, line)
+					} else {
+						log.Errorf("config variable '%s' in manpage does not match string in pot file:", item)
+						log.Errorf("    >> %s", line)
+						unmatched++
+					}
+					line = line[idx+len(item):]
+				} else {
+					break
+				}
+			}
+		}
+	}
+
+	if unmatched != 0 {
+		return fmt.Errorf("%d unmatched config variables", unmatched)
 	}
 	return nil
 }
