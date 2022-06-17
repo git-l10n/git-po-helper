@@ -61,6 +61,8 @@ func IsGitProject() bool {
 
 // ChdirProjectRoot changes current dir to project root.
 func ChdirProjectRoot() {
+	assertRepositoryNotNil()
+
 	if theRepository.repository.IsBare() {
 		log.Fatal("fail to change workdir, you are in a bare repository")
 	}
