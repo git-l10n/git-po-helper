@@ -32,7 +32,7 @@ ERROR [po/zh_CN.po]
 ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
 ------------------------------------------------------------------------------
 ERROR [po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1
-ERROR [po/zh_CN.po]    no mofile generated, and no scan typos
+ERROR [po/zh_CN.po]    fail to generate mofile
 
 ERROR: fail to execute "git-po-helper check-po"
 EOF

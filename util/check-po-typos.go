@@ -18,17 +18,18 @@ import (
 	"github.com/gorilla/i18n/gettext"
 )
 
-func checkTyposInPoFile(locale, poFile string) ([]string, bool) {
-	var errs []string
+type CheckPoEntryFunc func(string, string, string) ([]string, bool)
 
-	if flag.IgnoreTypos() {
-		return nil, true
-	}
+// checkEntriesInPoFile returns a list of messages, and a boolean which
+// indicates whether the messages are errors (false) or warnings (true).
+func checkEntriesInPoFile(locale, poFile string, fn CheckPoEntryFunc) (msgs []string, ok bool) {
+	ok = true
 
+	// Compile mo-file from po-file
 	moFile, err := ioutil.TempFile("", "mofile")
 	if err != nil {
-		errs = append(errs, err.Error())
-		return errs, false
+		msgs = append(msgs, err.Error())
+		return
 	}
 	defer os.Remove(moFile.Name())
 	moFile.Close()
@@ -39,57 +40,63 @@ func checkTyposInPoFile(locale, poFile string) ([]string, bool) {
 	cmd.Dir = repository.WorkDir()
 	err = cmd.Run()
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("fail to compile %s: %s", poFile, err))
-	}
-	fi, err := os.Stat(moFile.Name())
-	if err != nil || fi.Size() == 0 {
-		errs = append(errs, "no mofile generated, and no scan typos")
-		return errs, false
-	}
-	return checkTyposInMoFile(locale, moFile.Name())
-}
-
-func checkTyposInMoFile(locale, moFile string) ([]string, bool) {
-	var errs []string
-
-	if flag.IgnoreTypos() {
-		return nil, true
+		// There may be some non-fatal errors in the po-file.
+		// But if the generated mo-file is empty, a fatal error occurs.
+		msgs = append(msgs, fmt.Sprintf("fail to compile %s: %s", poFile, err))
 	}
 
-	f, err := os.Open(moFile)
+	f, err := os.Open(moFile.Name())
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("cannot open %s: %s", moFile, err))
-		return errs, false
+		msgs = append(msgs, "fail to generate mofile")
+		return msgs, false
+	}
+	// Fail to compile the po-file if the generated mo-file is empty.
+	fi, err := f.Stat()
+	if err != nil || fi.Size() == 0 {
+		msgs = append(msgs, "fail to generate mofile")
+		return msgs, false
 	}
 	defer f.Close()
+
 	iter := gettext.ReadMo(f)
 	for {
-		msg, err := iter.Next()
+		entry, err := iter.Next()
 		if err != nil {
 			if err != io.EOF {
-				errs = append(errs, fmt.Sprintf("fail to iterator: %s", err))
+				msgs = append(msgs, fmt.Sprintf("fail to iterator: %s", err))
 			}
 			break
 		}
-		if len(msg.StrPlural) == 0 {
-			errs = append(errs,
-				checkTypos(locale, string(msg.Id), string(msg.Str))...)
+		if len(entry.StrPlural) == 0 {
+			output, ignoreError := fn(locale, string(entry.Id), string(entry.Str))
+			msgs = append(msgs, output...)
+			if !ignoreError {
+				ok = false
+			}
 		} else {
-			for i := range msg.StrPlural {
+			for i := range entry.StrPlural {
 				if i == 0 {
-					errs = append(errs,
-						checkTypos(locale, string(msg.Id), string(msg.StrPlural[i]))...)
+					output, ignoreError := fn(locale, string(entry.Id), string(entry.StrPlural[i]))
+					msgs = append(msgs, output...)
+					if !ignoreError {
+						ok = false
+					}
 				} else {
-					errs = append(errs,
-						checkTypos(locale, string(msg.IdPlural), string(msg.StrPlural[i]))...)
+					output, ignoreError := fn(locale, string(entry.IdPlural), string(entry.StrPlural[i]))
+					msgs = append(msgs, output...)
+					if !ignoreError {
+						ok = false
+					}
 				}
 			}
 		}
 	}
-	if flag.ReportTyposAsErrors() && len(errs) > 0 {
-		return errs, false
-	}
-	return errs, true
+
+	return msgs, ok
+}
+
+func checkTyposInPoFile(locale, poFile string) ([]string, bool) {
+	return checkEntriesInPoFile(locale, poFile, checkTyposInPoEntry)
 }
 
 func isUnicodeFragment(str, substr string) (bool, error) {
@@ -165,21 +172,25 @@ func findUnmatchVariables(src, target string) []string {
 	sort.Strings(unmatched)
 	return unmatched
 }
-
-func checkTypos(locale, msgID, msgStr string) (errs []string) {
+func checkTyposInPoEntry(locale, msgID, msgStr string) ([]string, bool) {
 	var (
+		msgs       []string
 		unmatched  []string
 		origMsgID  = msgID
 		origMsgStr = msgStr
 	)
 
+	if flag.IgnoreTypos() {
+		return nil, true
+	}
+
 	// Header entry
 	if len(msgID) == 0 {
-		return
+		return nil, true
 	}
 	// Untranslated entry
 	if len(msgStr) == 0 {
-		return
+		return nil, true
 	}
 
 	if smudgeMap, ok := dict.SmudgeMaps[locale]; ok {
@@ -203,12 +214,17 @@ func checkTypos(locale, msgID, msgStr string) (errs []string) {
 
 	unmatched = findUnmatchVariables(msgID, msgStr)
 	if len(unmatched) > 0 {
-		errs = append(errs,
+		msgs = append(msgs,
 			fmt.Sprintf("mismatch variable names: %s",
 				strings.Join(unmatched, ", ")))
-		errs = append(errs, fmt.Sprintf(">> msgid: %s", origMsgID))
-		errs = append(errs, fmt.Sprintf(">> msgstr: %s", origMsgStr))
-		errs = append(errs, "")
+		msgs = append(msgs, fmt.Sprintf(">> msgid: %s", origMsgID))
+		msgs = append(msgs, fmt.Sprintf(">> msgstr: %s", origMsgStr))
+		msgs = append(msgs, "")
 	}
-	return
+
+	if flag.ReportTyposAsErrors() && len(msgs) > 0 {
+		return msgs, false
+	}
+
+	return msgs, true
 }
