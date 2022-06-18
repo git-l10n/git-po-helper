@@ -158,6 +158,7 @@ WARNING [po/zh_CN.po]
 WARNING [po/zh_CN.po]     > po/XX.po:18: this message is untranslated
 WARNING [po/zh_CN.po]     > po/XX.po:24: this message is untranslated
 WARNING [po/zh_CN.po]     > po/XX.po:29: this message is untranslated
+WARNING [po/zh_CN.po]     > ...
 WARNING [po/zh_CN.po]
 
 ERROR: fail to execute "git-po-helper check-po"

@@ -130,7 +130,7 @@ func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
 					} else {
 						msgMap[kind] = append(msgMap[kind], "po/XX.po:"+m[0])
 					}
-				} else if countMap[kindMissing] == 3 {
+				} else if countMap[kind] == 3 {
 					msgMap[kind] = append(msgMap[kind], "...")
 				}
 				countMap[kind]++

@@ -116,6 +116,7 @@ level=warning msg="[po/zh_CN.po]"
 level=warning msg="[po/zh_CN.po]     > po/XX.po:18: this message is untranslated"
 level=warning msg="[po/zh_CN.po]     > po/XX.po:24: this message is untranslated"
 level=warning msg="[po/zh_CN.po]     > po/XX.po:29: this message is untranslated"
+level=warning msg="[po/zh_CN.po]     > ..."
 level=warning msg="[po/zh_CN.po]"
 EOF
 
