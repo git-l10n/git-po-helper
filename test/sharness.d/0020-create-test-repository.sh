@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PO_HELPER_TEST_REPOSITORY_VERSION=6
+PO_HELPER_TEST_REPOSITORY_VERSION=7
 
 # Create test repository in .repository
 PO_HELPER_TEST_REPOSITORY="${SHARNESS_TEST_SRCDIR}/test-repository"
@@ -100,6 +100,7 @@ create_test_repository_real () {
 	do
 		${TAR_CMD} --strip-components=1 -C test-repository -xf git-$1.tar -- \
 			"git-$1/po" \
+			"git-$1/Documentation/config" \
 			"git-$1/remote.c" \
 			"git-$1/wt-status.c" \
 			"git-$1/builtin/clone.c" \
