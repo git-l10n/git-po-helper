@@ -4,7 +4,7 @@ test_description="test git-po-helper check-commits with typos"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=no"
+HELPER="po-helper --no-special-gettext-versions --pot-file=no --report-typos=warn"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -95,9 +95,9 @@ level=info msg="checking commits: 0 passed, 1 failed."
 ERROR: fail to execute "git-po-helper check-commits"
 EOF
 
-test_expect_success "check-commits show typos (--report-typos-as-errors)" '
+test_expect_success "check-commits show typos (--typos=error)" '
 	test_must_fail git -C workdir $HELPER \
-		check-commits --report-typos-as-errors v1.. >out 2>&1 &&
+		check-commits --report-typos=error v1.. >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

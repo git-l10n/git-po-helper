@@ -180,7 +180,7 @@ func checkTyposInPoEntry(locale, msgID, msgStr string) ([]string, bool) {
 		origMsgStr = msgStr
 	)
 
-	if flag.IgnoreTypos() {
+	if flag.ReportTypos() == flag.ReportIssueNone {
 		return nil, true
 	}
 
@@ -222,7 +222,7 @@ func checkTyposInPoEntry(locale, msgID, msgStr string) ([]string, bool) {
 		msgs = append(msgs, "")
 	}
 
-	if flag.ReportTyposAsErrors() && len(msgs) > 0 {
+	if flag.ReportTypos() == flag.ReportIssueError && len(msgs) > 0 {
 		return msgs, false
 	}
 

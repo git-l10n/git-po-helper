@@ -8,6 +8,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	ReportIssueNone = iota
+	ReportIssueWarn
+	ReportIssueError
+)
+
 // Verbose returns option "--verbose".
 func Verbose() int {
 	return viper.GetInt("verbose")
@@ -33,18 +39,30 @@ func NoGPG() bool {
 	return GitHubActionEvent() != "" || viper.GetBool("check--no-gpg") || viper.GetBool("check-commits--no-gpg")
 }
 
-// ReportTyposAsErrors returns option "--report-typos-as-errors".
-func ReportTyposAsErrors() bool {
-	return viper.GetBool("check-po--report-typos-as-errors") ||
-		viper.GetBool("check-commits--report-typos-as-errors") ||
-		viper.GetBool("check--report-typos-as-errors")
-}
+// ReportTypos returns way to display typos (none, warn, error).
+func ReportTypos() int {
+	var value = ""
 
-// IgnoreTypos returns option "--ignore-typos".
-func IgnoreTypos() bool {
-	return viper.GetBool("check-po--ignore-typos") ||
-		viper.GetBool("check-commits--ignore-typos") ||
-		viper.GetBool("check--ignore-typos")
+	if GitHubActionEvent() != "" {
+		return ReportIssueWarn
+	}
+	if v := viper.GetString("check--report-typos"); v != "" {
+		value = v
+	} else if v := viper.GetString("check-po--report-typos"); v != "" {
+		value = v
+	} else if v := viper.GetString("check-commits--report-typos"); v != "" {
+		value = v
+	}
+	switch value {
+	case "none":
+		return ReportIssueNone
+	case "warn":
+		return ReportIssueWarn
+	case "error":
+		fallthrough
+	default:
+		return ReportIssueError
+	}
 }
 
 // CheckFileLocations returns option "--check-file-locations".

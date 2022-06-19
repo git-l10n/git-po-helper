@@ -27,18 +27,14 @@ func (v *checkPoCommand) Command() *cobra.Command {
 	v.cmd.Flags().Bool("core",
 		false,
 		"also check XX.po against "+util.CorePot)
-	v.cmd.Flags().Bool("ignore-typos",
-		false,
-		"do not check typos in .po file")
-	v.cmd.Flags().Bool("report-typos-as-errors",
-		false,
-		"consider typos as errors")
+	v.cmd.Flags().String("report-typos",
+		"",
+		"way to display typos (none, warn, error)")
 	v.cmd.Flags().Bool("check-file-locations",
 		false,
 		"do not allow file locations")
 	_ = viper.BindPFlag("check-po--core", v.cmd.Flags().Lookup("core"))
-	_ = viper.BindPFlag("check-po--ignore-typos", v.cmd.Flags().Lookup("ignore-typos"))
-	_ = viper.BindPFlag("check-po--report-typos-as-errors", v.cmd.Flags().Lookup("report-typos-as-errors"))
+	_ = viper.BindPFlag("check-po--report-typos", v.cmd.Flags().Lookup("report-typos"))
 	_ = viper.BindPFlag("check-po--check-file-locations", v.cmd.Flags().Lookup("check-file-locations"))
 
 	return v.cmd

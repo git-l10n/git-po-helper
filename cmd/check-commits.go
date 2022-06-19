@@ -30,16 +30,12 @@ func (v *checkCommitsCommand) Command() *cobra.Command {
 		"f",
 		false,
 		"run even too many commits")
-	v.cmd.Flags().Bool("ignore-typos",
-		false,
-		"do not check typos in .po file")
-	v.cmd.Flags().Bool("report-typos-as-errors",
-		false,
-		"consider typos as errors")
+	v.cmd.Flags().String("report-typos",
+		"",
+		"way to display typos (none, warn, error)")
 	_ = viper.BindPFlag("check-commits--no-gpg", v.cmd.Flags().Lookup("no-gpg"))
 	_ = viper.BindPFlag("check-commits--force", v.cmd.Flags().Lookup("force"))
-	_ = viper.BindPFlag("check-commits--ignore-typos", v.cmd.Flags().Lookup("ignore-typos"))
-	_ = viper.BindPFlag("check-commits--report-typos-as-errors", v.cmd.Flags().Lookup("report-typos-as-errors"))
+	_ = viper.BindPFlag("check-commits--report-typos", v.cmd.Flags().Lookup("report-typos"))
 	return v.cmd
 }
 

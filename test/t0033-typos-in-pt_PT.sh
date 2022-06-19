@@ -4,7 +4,7 @@ test_description="check typos in pt_PT.po"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=no"
+HELPER="po-helper --no-special-gettext-versions --pot-file=no --report-typos=warn"
 
 test_expect_success "checkout po-2.31.1" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -59,7 +59,7 @@ test_expect_success "check typos in pt_PT.po" '
 test_expect_success "no typos in master branch" '
 	git -C workdir checkout master &&
 	git -C workdir $HELPER \
-		check-po --report-typos-as-errors pt_PT
+		check-po --report-typos=error pt_PT
 '
 
 test_done

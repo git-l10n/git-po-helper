@@ -4,7 +4,7 @@ test_description="check typos in po files"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=no"
+HELPER="po-helper --no-special-gettext-versions --pot-file=no --report-typos=warn"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -58,7 +58,7 @@ test_expect_success "mismatched shell variables" '
 	test_cmp expect actual
 '
 
-test_expect_success "trash variables in msgStr (--report-typos-as-errors)" '
+test_expect_success "trash variables in msgStr (--typos=error)" '
 	cat >workdir/po/zh_CN.po <<-\EOF &&
 	msgid ""
 	msgstr ""
@@ -80,7 +80,7 @@ test_expect_success "trash variables in msgStr (--report-typos-as-errors)" '
 	EOF
 
 	test_must_fail git -C workdir $HELPER \
-		check-po --report-typos-as-errors zh_CN >out 2>&1 &&
+		check-po --report-typos=error zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
