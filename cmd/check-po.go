@@ -30,12 +30,12 @@ func (v *checkPoCommand) Command() *cobra.Command {
 	v.cmd.Flags().String("report-typos",
 		"",
 		"way to display typos (none, warn, error)")
-	v.cmd.Flags().Bool("check-file-locations",
-		false,
-		"do not allow file locations")
+	v.cmd.Flags().String("report-file-locations",
+		"",
+		"way to report file-location issues (none, warn, error)")
 	_ = viper.BindPFlag("check-po--core", v.cmd.Flags().Lookup("core"))
 	_ = viper.BindPFlag("check-po--report-typos", v.cmd.Flags().Lookup("report-typos"))
-	_ = viper.BindPFlag("check-po--check-file-locations", v.cmd.Flags().Lookup("check-file-locations"))
+	_ = viper.BindPFlag("check-po--report-file-locations", v.cmd.Flags().Lookup("report-file-locations"))
 
 	return v.cmd
 }

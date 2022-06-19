@@ -163,5 +163,6 @@ func CmdUpdate(fileName string) bool {
 		log.Errorf(`fail to update "%s": %s`, poFile, err)
 		return false
 	}
+	viper.Set("check--report-file-locations", "none")
 	return CheckPoFile(locale, poFile)
 }

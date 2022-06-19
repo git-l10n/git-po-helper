@@ -15,7 +15,7 @@ func checkPoNoFileLocations(poFile string) ([]string, bool) {
 		err  error
 		errs []string
 	)
-	if !flag.CheckFileLocations() {
+	if flag.ReportFileLocations() == flag.ReportIssueNone {
 		return nil, true
 	}
 
@@ -53,7 +53,7 @@ func checkPoNoFileLocations(poFile string) ([]string, bool) {
 				"",
 				"    the [Updating a \"XX.po\" file] section in \"po/README.md\"",
 			)
-			return errs, false
+			return errs, flag.ReportFileLocations() == flag.ReportIssueWarn
 		}
 	}
 	return nil, true

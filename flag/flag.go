@@ -65,10 +65,30 @@ func ReportTypos() int {
 	}
 }
 
-// CheckFileLocations returns option "--check-file-locations".
-func CheckFileLocations() bool {
-	return GitHubActionEvent() != "" ||
-		viper.GetBool("check-po--check-file-locations")
+// ReportFileLocations returns way to display typos (none, warn, error).
+func ReportFileLocations() int {
+	var value = ""
+
+	if GitHubActionEvent() != "" {
+		return ReportIssueError
+	}
+	if v := viper.GetString("check--report-file-locations"); v != "" {
+		value = v
+	} else if v := viper.GetString("check-po--report-file-locations"); v != "" {
+		value = v
+	} else if v := viper.GetString("check-commits--report-file-locations"); v != "" {
+		value = v
+	}
+	switch value {
+	case "none":
+		return ReportIssueNone
+	case "warn":
+		return ReportIssueWarn
+	case "error":
+		fallthrough
+	default:
+		return ReportIssueError
+	}
 }
 
 const (

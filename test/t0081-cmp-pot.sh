@@ -22,7 +22,7 @@ EOF
 
 test_expect_success "zh_CN.po: all translated" '
 	git -C workdir $HELPER check-po  --pot-file=po/git.pot \
-		po/zh_CN.po >out 2>&1 &&
+		--report-file-locations=none po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -54,7 +54,7 @@ EOF
 
 test_expect_success "ko.po: has untranslated strings" '
 	test_must_fail git -C workdir $HELPER check-po --pot-file=po/git.pot \
-		po/ko.po >out 2>&1 &&
+		--report-file-locations=none po/ko.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

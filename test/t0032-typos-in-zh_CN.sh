@@ -70,7 +70,7 @@ level=warning msg="[po/zh_CN.po]"
 EOF
 
 test_expect_success "check typos in zh_CN.po" '
-	git -C workdir $HELPER check-po zh_CN >out 2>&1 &&
+	git -C workdir $HELPER check-po --report-file-locations=none zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -78,12 +78,22 @@ test_expect_success "check typos in zh_CN.po" '
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po]    5282 translated messages."
+------------------------------------------------------------------------------
+level=info msg="[po/zh_CN.po]    Found file-location comments in po file. By submitting a location-less"
+level=info msg="[po/zh_CN.po]    \"po/XX.po\" file, the size of the Git repository can be greatly reduced."
+level=info msg="[po/zh_CN.po]    See the discussion below:"
+level=info msg="[po/zh_CN.po]"
+level=info msg="[po/zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/"
+level=info msg="[po/zh_CN.po]"
+level=info msg="[po/zh_CN.po]    As how to commit a location-less \"po/XX.po\" file, See:"
+level=info msg="[po/zh_CN.po]"
+level=info msg="[po/zh_CN.po]     the [Updating a \"XX.po\" file] section in \"po/README.md\""
 EOF
 
 test_expect_success "check typos in master branch" '
 	git -C workdir checkout master &&
 	git -C workdir $HELPER \
-		check-po --report-typos=error zh_CN >out 2>&1 &&
+		check-po --report-typos=error --report-file-locations=warn zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

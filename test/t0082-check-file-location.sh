@@ -32,9 +32,16 @@ level=error msg="[po/zh_CN.po]     the [Updating a \"XX.po\" file] section in \"
 ERROR: fail to execute "git-po-helper check-po"
 EOF
 
-test_expect_success "zh_CN.po: has file-locations" '
+test_expect_success "zh_CN.po: has file-locations (--report-file-location=error)" '
 	test_must_fail git -C workdir $HELPER check-po \
-		--check-file-locations po/zh_CN.po >out 2>&1 &&
+		--report-file-locations=error po/zh_CN.po >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success "zh_CN.po: has file-locations (no --report-file-location option)" '
+	test_must_fail git -C workdir $HELPER check-po \
+		po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -51,7 +58,7 @@ test_expect_success "zh_CN.po: remove locations" '
 		mv po/zh_CN.poX po/zh_CN.po
 	) &&
 	git -C workdir $HELPER check-po \
-		--check-file-locations po/zh_CN.po >out 2>&1 &&
+		po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -63,7 +70,7 @@ test_expect_success "zh_CN.po: remove both files and locations" '
 		mv po/zh_CN.poX po/zh_CN.po
 	) &&
 	git -C workdir $HELPER check-po \
-		--check-file-locations po/zh_CN.po >out 2>&1 &&
+		po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

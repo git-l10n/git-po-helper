@@ -4,7 +4,7 @@ test_description="check typos in vi.po"
 
 . ./lib/sharness.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=no --report-typos=warn"
+HELPER="po-helper --no-special-gettext-versions --pot-file=no --report-typos=warn --report-file-locations=none"
 
 test_expect_success "checkout po-2.31.1" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&

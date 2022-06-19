@@ -67,7 +67,7 @@ EOF
 
 test_expect_success "show hints and errors for gettext 014" '
 	test_must_fail git -c gettext.useMultipleVersions=1 -C workdir \
-		$HELPER check-po fr >out 2>&1 &&
+		$HELPER check-po --report-file-locations=none fr >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

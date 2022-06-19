@@ -37,10 +37,14 @@ func (v *checkCommand) Command() *cobra.Command {
 	v.cmd.Flags().String("report-typos",
 		"",
 		"way to display typos (none, warn, error)")
+	v.cmd.Flags().String("report-file-locations",
+		"",
+		"way to report file-location issues (none, warn, error)")
 	_ = viper.BindPFlag("check--no-gpg", v.cmd.Flags().Lookup("no-gpg"))
 	_ = viper.BindPFlag("check--force", v.cmd.Flags().Lookup("force"))
 	_ = viper.BindPFlag("check--core", v.cmd.Flags().Lookup("core"))
 	_ = viper.BindPFlag("check--report-typos", v.cmd.Flags().Lookup("report-typos"))
+	_ = viper.BindPFlag("check--report-file-locations", v.cmd.Flags().Lookup("report-file-locations"))
 
 	return v.cmd
 }

@@ -64,7 +64,7 @@ ERROR: fail to execute "git-po-helper check-po"
 EOF
 
 test_expect_success "show gettext 0.14 incompatible errors" '
-	test_must_fail git -C workdir $HELPER check-po fr >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER check-po --report-file-locations=none fr >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

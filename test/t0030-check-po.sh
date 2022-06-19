@@ -55,7 +55,7 @@ test_expect_success "bad syntax of zh_CN.po" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz""
 	EOF
 
-	test_must_fail git -C workdir $HELPER check-po zh_CN >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER check-po --report-file-locations=none zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	test_cmp expect actual
@@ -99,7 +99,7 @@ level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messag
 EOF
 
 test_expect_success "check update of zh_CN.po" '
-	git -C workdir $HELPER check-po zh_CN >out 2>&1 &&
+	git -C workdir $HELPER check-po --report-file-locations=none zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
 		head -3 >actual &&
 	test_cmp expect actual
@@ -121,7 +121,7 @@ level=warning msg="[po/zh_CN.po]"
 EOF
 
 test_expect_success "check core update of zh_CN.po" '
-	git -C workdir $HELPER check-po --core zh_CN >out 2>&1 &&
+	git -C workdir $HELPER check-po --report-file-locations=none --core zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

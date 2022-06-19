@@ -33,9 +33,13 @@ func (v *checkCommitsCommand) Command() *cobra.Command {
 	v.cmd.Flags().String("report-typos",
 		"",
 		"way to display typos (none, warn, error)")
+	v.cmd.Flags().String("report-file-locations",
+		"",
+		"way to report file-location issues (none, warn, error)")
 	_ = viper.BindPFlag("check-commits--no-gpg", v.cmd.Flags().Lookup("no-gpg"))
 	_ = viper.BindPFlag("check-commits--force", v.cmd.Flags().Lookup("force"))
 	_ = viper.BindPFlag("check-commits--report-typos", v.cmd.Flags().Lookup("report-typos"))
+	_ = viper.BindPFlag("check-commits--report-file-locations", v.cmd.Flags().Lookup("report-file-locations"))
 	return v.cmd
 }
 
