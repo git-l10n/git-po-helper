@@ -78,7 +78,6 @@ test_expect_success "creater partial clone" '
 '
 
 cat >expect <<-\EOF
-level=info msg="successfully fetched 1 missing blob(s) in a batch from partial clone"
 ------------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po@rev]    2 translated messages."
 ------------------------------------------------------------------------------
@@ -142,7 +141,6 @@ test_expect_success "update po/TEAMS" '
 '
 
 cat >expect <<-\EOF
-level=info msg="successfully fetched 1 missing blob(s) in a batch from partial clone"
 ------------------------------------------------------------------------------
 level=error msg="commit <OID>: bad syntax at po/TEAMS:79 (unknown key \"Respository\"): Respository:    https://github.com/l10n-tw/git-po"
 level=error msg="commit <OID>: bad syntax at po/TEAMS:80 (need two tabs between k/v): Leader:     Yi-Jyun Pan <pan93412 AT gmail.com>"
