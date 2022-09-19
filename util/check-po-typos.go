@@ -3,7 +3,6 @@ package util
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
@@ -26,7 +25,7 @@ func checkEntriesInPoFile(locale, poFile string, fn CheckPoEntryFunc) (msgs []st
 	ok = true
 
 	// Compile mo-file from po-file
-	moFile, err := ioutil.TempFile("", "mofile")
+	moFile, err := os.CreateTemp("", "mofile")
 	if err != nil {
 		msgs = append(msgs, err.Error())
 		return

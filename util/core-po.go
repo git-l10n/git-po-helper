@@ -3,7 +3,6 @@ package util
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -51,7 +50,7 @@ func CheckCorePoFile(locale string) bool {
 		return false
 	}
 
-	fout, err := ioutil.TempFile("", "tmp-core-po")
+	fout, err := os.CreateTemp("", "tmp-core-po")
 	if err != nil {
 		errs = append(errs,
 			fmt.Sprintf("fail to create tmpfile: %s", err))

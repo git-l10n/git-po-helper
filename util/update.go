@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,7 +28,7 @@ func UpdatePotFile() (string, bool) {
 	// Try to download pot file.
 	if opt == flag.PotFileFlagDownload {
 		showProgress := flag.GitHubActionEvent() == ""
-		tmpfile, err := ioutil.TempFile("", "git.pot-*")
+		tmpfile, err := os.CreateTemp("", "git.pot-*")
 		if err != nil {
 			log.Error(err)
 			return "", false
