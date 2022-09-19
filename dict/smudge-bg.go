@@ -30,6 +30,7 @@ func init() {
 		{"неправилен параметър към опцията „--update“", "bad value for update parameter"},
 		{"включва опцията „--bare“ за голо хранилище", "implies bare"},
 		{"„--hard“/„--mixed“/„--soft“", "--{hard,mixed,soft}"},
+		{"„%s“ към опцията „--ancestry-path", "ancestry-path argument %s"},
 
 		// Upstream should add "--" ?
 		{"не поддържа опцията „--force“", "does not support 'force'"},
