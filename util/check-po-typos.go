@@ -193,12 +193,16 @@ func checkTyposInPoEntry(locale, msgID, msgStr string) ([]string, bool) {
 		return nil, true
 	}
 
-	if smudgeMap, ok := dict.SmudgeMaps[locale]; ok {
-		for k, v := range smudgeMap {
-			if re, ok := k.(*regexp.Regexp); ok {
-				msgStr = re.ReplaceAllString(msgStr, v)
+	if smudgeMaps, ok := dict.SmudgeMaps[locale]; ok {
+		for _, smudgeMap := range smudgeMaps {
+			if re, ok := smudgeMap.Pattern.(*regexp.Regexp); ok {
+				msgStr = re.ReplaceAllString(msgStr, smudgeMap.Replace)
 			} else {
-				msgStr = strings.Replace(msgStr, k.(string), v, -1)
+				msgStr = strings.Replace(
+					msgStr,
+					smudgeMap.Pattern.(string),
+					smudgeMap.Replace,
+					-1)
 			}
 		}
 	}

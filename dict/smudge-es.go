@@ -1,9 +1,9 @@
 package dict
 
 func init() {
-	SmudgeMaps["es"] = map[interface{}]string{
-		"p.e.": "e.g.",
+	SmudgeMaps["es"] = []SmudgeMap{
+		{"p.e.", "e.g."},
 
-		"--dirstat=archivos": "--dirstat=files",
+		{"--dirstat=archivos", "--dirstat=files"},
 	}
 }

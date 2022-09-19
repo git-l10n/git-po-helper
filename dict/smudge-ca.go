@@ -1,7 +1,7 @@
 package dict
 
 func init() {
-	SmudgeMaps["ca"] = map[interface{}]string{
-		"usuari@domini.com": "you@example.com",
+	SmudgeMaps["ca"] = []SmudgeMap{
+		{"usuari@domini.com", "you@example.com"},
 	}
 }
