@@ -114,15 +114,6 @@ cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=error msg="[po/sv.po]    5282 translated messages."
 level=error msg="[po/sv.po]    too many obsolete entries (768) in comments, please remove them"
-------------------------------------------------------------------------------
-level=error msg="[po/sv.po]    mismatch variable names: git-krokar"
-level=error msg="[po/sv.po]    >> msgid: Run git hooks"
-level=error msg="[po/sv.po]    >> msgstr: Kör git-krokar"
-level=error msg="[po/sv.po]"
-level=error msg="[po/sv.po]    mismatch variable names: --buffer"
-level=error msg="[po/sv.po]    >> msgid: flush is only for --buffer mode"
-level=error msg="[po/sv.po]    >> msgstr: flush är endast till för --buffer-läge"
-level=error msg="[po/sv.po]"
 
 ERROR: fail to execute "git-po-helper check-po"
 EOF

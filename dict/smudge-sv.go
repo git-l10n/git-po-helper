@@ -13,6 +13,8 @@ func init() {
 		{"git-katalog", "git dir"},
 		{"git-huvudet", "git header"},
 		{"git-process", "git process"},
+		{"-läge", " mode"},
+		{"-krokar", " hooks"},
 		{"git-arkivversion", "git repo version"},
 		{regexp.MustCompile(`\bgit-attribut\b`), "git attribute"},
 		{regexp.MustCompile(`\bgit-(fil|filen)\b`), "git file"},
