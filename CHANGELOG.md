@@ -2,6 +2,61 @@
 
 Changes of git-po-helper.
 
+## 0.6.4 (2022-09-27)
+
+* dict: sv: new smudge entry for git 2.38
+* refactor: ioutil package is obsolete for go 1.18
+* dict: bg: new smudge entry for git 2.38
+* dict: use ordered list for SmudgeMaps
+* Add opiton --report-file-location=<none,warn,error>
+* refactor: new option --report-typos=<none,warn,error>
+* Show output of partial clone in debug level
+* test: add test cases for "git-po-helper check-pot"
+* bugfix: more diff entries should be ignored in output
+* CI: lower version for golang is 1.16 now
+* chekc-pot: find unmatched config variable in put file
+* check-pot: show config variable in manpage or po/git.pot
+* refactor: check-po: refactor to reuse scanning of po file
+* repository: not panic if not in git.git repository
+* Change repository name which holding pot file to pot-changes
+* check-commits: do not check removed files
+* Do not allow too many obsolete entries in comments
+* Warn if there are untranslated, fuzzy or obsolete strings
+* Rename option "--check-pot-file" to "--pot-file"
+* When update XX.po, get latest pot file by downloading
+* Quit if fail to download pot file
+* refactor: create pot file using UpdatePotFile()
+* Instead of using tmpfile for PO_FILE, use po/XX.po
+* refactor: show prompt even for empty message
+* Format output for core pot checking
+* Tweak message for removing file-locations
+* Tweak message for missing translation
+* Do not show download progress in github actions
+* TEAMS: show filename of po/TEAMS in error messages
+* Documentation: update README and s@po-core/@po/@
+* Add horizontal lines before report errors
+* Fix go 1.4 incompatible issue: use ioutil.ReadAll
+* Update po/git.pot and check missing translations
+* check-commits: new checks for github-action
+* check-po: new option "--check-file-location" to check no locations
+* update: call make po-update if available
+* init: call make po-init if available
+* Show horizontal lines to separate groups of messages
+* test: run test on git 2.36.0
+* refactor: check commit changes using "diff-tree -z"
+* refactor: return array of string instead errors
+* refactor: add new helper functions to show error messages
+* Makefile: find source files using git-ls-files
+* Makefile: build before test
+* contrib: update drivers for po diff and clean
+* github actions: only run golint for go 1.17
+* refactor: fix issues found by staticcheck
+* contrib: filter to commit po files without location lines
+* contrib: use msgcat for diff driver
+* dict: remove typos section for bg as it is handled
+* diff: ignore msgcmp return error
+
+
 ## 0.4.6 (2021-12-16)
 
 * go mod: upgrade goconfig to 1.1.1
