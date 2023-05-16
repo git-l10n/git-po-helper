@@ -4,7 +4,15 @@ func init() {
 	SmudgeMaps["bg"] = []SmudgeMap{
 		{"———", "---"},
 
-		// Not keep symbols "<" and ">", the reason is ?
+		// Not keep symbols "<" and ">" - the reason provided by the translator is:
+		// Bulgarian uses different alphabet than English, thus it is obvious that
+		// things in Cyrillic that are uppercase are to be substituted, so no need for <>.
+		// Omitting the <> makes the strings shorter which is good, esp. for narrower terminals.
+		// <> are dangerous when pasted on the command line so it is better to omit them.
+		// In some messages they make them hard to read, ex.:
+		//   commit-graph generation for commit %s is %<PRIuMAX> < %<PRIuMAX>
+		//   git pack-objects [<options>] <base-name> [< <ref-list> | < <object-list>]
+		//   git mailinfo [<options>] <msg> <patch> < mail >info
 		{"РЕГУЛЯРЕН_ИЗРАЗ", "<РЕГУЛЯРЕН_ИЗРАЗ>"},
 		{"ДИРЕКТОРИЯ", "<ДИРЕКТОРИЯ>"},
 		{"ПАКЕТЕН_ФАЙЛ", "<ПАКЕТЕН_ФАЙЛ>"},
@@ -17,6 +25,7 @@ func init() {
 		{"--tool=ПРОГРАМА", "--tool=<ПРОГРАМА>"},
 		{"--schedule=ЧЕСТОТА", "--schedule=<ЧЕСТОТА>"},
 		{"trailers:key=ЕПИЛОГ", "trailers:key=<ЕПИЛОГ>"},
+		{"ПОДАВАНЕ", "<committish>"},
 
 		// Upstream may need to add "<>" around "files"
 		{"--dirstat=ФАЙЛОВЕ", "--dirstat=files"},
@@ -35,6 +44,7 @@ func init() {
 		// Upstream should add "--" ?
 		{"не поддържа опцията „--force“", "does not support 'force'"},
 		{"неправилна стойност за „--mirror“: %s", "unknown mirror argument: %s"},
+		{"Неправилен режим за „--rebase-merges“: %s", "Unknown rebase-merges mode: %s"},
 
 		// Add or lost "git" before subcommand
 		{"Командата „git pack-objects“", "spawn pack-objects"},
