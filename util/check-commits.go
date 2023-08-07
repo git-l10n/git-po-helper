@@ -187,7 +187,7 @@ func (v *commitLog) checkCommitDate(date string) error {
 
 func (v *commitLog) checkAuthorCommitter() bool {
 	var (
-		re                = regexp.MustCompile(`^(.+ <.+@.+\..+>) ([0-9]+)( ([+-][0-9]+))?$`)
+		re                = regexp.MustCompile(`^(\S.+ <\S+@.+\.\S+>) ([0-9]+)( ([+-][0-9]+))?$`)
 		m                 []string
 		value             string
 		author, committer string
