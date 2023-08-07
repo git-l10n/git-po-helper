@@ -60,7 +60,7 @@ test_expect_success "new commit with unsupported hidden meta fields" '
 		test_tick &&
 		git commit -F .git/commit-message &&
 		git cat-file commit HEAD >.git/commit-meta &&
-		perl -pe "s#^(parent .*)#\1\nnote: i am a hacker#;
+		perl -pe "s#^(committer .*)#\1\nnote: i am a hacker#;
 		          s#(^committer .*)#\1\nnote: happy coding#" \
 		     <.git/commit-meta >.git/commit-hacked-meta &&
 
@@ -73,8 +73,8 @@ test_expect_success "new commit with unsupported hidden meta fields" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
-	level=error msg="commit <OID>: unknown commit header: note: i am a hacker"
 	level=error msg="commit <OID>: unknown commit header: note: happy coding"
+	level=error msg="commit <OID>: unknown commit header: note: i am a hacker"
 	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 	level=info msg="checking commits: 0 passed, 1 failed."
@@ -182,7 +182,7 @@ test_expect_success "new commit with bad email address" '
 		git commit -F .git/commit-message &&
 		git cat-file commit HEAD >.git/commit-meta &&
 		sed -e "s/^author .*/author Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800/" \
-			-e "s/^committer .*/committer <worldhello.net@gmail.com> 1112911993 +0800/" \
+			-e "s/^committer .*/committer    <worldhello.net@gmail.com> 1112911993 +0800/" \
 			<.git/commit-meta >.git/commit-hacked-meta &&
 
 		cid=$(git hash-object -w -t commit .git/commit-hacked-meta) &&
