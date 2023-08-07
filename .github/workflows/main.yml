@@ -21,10 +21,10 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - uses: actions/checkout@v2 # https://github.com/actions/checkout
+      - uses: actions/checkout@v3 # https://github.com/actions/checkout
         with:
           fetch-depth: '0' # 0 indicates all history for all branches and tags.
-      - uses: actions/setup-go@v2 # See https://github.com/actions/setup-go
+      - uses: actions/setup-go@v4 # See https://github.com/actions/setup-go
         with:
           stable: 'false'
           go-version: ${{ matrix.go }}
@@ -67,10 +67,10 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - uses: actions/checkout@v2 # https://github.com/actions/checkout
+      - uses: actions/checkout@v3 # https://github.com/actions/checkout
         with:
           fetch-depth: '0' # 0 indicates all history for all branches and tags.
-      - uses: actions/setup-go@v2 # See https://github.com/actions/setup-go
+      - uses: actions/setup-go@v4 # See https://github.com/actions/setup-go
         with:
           stable: 'false'
           go-version: ${{ matrix.go }}
