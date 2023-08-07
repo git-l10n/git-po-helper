@@ -2,6 +2,13 @@
 
 Changes of git-po-helper.
 
+## 0.6.4 (2023-08-07)
+
+* test: no illegal fields among core commit metadata
+* util: username must have at least one non-space character
+* Download pot from master branch instead of main
+
+
 ## 0.6.4 (2022-09-27)
 
 * dict: sv: new smudge entry for git 2.38
