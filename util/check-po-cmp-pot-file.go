@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	PotFileURL = "https://github.com/git-l10n/pot-changes/raw/pot/main/po/git.pot"
+	PotFileURL = "https://github.com/git-l10n/pot-changes/raw/pot/master/po/git.pot"
 )
 
 func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
