@@ -2,7 +2,7 @@
 
 test_description="test git-po-helper init"
 
-. ./lib/sharness.sh
+. ./lib/test-lib.sh
 
 HELPER="po-helper --no-special-gettext-versions"
 

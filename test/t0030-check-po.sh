@@ -2,7 +2,7 @@
 
 test_description="test git-po-helper update"
 
-. ./lib/sharness.sh
+. ./lib/test-lib.sh
 
 HELPER="po-helper --no-special-gettext-versions --pot-file=po/git.pot"
 

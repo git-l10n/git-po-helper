@@ -3,7 +3,7 @@
 PO_HELPER_TEST_REPOSITORY_VERSION=7
 
 # Create test repository in .repository
-PO_HELPER_TEST_REPOSITORY="${SHARNESS_TEST_SRCDIR}/test-repository"
+PO_HELPER_TEST_REPOSITORY="${TEST_DIRECTORY}/test-repository"
 PO_HELPER_TEST_REPOSITORY_VERSION_FILE="${PO_HELPER_TEST_REPOSITORY}/.VERSION"
 
 case $(uname) in
@@ -46,20 +46,20 @@ create_test_repository () {
 	# Download git.tgz
 	for gitver in 2.31.1 2.36.0
 	do
-	if test ! -f "${SHARNESS_TEST_SRCDIR}/git-$gitver.tar"
+	if test ! -f "${TEST_DIRECTORY}/git-$gitver.tar"
 	then
-		wget -O "${SHARNESS_TEST_SRCDIR}/git-$gitver.tar.gz" \
+		wget -O "${TEST_DIRECTORY}/git-$gitver.tar.gz" \
 			--progress=dot:mega \
 			https://mirrors.edge.kernel.org/pub/software/scm/git/git-$gitver.tar.gz &&
-		gunzip "${SHARNESS_TEST_SRCDIR}/git-$gitver.tar.gz"
+		gunzip "${TEST_DIRECTORY}/git-$gitver.tar.gz"
 		if test $? -ne 0
 		then
 			echo >&2 "ERROR: fail to download or unzip git-$gitver.tar.gz"
 			return 1
 		fi
-		wget -O "${SHARNESS_TEST_SRCDIR}/git-$gitver.tar.sign" \
+		wget -O "${TEST_DIRECTORY}/git-$gitver.tar.sign" \
 			https://mirrors.edge.kernel.org/pub/software/scm/git/git-$gitver.tar.sign &&
-		gpg --verify "${SHARNESS_TEST_SRCDIR}/git-$gitver.tar.sign"
+		gpg --verify "${TEST_DIRECTORY}/git-$gitver.tar.sign"
 		if test $? -ne 0
 		then
 			echo >&2 "WARNING: cannot verify the signature of the download git package"

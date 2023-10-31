@@ -2,7 +2,7 @@
 
 test_description="compare po/git.pot"
 
-. ./lib/sharness.sh
+. ./lib/test-lib.sh
 
 HELPER="po-helper --no-special-gettext-versions"
 
