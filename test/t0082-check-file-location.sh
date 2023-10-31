@@ -2,7 +2,7 @@
 
 test_description="check file-locations in po file"
 
-. ./lib/sharness.sh
+. ./lib/test-lib.sh
 
 HELPER="po-helper --no-special-gettext-versions --pot-file=no"
 

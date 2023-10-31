@@ -2,7 +2,7 @@
 
 test_description="show hints for missing gettext 0.14"
 
-. ./lib/sharness.sh
+. ./lib/test-lib.sh
 
 HELPER="po-helper --no-special-gettext-versions --pot-file=no"
 

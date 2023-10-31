@@ -2,7 +2,7 @@
 
 test_description="show gettext 0.14 incompatible errors"
 
-. ./lib/sharness.sh
+. ./lib/test-lib.sh
 
 HELPER="po-helper --no-special-gettext-versions --pot-file=no"
 

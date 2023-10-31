@@ -2,7 +2,7 @@
 
 test_description="test git-po-helper check-commits with typos"
 
-. ./lib/sharness.sh
+. ./lib/test-lib.sh
 
 HELPER="po-helper --no-special-gettext-versions --pot-file=no --report-typos=warn"
 

@@ -2,7 +2,7 @@
 
 test_description="check output for --github-action-event"
 
-. ./lib/sharness.sh
+. ./lib/test-lib.sh
 
 HELPER="po-helper --github-action-event=pull_request_target --pot-file=po/git.pot"
 
