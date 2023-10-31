@@ -71,7 +71,7 @@ test_expect_success "creater partial clone" '
 	ls partial-clone.git/objects/pack/*.promisor >out &&
 	make_user_friendly_and_stable_output <out |
 		sed -e "s/pack-[0-9a-f]*.promisor/pack-<OID>.promisor/" >actual &&
-	cat >expect <<-EOF
+	cat >expect <<-EOF &&
 	partial-clone.git/objects/pack/pack-<OID>.promisor
 	EOF
 	test_cmp actual expect
