@@ -796,7 +796,7 @@ test_expect_success "gbk characters in commit log with proper encoding" '
 
 		Signed-off-by: Author <author@example.com>
 		EOF
-		iconv -f UTF-8 -t GBK >.git/commit-message 
+		iconv -f UTF-8 -t GBK >.git/commit-message &&
 		test_tick &&
 		git -c i18n.commitencoding=GBK commit --allow-empty -F .git/commit-message &&
 		git cat-file commit HEAD >.git/commit-meta
@@ -825,7 +825,7 @@ test_expect_success "gbk characters in commit log with wrong encoding" '
 
 		Signed-off-by: Author <author@example.com>
 		EOF
-		iconv -f UTF-8 -t GBK >.git/commit-message 
+		iconv -f UTF-8 -t GBK >.git/commit-message &&
 		test_tick &&
 		git -c i18n.commitencoding=iso-8859-6 commit --allow-empty -F .git/commit-message &&
 		git cat-file commit HEAD >.git/commit-meta
