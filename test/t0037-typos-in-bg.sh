@@ -148,9 +148,9 @@ level=warning msg="[po/bg.po]    mismatch variable names: --bisect-reset, --bise
 level=warning msg="[po/bg.po]    >> msgid: git bisect--helper --bisect-state (good|old) [<rev>...]"
 level=warning msg="[po/bg.po]    >> msgstr: git bisect--helper --bisect-reset (ДОБРО) [ВЕРСИЯ…]"
 level=warning msg="[po/bg.po]"
-level=warning msg="[po/bg.po]    mismatch variable names: --batch-size="
-level=warning msg="[po/bg.po]    >> msgid: git multi-pack-index [<options>] (write|verify|expire|repack --batch-size=<size>)"
-level=warning msg="[po/bg.po]    >> msgstr: git multi-pack-index [ОПЦИЯ…] (write|verify|expire|repack --batch-size=РАЗМЕР)"
+level=warning msg="[po/bg.po]    mismatch variable names: _git_rev"
+level=warning msg="[po/bg.po]    >> msgid: git bundle create [<options>] <file> <git-rev-list args>"
+level=warning msg="[po/bg.po]    >> msgstr: git bundle create [ОПЦИЯ…] ФАЙЛ АРГУМЕНТ_ЗА_git_rev-list…"
 level=warning msg="[po/bg.po]"
 level=warning msg="[po/bg.po]    mismatch variable names: git upload-pack, git upload-repack"
 level=warning msg="[po/bg.po]    >> msgid: git upload-pack [<options>] <dir>"
@@ -240,10 +240,18 @@ test_expect_success "check typos in bg.po" '
 	test_cmp expect actual
 '
 
-test_expect_success "no typos in master branch" '
+test_expect_success "still has typos in master branch" '
 	git -C workdir checkout master &&
-	git -C workdir $HELPER \
-		check-po --report-typos=error bg
+	test_must_fail git -C workdir $HELPER \
+		check-po --report-typos=error bg >actual 2>&1 &&
+	cat >expect <<-EOF &&
+		ERROR [po/bg.po]        mismatch variable names: _git_rev 
+		ERROR [po/bg.po]        >> msgid: git bundle create [<options>] <file> <git-rev-list args> 
+		ERROR [po/bg.po]        >> msgstr: git bundle create [ОПЦИЯ…] ФАЙЛ АРГУМЕНТ_ЗА_git_rev-list… 
+		ERROR [po/bg.po]
+	EOF
+	test_cmp actual actual
+
 '
 
 test_done

@@ -98,14 +98,31 @@ func checkTyposInPoFile(locale, poFile string) ([]string, bool) {
 	return checkEntriesInPoFile(locale, poFile, checkTyposInPoEntry)
 }
 
-func isUnicodeFragment(str, substr string) (bool, error) {
+/*
+ * Some languages do not use space character to separate words, so
+ * when grep keep words (ascii characters) from the translated message,
+ * we need to make sure the extracted message is a proper segment of the
+ * original message. E.g. in vi (Vietnamese) translation, has an entry
+ * like below:
+ *
+ *     msgid: create/reset and checkout a branch
+ *     msgstr: tạo/đặt_lại và checkout một nhánh"
+ *
+ * When searching keep words in msgstr, we may get a variable like
+ * keep word "t_l", but by checking boundary of the word (đặt_lại),
+ * we can exclude this false positive matching result.
+ *
+ * But for bg (Bulgarian) translations, the "<>" around the placeholders
+ * are removed, we should turn off this check for bg translations.
+ */
+func isCorrectSentenceSegmentation(str, substr string) error {
 	var (
 		r    rune
 		size int
 	)
 	idx := strings.Index(str, substr)
 	if idx < 0 {
-		return false, fmt.Errorf("substr %s not in %s", substr, str)
+		return fmt.Errorf("substr %s not in %s", substr, str)
 	}
 	head := str[0:idx]
 	tail := str[idx+len(substr):]
@@ -113,7 +130,7 @@ func isUnicodeFragment(str, substr string) (bool, error) {
 		r, size = utf8.DecodeLastRuneInString(head)
 		if size > 1 {
 			if !unicode.IsPunct(r) && !unicode.IsSymbol(r) && !unicode.IsSpace(r) {
-				return true, nil
+				return fmt.Errorf("find leading unicode frag: %v", r)
 			}
 		}
 	}
@@ -121,14 +138,14 @@ func isUnicodeFragment(str, substr string) (bool, error) {
 		r, size = utf8.DecodeRuneInString(tail)
 		if size > 1 {
 			if !unicode.IsPunct(r) && !unicode.IsSymbol(r) && !unicode.IsSpace(r) {
-				return true, nil
+				return fmt.Errorf("find trailing unicode frag: %v", r)
 			}
 		}
 	}
-	return false, nil
+	return nil
 }
 
-func findMismatchedVariables(src, target string) []string {
+func findMismatchedVariables(locale, src, target string) []string {
 	var (
 		srcMap     = make(map[string]bool)
 		targetMap  = make(map[string]bool)
@@ -144,12 +161,23 @@ func findMismatchedVariables(src, target string) []string {
 	}
 	for _, m := range dict.KeepWordsPattern.FindAllStringSubmatch(target, -1) {
 		key := m[1]
-		if frag, err := isUnicodeFragment(target, key); err == nil && !frag {
-			if strings.HasPrefix(key, "${") && strings.HasSuffix(key, "}") {
-				key = "$" + key[2:len(key)-1]
+		switch locale {
+		case "bg":
+			// Bulgarian (bg) translations removed "<>" boundary characters,
+			// so we should not check boundary characters.
+		case "vi", "sv":
+			// For vi (Vietnamese), sv (Swedish) translations, check the
+			// boundary characters for false positive matches.
+			fallthrough
+		default:
+			if err := isCorrectSentenceSegmentation(target, key); err != nil {
+				continue
 			}
-			targetMap[key] = false
 		}
+		if strings.HasPrefix(key, "${") && strings.HasSuffix(key, "}") {
+			key = "$" + key[2:len(key)-1]
+		}
+		targetMap[key] = false
 	}
 
 	for key := range targetMap {
@@ -215,7 +243,7 @@ func checkTyposInPoEntry(locale, msgID, msgStr string) ([]string, bool) {
 		}
 	}
 
-	mismatched = findMismatchedVariables(msgID, msgStr)
+	mismatched = findMismatchedVariables(locale, msgID, msgStr)
 	if len(mismatched) > 0 {
 		msgs = append(msgs,
 			fmt.Sprintf("mismatch variable names: %s",
