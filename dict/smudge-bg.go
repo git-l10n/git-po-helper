@@ -1,111 +1,13 @@
 package dict
 
+import "regexp"
+
 func init() {
 	SmudgeMaps["bg"] = []SmudgeMap{
-		{
-			Pattern: "———",
-			Replace: "---",
-		},
-
-		// Not keep symbols "<" and ">", the reason is ?
-		{
-			Pattern: "РЕГУЛЯРЕН_ИЗРАЗ",
-			Replace: "<РЕГУЛЯРЕН_ИЗРАЗ>",
-		},
-		{
-			Pattern: "ДИРЕКТОРИЯ",
-			Replace: "<ДИРЕКТОРИЯ>",
-		},
-		{
-			Pattern: "ПАКЕТЕН_ФАЙЛ",
-			Replace: "<ПАКЕТЕН_ФАЙЛ>",
-		},
-		{
-			Pattern: "align:ШИРОЧИНА,ПОЗИЦИЯ",
-			Replace: "align:<ШИРОЧИНА>,<ПОЗИЦИЯ>",
-		},
-		{
-			Pattern: "color:ЦВЯТ",
-			Replace: "color:<ЦВЯТ>",
-		},
-		{
-			Pattern: "--config=НАСТРОЙКА",
-			Replace: "--config=<НАСТРОЙКА>",
-		},
-		{
-			Pattern: "--prefix=ПРЕФИКС",
-			Replace: "--prefix=<ПРЕФИКС>",
-		},
-		{
-			Pattern: "--index-output=ФАЙЛ",
-			Replace: "--index-output=<ФАЙЛ>",
-		},
-		{
-			Pattern: "--extcmd=КОМАНДА",
-			Replace: "--extcmd=<КОМАНДА>",
-		},
-		{
-			Pattern: "--tool=ПРОГРАМА",
-			Replace: "--tool=<ПРОГРАМА>",
-		},
-		{
-			Pattern: "--schedule=ЧЕСТОТА",
-			Replace: "--schedule=<ЧЕСТОТА>",
-		},
-		{
-			Pattern: "trailers:key=ЕПИЛОГ",
-			Replace: "trailers:key=<ЕПИЛОГ>",
-		},
-
-		// Upstream may need to add "<>" around "files"
-		{
-			Pattern: "--dirstat=ФАЙЛОВЕ",
-			Replace: "--dirstat=files",
-		},
-		{
-			Pattern: "--dirstat=ФАЙЛ…,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2,",
-			Replace: "--dirstat=files,param1,param2",
-		},
-
-		// Email address
-		{
-			Pattern: "ИМЕ@example.com",
-			Replace: "you@example.com",
-		},
-		{
-			Pattern: "пенчо@example.com",
-			Replace: "you@example.com",
-		},
-
-		// add or lost '--'
-		{
-			Pattern: "неправилен параметър към опцията „--update“",
-			Replace: "bad value for update parameter",
-		},
-		{
-			Pattern: "включва опцията „--bare“ за голо хранилище",
-			Replace: "implies bare",
-		},
-		{
-			Pattern: "„--hard“/„--mixed“/„--soft“",
-			Replace: "--{hard,mixed,soft}",
-		},
-		{
-			Pattern: "„%s“ към опцията „--ancestry-path",
-			Replace: "ancestry-path argument %s",
-		},
-
-		// Upstream should add "--" ?
-		{
-			Pattern: "не поддържа опцията „--force“",
-			Replace: "does not support 'force'",
-		},
-		{
-			Pattern: "неправилна стойност за „--mirror“: %s",
-			Replace: "unknown mirror argument: %s",
-		},
-
-		// Add or lost "git" before subcommand
+		/*
+		 * In bg translations, additional "git" command name is added before
+		 * subcommand, revert these changes before checking typos.
+		 */
 		{
 			Pattern: "Командата „git pack-objects“",
 			Replace: "spawn pack-objects",
@@ -131,7 +33,40 @@ func init() {
 			Replace: "    merge-base --fork-point",
 		},
 
-		// Quotes in bg
+		/*
+		 * In bg translations, add additional "--" characters before command option,
+		 * but the original msgid does not have.
+		 */
+		{
+			Pattern: "неправилен параметър към опцията „--update“",
+			Replace: "bad value for update parameter",
+		},
+		{
+			Pattern: "включва опцията „--bare“ за голо хранилище",
+			Replace: "implies bare",
+		},
+		{
+			Pattern: "„--hard“/„--mixed“/„--soft“",
+			Replace: "--{hard,mixed,soft}",
+		},
+		{
+			Pattern: "„%s“ към опцията „--ancestry-path",
+			Replace: "ancestry-path argument %s",
+		},
+		{
+			Pattern: "Неправилен режим за „--rebase-merges“: %s",
+			Replace: "Unknown rebase-merges mode: %s",
+		},
+		{
+			Pattern: "не поддържа опцията „--force“",
+			Replace: "does not support 'force'",
+		},
+		{
+			Pattern: "неправилна стойност за „--mirror“: %s",
+			Replace: "unknown mirror argument: %s",
+		},
+
+		// Revert changes in bg, such as quotes and dashes.
 		{
 			Pattern: "„",
 			Replace: "\"",
@@ -139,6 +74,80 @@ func init() {
 		{
 			Pattern: "“",
 			Replace: "\"",
+		},
+		{
+			Pattern: "———",
+			Replace: "---",
+		},
+
+		// Revert translated email address
+		{
+			Pattern: "ИМЕ@example.com",
+			Replace: "you@example.com",
+		},
+		{
+			Pattern: "пенчо@example.com",
+			Replace: "you@example.com",
+		},
+
+		/*
+		 * The <place-holder> in format string was translated without "<>", e.g.:
+		 *
+		 *     msgid "expected format: %%(color:<color>)"
+		 *     msgstr "очакван формат: %%(color:ЦВЯТ)"
+		 *
+		 *     msgid "expected format: %%(align:<width>,<position>)"
+		 *     msgstr "очакван формат: %%(align:ШИРОЧИНА,ПОЗИЦИЯ)"
+		 *
+		 * After replaced according to patterns defined in GlobalSkipPatterns,
+		 * the result are follow:
+		 *
+		 *     msgid "expected format: %%(color:<...>)"
+		 *     msgstr "очакван формат: %%(color:ЦВЯТ)"
+		 *
+		 *     msgid "expected format: %%(align:<...>,<...>)"
+		 *     msgstr "очакван формат: %%(align:ШИРОЧИНА,ПОЗИЦИЯ)"
+		 *
+		 * In oder to check the format strings in above messages, we define
+		 * several smudge maps as below.
+		 */
+		{
+			Pattern: regexp.MustCompile(`(%%\([^\s\)]+?:([^\s\)]*?=)?).*?\)`),
+			Replace: "$1)",
+			Reverse: true,
+		},
+		{
+			Pattern: regexp.MustCompile(`(%%\([^\s\)]+?:([^\s\)]*?=)?).*?\)`),
+			Replace: "$1)",
+		},
+
+		/*
+		 * The <place-holder>s in command options were translated in bg without "<>", e.g.:
+		 *
+		 *     msgid "git restore [<options>] [--source=<branch>] <file>..."
+		 *     msgstr "git restore [ОПЦИЯ…] [--source=КЛОН] ФАЙЛ…"
+		 *
+		 * After replaced according to patterns defined in GlobalSkipPatterns,
+		 * the result are follow:
+		 *
+		 *     msgid "git restore [<...>] [--source=<...>] <file>..."
+		 *     msgstr "git restore [ОПЦИЯ…] [--source=КЛОН] ФАЙЛ…"
+		 *
+		 * We will get the keep words as follows from patten defined in KeepWordsPattern.
+		 *
+		 *     msgid:  --source=
+		 *     msgstr: --source=K
+		 *
+		 * This will cause false positive report of typos. Hack as follows:
+		 */
+		{
+			Pattern: regexp.MustCompile(`(--[^\s]+=)<\.\.\.>`),
+			Replace: "$1 ...",
+			Reverse: true,
+		},
+		{
+			Pattern: regexp.MustCompile(`(--[^\s]+=)([a-zA-Z-]*[^a-zA-Z0-9\s-"]+[a-zA-Z0-9-]*)`),
+			Replace: "$1 $2",
 		},
 	}
 }

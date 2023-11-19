@@ -4,3 +4,4 @@ test-repository
 *.swp
 test-results/
 trash directory.*/
+chainlinttmp/
