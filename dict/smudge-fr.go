@@ -2,7 +2,13 @@ package dict
 
 func init() {
 	SmudgeMaps["fr"] = []SmudgeMap{
-		{"vous@exemple.com", "you@example.com"},
-		{"Vous@exemple.com", "you@example.com"},
+		{
+			Pattern: "vous@exemple.com",
+			Replace: "you@example.com",
+		},
+		{
+			Pattern: "Vous@exemple.com",
+			Replace: "you@example.com",
+		},
 	}
 }

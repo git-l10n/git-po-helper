@@ -2,8 +2,13 @@ package dict
 
 func init() {
 	SmudgeMaps["es"] = []SmudgeMap{
-		{"p.e.", "e.g."},
-
-		{"--dirstat=archivos", "--dirstat=files"},
+		{
+			Pattern: "p.e.",
+			Replace: "e.g.",
+		},
+		{
+			Pattern: "--dirstat=archivos",
+			Replace: "--dirstat=files",
+		},
 	}
 }
