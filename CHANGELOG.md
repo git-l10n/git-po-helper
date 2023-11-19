@@ -21,7 +21,7 @@ Changes of git-po-helper.
 * test: add test cases for "git-po-helper check-pot"
 * bugfix: more diff entries should be ignored in output
 * CI: lower version for golang is 1.16 now
-* chekc-pot: find unmatched config variable in put file
+* chekc-pot: find mismatched config variable in put file
 * check-pot: show config variable in manpage or po/git.pot
 * refactor: check-po: refactor to reuse scanning of po file
 * repository: not panic if not in git.git repository
@@ -91,7 +91,7 @@ Changes of git-po-helper.
 ## 0.4.3 (2021-10-22)
 
 * Smudge on msgStr to suppress false positive for checking typos..
-* Check unmatched "%(fieldname)" in format of git-for-each-ref.
+* Check mismatched "%(fieldname)" in format of git-for-each-ref.
 * Test on po files of git 2.31.1 and latest version.
 
 
@@ -145,7 +145,7 @@ Changes of git-po-helper.
 ## 0.0.5 (2021-7-3)
 
 * Run CI using github action instead of azure-pipeline
-* check-po: check typos of unmatched variable names
+* check-po: check typos of mismatched variable names
 * Show number of commits checked
 * Commit time is UTC time, no need to check offset
 

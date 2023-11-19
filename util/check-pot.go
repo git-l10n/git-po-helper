@@ -101,10 +101,10 @@ func ShowManpageConfigs(onlyCamelCase bool) error {
 
 func CheckCamelCaseConfigVariableInPotFile() error {
 	var (
-		potFile   = filepath.Join(PoDir, GitPot)
-		configs   []string
-		err       error
-		unmatched = 0
+		potFile    = filepath.Join(PoDir, GitPot)
+		configs    []string
+		err        error
+		mismatched = 0
 	)
 
 	if !IsFile(potFile) {
@@ -147,7 +147,7 @@ func CheckCamelCaseConfigVariableInPotFile() error {
 					} else {
 						log.Errorf("config variable '%s' in manpage does not match string in pot file:", item)
 						log.Errorf("    >> %s", line)
-						unmatched++
+						mismatched++
 					}
 					line = line[idx+len(item):]
 				} else {
@@ -157,8 +157,8 @@ func CheckCamelCaseConfigVariableInPotFile() error {
 		}
 	}
 
-	if unmatched != 0 {
-		return fmt.Errorf("%d unmatched config variables", unmatched)
+	if mismatched != 0 {
+		return fmt.Errorf("%d mismatched config variables", mismatched)
 	}
 	return nil
 }

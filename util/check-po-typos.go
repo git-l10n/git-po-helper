@@ -128,11 +128,11 @@ func isUnicodeFragment(str, substr string) (bool, error) {
 	return false, nil
 }
 
-func findUnmatchVariables(src, target string) []string {
+func findMismatchedVariables(src, target string) []string {
 	var (
-		srcMap    = make(map[string]bool)
-		targetMap = make(map[string]bool)
-		unmatched []string
+		srcMap     = make(map[string]bool)
+		targetMap  = make(map[string]bool)
+		mismatched []string
 	)
 
 	for _, m := range dict.KeepWordsPattern.FindAllStringSubmatch(src, -1) {
@@ -160,21 +160,21 @@ func findUnmatchVariables(src, target string) []string {
 	}
 	for key := range srcMap {
 		if !srcMap[key] {
-			unmatched = append(unmatched, key)
+			mismatched = append(mismatched, key)
 		}
 	}
 	for key := range targetMap {
 		if !targetMap[key] {
-			unmatched = append(unmatched, key)
+			mismatched = append(mismatched, key)
 		}
 	}
-	sort.Strings(unmatched)
-	return unmatched
+	sort.Strings(mismatched)
+	return mismatched
 }
 func checkTyposInPoEntry(locale, msgID, msgStr string) ([]string, bool) {
 	var (
 		msgs       []string
-		unmatched  []string
+		mismatched []string
 		origMsgID  = msgID
 		origMsgStr = msgStr
 	)
@@ -215,11 +215,11 @@ func checkTyposInPoEntry(locale, msgID, msgStr string) ([]string, bool) {
 		}
 	}
 
-	unmatched = findUnmatchVariables(msgID, msgStr)
-	if len(unmatched) > 0 {
+	mismatched = findMismatchedVariables(msgID, msgStr)
+	if len(mismatched) > 0 {
 		msgs = append(msgs,
 			fmt.Sprintf("mismatch variable names: %s",
-				strings.Join(unmatched, ", ")))
+				strings.Join(mismatched, ", ")))
 		msgs = append(msgs, fmt.Sprintf(">> msgid: %s", origMsgID))
 		msgs = append(msgs, fmt.Sprintf(">> msgstr: %s", origMsgStr))
 		msgs = append(msgs, "")
