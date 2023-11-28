@@ -2,7 +2,19 @@
 
 Changes of git-po-helper.
 
-## 0.6.4 (2023-08-07)
+## 0.7.0 (2023-11-28)
+
+* dict/bg: Smudge both msgId and msgStr
+* util/bg: do not check boundary characters
+* refactor: change style of definition for SmudgeMaps
+* Fix typos: unmatched -> mismatched
+* test: fixed chain-lint error in test cases
+* test: replace sharness with git test-lib test framework
+* actions: upgrade version of actions/checkout and actions/setup-go
+* actions: do not run golint for go 1.17
+
+
+## 0.6.5 (2023-08-07)
 
 * test: no illegal fields among core commit metadata
 * util: username must have at least one non-space character
