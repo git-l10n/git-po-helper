@@ -5,7 +5,7 @@
 
 test_description='Test on test-tool xml-encode'
 
-. ../test-lib.sh
+. lib/test-lib.sh
 
 test_expect_success 'xml-encode test' '
 	cat <<-EOF |

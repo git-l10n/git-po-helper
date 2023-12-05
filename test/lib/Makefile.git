@@ -1,4 +1,6 @@
 TEST_LIB_DIRECTORY=.
+TEST_TARGET_DIRECTORY=..
+export TEST_TARGET_DIRECTORY
 
 # Import tree-wide shared Makefile behavior and libraries
 include $(TEST_LIB_DIRECTORY)/shared.mak
@@ -35,7 +37,7 @@ CHAINLINTTMP_SQ = $(subst ','\'',$(CHAINLINTTMP))
 
 T = $(sort $(wildcard t[0-9][0-9][0-9][0-9]-*.sh))
 THELPERS = $(sort $(filter-out $(T),$(wildcard *.sh)))
-TLIBS = $(sort $(wildcard $(TEST_LIB_DIRECTORY)/lib-*.sh)) $(TEST_LIB_DIRECTORY)/annotate-tests.sh
+TLIBS = $(sort $(wildcard $(TEST_LIB_DIRECTORY)/lib-*.sh))
 TPERF = $(sort $(wildcard perf/p[0-9][0-9][0-9][0-9]-*.sh))
 CHAINLINTTESTS = $(sort $(patsubst $(TEST_LIB_DIRECTORY)/chainlint/%.test,%,$(wildcard $(TEST_LIB_DIRECTORY)/chainlint/*.test)))
 CHAINLINT = '$(PERL_PATH_SQ)' $(TEST_LIB_DIRECTORY)/chainlint.pl

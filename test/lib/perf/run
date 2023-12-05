@@ -5,6 +5,12 @@ die () {
 	exit 1
 }
 
+if test -z "$TEST_LIB_DIRECTORY"
+then
+	die "TEST_LIB_DIRECTORY is not defined"
+fi
+TEST_LIB_DIRECTORY="$(cd "$TEST_LIB_DIRECTORY" && pwd)"
+
 while [ $# -gt 0 ]; do
 	arg="$1"
 	case "$arg" in
@@ -53,9 +59,9 @@ build_git_rev () {
 	name="$2"
 	for config in config.mak config.mak.autogen config.status
 	do
-		if test -e "../../$config"
+		if test -e "$TEST_TARGET_DIRECTORY/$config"
 		then
-			cp "../../$config" "build/$rev/"
+			cp "$TEST_TARGET_DIRECTORY/$config" "build/$rev/"
 		fi
 	done
 	echo "=== Building $rev ($name) ==="
@@ -191,10 +197,10 @@ run_subsection () {
 
 	if test -z "$GIT_PERF_SEND_TO_CODESPEED"
 	then
-		./aggregate.perl --results-dir="$TEST_RESULTS_DIR" $codespeed_opt "$@"
+		"$TEST_LIB_DIRECTORY"/perf/aggregate.perl --results-dir="$TEST_RESULTS_DIR" $codespeed_opt "$@"
 	else
 		json_res_file=""$TEST_RESULTS_DIR"/$GIT_PERF_SUBSECTION/aggregate.json"
-		./aggregate.perl --results-dir="$TEST_RESULTS_DIR" --codespeed "$@" | tee "$json_res_file"
+		"$TEST_LIB_DIRECTORY"/perf/aggregate.perl --results-dir="$TEST_RESULTS_DIR" --codespeed "$@" | tee "$json_res_file"
 		send_data_url="$GIT_PERF_SEND_TO_CODESPEED/result/add/json/"
 		curl -v --request POST --data-urlencode "json=$(cat "$json_res_file")" "$send_data_url"
 	fi
@@ -204,7 +210,7 @@ get_var_from_env_or_config "GIT_PERF_CODESPEED_OUTPUT" "perf" "codespeedOutput" 
 get_var_from_env_or_config "GIT_PERF_SEND_TO_CODESPEED" "perf" "sendToCodespeed"
 
 cd "$(dirname $0)"
-. ../../GIT-BUILD-OPTIONS
+. $TEST_TARGET_DIRECTORY/GIT-BUILD-OPTIONS
 
 if test -n "$TEST_OUTPUT_DIRECTORY"
 then

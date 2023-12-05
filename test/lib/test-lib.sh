@@ -1,4 +1,4 @@
-# Test framework for git.  See t/README for usage.
+# Test framework for git.  See README for usage.
 #
 # Copyright (c) 2005 Junio C Hamano
 #
@@ -16,22 +16,22 @@
 # along with this program.  If not, see http://www.gnu.org/licenses/ .
 
 # Test the binaries we have just built.  The tests are kept in
-# t/ subdirectory and are run in 'trash directory' subdirectory.
+# a subdirectory and are run in 'trash directory' subdirectory.
 if test -z "$TEST_DIRECTORY"
 then
 	# ensure that TEST_DIRECTORY is an absolute path so that it
 	# is valid even if the current working directory is changed
 	TEST_DIRECTORY=$(pwd)
 else
-	# The TEST_DIRECTORY will always be the path to the "t"
-	# directory in the git.git checkout. This is overridden by
-	# e.g. t/lib-subtest.sh, but only because its $(pwd) is
+	# The TEST_DIRECTORY will always be the path where the test
+	# suite exists in the checkout project. This is overridden by
+	# e.g. lib-subtest.sh, but only because its $(pwd) is
 	# different. Those tests still set "$TEST_DIRECTORY" to the
 	# same path.
 	#
 	# See use of "$TEST_TARGET_DIRECTORY" and "$TEST_DIRECTORY" below for
 	# hard assumptions about "$TEST_TARGET_DIRECTORY/t" existing and being
-	# the "$TEST_DIRECTORY", and e.g. "$TEST_DIRECTORY/helper"
+	# the "$TEST_DIRECTORY", and e.g. "$TEST_DIRECTORY/t0000-basic.sh"
 	# needing to exist.
 	TEST_DIRECTORY=$(cd "$TEST_DIRECTORY" && pwd) || exit 1
 fi
@@ -47,12 +47,24 @@ then
 	TEST_OUTPUT_DIRECTORY=$TEST_DIRECTORY
 fi
 
-# Public: Build directory that will be added to PATH. By default, it is set to
-# the parent directory of TEST_TARGET_DIRECTORY.
-: "${TEST_TARGET_DIRECTORY:="$(cd "$TEST_DIRECTORY/.." && pwd)"}"
+# The binaries we want to test are located in TEST_TARGET_DIRECTORY.
+# Set default value for it and export it.
+if test -z "$TEST_TARGET_DIRECTORY"
+then
+	TEST_TARGET_DIRECTORY="$(cd "$TEST_DIRECTORY/.." && pwd)"
+else
+	TEST_TARGET_DIRECTORY="$(cd "$TEST_TARGET_DIRECTORY" && pwd)"
+fi
 export TEST_TARGET_DIRECTORY
 
-# Public: Source directory of test code and library.
+if test "$TEST_DIRECTORY" = "$TEST_TARGET_DIRECTORY"
+then
+	echo "PANIC: Identical TEST_DIRECTORY and TEST_TARGET_DIRECTORY: $TEST_DIRECTORY" >&2
+	echo "PANIC: Please define a proper TEST_TARGET_DIRECTORY environment" >&2
+	exit 1
+fi
+
+# TEST_LIB_DIRECTORY is the source directory of test code and library.
 # This directory may be different from the directory in which tests are
 # being run.
 if test -z "$TEST_LIB_DIRECTORY"
@@ -79,6 +91,8 @@ then
 		echo >&2 "ERROR: lib/ direcotory."
 		exit 1
 	fi
+else
+	TEST_LIB_DIRECTORY="$(cd "$TEST_LIB_DIRECTORY" && pwd)"
 fi
 export TEST_LIB_DIRECTORY
 
@@ -120,10 +134,12 @@ export UBSAN_OPTIONS
 : "${SHELL_PATH:=/bin/sh}"
 : "${TEST_SHELL_PATH:=/bin/sh}"
 : "${PERL_PATH:=/usr/bin/perl}"
-: "${PYTHON_PATH:=$(which python)}"
 : "${DIFF:=diff}"
 
-export PERL_PATH SHELL_PATH PYTHON_PATH
+export PERL_PATH SHELL_PATH
+
+: "${PYTHON_PATH:=$(which python)}"
+export PYTHON_PATH
 
 # In t0000, we need to override test directories of nested testcases. In case
 # the developer has TEST_OUTPUT_DIRECTORY part of his build options, then we'd
@@ -132,6 +148,13 @@ export PERL_PATH SHELL_PATH PYTHON_PATH
 if test -n "${TEST_OUTPUT_DIRECTORY_OVERRIDE}"
 then
 	TEST_OUTPUT_DIRECTORY="${TEST_OUTPUT_DIRECTORY_OVERRIDE}"
+fi
+
+# Disallow the use of abbreviated options in the test suite by default
+if test -z "${GIT_TEST_DISALLOW_ABBREVIATED_OPTIONS}"
+then
+	GIT_TEST_DISALLOW_ABBREVIATED_OPTIONS=true
+	export GIT_TEST_DISALLOW_ABBREVIATED_OPTIONS
 fi
 
 # Explicitly set the default branch name for testing, to avoid the
@@ -186,6 +209,10 @@ parse_option () {
 		# Ignore --quiet under a TAP::Harness. Saying how many tests
 		# passed without the ok/not ok details is always an error.
 		test -z "$HARNESS_ACTIVE" && quiet=t ;;
+	--with-dashes)
+		with_dashes=t ;;
+	--no-bin-wrappers)
+		no_bin_wrappers=t ;;
 	--no-color)
 		color= ;;
 	--va|--val|--valg|--valgr|--valgri|--valgrin|--valgrind)
@@ -1385,88 +1412,7 @@ test_done () {
 	esac
 }
 
-if test -n "$valgrind"
-then
-	make_symlink () {
-		test -h "$2" &&
-		test "$1" = "$(readlink "$2")" || {
-			# be super paranoid
-			if mkdir "$2".lock
-			then
-				rm -f "$2" &&
-				ln -s "$1" "$2" &&
-				rm -r "$2".lock
-			else
-				while test -d "$2".lock
-				do
-					say "Waiting for lock on $2."
-					sleep 1
-				done
-			fi
-		}
-	}
-
-	make_valgrind_symlink () {
-		# handle only executables, unless they are shell libraries that
-		# need to be in the exec-path.
-		test -x "$1" ||
-		test "# " = "$(test_copy_bytes 2 <"$1")" ||
-		return;
-
-		base=$(basename "$1")
-		case "$base" in
-		test-*)
-			symlink_target="$TEST_LIB_DIRECTORY/helper/$base"
-			;;
-		*)
-			symlink_target="$TEST_TARGET_DIRECTORY/$base"
-			;;
-		esac
-		# do not override scripts
-		if test -x "$symlink_target" &&
-		    test ! -d "$symlink_target" &&
-		    test "#!" != "$(test_copy_bytes 2 <"$symlink_target")"
-		then
-			symlink_target=../valgrind.sh
-		fi
-		case "$base" in
-		*.sh|*.perl)
-			symlink_target=../unprocessed-script
-		esac
-		# create the link, or replace it if it is out of date
-		make_symlink "$symlink_target" "$GIT_VALGRIND/bin/$base" || exit
-	}
-
-	# override all git executables in TEST_DIRECTORY/..
-	GIT_VALGRIND=$TEST_LIB_DIRECTORY/valgrind
-	mkdir -p "$GIT_VALGRIND"/bin
-	for file in $TEST_TARGET_DIRECTORY/git* $TEST_LIB_DIRECTORY/helper/test-*
-	do
-		make_valgrind_symlink $file
-	done
-	# special-case the mergetools loadables
-	make_symlink "$TEST_TARGET_DIRECTORY"/mergetools "$GIT_VALGRIND/bin/mergetools"
-	OLDIFS=$IFS
-	IFS=:
-	for path in $PATH
-	do
-		ls "$path"/git-* 2> /dev/null |
-		while read file
-		do
-			make_valgrind_symlink "$file"
-		done
-	done
-	IFS=$OLDIFS
-	PATH=$GIT_VALGRIND/bin:$PATH
-	export GIT_VALGRIND
-	GIT_VALGRIND_MODE="$valgrind"
-	export GIT_VALGRIND_MODE
-	GIT_VALGRIND_ENABLED=t
-	test -n "$valgrind_only" && GIT_VALGRIND_ENABLED=
-	export GIT_VALGRIND_ENABLED
-else # normal case
-	PATH="$TEST_TARGET_DIRECTORY:$TEST_LIB_DIRECTORY/helper:$PATH"
-fi
+PATH="$TEST_TARGET_DIRECTORY:$TEST_LIB_DIRECTORY/helper:$PATH"
 GIT_CONFIG_NOSYSTEM=1
 GIT_ATTR_NOSYSTEM=1
 GIT_CEILING_DIRECTORIES="$TRASH_DIRECTORY/.."
@@ -1480,11 +1426,6 @@ then
 	else
 		GIT_TEST_CMP="$DIFF -u"
 	fi
-fi
-
-if ! test -x "$TEST_LIB_DIRECTORY"/helper/test-tool
-then
-	BAIL_OUT 'You need to build test-tool; Run "make t/helper/test-tool" in the source (toplevel) directory'
 fi
 
 # Are we running this test at all?

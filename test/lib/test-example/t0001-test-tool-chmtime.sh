@@ -5,7 +5,7 @@
 
 test_description='Test on test-tool chmtime'
 
-. ../test-lib.sh
+. lib/test-lib.sh
 
 test_expect_success 'setup' '
 	touch -t 200504072213.13 foo &&

@@ -5,7 +5,7 @@
 
 test_description='Test on test-tool date'
 
-. ../test-lib.sh
+. lib/test-lib.sh
 
 test_expect_success 'date is64bit' '
 	test_expect_code 1 test-tool date is64bit

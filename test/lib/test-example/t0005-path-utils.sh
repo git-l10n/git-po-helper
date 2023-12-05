@@ -5,7 +5,7 @@
 
 test_description='Test on test-tool path-utils'
 
-. ../test-lib.sh
+. lib/test-lib.sh
 
 test_expect_success 'setup' '
 	cat >foo <<-EOF &&

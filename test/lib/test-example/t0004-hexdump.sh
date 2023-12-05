@@ -5,7 +5,7 @@
 
 test_description='Test on test-tool hexdump'
 
-. ../test-lib.sh
+. lib/test-lib.sh
 
 test_expect_success 'hexdump (ascii)' '
 	printf "hello, world!\n" |

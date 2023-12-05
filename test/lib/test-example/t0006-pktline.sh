@@ -5,7 +5,7 @@
 
 test_description='Test on test-tool pkt-line'
 
-. ../test-lib.sh
+. lib/test-lib.sh
 
 test_expect_success 'pkt-line from stdin (special packets)' '
 	cat <<-EOF |

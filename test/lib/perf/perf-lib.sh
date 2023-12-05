@@ -17,18 +17,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see http://www.gnu.org/licenses/ .
 
-# These variables must be set before the inclusion of test-lib.sh below,
-# because it will change our working directory.
-TEST_DIRECTORY=$(pwd)/..
-TEST_OUTPUT_DIRECTORY=$(pwd)
-
 TEST_NO_CREATE_REPO=t
 TEST_NO_MALLOC_CHECK=t
 
-. ../test-lib.sh
+if test -z "$TEST_TARGET_DIRECTORY"
+then
+	echo >&2 "error: TEST_TARGET_DIRECTORY is not defined"
+	exit 1
+fi
+
+if test -z "$TEST_LIB_DIRECTORY"
+then
+	exec >&2
+	cat <<-EOF
+		error: Must include test-lib.sh before this one. E.g.:
+
+		    . ../test-lib.sh
+		    . .perf-lib.sh
+	EOF
+	exit 1
+fi
 
 unset GIT_CONFIG_NOSYSTEM
-GIT_CONFIG_SYSTEM="$TEST_DIRECTORY/perf/config"
+GIT_CONFIG_SYSTEM="$TEST_LIB_DIRECTORY/perf/config"
 export GIT_CONFIG_SYSTEM
 
 if test -n "$GIT_TEST_INSTALLED" -a -z "$PERF_SET_GIT_TEST_INSTALLED"
@@ -58,7 +69,7 @@ mkdir -p "$perf_results_dir"
 rm -f "$perf_results_dir"/$(basename "$0" .sh).subtests
 
 die_if_build_dir_not_repo () {
-	if ! ( cd "$TEST_DIRECTORY/.." &&
+	if ! ( cd "$TEST_TARGET_DIRECTORY" &&
 		    git rev-parse --build-dir >/dev/null 2>&1 ); then
 		error "No $1 defined, and your build directory is not a repo"
 	fi
@@ -66,11 +77,11 @@ die_if_build_dir_not_repo () {
 
 if test -z "$GIT_PERF_REPO"; then
 	die_if_build_dir_not_repo '$GIT_PERF_REPO'
-	GIT_PERF_REPO=$TEST_DIRECTORY/..
+	GIT_PERF_REPO=$TEST_TARGET_DIRECTORY
 fi
 if test -z "$GIT_PERF_LARGE_REPO"; then
 	die_if_build_dir_not_repo '$GIT_PERF_LARGE_REPO'
-	GIT_PERF_LARGE_REPO=$TEST_DIRECTORY/..
+	GIT_PERF_LARGE_REPO=$TEST_TARGET_DIRECTORY
 fi
 
 test_perf_do_repo_symlink_config_ () {
@@ -173,7 +184,7 @@ test_run_perf_ () {
 	test_export_="test_cleanup"
 	export test_cleanup test_export_
 	"$GTIME" -f "%E %U %S" -o test_time.$i "$TEST_SHELL_PATH" -c '
-. '"$TEST_DIRECTORY"/test-lib-functions.sh'
+. '"$TEST_LIB_DIRECTORY"/test-lib-functions.sh'
 test_export () {
 	test_export_="$test_export_ $*"
 }
@@ -274,7 +285,7 @@ test_perf_ () {
 	else
 		test_ok_ "$1"
 	fi
-	"$TEST_DIRECTORY"/perf/min_time.perl test_time.* >"$base".result
+	"$TEST_LIB_DIRECTORY"/perf/min_time.perl test_time.* >"$base".result
 	rm test_time.*
 }
 
@@ -321,7 +332,7 @@ test_size () {
 test_at_end_hook_ () {
 	if test -z "$GIT_PERF_AGGREGATING_LATER"; then
 		(
-			cd "$TEST_DIRECTORY"/perf &&
+			cd "$TEST_LIB_DIRECTORY"/perf &&
 			./aggregate.perl --results-dir="$TEST_RESULTS_DIR" $(basename "$0")
 		)
 	fi

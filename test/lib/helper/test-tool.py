@@ -110,31 +110,53 @@ def cmd_env_helper(*argv):
 	parsed = parser.parse_args(argv)
 	ret = 0
 
+	def git_parse_maybe_bool_text(val):
+		if val is None:
+			return 1
+		elif val == "":
+			return 0
+		elif isinstance(val, str) and val.lower() in ('1', 'true', 'yes', 'on'):
+			return 1
+		elif isinstance(val, str) and val.lower() in ('0', 'false', 'no', 'off'):
+			return 0
+		else:
+			return -1
+
+	def git_parse_maybe_bool(val):
+		v = git_parse_maybe_bool_text(val)
+		if v >= 0:
+			return v
+		try:
+			v = int(val)
+		except ValueError:
+			sys.stderr.write("ERROR: bad boolean value '%s'\n" % val)
+			exit(128)
+		if v == 0:
+			return 0
+		else:
+			return 1
+
 	if parsed.default is not None and len(parsed.default) == 0:
 		parser.print_help()
-		return 1
+		return 129
 	if parsed.type is None:
 		parser.print_help()
-		return 1
+		return 129
 
 	if parsed.type == 'bool':
-		val = os.getenv(parsed.key[0], default=parsed.default)
-		if val is not None:
-			if val.lower() in ('1', 'true', 'yes', 'on'):
-				ret = 1
-			elif val.lower() in ('0', 'false', 'no', 'off'):
-				ret = 0
-			else:
-				sys.stderr.write("ERROR: bad boolean environment value '%s' for '%s'\n" %
-						 (val, parsed.key[0]))
-				return 1
-		else:
-			ret = 0
+		default_int = 0
+		if parsed.default is not None:
+			default_int = git_parse_maybe_bool(parsed.default)
+			if default_int < 0:
+				sys.stderr.write("ERROR: option `--default' expects a boolean value with `--type=bool`, not `%s`\n" %
+						 parsed.default)
+				return 129
+		ret = git_parse_maybe_bool(os.getenv(parsed.key[0], default=str(default_int)))
 		if not parsed.exit_code:
-			if ret == 1:
-				print('true')
-			else:
+			if ret == 0:
 				print('false')
+			else:
+				print('true')
 	elif parsed.type == 'ulong':
 		val = os.getenv(parsed.key[0], default=parsed.default)
 		ret = 0
@@ -151,7 +173,7 @@ def cmd_env_helper(*argv):
 				ret = int(val)
 		except ValueError:
 			sys.stderr.write("ERROR: failed to parse ulong number '%s'\n" % val)
-			return 1
+			return 129
 		if not parsed.exit_code:
 			print('%ld' % ret)
 

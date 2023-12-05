@@ -1,7 +1,11 @@
-# Import tree-wide shared Makefile behavior and libraries
-include ../../shared.mak
+TEST_LIB_DIRECTORY=..
+TEST_TARGET_DIRECTORY=../..
+export TEST_LIB_DIRECTORY TEST_TARGET_DIRECTORY
 
--include ../../config.mak
+# Import tree-wide shared Makefile behavior and libraries
+include $(TEST_LIB_DIRECTORY)/shared.mak
+
+-include $(TEST_TARGET_DIRECTORY)/config.mak
 export GIT_TEST_OPTIONS
 
 all: test-lint perf

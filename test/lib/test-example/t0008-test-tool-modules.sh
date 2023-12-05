@@ -5,7 +5,7 @@
 
 test_description='Test on test-tool extension module'
 
-. ../test-lib.sh
+. lib/test-lib.sh
 
 test_expect_success 'no TEST_DIRECTORY env' '
 	test_must_fail env TEST_DIRECTORY= test-tool missing-cmd >actual 2>&1 &&
