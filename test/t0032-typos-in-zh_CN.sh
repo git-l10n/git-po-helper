@@ -31,6 +31,16 @@ level=warning msg="[po/zh_CN.po]    mismatched patterns: git-am"
 level=warning msg="[po/zh_CN.po]    >> msgid: It looks like 'git am' is in progress. Cannot rebase."
 level=warning msg="[po/zh_CN.po]    >> msgstr: 看起来 'git-am' 正在执行中。无法变基。"
 level=warning msg="[po/zh_CN.po]"
+level=warning msg="[po/zh_CN.po]    mismatched patterns: refs/remotes/"
+level=warning msg="[po/zh_CN.po]    >> msgid: Note: A branch outside the refs/remotes/ hierarchy was not removed;"
+level=warning msg="[po/zh_CN.po]    to delete it, use:"
+level=warning msg="[po/zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一个分支未被移除。要删除它，使用："
+level=warning msg="[po/zh_CN.po]"
+level=warning msg="[po/zh_CN.po]    mismatched patterns: refs/remotes/"
+level=warning msg="[po/zh_CN.po]    >> msgid: Note: Some branches outside the refs/remotes/ hierarchy were not removed;"
+level=warning msg="[po/zh_CN.po]    to delete them, use:"
+level=warning msg="[po/zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一些分支未被移除。要删除它们，使用："
+level=warning msg="[po/zh_CN.po]"
 level=warning msg="[po/zh_CN.po]    mismatched patterns: submodule.alternateLocaion, submodule.alternateLocation"
 level=warning msg="[po/zh_CN.po]    >> msgid: Value '%s' for submodule.alternateLocation is not recognized"
 level=warning msg="[po/zh_CN.po]    >> msgstr: 不能识别 submodule.alternateLocaion 的取值 '%s'"
@@ -88,12 +98,23 @@ level=info msg="[po/zh_CN.po]"
 level=info msg="[po/zh_CN.po]    As how to commit a location-less \"po/XX.po\" file, See:"
 level=info msg="[po/zh_CN.po]"
 level=info msg="[po/zh_CN.po]     the [Updating a \"XX.po\" file] section in \"po/README.md\""
+------------------------------------------------------------------------------
+level=warning msg="[po/zh_CN.po]    mismatched patterns: refs/remotes/"
+level=warning msg="[po/zh_CN.po]    >> msgid: Note: A branch outside the refs/remotes/ hierarchy was not removed;"
+level=warning msg="[po/zh_CN.po]    to delete it, use:"
+level=warning msg="[po/zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一个分支未被移除。要删除它，使用："
+level=warning msg="[po/zh_CN.po]"
+level=warning msg="[po/zh_CN.po]    mismatched patterns: refs/remotes/"
+level=warning msg="[po/zh_CN.po]    >> msgid: Note: Some branches outside the refs/remotes/ hierarchy were not removed;"
+level=warning msg="[po/zh_CN.po]    to delete them, use:"
+level=warning msg="[po/zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一些分支未被移除。要删除它们，使用："
+level=warning msg="[po/zh_CN.po]"
 EOF
 
 test_expect_success "check typos in master branch" '
 	git -C workdir checkout master &&
 	git -C workdir $HELPER \
-		check-po --report-typos=error --report-file-locations=warn zh_CN >out 2>&1 &&
+		check-po --report-typos=warn --report-file-locations=warn zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

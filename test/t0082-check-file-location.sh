@@ -28,6 +28,17 @@ level=error msg="[po/zh_CN.po]"
 level=error msg="[po/zh_CN.po]    As how to commit a location-less \"po/XX.po\" file, See:"
 level=error msg="[po/zh_CN.po]"
 level=error msg="[po/zh_CN.po]     the [Updating a \"XX.po\" file] section in \"po/README.md\""
+------------------------------------------------------------------------------
+level=error msg="[po/zh_CN.po]    mismatched patterns: refs/remotes/"
+level=error msg="[po/zh_CN.po]    >> msgid: Note: A branch outside the refs/remotes/ hierarchy was not removed;"
+level=error msg="[po/zh_CN.po]    to delete it, use:"
+level=error msg="[po/zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一个分支未被移除。要删除它，使用："
+level=error msg="[po/zh_CN.po]"
+level=error msg="[po/zh_CN.po]    mismatched patterns: refs/remotes/"
+level=error msg="[po/zh_CN.po]    >> msgid: Note: Some branches outside the refs/remotes/ hierarchy were not removed;"
+level=error msg="[po/zh_CN.po]    to delete them, use:"
+level=error msg="[po/zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一些分支未被移除。要删除它们，使用："
+level=error msg="[po/zh_CN.po]"
 
 ERROR: fail to execute "git-po-helper check-po"
 EOF
@@ -49,6 +60,19 @@ test_expect_success "zh_CN.po: has file-locations (no --report-file-location opt
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po]    5282 translated messages."
+------------------------------------------------------------------------------
+level=error msg="[po/zh_CN.po]    mismatched patterns: refs/remotes/"
+level=error msg="[po/zh_CN.po]    >> msgid: Note: A branch outside the refs/remotes/ hierarchy was not removed;"
+level=error msg="[po/zh_CN.po]    to delete it, use:"
+level=error msg="[po/zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一个分支未被移除。要删除它，使用："
+level=error msg="[po/zh_CN.po]"
+level=error msg="[po/zh_CN.po]    mismatched patterns: refs/remotes/"
+level=error msg="[po/zh_CN.po]    >> msgid: Note: Some branches outside the refs/remotes/ hierarchy were not removed;"
+level=error msg="[po/zh_CN.po]    to delete them, use:"
+level=error msg="[po/zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一些分支未被移除。要删除它们，使用："
+level=error msg="[po/zh_CN.po]"
+
+ERROR: fail to execute "git-po-helper check-po"
 EOF
 
 test_expect_success "zh_CN.po: remove locations" '
@@ -57,7 +81,7 @@ test_expect_success "zh_CN.po: remove locations" '
 		msgcat --add-location=file po/zh_CN.po -o po/zh_CN.poX &&
 		mv po/zh_CN.poX po/zh_CN.po
 	) &&
-	git -C workdir $HELPER check-po \
+	test_must_fail git -C workdir $HELPER check-po \
 		po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
@@ -69,7 +93,7 @@ test_expect_success "zh_CN.po: remove both files and locations" '
 		msgcat --no-location po/zh_CN.po -o po/zh_CN.poX &&
 		mv po/zh_CN.poX po/zh_CN.po
 	) &&
-	git -C workdir $HELPER check-po \
+	test_must_fail git -C workdir $HELPER check-po \
 		po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual

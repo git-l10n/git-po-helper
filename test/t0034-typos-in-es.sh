@@ -50,6 +50,22 @@ level=warning msg="[po/es.po]    mismatched patterns: --shallow-since, --shalow-
 level=warning msg="[po/es.po]    >> msgid: Server does not support --shallow-since"
 level=warning msg="[po/es.po]    >> msgstr: El servidor no soporta --shalow-since"
 level=warning msg="[po/es.po]"
+level=warning msg="[po/es.po]    mismatched patterns: refs/heads/, refs/tags/"
+level=warning msg="[po/es.po]    >> msgid: The <src> part of the refspec is a blob object."
+level=warning msg="[po/es.po]    Did you mean to tag a new blob by pushing to"
+level=warning msg="[po/es.po]    '%s:refs/tags/%s'?"
+level=warning msg="[po/es.po]    >> msgstr: La parte <src> del refspec es un objeto blob."
+level=warning msg="[po/es.po]    ¿Quisiste crear un tag nuevo mediante un push a"
+level=warning msg="[po/es.po]    '%s:refs/heads/%s'?"
+level=warning msg="[po/es.po]"
+level=warning msg="[po/es.po]    mismatched patterns: refs/heads/, refs/tags/"
+level=warning msg="[po/es.po]    >> msgid: The <src> part of the refspec is a tree object."
+level=warning msg="[po/es.po]    Did you mean to tag a new tree by pushing to"
+level=warning msg="[po/es.po]    '%s:refs/tags/%s'?"
+level=warning msg="[po/es.po]    >> msgstr: La parte <src> del refspec es un objeto tree."
+level=warning msg="[po/es.po]    ¿Quisiste crear un tag nuevo mediante un push a"
+level=warning msg="[po/es.po]    '%s:refs/heads/%s'?"
+level=warning msg="[po/es.po]"
 level=warning msg="[po/es.po]    mismatched patterns: ---smtp-debug, --smtp-debug"
 level=warning msg="[po/es.po]    >> msgid: Unable to initialize SMTP properly. Check config and use --smtp-debug."
 level=warning msg="[po/es.po]    >> msgstr: No es posible inicializar SMTP adecuadamente. Verificar config y usar ---smtp-debug."
@@ -71,6 +87,10 @@ level=warning msg="[po/es.po]"
 level=warning msg="[po/es.po]    mismatched patterns: dimmed_zebra"
 level=warning msg="[po/es.po]    >> msgid: color moved setting must be one of 'no', 'default', 'blocks', 'zebra', 'dimmed-zebra', 'plain'"
 level=warning msg="[po/es.po]    >> msgstr: opción de color tiene que ser una de 'no', 'default', 'blocks', 'zebra', 'dimmed_zebra', 'plain'"
+level=warning msg="[po/es.po]"
+level=warning msg="[po/es.po]    mismatched patterns: refs/remotes/<...>/HEAD, refs/remotos/<...>/HEAD"
+level=warning msg="[po/es.po]    >> msgid: delete refs/remotes/<name>/HEAD"
+level=warning msg="[po/es.po]    >> msgstr: borrar refs/remotos/<nombre>/HEAD"
 level=warning msg="[po/es.po]"
 level=warning msg="[po/es.po]    mismatched patterns: gc.logexpirity, gc.logexpiry"
 level=warning msg="[po/es.po]    >> msgid: failed to parse gc.logexpiry value %s"
@@ -136,7 +156,7 @@ level=warning msg="[po/es.po]"
 ERROR: fail to execute "git-po-helper check-po"
 EOF
 
-test_expect_success "check typos in es.po" '
+test_expect_success "check typos in es.po of git 2.31.1" '
 	test_must_fail git -C workdir $HELPER check-po es >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
@@ -146,11 +166,20 @@ cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=error msg="[po/es.po]    5210 translated messages."
 level=error msg="[po/es.po]    too many obsolete entries (125) in comments, please remove them"
+------------------------------------------------------------------------------
+level=error msg="[po/es.po]    mismatched patterns: refs/remotes/<...>/HEAD, refs/remotos/<...>/HEAD"
+level=error msg="[po/es.po]    >> msgid: delete refs/remotes/<name>/HEAD"
+level=error msg="[po/es.po]    >> msgstr: borrar refs/remotos/<nombre>/HEAD"
+level=error msg="[po/es.po]"
+level=error msg="[po/es.po]    mismatched patterns: refs/preferch/, refs/prefetch/"
+level=error msg="[po/es.po]    >> msgid: modify the refspec to place all refs within refs/prefetch/"
+level=error msg="[po/es.po]    >> msgstr: modificar el refspec para colocar todas las referencias en refs/preferch/"
+level=error msg="[po/es.po]"
 
 ERROR: fail to execute "git-po-helper check-po"
 EOF
 
-test_expect_success "no typos in master branch" '
+test_expect_success "typos in master branch" '
 	git -C workdir checkout master &&
 	test_must_fail git -C workdir $HELPER \
 		check-po --report-typos=error es >out 2>&1 &&

@@ -149,5 +149,29 @@ func init() {
 			Pattern: regexp.MustCompile(`(--[^\s]+=)([a-zA-Z-]*[^a-zA-Z0-9\s-"]+[a-zA-Z0-9-]*)`),
 			Replace: "$1 $2",
 		},
+
+		/*
+		 * The <place-holder>s in refspecs were translated in bg without "<>", e.g.:
+		 *
+		 *     msgid: "set refs/remotes/<name>/HEAD according to remote"
+		 *     msgstr: "задаване на refs/remotes/ИМЕ/HEAD според отдалеченото хранилище"
+		 *
+		 * After replaced according to patterns defined in GlobalSkipPatterns,
+		 * the result are follow:
+		 *
+		 *     msgid: "set refs/remotes/<...>/HEAD according to remote"
+		 *     msgstr: "задаване на refs/remotes/ИМЕ/HEAD според отдалеченото хранилище"
+		 *
+		 * We will get the keep words as follows from patten defined in KeepWordsPattern.
+		 *
+		 *     msgid:  refs/remotes/<...>/HEAD
+		 *     msgstr: refs/remotes/
+		 *
+		 * This will cause false positive report of typos. Hack as follows:
+		 */
+		{
+			Pattern: regexp.MustCompile(`/ИМЕ/`),
+			Replace: "/<name>/",
+		},
 	}
 }

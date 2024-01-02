@@ -48,6 +48,26 @@ level=warning msg="[po/sv.po]    Du kan inspektera det som checkades ut med \"gi
 level=warning msg="[po/sv.po]    och försöka med \"git restore -source=HEAD :/\""
 level=warning msg="[po/sv.po]"
 level=warning msg="[po/sv.po]"
+level=warning msg="[po/sv.po]    mismatched patterns: refs/{heads,tags}/-prefix"
+level=warning msg="[po/sv.po]    >> msgid: The destination you provided is not a full refname (i.e.,"
+level=warning msg="[po/sv.po]    starting with \"refs/\"). We tried to guess what you meant by:"
+level=warning msg="[po/sv.po]"
+level=warning msg="[po/sv.po]    - Looking for a ref that matches '%s' on the remote side."
+level=warning msg="[po/sv.po]    - Checking if the <src> being pushed ('%s')"
+level=warning msg="[po/sv.po]     is a ref in \"refs/{heads,tags}/\". If so we add a corresponding"
+level=warning msg="[po/sv.po]     refs/{heads,tags}/ prefix on the remote side."
+level=warning msg="[po/sv.po]"
+level=warning msg="[po/sv.po]    Neither worked, so we gave up. You must fully qualify the ref."
+level=warning msg="[po/sv.po]    >> msgstr: Målet du angav är inte ett komplett referensamn (dvs.,"
+level=warning msg="[po/sv.po]    startar med \"refs/\"). Vi försökte gissa vad du menade genom att:"
+level=warning msg="[po/sv.po]"
+level=warning msg="[po/sv.po]    - Se efter en referens som motsvarar \"%s\" på fjärrsidan."
+level=warning msg="[po/sv.po]    - Se om <källan> som sänds (\"%s\")"
+level=warning msg="[po/sv.po]     är en referens i \"refs/{heads,tags}/\". Om så lägger vi till"
+level=warning msg="[po/sv.po]     motsvarande refs/{heads,tags}/-prefix på fjärrsidan."
+level=warning msg="[po/sv.po]"
+level=warning msg="[po/sv.po]    Inget av dem fungerade, så vi gav upp. Ange fullständig referens."
+level=warning msg="[po/sv.po]"
 level=warning msg="[po/sv.po]    mismatched patterns: add_cacheinfo, add_cahceinfo"
 level=warning msg="[po/sv.po]    >> msgid: add_cacheinfo failed for path '%s'; merge aborting."
 level=warning msg="[po/sv.po]    >> msgstr: add_cahceinfo misslyckades för sökvägen \"%s\"; avslutar sammanslagningen."
@@ -114,11 +134,32 @@ cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=error msg="[po/sv.po]    5282 translated messages."
 level=error msg="[po/sv.po]    too many obsolete entries (768) in comments, please remove them"
+------------------------------------------------------------------------------
+level=error msg="[po/sv.po]    mismatched patterns: refs/{heads,tags}/-prefix"
+level=error msg="[po/sv.po]    >> msgid: The destination you provided is not a full refname (i.e.,"
+level=error msg="[po/sv.po]    starting with \"refs/\"). We tried to guess what you meant by:"
+level=error msg="[po/sv.po]"
+level=error msg="[po/sv.po]    - Looking for a ref that matches '%s' on the remote side."
+level=error msg="[po/sv.po]    - Checking if the <src> being pushed ('%s')"
+level=error msg="[po/sv.po]     is a ref in \"refs/{heads,tags}/\". If so we add a corresponding"
+level=error msg="[po/sv.po]     refs/{heads,tags}/ prefix on the remote side."
+level=error msg="[po/sv.po]"
+level=error msg="[po/sv.po]    Neither worked, so we gave up. You must fully qualify the ref."
+level=error msg="[po/sv.po]    >> msgstr: Målet du angav är inte ett komplett referensamn (dvs.,"
+level=error msg="[po/sv.po]    startar med \"refs/\"). Vi försökte gissa vad du menade genom att:"
+level=error msg="[po/sv.po]"
+level=error msg="[po/sv.po]    - Se efter en referens som motsvarar \"%s\" på fjärrsidan."
+level=error msg="[po/sv.po]    - Se om <källan> som sänds (\"%s\")"
+level=error msg="[po/sv.po]     är en referens i \"refs/{heads,tags}/\". Om så lägger vi till"
+level=error msg="[po/sv.po]     motsvarande refs/{heads,tags}/-prefix på fjärrsidan."
+level=error msg="[po/sv.po]"
+level=error msg="[po/sv.po]    Inget av dem fungerade, så vi gav upp. Ange fullständig referens."
+level=error msg="[po/sv.po]"
 
 ERROR: fail to execute "git-po-helper check-po"
 EOF
 
-test_expect_success "no typos in master branch" '
+test_expect_success "typos in master branch" '
 	git -C workdir checkout master &&
 	test_must_fail git -C workdir $HELPER \
 		check-po --report-typos=error sv >out 2>&1 &&
