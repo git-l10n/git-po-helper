@@ -2,6 +2,13 @@
 
 Changes of git-po-helper.
 
+## 0.7.1 (2024-01-02)
+
+* dict: add pattern to find typos of refspecs
+* typo: use more general expressions "mismatched patterns"
+* test: use git-test-lib as our test framework
+
+
 ## 0.7.0 (2023-11-28)
 
 * dict/bg: Smudge both msgId and msgStr
