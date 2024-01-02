@@ -58,11 +58,11 @@ cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po@rev]    2 translated messages."
 ------------------------------------------------------------------------------
-level=warning msg="[po/zh_CN.po@rev]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
+level=warning msg="[po/zh_CN.po@rev]    mismatched patterns: $branch, $remote_name, $sm_path, sm_path"
 level=warning msg="[po/zh_CN.po@rev]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
 level=warning msg="[po/zh_CN.po@rev]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
 level=warning msg="[po/zh_CN.po@rev]"
-level=warning msg="[po/zh_CN.po@rev]    mismatch variable names: $command, $res"
+level=warning msg="[po/zh_CN.po@rev]    mismatched patterns: $command, $res"
 level=warning msg="[po/zh_CN.po@rev]    >> msgid: exit code $res from $command is < 0 or >= 128"
 level=warning msg="[po/zh_CN.po@rev]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
 level=warning msg="[po/zh_CN.po@rev]"
@@ -81,11 +81,11 @@ cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po@rev]    2 translated messages."
 ------------------------------------------------------------------------------
-level=error msg="[po/zh_CN.po@rev]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
+level=error msg="[po/zh_CN.po@rev]    mismatched patterns: $branch, $remote_name, $sm_path, sm_path"
 level=error msg="[po/zh_CN.po@rev]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
 level=error msg="[po/zh_CN.po@rev]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
 level=error msg="[po/zh_CN.po@rev]"
-level=error msg="[po/zh_CN.po@rev]    mismatch variable names: $command, $res"
+level=error msg="[po/zh_CN.po@rev]    mismatched patterns: $command, $res"
 level=error msg="[po/zh_CN.po@rev]    >> msgid: exit code $res from $command is < 0 or >= 128"
 level=error msg="[po/zh_CN.po@rev]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
 level=error msg="[po/zh_CN.po@rev]"
@@ -124,11 +124,11 @@ level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and comm
 ------------------------------------------------------------------------------
 level=info msg="[po/zh_CN.po@rev]    2 translated messages."
 ------------------------------------------------------------------------------
-level=warning msg="[po/zh_CN.po@rev]    mismatch variable names: $branch, $remote_name, $sm_path, sm_path"
+level=warning msg="[po/zh_CN.po@rev]    mismatched patterns: $branch, $remote_name, $sm_path, sm_path"
 level=warning msg="[po/zh_CN.po@rev]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
 level=warning msg="[po/zh_CN.po@rev]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
 level=warning msg="[po/zh_CN.po@rev]"
-level=warning msg="[po/zh_CN.po@rev]    mismatch variable names: $command, $res"
+level=warning msg="[po/zh_CN.po@rev]    mismatched patterns: $command, $res"
 level=warning msg="[po/zh_CN.po@rev]    >> msgid: exit code $res from $command is < 0 or >= 128"
 level=warning msg="[po/zh_CN.po@rev]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
 level=warning msg="[po/zh_CN.po@rev]"

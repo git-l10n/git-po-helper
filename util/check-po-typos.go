@@ -258,7 +258,7 @@ func checkTyposInPoEntry(locale, msgID, msgStr string) ([]string, bool) {
 	mismatched = findMismatchedVariables(locale, msgID, msgStr)
 	if len(mismatched) > 0 {
 		msgs = append(msgs,
-			fmt.Sprintf("mismatch variable names: %s",
+			fmt.Sprintf("mismatched patterns: %s",
 				strings.Join(mismatched, ", ")))
 		msgs = append(msgs, fmt.Sprintf(">> msgid: %s", origMsgID))
 		msgs = append(msgs, fmt.Sprintf(">> msgstr: %s", origMsgStr))
