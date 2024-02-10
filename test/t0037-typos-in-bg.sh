@@ -251,14 +251,28 @@ test_expect_success "check typos in bg.po" '
 test_expect_success "still has typos in master branch" '
 	git -C workdir checkout master &&
 	test_must_fail git -C workdir $HELPER \
-		check-po --report-typos=error bg >actual 2>&1 &&
+		check-po --report-typos=error bg >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
 	cat >expect <<-EOF &&
-		ERROR [po/bg.po]        mismatched patterns: _git_rev 
-		ERROR [po/bg.po]        >> msgid: git bundle create [<options>] <file> <git-rev-list args> 
-		ERROR [po/bg.po]        >> msgstr: git bundle create [ОПЦИЯ…] ФАЙЛ АРГУМЕНТ_ЗА_git_rev-list… 
-		ERROR [po/bg.po]
+		------------------------------------------------------------------------------
+		level=info msg="[po/bg.po]    5195 translated messages."
+		------------------------------------------------------------------------------
+		level=error msg="[po/bg.po]    mismatched patterns: refs/heads, refs/heads/"
+		level=error msg="[po/bg.po]    >> msgid: HEAD (%s) points outside of refs/heads/"
+		level=error msg="[po/bg.po]    >> msgstr: „HEAD“ (%s) сочи извън директорията „refs/heads“"
+		level=error msg="[po/bg.po]"
+		level=error msg="[po/bg.po]    mismatched patterns: _git_rev"
+		level=error msg="[po/bg.po]    >> msgid: git bundle create [<options>] <file> <git-rev-list args>"
+		level=error msg="[po/bg.po]    >> msgstr: git bundle create [ОПЦИЯ…] ФАЙЛ АРГУМЕНТ_ЗА_git_rev-list…"
+		level=error msg="[po/bg.po]"
+		level=error msg="[po/bg.po]    mismatched patterns: --dirstat=, --dirstat=files"
+		level=error msg="[po/bg.po]    >> msgid: synonym for --dirstat=files,param1,param2..."
+		level=error msg="[po/bg.po]    >> msgstr: псевдоним на „--dirstat=ФАЙЛ…,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2,…“"
+		level=error msg="[po/bg.po]"
+
+		ERROR: fail to execute "git-po-helper check-po"
 	EOF
-	test_cmp actual actual
+	test_cmp expect actual
 
 '
 
