@@ -2,8 +2,10 @@
 
 Changes of git-po-helper.
 
-## 0.7.1 (2024-01-02)
+## 0.7.3 (2024-02-10)
 
+* dict: ca: new smudge entries
+* dict: loose pattern to find typos of "refs/"
 * dict: add pattern to find typos of refspecs
 * typo: use more general expressions "mismatched patterns"
 * test: use git-test-lib as our test framework
