@@ -995,7 +995,7 @@ func checkCommits(commits ...string) bool {
 			break
 		}
 		for _, change := range changes {
-			if !strings.HasPrefix(change, PoDir+"/") {
+			if !strings.HasPrefix(change, PoDir+"/") && change != ".github/workflows/l10n.yml" {
 				notL10nChanges = append(notL10nChanges, change)
 			} else if change == "po/TEAMS" {
 				l10nChanges = append(l10nChanges, change)
