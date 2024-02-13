@@ -224,7 +224,7 @@ test_expect_success "check typos of mismatched options" '
 	level=warning msg="[po/zh_CN.po]    >> msgid: --reject and --3way cannot be used together."
 	level=warning msg="[po/zh_CN.po]    >> msgstr: --reject 和 -3way 不能同时使用。"
 	level=warning msg="[po/zh_CN.po]"
-	level=warning msg="[po/zh_CN.po]    mismatched patterns: --word-diff-regex="
+	level=warning msg="[po/zh_CN.po]    mismatched patterns: --word-diff-regex, --word-diff-regex=<...>"
 	level=warning msg="[po/zh_CN.po]    >> msgid: equivalent to --word-diff=color --word-diff-regex=<regex>"
 	level=warning msg="[po/zh_CN.po]    >> msgstr: 相当于 --word-diff=color --word-diff-regex=正则"
 	level=warning msg="[po/zh_CN.po]"

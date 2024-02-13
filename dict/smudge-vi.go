@@ -14,5 +14,9 @@ func init() {
 			Pattern: "bạn@ví_dụ.com",
 			Replace: "you@example.com",
 		},
+		{
+			Pattern: "…",
+			Replace: "...",
+		},
 	}
 }

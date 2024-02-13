@@ -19,7 +19,8 @@ var KeepWordsPattern = regexp.MustCompile(`(` +
 	`|` +
 	`\b[a-z-]+--[a-z-]+` + // match helper commands: bisect--helper, ...
 	`|` +
-	`--[a-zA-Z0-9-=]+` + // match git options: --option, --option=value, ...
+	// match git options: --option, --option=param1,param2 ..., --[no-]signed
+	`--(\[[a-z-]+\])?[a-zA-Z0-9-]+(=[a-zA-Z0-9,<\.>*]+)?` +
 	`|` +
 	`%%\(.*?\)` + // match %(fieldname) in format argument of git-for-each-ref, ...
 	`|` +
