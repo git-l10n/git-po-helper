@@ -79,6 +79,10 @@ func init() {
 			Pattern: "———",
 			Replace: "---",
 		},
+		{
+			Pattern: "…",
+			Replace: "...",
+		},
 
 		// Revert translated email address
 		{
@@ -88,6 +92,14 @@ func init() {
 		{
 			Pattern: "пенчо@example.com",
 			Replace: "you@example.com",
+		},
+
+		/*
+		 * Add "<>" markers for param1 and param2
+		 */
+		{
+			Pattern: "files,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2",
+			Replace: "files,<ПАРАМЕТЪР_1>,<ПАРАМЕТЪР_2>",
 		},
 
 		/*
@@ -133,21 +145,13 @@ func init() {
 		 *     msgid "git restore [<...>] [--source=<...>] <file>..."
 		 *     msgstr "git restore [ОПЦИЯ…] [--source=КЛОН] ФАЙЛ…"
 		 *
-		 * We will get the keep words as follows from patten defined in KeepWordsPattern.
+		 * Use the pattern below, we can rewrite "--source=КЛОН" in msgstr to:
 		 *
-		 *     msgid:  --source=
-		 *     msgstr: --source=K
-		 *
-		 * This will cause false positive report of typos. Hack as follows:
+		 *     --source=<...>
 		 */
 		{
-			Pattern: regexp.MustCompile(`(--[^\s]+=)<\.\.\.>`),
-			Replace: "$1 ...",
-			Reverse: true,
-		},
-		{
-			Pattern: regexp.MustCompile(`(--[^\s]+=)([a-zA-Z-]*[^a-zA-Z0-9\s-"]+[a-zA-Z0-9-]*)`),
-			Replace: "$1 $2",
+			Pattern: regexp.MustCompile(`(--[a-zA-Z0-9-]+)=([a-zA-Z0-9-]*[^a-zA-Z0-9<>\[\]()%\s"',*-]+[^<>\[\]()%\s"',*]*)`),
+			Replace: "$1=<...>",
 		},
 
 		/*
