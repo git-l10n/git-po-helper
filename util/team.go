@@ -186,11 +186,12 @@ func ParseTeams(fileName string) ([]Team, []error) {
 // ShowTeams will show leader/members of a team.
 func ShowTeams(args ...string) bool {
 	var (
-		teams      []Team
-		errors     []error
-		optLeader  = viper.GetBool("team-leader")
-		optMembers = viper.GetBool("team-members")
-		ret        = true
+		teams       []Team
+		errors      []error
+		optLeader   = viper.GetBool("team-leader")
+		optMembers  = viper.GetBool("team-members")
+		optLanguage = viper.GetBool("show-language")
+		ret         = true
 	)
 	teams, errors = ParseTeams("")
 	if len(errors) != 0 {
@@ -204,15 +205,20 @@ func ShowTeams(args ...string) bool {
 		return ret
 	}
 	for _, team := range teams {
-		if optLeader || optMembers {
-			fmt.Printf("%s <%s>\n", team.Leader.Name, team.Leader.Email)
+		prefix := ""
+		if optLanguage {
+			fmt.Printf("%s:\n", team.Language)
+			prefix = "\t"
+		}
+		if (optLeader || optMembers) && team.Leader.Name != "" {
+			fmt.Printf("%s%s <%s>\n", prefix, team.Leader.Name, team.Leader.Email)
 		}
 		if optMembers {
 			for _, member := range team.Members {
-				fmt.Printf("%s <%s>\n", member.Name, member.Email)
+				fmt.Printf("%s%s <%s>\n", prefix, member.Name, member.Email)
 			}
 		}
-		if !optLeader && !optMembers {
+		if !optLeader && !optMembers && !optLanguage {
 			fmt.Println(team.Language)
 		}
 	}
