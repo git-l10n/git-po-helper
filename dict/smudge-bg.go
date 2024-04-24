@@ -9,8 +9,20 @@ func init() {
 		 * subcommand, revert these changes before checking typos.
 		 */
 		{
-			Pattern: "Командата „git pack-objects“",
-			Replace: "spawn pack-objects",
+			Pattern: "Командата „git pack-objects“ не може да бъде стартирана",
+			Replace: "Could not spawn pack-objects",
+		},
+		{
+			Pattern: "гарантиращите обекти не може да се подадат на командата „git pack-objects“",
+			Replace: "failed to feed promisor objects to pack-objects",
+		},
+		{
+			Pattern: "Командата „git pack-objects“ не записа файл „%s“ за пакета „%s-%s“",
+			Replace: "pack-objects did not write a '%s' file for pack %s-%s",
+		},
+		{
+			Pattern: "Командата „git pack-objects“ не завърши успешно",
+			Replace: "pack-objects died",
 		},
 		{
 			Pattern: "„git-difftool“ изисква работно дърво или опцията „--no-index“",
@@ -19,10 +31,6 @@ func init() {
 		{
 			Pattern: "командата „git index-pack“ не завърши успешно",
 			Replace: "index-pack died",
-		},
-		{
-			Pattern: "Командата „git pack-objects“ не завърши успешно",
-			Replace: "pack-objects died",
 		},
 		{
 			Pattern: "указателят „%s“ не е бил включен поради опциите зададени на „git rev-list“",
@@ -42,28 +50,16 @@ func init() {
 			Replace: "bad value for update parameter",
 		},
 		{
-			Pattern: "включва опцията „--bare“ за голо хранилище",
-			Replace: "implies bare",
+			Pattern: "непозната стойност за „--object-format“: „%s“",
+			Replace: "unknown value for object-format: %s",
 		},
 		{
 			Pattern: "„--hard“/„--mixed“/„--soft“",
 			Replace: "--{hard,mixed,soft}",
 		},
 		{
-			Pattern: "„%s“ към опцията „--ancestry-path",
-			Replace: "ancestry-path argument %s",
-		},
-		{
 			Pattern: "Неправилен режим за „--rebase-merges“: %s",
 			Replace: "Unknown rebase-merges mode: %s",
-		},
-		{
-			Pattern: "не поддържа опцията „--force“",
-			Replace: "does not support 'force'",
-		},
-		{
-			Pattern: "неправилна стойност за „--mirror“: %s",
-			Replace: "unknown mirror argument: %s",
 		},
 
 		// Revert changes in bg, such as quotes and dashes.
@@ -98,7 +94,7 @@ func init() {
 		 * Add "<>" markers for param1 and param2
 		 */
 		{
-			Pattern: "files,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2",
+			Pattern: "files,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2,",
 			Replace: "files,<ПАРАМЕТЪР_1>,<ПАРАМЕТЪР_2>",
 		},
 

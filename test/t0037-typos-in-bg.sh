@@ -124,6 +124,10 @@ level=warning msg="[po/bg.po]    mismatched patterns: vger.kernel.org"
 level=warning msg="[po/bg.po]    >> msgid: confusion beyond insanity in parse_pack_objects()"
 level=warning msg="[po/bg.po]    >> msgstr: фатална грешка във функцията „parse_pack_objects“. Това е грешка в Git, докладвайте я на разработчиците, като пратите е-писмо на адрес: „git@vger.kernel.org“."
 level=warning msg="[po/bg.po]"
+level=warning msg="[po/bg.po]    mismatched patterns: --bare"
+level=warning msg="[po/bg.po]    >> msgid: create a mirror repository (implies bare)"
+level=warning msg="[po/bg.po]    >> msgstr: създаване на хранилище-огледало (включва опцията „--bare“ за голо хранилище)"
+level=warning msg="[po/bg.po]"
 level=warning msg="[po/bg.po]    mismatched patterns: credential-cache--daemon"
 level=warning msg="[po/bg.po]    >> msgid: credential-cache--daemon unavailable; no unix socket support"
 level=warning msg="[po/bg.po]    >> msgstr: демонът за кеша с идентификациите е недостъпен — липсва поддръжка на гнезда на unix"
@@ -236,6 +240,10 @@ level=warning msg="[po/bg.po]    mismatched patterns: --patch"
 level=warning msg="[po/bg.po]    >> msgid: unknown --patch mode: %s"
 level=warning msg="[po/bg.po]    >> msgstr: неизвестна стратегия за прилагане на кръпка: „%s“"
 level=warning msg="[po/bg.po]"
+level=warning msg="[po/bg.po]    mismatched patterns: --mirror"
+level=warning msg="[po/bg.po]    >> msgid: unknown mirror argument: %s"
+level=warning msg="[po/bg.po]    >> msgstr: неправилна стойност за „--mirror“: %s"
+level=warning msg="[po/bg.po]"
 level=warning msg="[po/bg.po]    mismatched patterns: update_ref"
 level=warning msg="[po/bg.po]    >> msgid: update_ref failed for ref '%s': %s"
 level=warning msg="[po/bg.po]    >> msgstr: неуспешно обновяване на указателя „%s“: %s"
@@ -248,30 +256,43 @@ test_expect_success "check typos in bg.po" '
 	test_cmp expect actual
 '
 
+cat >expect <<-EOF &&
+------------------------------------------------------------------------------
+level=info msg="[po/bg.po]    5195 translated messages."
+------------------------------------------------------------------------------
+level=error msg="[po/bg.po]    mismatched patterns: refs/heads, refs/heads/"
+level=error msg="[po/bg.po]    >> msgid: HEAD (%s) points outside of refs/heads/"
+level=error msg="[po/bg.po]    >> msgstr: „HEAD“ (%s) сочи извън директорията „refs/heads“"
+level=error msg="[po/bg.po]"
+level=error msg="[po/bg.po]    mismatched patterns: --bare"
+level=error msg="[po/bg.po]    >> msgid: create a mirror repository (implies bare)"
+level=error msg="[po/bg.po]    >> msgstr: създаване на хранилище-огледало (включва опцията „--bare“ за голо хранилище)"
+level=error msg="[po/bg.po]"
+level=error msg="[po/bg.po]    mismatched patterns: _git_rev"
+level=error msg="[po/bg.po]    >> msgid: git bundle create [<options>] <file> <git-rev-list args>"
+level=error msg="[po/bg.po]    >> msgstr: git bundle create [ОПЦИЯ…] ФАЙЛ АРГУМЕНТ_ЗА_git_rev-list…"
+level=error msg="[po/bg.po]"
+level=error msg="[po/bg.po]    mismatched patterns: --force"
+level=error msg="[po/bg.po]    >> msgid: helper %s does not support 'force'"
+level=error msg="[po/bg.po]    >> msgstr: насрещната помощна програма „%s“ не поддържа опцията „--force“"
+level=error msg="[po/bg.po]"
+level=error msg="[po/bg.po]    mismatched patterns: --dirstat=<...>,, --dirstat=files,param1,param2..."
+level=error msg="[po/bg.po]    >> msgid: synonym for --dirstat=files,param1,param2..."
+level=error msg="[po/bg.po]    >> msgstr: псевдоним на „--dirstat=ФАЙЛ…,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2,…“"
+level=error msg="[po/bg.po]"
+level=error msg="[po/bg.po]    mismatched patterns: --mirror"
+level=error msg="[po/bg.po]    >> msgid: unknown mirror argument: %s"
+level=error msg="[po/bg.po]    >> msgstr: неправилна стойност за „--mirror“: %s"
+level=error msg="[po/bg.po]"
+
+ERROR: fail to execute "git-po-helper check-po"
+EOF
+
 test_expect_success "still has typos in master branch" '
 	git -C workdir checkout master &&
 	test_must_fail git -C workdir $HELPER \
 		check-po --report-typos=error bg >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
-	cat >expect <<-EOF &&
-		------------------------------------------------------------------------------
-		level=info msg="[po/bg.po]    5195 translated messages."
-		------------------------------------------------------------------------------
-		level=error msg="[po/bg.po]    mismatched patterns: refs/heads, refs/heads/"
-		level=error msg="[po/bg.po]    >> msgid: HEAD (%s) points outside of refs/heads/"
-		level=error msg="[po/bg.po]    >> msgstr: „HEAD“ (%s) сочи извън директорията „refs/heads“"
-		level=error msg="[po/bg.po]"
-		level=error msg="[po/bg.po]    mismatched patterns: _git_rev"
-		level=error msg="[po/bg.po]    >> msgid: git bundle create [<options>] <file> <git-rev-list args>"
-		level=error msg="[po/bg.po]    >> msgstr: git bundle create [ОПЦИЯ…] ФАЙЛ АРГУМЕНТ_ЗА_git_rev-list…"
-		level=error msg="[po/bg.po]"
-		level=error msg="[po/bg.po]    mismatched patterns: --dirstat=<...>,, --dirstat=files,param1,param2..."
-		level=error msg="[po/bg.po]    >> msgid: synonym for --dirstat=files,param1,param2..."
-		level=error msg="[po/bg.po]    >> msgstr: псевдоним на „--dirstat=ФАЙЛ…,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2,…“"
-		level=error msg="[po/bg.po]"
-
-		ERROR: fail to execute "git-po-helper check-po"
-	EOF
 	test_cmp expect actual
 
 '
