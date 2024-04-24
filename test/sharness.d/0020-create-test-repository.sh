@@ -44,38 +44,37 @@ create_test_repository () {
 	fi
 
 	# Download git.tgz
-	for gitver in 2.31.1 2.36.0
+	versions="2.31.1 2.36.0"
+	for gitver in $versions
 	do
-	if test ! -f "${TEST_DIRECTORY}/git-$gitver.tar"
-	then
-		wget -O "${TEST_DIRECTORY}/git-$gitver.tar.gz" \
-			--progress=dot:mega \
-			https://mirrors.edge.kernel.org/pub/software/scm/git/git-$gitver.tar.gz &&
-		gunzip "${TEST_DIRECTORY}/git-$gitver.tar.gz"
-		if test $? -ne 0
+		if test ! -f "${TEST_DIRECTORY}/git-$gitver.tar"
 		then
-			echo >&2 "ERROR: fail to download or unzip git-$gitver.tar.gz"
-			return 1
+			(
+				wget -O "${TEST_DIRECTORY}/git-$gitver.tar.gz" \
+					--progress=dot:mega \
+					https://mirrors.edge.kernel.org/pub/software/scm/git/git-$gitver.tar.gz ||
+				wget -O "${TEST_DIRECTORY}/git-$gitver.tar.gz" \
+					--progress=dot:mega \
+					https://github.com/git/git/archive/refs/tags/v$gitver.tar.gz
+			) &&
+			gunzip "${TEST_DIRECTORY}/git-$gitver.tar.gz"
+			if test $? -ne 0
+			then
+				echo >&2 "ERROR: fail to download or unzip git-$gitver.tar.gz"
+				return 1
+			fi
 		fi
-		wget -O "${TEST_DIRECTORY}/git-$gitver.tar.sign" \
-			https://mirrors.edge.kernel.org/pub/software/scm/git/git-$gitver.tar.sign &&
-		gpg --verify "${TEST_DIRECTORY}/git-$gitver.tar.sign"
-		if test $? -ne 0
-		then
-			echo >&2 "WARNING: cannot verify the signature of the download git package"
-		fi
-	fi
 	done
 
 	# Remove whole shared repository
 	if test -d "$PO_HELPER_TEST_REPOSITORY"
 	then
-		echo >&2 "Will recreate shared repository in $PO_HELPER_TEST_REPOSITORY"
+		echo >&2 "Will recreate shared repository in $PO_HELPER_TEST_REPOSITORY" &&
 		rm -rf "$PO_HELPER_TEST_REPOSITORY"
 	fi
 
 	# Start to create shared repository
-	create_test_repository_real 2.31.1 2.36.0 &&
+	create_test_repository_real $versions &&
 	echo ${PO_HELPER_TEST_REPOSITORY_VERSION} >${PO_HELPER_TEST_REPOSITORY_VERSION_FILE} &&
 	rm -f "${PO_HELPER_TEST_REPOSITORY}.lock"
 }
