@@ -2,6 +2,16 @@
 
 Changes of git-po-helper.
 
+## 0.7.5 (2024-04-25)
+
+* dict: dirty hacks on bg for git v2.45.0
+* test: prepare for upgarde test repositories
+* team: add -L to show language
+* dict: update smudge table for bg for new keepwords
+* dict: change KeepWordsPattern and add test cases
+* Stop pretending that the l10n.yml workflow is outside git-l10n's ownership
+
+
 ## 0.7.3 (2024-02-10)
 
 * dict: ca: new smudge entries
