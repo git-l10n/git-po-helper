@@ -61,7 +61,7 @@ test_expect_success "fail to update zh_CN: bad syntax of zh_CN.po" '
 
 	cat >expect <<-\EOF &&
 	po/zh_CN.po:25: end-of-line within string
-	level=error msg="fail to update \"po/zh_CN.po\": exit status 1"
+	level=error msg="fail to read output for \"po/zh_CN.po\": exit status 1"
 	EOF
 
 	test_cmp expect actual
@@ -122,6 +122,84 @@ test_expect_success "check update of zh_CN.po" '
 	EOF
 
 	test_cmp expect actual
+'
+
+test_expect_success "update zh_CN with file and location" '
+	cat >workdir/po/zh_CN.po <<-\EOF &&
+	msgid ""
+	msgstr ""
+	"Project-Id-Version: Git\n"
+	"Report-Msgid-Bugs-To: Git Mailing List <git@vger.kernel.org>\n"
+	"POT-Creation-Date: 2021-03-04 22:41+0800\n"
+	"PO-Revision-Date: 2021-03-04 22:41+0800\n"
+	"Last-Translator: Automatically generated\n"
+	"Language-Team: none\n"
+	"Language: zh_CN\n"
+	"MIME-Version: 1.0\n"
+	"Content-Type: text/plain; charset=UTF-8\n"
+	"Content-Transfer-Encoding: 8bit\n"
+	"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+	EOF
+
+	git -C workdir $HELPER --pot-file=po/git.pot \
+		update zh_CN &&
+
+	grep "^#: builtin/clean.c" workdir/po/zh_CN.po >output &&
+	sort output | head -1 >actual &&
+	cat >expect <<-EOF &&
+	#: builtin/clean.c:29
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success "update zh_CN --no-location" '
+	cat >workdir/po/zh_CN.po <<-\EOF &&
+	msgid ""
+	msgstr ""
+	"Project-Id-Version: Git\n"
+	"Report-Msgid-Bugs-To: Git Mailing List <git@vger.kernel.org>\n"
+	"POT-Creation-Date: 2021-03-04 22:41+0800\n"
+	"PO-Revision-Date: 2021-03-04 22:41+0800\n"
+	"Last-Translator: Automatically generated\n"
+	"Language-Team: none\n"
+	"Language: zh_CN\n"
+	"MIME-Version: 1.0\n"
+	"Content-Type: text/plain; charset=UTF-8\n"
+	"Content-Transfer-Encoding: 8bit\n"
+	"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+	EOF
+
+	git -C workdir $HELPER --pot-file=po/git.pot \
+		update --no-location zh_CN &&
+
+	grep "^#: builtin/clean.c" workdir/po/zh_CN.po >output &&
+	sort output | head -1 >actual &&
+	cat >expect <<-EOF &&
+	#: builtin/clean.c
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success "update zh_CN --no-file-location" '
+	cat >workdir/po/zh_CN.po <<-\EOF &&
+	msgid ""
+	msgstr ""
+	"Project-Id-Version: Git\n"
+	"Report-Msgid-Bugs-To: Git Mailing List <git@vger.kernel.org>\n"
+	"POT-Creation-Date: 2021-03-04 22:41+0800\n"
+	"PO-Revision-Date: 2021-03-04 22:41+0800\n"
+	"Last-Translator: Automatically generated\n"
+	"Language-Team: none\n"
+	"Language: zh_CN\n"
+	"MIME-Version: 1.0\n"
+	"Content-Type: text/plain; charset=UTF-8\n"
+	"Content-Transfer-Encoding: 8bit\n"
+	"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+	EOF
+
+	git -C workdir $HELPER --pot-file=po/git.pot \
+		update --no-file-location zh_CN &&
+	test_must_fail grep "^#: builtin/clean.c" workdir/po/zh_CN.po
 '
 
 test_done
