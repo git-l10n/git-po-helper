@@ -1546,26 +1546,18 @@ else
 	mkdir -p "$TRASH_DIRECTORY"
 fi
 
-#
-# Load any extensions in $testdir/test-lib.d/*.sh
-#
-if test -d "${TEST_DIRECTORY}/test-lib.d"
+# Load extensions in $testdir/sharness.d/*.sh
+# See sharness project: https://github.com/felipec/sharness
+if test -d "${TEST_DIRECTORY}/sharness.d"
 then
-	TEST_EXTENSION_DIRECTORY="${TEST_DIRECTORY}/test-lib.d"
-else
-	# See sharness project: https://github.com/felipec/sharness
-	TEST_EXTENSION_DIRECTORY="${TEST_DIRECTORY}/sharness.d"
-fi
-if test -d "${TEST_EXTENSION_DIRECTORY}"
-then
-	for file in "${TEST_EXTENSION_DIRECTORY}"/*.sh
+	for file in "${TEST_DIRECTORY}/sharness.d"/*.sh
 	do
 		# Ensure glob was not an empty match:
 		test -e "${file}" || break
 
 		if test -n "$debug"
 		then
-			BAIL_OUT "sharness: loading extensions from ${file}"
+			say_color info "sharness: loading extensions from ${file}"
 		fi
 		# shellcheck disable=SC1090
 		. "${file}"

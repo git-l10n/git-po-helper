@@ -41,7 +41,7 @@ In order to reuse the latest test framework of the Git project and
 easy to maintain, use the following strategies:
 
 1. Use [git-filter-repo] to export test-lib related files and their
-   commit histories from the Git project. The resulting tailored
+   commit histories from the Git project. The generated tailored
    commits are saved in the branch named "git-test-lib".
 
 2. The test-lib test framework relies on a helper program named
@@ -49,15 +49,15 @@ easy to maintain, use the following strategies:
    need for C compilation, re-implemented part of the "test-tool"
    subcommands in Python.
 
-3. Make some modifications to test-lib, such as sourcing "test-lib.sh"
-   from a subdirectory other than the current directory. Some
-   modifications are borrowed from Sharness.
+3. Apply a series of patches to test-lib so that it can be easily
+   reused in other projects. Some patches are borrowed from Sharness.
 
-4. The "git-test-lib" branch is continuously updated with the Git
-   project, and the master branch will be rebased on it, so the master
-   branch is not stable. For instructions on how to tailor the
-   test-lib framework from the Git project to update the "git-test-lib"
-   branch, please refer to the last section.
+4. This project is a by-product of the Git project. For each Git
+   release, we will re-run step 1 to export the latest test
+   framework from Git project which may include new files we
+   missed in older versions. The generated commit history will
+   overwrite the "git-test-lib" branch, and the master branch will
+   rebase on it.
 
 
 Install test-lib
