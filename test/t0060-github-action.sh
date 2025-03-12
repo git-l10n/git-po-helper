@@ -73,7 +73,7 @@ test_expect_success "bad syntax of zh_CN.po" '
 '
 
 cat >expect <<-EOF
-INFO updating po file for "Chinese - China": msgmerge --add-location --backup=off -U po/zh_CN.po po/git.pot
+INFO run msgmerge for "Chinese - China": msgmerge --add-location -o - po/zh_CN.po po/git.pot
 ------------------------------------------------------------------------------
 INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
 ------------------------------------------------------------------------------

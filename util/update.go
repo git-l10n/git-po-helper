@@ -107,22 +107,31 @@ func UpdatePotFile() (string, bool) {
 // CmdUpdate implements update sub command.
 func CmdUpdate(fileName string) bool {
 	var (
-		cmd            *exec.Cmd
-		locale         string
-		localeFullName string
-		err            error
-		poFile         string
-		cmdArgs        []string
-		poTemplate     string
-		ok             bool
+		cmd               *exec.Cmd
+		msgCatCmd         *exec.Cmd
+		locale            string
+		localeFullName    string
+		err               error
+		poFile            string
+		tmpFile           string
+		cmdArgs           []string
+		poTemplate        string
+		ok                bool
+		optNoLocation     = viper.GetBool("no-location")
+		optNoFileLocation = viper.GetBool("no-file-location")
+		output            []byte
 	)
 
 	locale = strings.TrimSuffix(filepath.Base(fileName), ".po")
 	if localeFullName, err = GetPrettyLocaleName(locale); err != nil {
-		log.Errorf("fail to update: %s", err)
+		log.Errorf("fail to get locale name: %s", err)
 		return false
 	}
 	poFile = filepath.Join(PoDir, locale+".po")
+	tmpFile = poFile + ".tmp"
+	defer func() {
+		os.Remove(tmpFile)
+	}()
 
 	// Update pot file.
 	if poTemplate, ok = UpdatePotFile(); !ok {
@@ -143,25 +152,61 @@ func CmdUpdate(fileName string) bool {
 		return false
 	}
 
-	cmdArgs = []string{"msgmerge",
-		"--add-location",
-		"--backup=off",
-		"-U",
+	cmdArgs = []string{"msgmerge"}
+	if optNoFileLocation {
+		cmdArgs = append(cmdArgs, "--no-location")
+	} else {
+		cmdArgs = append(cmdArgs, "--add-location")
+	}
+	cmdArgs = append(cmdArgs,
+		"-o", "-", // Save output to stdout
 		poFile,
 		poTemplate,
-	}
-	log.Infof(`updating po file for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
+	)
+	log.Infof(`run msgmerge for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
 	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = repository.WorkDir()
 	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		log.Errorf(`fail to update "%s": %s`, poFile, err)
+
+	if optNoLocation {
+		msgCatCmdArgs := []string{"msgcat", "--add-location=file", "-"}
+		log.Infof(`run msgcat for "%s": %s`, localeFullName, strings.Join(msgCatCmdArgs, " "))
+		msgCatCmd = exec.Command(msgCatCmdArgs[0], msgCatCmdArgs[1:]...)
+		msgCatCmd.Stdin, err = cmd.StdoutPipe()
+		if err != nil {
+			log.Errorf("fail to create pipe: %v\n", err)
+			return false
+		}
+		if err := cmd.Start(); err != nil {
+			log.Errorf(`fail to start msgmerge: %s`, err)
+			return false
+		}
+		output, err = msgCatCmd.Output()
+		if err != nil {
+			log.Errorf(`fail to read output for "%s": %s`, poFile, err)
+			return false
+		}
+	} else {
+		output, err = cmd.Output()
+		if err != nil {
+			log.Errorf(`fail to read output for "%s": %s`, poFile, err)
+			return false
+		}
+	}
+
+	if err := os.WriteFile(tmpFile, output, 0644); err != nil {
+		log.Errorf(`fail to write to "%s": %s`, tmpFile, err)
 		return false
 	}
-	if err := cmd.Wait(); err != nil {
-		log.Errorf(`fail to update "%s": %s`, poFile, err)
-		return false
+	os.Rename(tmpFile, poFile)
+
+	if optNoLocation {
+		if err := cmd.Wait(); err != nil {
+			log.Errorf(`wait failed: %s`, err)
+			return false
+		}
 	}
+
 	viper.Set("check--report-file-locations", "none")
 	return CheckPoFile(locale, poFile)
 }
