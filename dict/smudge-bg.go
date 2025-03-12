@@ -46,10 +46,6 @@ func init() {
 		 * but the original msgid does not have.
 		 */
 		{
-			Pattern: "неправилен параметър към опцията „--update“",
-			Replace: "bad value for update parameter",
-		},
-		{
 			Pattern: "непозната стойност за „--object-format“: „%s“",
 			Replace: "unknown value for object-format: %s",
 		},
