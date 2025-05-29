@@ -9,8 +9,8 @@ func init() {
 		 * subcommand, revert these changes before checking typos.
 		 */
 		{
-			Pattern: "Командата „git pack-objects“ не може да бъде стартирана",
-			Replace: "Could not spawn pack-objects",
+			Pattern: "Командата „git pack-objects“",
+			Replace: "Command pack-objects",
 		},
 		{
 			Pattern: "гарантиращите обекти не може да се подадат на командата „git pack-objects“",
