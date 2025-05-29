@@ -9,7 +9,7 @@ func init() {
 		 * subcommand, revert these changes before checking typos.
 		 */
 		{
-			Pattern: "Командата „git pack-objects“ не може да бъде стартирана",
+			Pattern: "Командата „git pack-objects“ не може да се стартира",
 			Replace: "Could not spawn pack-objects",
 		},
 		{
