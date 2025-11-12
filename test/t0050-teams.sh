@@ -106,6 +106,28 @@ test_expect_success "show team members" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
+	Alex Henrie <alexhenrie24@gmail.com>
+	Ralf Thielow <ralf.thielow@gmail.com>
+	Phillip Szelat <phillip.szelat@gmail.com>
+	Sébastien Helleu <flashcode@flashtux.org>
+	Changwoo Ryu <cwryu@debian.org>
+	Sihyeon Jang <uneedsihyeon@gmail.com>
+	insolor <insolor@gmail.com>
+	Nguyễn Thái Ngọc Duy <pclouds@gmail.com>
+	Ray Chen <oldsharp@gmail.com>
+	依云 <lilydjwg@gmail.com>
+	Fangyi Zhou <me@fangyi.io>
+	Franklin Weng <franklin@goodhorse.idv.tw>
+	EOF
+
+	test_cmp expect actual
+'
+
+test_expect_success "show all team members (leader + members)" '
+	git -C workdir $HELPER team --all >out &&
+	make_user_friendly_and_stable_output <out >actual &&
+
+	cat >expect <<-EOF &&
 	Alexander Shopov <ash@kambanaria.org>
 	Jordi Mas <jmas@softcatala.org>
 	Alex Henrie <alexhenrie24@gmail.com>

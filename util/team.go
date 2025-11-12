@@ -210,6 +210,10 @@ func ShowTeams(args ...string) bool {
 		if optLanguage {
 			fmt.Printf("# %s:\n", team.Language)
 			prefix = "\t"
+		} else if !optLeader && !optMembers && !optAll {
+			// When no options specified, show language code and name
+			fmt.Printf("%s\n", team.Language)
+			continue
 		}
 		if (optLeader || optAll) && team.Leader.Name != "" {
 			fmt.Printf("%s%s <%s>\n", prefix, team.Leader.Name, team.Leader.Email)
@@ -219,9 +223,6 @@ func ShowTeams(args ...string) bool {
 			for _, member := range team.Members {
 				fmt.Printf("%s%s <%s>\n", prefix, member.Name, member.Email)
 			}
-		}
-		if !optLeader && !optMembers && !optAll && !optLanguage {
-			fmt.Printf("# %s:\n", team.Language)
 		}
 	}
 	return ret
