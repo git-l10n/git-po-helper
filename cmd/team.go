@@ -27,9 +27,13 @@ func (v *teamCommand) Command() *cobra.Command {
 	v.cmd.Flags().BoolP("leader",
 		"l",
 		false,
-		"show leader")
+		"show leaders only")
 	v.cmd.Flags().BoolP("members",
 		"m",
+		false,
+		"show members only")
+	v.cmd.Flags().BoolP("all",
+		"a",
 		false,
 		"show all users")
 	v.cmd.Flags().BoolP("language",
@@ -39,9 +43,10 @@ func (v *teamCommand) Command() *cobra.Command {
 	v.cmd.Flags().BoolP("check",
 		"c",
 		false,
-		"show all users")
+		"check team members")
 	_ = viper.BindPFlag("team-leader", v.cmd.Flags().Lookup("leader"))
 	_ = viper.BindPFlag("team-members", v.cmd.Flags().Lookup("members"))
+	_ = viper.BindPFlag("all-team-members", v.cmd.Flags().Lookup("all"))
 	_ = viper.BindPFlag("show-language", v.cmd.Flags().Lookup("language"))
 	_ = viper.BindPFlag("team-check", v.cmd.Flags().Lookup("check"))
 	return v.cmd

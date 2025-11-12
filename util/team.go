@@ -190,6 +190,7 @@ func ShowTeams(args ...string) bool {
 		errors      []error
 		optLeader   = viper.GetBool("team-leader")
 		optMembers  = viper.GetBool("team-members")
+		optAll      = viper.GetBool("all-team-members")
 		optLanguage = viper.GetBool("show-language")
 		ret         = true
 	)
@@ -207,19 +208,20 @@ func ShowTeams(args ...string) bool {
 	for _, team := range teams {
 		prefix := ""
 		if optLanguage {
-			fmt.Printf("%s:\n", team.Language)
+			fmt.Printf("# %s:\n", team.Language)
 			prefix = "\t"
 		}
-		if (optLeader || optMembers) && team.Leader.Name != "" {
+		if (optLeader || optAll) && team.Leader.Name != "" {
 			fmt.Printf("%s%s <%s>\n", prefix, team.Leader.Name, team.Leader.Email)
 		}
-		if optMembers {
+		// If no maintainer, not show members
+		if (optMembers && team.Leader.Name != "") || optAll {
 			for _, member := range team.Members {
 				fmt.Printf("%s%s <%s>\n", prefix, member.Name, member.Email)
 			}
 		}
-		if !optLeader && !optMembers && !optLanguage {
-			fmt.Println(team.Language)
+		if !optLeader && !optMembers && !optAll && !optLanguage {
+			fmt.Printf("# %s:\n", team.Language)
 		}
 	}
 	return ret
