@@ -147,7 +147,7 @@ test_expect_success "update zh_CN with file and location" '
 	grep "^#: builtin/clean.c" workdir/po/zh_CN.po >output &&
 	sort output | head -1 >actual &&
 	cat >expect <<-EOF &&
-	#: builtin/clean.c:29
+	#: builtin/clean.c
 	EOF
 	test_cmp expect actual
 '

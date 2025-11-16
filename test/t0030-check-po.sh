@@ -114,8 +114,8 @@ level=info msg="[zh_CN.po (core)]    2 translated messages, 479 untranslated mes
 level=warning msg="[po/zh_CN.po]    5102 untranslated string(s) in your 'po/XX.po'"
 level=warning msg="[po/zh_CN.po]"
 level=warning msg="[po/zh_CN.po]     > po/XX.po:18: this message is untranslated"
-level=warning msg="[po/zh_CN.po]     > po/XX.po:24: this message is untranslated"
-level=warning msg="[po/zh_CN.po]     > po/XX.po:29: this message is untranslated"
+level=warning msg="[po/zh_CN.po]     > po/XX.po:22: this message is untranslated"
+level=warning msg="[po/zh_CN.po]     > po/XX.po:26: this message is untranslated"
 level=warning msg="[po/zh_CN.po]     > ..."
 level=warning msg="[po/zh_CN.po]"
 EOF

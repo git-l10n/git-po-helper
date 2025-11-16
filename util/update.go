@@ -156,7 +156,7 @@ func CmdUpdate(fileName string) bool {
 	if optNoFileLocation {
 		cmdArgs = append(cmdArgs, "--no-location")
 	} else {
-		cmdArgs = append(cmdArgs, "--add-location")
+		cmdArgs = append(cmdArgs, "--add-location=file")
 	}
 	cmdArgs = append(cmdArgs,
 		"-o", "-", // Save output to stdout

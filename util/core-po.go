@@ -66,7 +66,7 @@ func CheckCorePoFile(locale string) bool {
 	}
 
 	cmd := exec.Command("msgmerge",
-		"--add-location",
+		"--add-location=file",
 		"--backup=off",
 		"-U",
 		fout.Name(),

@@ -72,25 +72,13 @@ test_expect_success "bad syntax of zh_CN.po" '
 	test_cmp expect actual
 '
 
-cat >expect <<-EOF
-INFO run msgmerge for "Chinese - China": msgmerge --add-location -o - po/zh_CN.po po/git.pot
-------------------------------------------------------------------------------
-INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
-------------------------------------------------------------------------------
-ERROR [po/zh_CN.po]    Found file-location comments in po file. By submitting a location-less
-ERROR [po/zh_CN.po]    "po/XX.po" file, the size of the Git repository can be greatly reduced.
-ERROR [po/zh_CN.po]    See the discussion below:
-ERROR [po/zh_CN.po]
-ERROR [po/zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
-ERROR [po/zh_CN.po]
-ERROR [po/zh_CN.po]    As how to commit a location-less "po/XX.po" file, See:
-ERROR [po/zh_CN.po]
-ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
+test_expect_success "update zh_CN (--add-location=file)" '
+	cat >expect <<-EOF &&
+	INFO run msgmerge for "Chinese - China": msgmerge --add-location=file -o - po/zh_CN.po po/git.pot
+	------------------------------------------------------------------------------
+	INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
+	EOF
 
-ERROR: fail to execute "git-po-helper update"
-EOF
-
-test_expect_success "update zh_CN (with file-location)" '
 	cat >workdir/po/zh_CN.po <<-\EOF &&
 	msgid ""
 	msgstr ""
@@ -118,19 +106,19 @@ test_expect_success "update zh_CN (with file-location)" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz"
 	EOF
 
-	test_must_fail git -C workdir $HELPER update zh_CN 2>&1 |
+	git -C workdir $HELPER update zh_CN 2>&1 |
 		make_user_friendly_and_stable_output |
 		sed "/^\.\./ d" >actual &&
 	test_cmp expect actual
 '
 
-cat >expect <<-\EOF
-------------------------------------------------------------------------------
-INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
-EOF
-
 test_expect_success "check update of zh_CN.po" '
-	test_must_fail git -C workdir $HELPER \
+	cat >expect <<-\EOF &&
+	------------------------------------------------------------------------------
+	INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
+	EOF
+
+	git -C workdir $HELPER \
 		check-po zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
 		head -2 >actual &&
@@ -141,31 +129,19 @@ cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
 ------------------------------------------------------------------------------
-ERROR [po/zh_CN.po]    Found file-location comments in po file. By submitting a location-less
-ERROR [po/zh_CN.po]    "po/XX.po" file, the size of the Git repository can be greatly reduced.
-ERROR [po/zh_CN.po]    See the discussion below:
-ERROR [po/zh_CN.po]
-ERROR [po/zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
-ERROR [po/zh_CN.po]
-ERROR [po/zh_CN.po]    As how to commit a location-less "po/XX.po" file, See:
-ERROR [po/zh_CN.po]
-ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
-------------------------------------------------------------------------------
 INFO [zh_CN.po (core)]    2 translated messages, 479 untranslated messages.
 ------------------------------------------------------------------------------
 WARNING [po/zh_CN.po]    5102 untranslated string(s) in your 'po/XX.po'
 WARNING [po/zh_CN.po]
 WARNING [po/zh_CN.po]     > po/XX.po:18: this message is untranslated
-WARNING [po/zh_CN.po]     > po/XX.po:24: this message is untranslated
-WARNING [po/zh_CN.po]     > po/XX.po:29: this message is untranslated
+WARNING [po/zh_CN.po]     > po/XX.po:22: this message is untranslated
+WARNING [po/zh_CN.po]     > po/XX.po:26: this message is untranslated
 WARNING [po/zh_CN.po]     > ...
 WARNING [po/zh_CN.po]
-
-ERROR: fail to execute "git-po-helper check-po"
 EOF
 
 test_expect_success "check core update of zh_CN.po" '
-	test_must_fail git -C workdir $HELPER \
+	git -C workdir $HELPER \
 		check-po --core zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
