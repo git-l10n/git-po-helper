@@ -140,8 +140,8 @@ func (v *rootCommand) Command() *cobra.Command {
 		false,
 		"no check using gettext 0.14 for back compatible")
 	v.cmd.PersistentFlags().String("pot-file",
-		"download",
-		"way to get latest pot file: 'download', 'build', 'no' or filename such as po/git.pot")
+		"auto",
+		"way to get latest pot file: 'auto', 'download', 'build', 'no' or filename such as po/git.pot")
 	_ = v.cmd.PersistentFlags().MarkHidden("dryrun")
 	_ = v.cmd.PersistentFlags().MarkHidden("no-special-gettext-versions")
 	_ = v.cmd.PersistentFlags().MarkHidden("github-action-event")

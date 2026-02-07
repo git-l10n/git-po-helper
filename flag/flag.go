@@ -122,7 +122,16 @@ func GetPotFileFlag() int {
 	)
 
 	if opt == "" {
-		opt = "download"
+		opt = "auto"
+	}
+
+	// Handle "auto" value
+	if opt == "auto" {
+		if GitHubActionEvent() != "" {
+			opt = "download"
+		} else {
+			opt = "build"
+		}
 	}
 
 	switch opt {
