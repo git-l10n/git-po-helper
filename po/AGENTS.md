@@ -604,6 +604,231 @@ Re-run the translation command. The system will continue from the last progress
 checkpoint.
 
 
+## Reviewing po/XX.po
+
+When asked to review translations in `po/XX.po` or similar:
+
+AI agents can review translations in `po/XX.po`, targeting: (1) the full file,
+(2) changes in a specific commit, or (3) changes since a specific commit.
+
+Preparing a proper diff (original vs new) with full context for review is
+difficult without tooling. Plain `git diff` may fragment or lose PO translation
+context. Use `git-po-helper compare` instead to extract new or changed entries
+into a valid PO file for review.
+
+### Extracting content to review
+
+The `git-po-helper compare` command extracts new or changed entries between two
+PO file versions and writes them to stdout. Redirect to a file for review:
+
+```shell
+# Review local changes (HEAD vs working tree)
+git-po-helper compare po/XX.po >po/review.po
+
+# Review changes in a specific commit (parent vs commit)
+git-po-helper compare --commit <commit> po/XX.po >po/review.po
+
+# Review changes since a commit (commit vs working tree)
+git-po-helper compare --since <commit> po/XX.po >po/review.po
+
+# Review between two commits
+git-po-helper compare -r <commit1>..<commit2> po/XX.po >po/review.po
+
+# Compare two worktree files
+git-po-helper compare po/XX-old.po po/XX-new.po >po/review.po
+```
+
+**Options summary**
+
+| Option              | Meaning                                        |
+|---------------------|------------------------------------------------|
+| (none)              | Compare HEAD with working tree (local changes) |
+| `--commit <commit>` | Compare parent of commit with the commit       |
+| `--since <commit>`  | Compare commit with working tree               |
+| `-r x..y`           | Compare revision x with revision y             |
+| `-r x..`            | Compare revision x with working tree           |
+| `-r x`              | Compare parent of x with x                     |
+
+**Note**:
+1. Output is empty when there are no new or changed entries. If `po/review.po`
+   is empty, there is nothing to review.
+2. If the output is not empty, always has a valid PO head entry.
+
+
+### Handling large review files
+
+When the extracted review file is too large to review in one pass, use
+`git-po-helper msg-select` to split it by entry index range into smaller
+files and review each batch separately.
+
+Entry numbers: 0 is the header (included by default; use `--no-header` to
+omit); 1, 2, 3, ... are the first, second, third content entries. Range
+format: `--range "1-50"` (entries 1–50), `--range "-50"` (first 50 entries),
+`--range "51-"` (from entry 51 to end), or combined like
+`--range "1-50,101-150"`.
+
+Example workflow for a large `po/review.po`:
+
+```shell
+# Extract first 50 entries to a batch file
+git-po-helper msg-select --range "-50" po/review.po >po/review-batch1.po
+
+# Extract entries 51–100 for the next batch
+git-po-helper msg-select --range "51-100" po/review.po >po/review-batch2.po
+
+# Extract entries 101 to end for the last batch
+git-po-helper msg-select --range "101-" po/review.po >po/review-batch3.po
+
+# Or extract a range to a fragment file (no header)
+git-po-helper msg-select --range "1-50" --no-header po/review.po >po/review-fragment.po
+```
+
+Review each batch file in turn, then apply corrections to the main `po/XX.po`.
+
+
+### Review procedure
+
+1. **Extract entries**: Run `git-po-helper compare` with the desired range and
+   redirect output to `po/review.po` (see above). Clear any prior batch state:
+   `rm -f po/review.batch`.
+
+2. **Check file size and prepare batch if large**: **BEFORE reviewing**, count
+   entries in `po/review.po`. If it contains more than 100 entries, use
+   `git-po-helper msg-select` to process in batches. Use dynamic batch sizing.
+   Use `po/review.batch` to persist `BATCH_NUM` across iterations. Process all
+   batches in one run to produce a single JSON report (no interrupt/resume).
+
+   ```shell
+   # Count content entries in po/review.po (exclude header)
+   ENTRY_COUNT=$(grep -c '^msgid ' po/review.po 2>/dev/null || true)
+   ENTRY_COUNT=$((ENTRY_COUNT > 0 ? ENTRY_COUNT - 1 : 0))
+
+   # Dynamic batch size (same logic as translation workflow)
+   if test "$ENTRY_COUNT" -gt 100
+   then
+       if test "$ENTRY_COUNT" -gt 500
+       then
+           NUM=100
+       elif test "$ENTRY_COUNT" -gt 200
+       then
+           NUM=75
+       else
+           NUM=50
+       fi
+       # BATCH_NUM: persist in po/review.batch for iteration across steps
+       BATCH_NUM=$(cat po/review.batch 2>/dev/null || echo 0)
+       BATCH_NUM=$((BATCH_NUM + 1))
+       echo $BATCH_NUM >po/review.batch
+       START=$(((BATCH_NUM - 1) * NUM + 1))
+       END=$((BATCH_NUM * NUM))
+       if test "$END" -gt "$ENTRY_COUNT"
+       then
+           END=$ENTRY_COUNT
+       fi
+
+       # Extract batch: use -N for first batch, N-M for middle, N- for last
+       if test "$BATCH_NUM" -eq 1
+       then
+           git-po-helper msg-select --range "-$NUM" po/review.po >po/review-batch.po
+       elif test "$END" -ge "$ENTRY_COUNT"
+       then
+           git-po-helper msg-select --range "$START-" po/review.po >po/review-batch.po
+       else
+           git-po-helper msg-select --range "$START-$END" po/review.po >po/review-batch.po
+       fi
+
+       echo "Reviewing batch $BATCH_NUM: entries $START-$END (of $ENTRY_COUNT)"
+       REVIEW_FILE="po/review-batch.po"
+   else
+       REVIEW_FILE="po/review.po"
+       echo "Reviewing all $ENTRY_COUNT entries at once"
+   fi
+   ```
+
+3. **Read context**: Reference the "Background Knowledge for Translators
+   and Reviewers" section for PO format, placeholder rules, and terminology.
+   Read the glossary section if presents in the review PO file and add it
+   to the context for reference.
+
+4. **Review entries**: For each entry in `$REVIEW_FILE`, check:
+   - Terminology consistency with the glossary
+   - Correctness of placeholder preservation and reordering
+   - Naturalness and fluency in the target language
+   - Technical accuracy of the translation
+
+5. **Output format**: When providing review feedback, you may output a JSON
+   report with issues and suggestions (see the "Review JSON Format" section
+   below). Alternatively, provide inline suggestions or a human-readable
+   report.
+
+6. **Apply changes**: If the review identifies issues, the human translator
+   applies the suggested corrections to `po/XX.po` (or the appropriate source
+   file). The review output file (`po/review.po` or `po/review-batch.po`) is
+   for reference only; it is not merged back automatically.
+
+7. **Report progress and repeat**: If processing in batches, report progress
+   and repeat from step 2 until all batches are reviewed. Accumulate issues
+   into a single JSON report across all batches.
+
+   ```shell
+   if test -f po/review-batch.po
+   then
+       PROCESSED=$((BATCH_NUM * NUM))
+       if test "$PROCESSED" -gt "$ENTRY_COUNT"
+       then
+           PROCESSED=$ENTRY_COUNT
+       fi
+       PROGRESS=$((100 * PROCESSED / ENTRY_COUNT))
+       echo "Progress: $PROGRESS% ($PROCESSED/$ENTRY_COUNT entries reviewed)"
+       if test "$END" -ge "$ENTRY_COUNT"
+       then
+           echo "Review complete. Clean up: rm -f po/review-batch.po po/review.batch"
+           echo "Output report: git-po-helper stat --review po/review.json po/review.po"
+           # LLM: Display the output and execute: git-po-helper stat --review po/review.json po/review.po
+       else
+           echo "Repeat from step 2 for next batch."
+       fi
+   fi
+   ```
+
+   **MANDATORY**: When `po/review.po` has more than 100 entries, you MUST
+   process all batches in one run and produce a single JSON report. Do not
+   stop early; accumulate issues from each batch into the final output.
+
+
+### Review JSON Format
+
+When outputting a JSON report, use the following structure:
+
+```json
+{
+  "issues": [
+    {
+      "msgid": "commit",
+      "msgstr": "承诺",
+      "score": 0,
+      "description": "术语错误：'commit'应译为'提交'",
+      "suggestion": "提交"
+    },
+    {
+      "msgid": "repository",
+      "msgstr": "仓库",
+      "score": 2,
+      "description": "一致性问题：其他地方使用'版本库'",
+      "suggestion": "版本库"
+    }
+  ]
+}
+```
+
+- `issues`: Array of issues found. Each issue has:
+  - `msgid`: Original string (msgid).
+  - `msgstr`: Current translation.
+  - `score`: 0 = critical (must fix), 2 = minor (needs adjustment), 3 = perfect.
+  - `description`: Explanation of the issue.
+  - `suggestion`: Suggested correction.
+
+
 ## Human translators remain in control
 
 Translation of Git is a human-driven community effort. Language team leaders and
