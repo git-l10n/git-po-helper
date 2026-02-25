@@ -88,9 +88,10 @@ func GetPrettyLocaleName(locale string) (string, error) {
 	return langName, nil
 }
 
-// GetUserInput reads user input from stdin
+// GetUserInput reads user input from stdin.
+// Prompt is written to stderr so stdout remains clean for redirects (e.g. compare >file).
 func GetUserInput(prompt, defaultValue string) string {
-	fmt.Print(prompt)
+	fmt.Fprint(os.Stderr, prompt)
 
 	reader := bufio.NewReader(os.Stdin)
 	text, _ := reader.ReadString('\n')

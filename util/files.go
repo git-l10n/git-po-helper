@@ -27,9 +27,9 @@ func ResolvePoFile(poFileArg string, changedPoFiles []string) (string, error) {
 		default:
 			// Multiple files: interactive mode asks user, non-interactive errors
 			if isatty.IsTerminal(os.Stdin.Fd()) && isatty.IsTerminal(os.Stdout.Fd()) {
-				fmt.Printf("Multiple changed po files found:\n")
+				fmt.Fprintf(os.Stderr, "Multiple changed po files found:\n")
 				for i, f := range changedPoFiles {
-					fmt.Printf("  [%d] %s\n", i+1, f)
+					fmt.Fprintf(os.Stderr, "  [%d] %s\n", i+1, f)
 				}
 				answer := GetUserInput(fmt.Sprintf("Select file (1-%d): ", len(changedPoFiles)), "1")
 				var idx int
