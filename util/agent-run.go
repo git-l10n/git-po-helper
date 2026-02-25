@@ -76,14 +76,13 @@ var (
 
 // ReviewOutputPaths returns (poFile, jsonFile) for the given output base path.
 // If base is empty, use ReviewDefaultOutputFile.
-// Strips .po or .json extension from base if present.
+// Uses DeriveReviewPaths to ensure consistent json/po derivation.
 func ReviewOutputPaths(base string) (poFile, jsonFile string) {
 	if base == "" {
 		base = ReviewDefaultOutputFile
 	}
-	base = strings.TrimSuffix(base, ".po")
-	base = strings.TrimSuffix(base, ".json")
-	return base + ".po", base + ".json"
+	jsonFile, poFile = DeriveReviewPaths(base)
+	return poFile, jsonFile
 }
 
 // CalculateReviewScore calculates a 0-100 score from a ReviewJSONResult.
@@ -1724,7 +1723,7 @@ func RunAgentReviewAllWithLLM(cfg *config.AgentConfig, agentName string, target 
 		return result, fmt.Errorf("review JSON not generated at %s\nHint: The agent must write the review result to this file", reviewJSONFile)
 	}
 
-	reportResult, err := ReportReviewFromJSON(reviewJSONFile, poFile)
+	reportResult, err := ReportReviewFromJSON(reviewJSONFile)
 	if err != nil {
 		return result, fmt.Errorf("failed to read review JSON: %w", err)
 	}

@@ -166,11 +166,13 @@ type ReviewReportResult struct {
 
 // ReportReviewFromJSON reads a review JSON file, optionally fills total_entries
 // from a PO file when the JSON has none, and returns the report data.
-// poFileForCount is required when review.TotalEntries <= 0.
-func ReportReviewFromJSON(reviewFile string, poFileForCount string) (*ReviewReportResult, error) {
-	data, err := os.ReadFile(reviewFile)
+// path may end with .json or .po; both json and po filenames are derived from it
+// via DeriveReviewPaths to avoid inconsistency.
+func ReportReviewFromJSON(path string) (*ReviewReportResult, error) {
+	jsonFile, poFile := DeriveReviewPaths(path)
+	data, err := os.ReadFile(jsonFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read review JSON %s: %w", reviewFile, err)
+		return nil, fmt.Errorf("failed to read review JSON %s: %w", jsonFile, err)
 	}
 
 	var review ReviewJSONResult
@@ -179,15 +181,12 @@ func ReportReviewFromJSON(reviewFile string, poFileForCount string) (*ReviewRepo
 	}
 
 	if review.TotalEntries <= 0 {
-		if poFileForCount == "" {
-			return nil, fmt.Errorf("review JSON has no total_entries; provide po-file to count entries")
+		if !Exist(poFile) {
+			return nil, fmt.Errorf("file does not exist: %s", poFile)
 		}
-		if !Exist(poFileForCount) {
-			return nil, fmt.Errorf("file does not exist: %s", poFileForCount)
-		}
-		count, err := CountPoEntries(poFileForCount)
+		count, err := CountPoEntries(poFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to count entries in %s: %w", poFileForCount, err)
+			return nil, fmt.Errorf("failed to count entries in %s: %w", poFile, err)
 		}
 		review.TotalEntries = count
 	}

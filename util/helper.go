@@ -18,6 +18,19 @@ var (
 	oidRegex = regexp.MustCompile(`^[0-9a-f]{7,40}[0-9]*$`)
 )
 
+// DeriveReviewPaths takes a path and returns (jsonFile, poFile). The path may end with
+// .json or .po; the extension is stripped to get the base. Returns base+".json" and
+// base+".po". Use this to ensure json and po filenames are always consistent.
+func DeriveReviewPaths(path string) (jsonFile, poFile string) {
+	base := path
+	if strings.HasSuffix(base, ".json") {
+		base = strings.TrimSuffix(base, ".json")
+	} else if strings.HasSuffix(base, ".po") {
+		base = strings.TrimSuffix(base, ".po")
+	}
+	return base + ".json", base + ".po"
+}
+
 // Exist check if path is exist.
 func Exist(name string) bool {
 	if _, err := os.Stat(name); err == nil {

@@ -88,27 +88,15 @@ func (v statCommand) Execute(args []string) error {
 }
 
 func (v statCommand) executeReviewReport(args []string) error {
-	// Derive json and po from --review: strip .json/.po if present, then add both
-	base := v.O.Review
-	if strings.HasSuffix(base, ".json") {
-		base = strings.TrimSuffix(base, ".json")
-	} else if strings.HasSuffix(base, ".po") {
-		base = strings.TrimSuffix(base, ".po")
-	}
-	jsonFile := base + ".json"
-	poFile := base + ".po"
-
-	result, err := util.ReportReviewFromJSON(jsonFile, poFile)
+	result, err := util.ReportReviewFromJSON(v.O.Review)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
 			return newUserError(err.Error())
 		}
-		if strings.Contains(err.Error(), "provide po-file") {
-			return newUserError("review JSON has no total_entries; provide <po-file> to count entries")
-		}
 		return err
 	}
 
+	jsonFile, _ := util.DeriveReviewPaths(v.O.Review)
 	fmt.Printf("Review JSON: %s\n", jsonFile)
 	fmt.Printf("  Total entries: %d\n", result.Review.TotalEntries)
 	fmt.Printf("  Issues found: %d\n", len(result.Review.Issues))
