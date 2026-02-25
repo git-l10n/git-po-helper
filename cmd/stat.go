@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/flag"
@@ -33,14 +34,15 @@ func (v *statCommand) Command() *cobra.Command {
   obsolete     - obsolete entries (#~ format)
 
 With --review <json-file>: report review results from agent-run review JSON.
-If the JSON has no total_entries, po-file is required to count entries.`,
+Both files are derived from the path: strip .json or .po if present, then use <base>.json and <base>.po.
+No args required.`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return v.Execute(args)
 		},
 	}
 
-	v.cmd.Flags().StringVar(&v.O.Review, "review", "", "report from review JSON file (agent-run review output)")
+	v.cmd.Flags().StringVar(&v.O.Review, "review", "", "report from review; path may end with .json or .po (both <base>.json and <base>.po are used)")
 
 	return v.cmd
 }
@@ -49,6 +51,9 @@ func (v statCommand) Execute(args []string) error {
 	repository.ChdirProjectRoot()
 
 	if v.O.Review != "" {
+		if len(args) > 0 {
+			fmt.Fprintf(os.Stderr, "warning: in --review mode, args are ignored\n")
+		}
 		return v.executeReviewReport(args)
 	}
 
@@ -83,12 +88,17 @@ func (v statCommand) Execute(args []string) error {
 }
 
 func (v statCommand) executeReviewReport(args []string) error {
-	poFileForCount := ""
-	if len(args) == 1 {
-		poFileForCount = args[0]
+	// Derive json and po from --review: strip .json/.po if present, then add both
+	base := v.O.Review
+	if strings.HasSuffix(base, ".json") {
+		base = strings.TrimSuffix(base, ".json")
+	} else if strings.HasSuffix(base, ".po") {
+		base = strings.TrimSuffix(base, ".po")
 	}
+	jsonFile := base + ".json"
+	poFile := base + ".po"
 
-	result, err := util.ReportReviewFromJSON(v.O.Review, poFileForCount)
+	result, err := util.ReportReviewFromJSON(jsonFile, poFile)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
 			return newUserError(err.Error())
@@ -99,7 +109,7 @@ func (v statCommand) executeReviewReport(args []string) error {
 		return err
 	}
 
-	fmt.Printf("Review JSON: %s\n", v.O.Review)
+	fmt.Printf("Review JSON: %s\n", jsonFile)
 	fmt.Printf("  Total entries: %d\n", result.Review.TotalEntries)
 	fmt.Printf("  Issues found: %d\n", len(result.Review.Issues))
 	fmt.Printf("  Review score: %d/100\n", result.Score)
