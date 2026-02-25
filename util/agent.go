@@ -222,18 +222,24 @@ func CountPoEntries(poFile string) (int, error) {
 	return count, nil
 }
 
+// PlaceholderVars holds key-value pairs for placeholder replacement.
+// Keys correspond to placeholder names in template (e.g. {prompt}, {source}).
+type PlaceholderVars map[string]string
+
 // ReplacePlaceholders replaces placeholders in a template string with actual values.
-// Supported placeholders:
-//   - {prompt} - replaced with the prompt text
-//   - {source} - replaced with the source file path (po file)
-//   - {commit} - replaced with the commit ID (default: HEAD)
+// Placeholders in template use {key} format, e.g. {prompt}, {source}, {commit}.
 //
-// If a placeholder value is empty, it will be replaced with an empty string.
-func ReplacePlaceholders(template string, prompt, source, commit string) string {
+// Example:
+//
+//	ReplacePlaceholders("cmd -p {prompt} -s {source}", PlaceholderVars{
+//	    "prompt": "update",
+//	    "source": "po/zh_CN.po",
+//	})
+func ReplacePlaceholders(template string, kv PlaceholderVars) string {
 	result := template
-	result = strings.ReplaceAll(result, "{prompt}", prompt)
-	result = strings.ReplaceAll(result, "{source}", source)
-	result = strings.ReplaceAll(result, "{commit}", commit)
+	for key, value := range kv {
+		result = strings.ReplaceAll(result, "{"+key+"}", value)
+	}
 	return result
 }
 
@@ -443,13 +449,13 @@ func SelectAgent(cfg *config.AgentConfig, agentName string) (config.Agent, error
 }
 
 // BuildAgentCommand builds an agent command by replacing placeholders in the agent's command template.
-// It replaces {prompt}, {source}, and {commit} placeholders with actual values.
+// It replaces placeholders (e.g. {prompt}, {source}, {commit}) with values from vars.
 // For claude/codex/opencode/gemini commands, it adds stream-json parameters based on agent.Output.
 // Uses agent.Kind for type-safe detection (Kind must be validated by SelectAgent).
-func BuildAgentCommand(agent config.Agent, prompt, source, commit string) []string {
+func BuildAgentCommand(agent config.Agent, vars PlaceholderVars) []string {
 	cmd := make([]string, len(agent.Cmd))
 	for i, arg := range agent.Cmd {
-		cmd[i] = ReplacePlaceholders(arg, prompt, source, commit)
+		cmd[i] = ReplacePlaceholders(arg, vars)
 	}
 
 	// Use agent.Kind for type detection (validated by SelectAgent)

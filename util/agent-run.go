@@ -658,7 +658,7 @@ func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string, agentTest bool
 	}
 
 	// Build agent command with placeholders replaced
-	agentCmd := BuildAgentCommand(selectedAgent, prompt, "", "")
+	agentCmd := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt})
 
 	// Determine output format
 	outputFormat := selectedAgent.Output
@@ -863,7 +863,7 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 	if rel, err := filepath.Rel(workDir, poFile); err == nil && rel != "" && rel != "." {
 		sourcePath = filepath.ToSlash(rel)
 	}
-	agentCmd := BuildAgentCommand(selectedAgent, prompt, sourcePath, "")
+	agentCmd := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": sourcePath})
 
 	// Determine output format
 	outputFormat := selectedAgent.Output
@@ -1237,7 +1237,7 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 	if rel, err := filepath.Rel(workDir, poFile); err == nil && rel != "" && rel != "." {
 		sourcePath = filepath.ToSlash(rel)
 	}
-	agentCmd := BuildAgentCommand(selectedAgent, prompt, sourcePath, "")
+	agentCmd := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": sourcePath})
 
 	// Determine output format
 	outputFormat := selectedAgent.Output
@@ -1417,11 +1417,11 @@ func CmdAgentRunTranslate(agentName, poFile string) error {
 }
 
 // executeReviewAgent executes the agent command for reviewing the given file.
-// reviewFilePath is the PO file to review (e.g. po/review.po or po/review-batch.po).
+// vars contains placeholder values (e.g. "prompt", "source" for the file to review).
 // Returns stdout (for JSON extraction), stderr, originalStdout (raw before parsing), streamResult.
 // Updates result with AgentExecuted, AgentSuccess, AgentError, AgentStdout, AgentStderr.
-func executeReviewAgent(selectedAgent config.Agent, prompt, reviewFilePath, workDir string, result *AgentRunResult) (stdout, stderr, originalStdout []byte, streamResult AgentStreamResult, err error) {
-	agentCmd := BuildAgentCommand(selectedAgent, prompt, reviewFilePath, "")
+func executeReviewAgent(selectedAgent config.Agent, vars PlaceholderVars, workDir string, result *AgentRunResult) (stdout, stderr, originalStdout []byte, streamResult AgentStreamResult, err error) {
+	agentCmd := BuildAgentCommand(selectedAgent, vars)
 
 	outputFormat := selectedAgent.Output
 	if outputFormat == "" {
@@ -1511,17 +1511,18 @@ func executeReviewAgent(selectedAgent config.Agent, prompt, reviewFilePath, work
 	return stdout, stderr, originalStdout, streamResult, nil
 }
 
-// runReviewSingleBatch runs review on the full reviewFilePath (single batch).
-func runReviewSingleBatch(selectedAgent config.Agent, prompt, reviewFilePath, workDir string, result *AgentRunResult, entryCount int) (*ReviewJSONResult, error) {
-	stdout, _, _, _, err := executeReviewAgent(selectedAgent, prompt, reviewFilePath, workDir, result)
+// runReviewSingleBatch runs review on the full file (single batch).
+func runReviewSingleBatch(selectedAgent config.Agent, vars PlaceholderVars, workDir string, result *AgentRunResult, entryCount int) (*ReviewJSONResult, error) {
+	stdout, _, _, _, err := executeReviewAgent(selectedAgent, vars, workDir, result)
 	if err != nil {
 		return nil, err
 	}
-	return parseAndAccumulateReviewJSON(stdout, entryCount, reviewFilePath)
+	return parseAndAccumulateReviewJSON(stdout, entryCount)
 }
 
 // runReviewBatched runs review in batches using msg-select when entry count > 100.
-func runReviewBatched(selectedAgent config.Agent, prompt, reviewPOFile, workDir string, result *AgentRunResult, entryCount int) (*ReviewJSONResult, error) {
+func runReviewBatched(selectedAgent config.Agent, vars PlaceholderVars, workDir string, result *AgentRunResult, entryCount int) (*ReviewJSONResult, error) {
+	reviewPOFile := vars["source"]
 	num := 50
 	if entryCount > 500 {
 		num = 100
@@ -1555,14 +1556,19 @@ func runReviewBatched(selectedAgent config.Agent, prompt, reviewPOFile, workDir 
 		f.Close()
 
 		// Run agent on batch
-		stdout, _, _, _, err := executeReviewAgent(selectedAgent, prompt, batchFile, workDir, result)
+		batchVars := make(PlaceholderVars)
+		for k, v := range vars {
+			batchVars[k] = v
+		}
+		batchVars["source"] = batchFile
+		stdout, _, _, _, err := executeReviewAgent(selectedAgent, batchVars, workDir, result)
 		os.Remove(batchFile) // Clean up batch file
 		if err != nil {
 			return nil, err
 		}
 
 		// Parse JSON and accumulate issues
-		batchJSON, err := parseAndAccumulateReviewJSON(stdout, end-start+1, batchFile)
+		batchJSON, err := parseAndAccumulateReviewJSON(stdout, entryCount)
 		if err != nil {
 			return nil, err
 		}
@@ -1590,7 +1596,7 @@ func formatMsgSelectRange(batchNum, start, end, entryCount, num int) string {
 }
 
 // parseAndAccumulateReviewJSON extracts and parses JSON from stdout, updates total_entries.
-func parseAndAccumulateReviewJSON(stdout []byte, entryCount int, reviewFilePath string) (*ReviewJSONResult, error) {
+func parseAndAccumulateReviewJSON(stdout []byte, entryCount int) (*ReviewJSONResult, error) {
 	jsonBytes, err := ExtractJSONFromOutput(stdout)
 	if err != nil {
 		log.Errorf("failed to extract JSON from agent output: %v", err)
@@ -1666,7 +1672,7 @@ func RunAgentReviewAllWithLLM(cfg *config.AgentConfig, agentName string, target 
 		poFileRel = filepath.ToSlash(rel)
 	}
 	prompt := buildReviewAllWithLLMPrompt(target)
-	agentCmd := BuildAgentCommand(selectedAgent, prompt, poFileRel, "")
+	agentCmd := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": poFileRel})
 
 	outputFormat := normalizeOutputFormat(selectedAgent.Output)
 	if outputFormat == "" {
@@ -1809,15 +1815,21 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 		entryCount-- // Exclude header
 	}
 
+	reviewVars := PlaceholderVars{
+		"prompt": prompt,
+		"source": reviewPOFile,
+		"dest":   reviewPOFile,
+		"json":   reviewJSONFile,
+	}
 	if entryCount <= 100 {
 		// Single run: review entire file
-		reviewJSON, err = runReviewSingleBatch(selectedAgent, prompt, reviewPOFile, workDir, result, entryCount)
+		reviewJSON, err = runReviewSingleBatch(selectedAgent, reviewVars, workDir, result, entryCount)
 		if err != nil {
 			return result, err
 		}
 	} else {
 		// Batch mode: iterate with msg-select
-		reviewJSON, err = runReviewBatched(selectedAgent, prompt, reviewPOFile, workDir, result, entryCount)
+		reviewJSON, err = runReviewBatched(selectedAgent, reviewVars, workDir, result, entryCount)
 		if err != nil {
 			return result, err
 		}

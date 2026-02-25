@@ -347,7 +347,7 @@ agent-test:
 5. **Get prompt** from `cfg.Prompt.UpdatePo`:
    - If empty, return an error instructing the user to set `prompt.update_po`.
 6. **Build agent command**:
-   - Use `BuildAgentCommand(selectedAgent, prompt, source, "")`, where `source` is the PO file path (e.g., `po/zh_CN.po`).
+   - Use `BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": source})`, where `source` is the PO file path (e.g., `po/zh_CN.po`).
    - Placeholders `{prompt}`, `{source}`, and `{commit}` are replaced before execution.
 7. **Execute agent command**:
    - Use `ExecuteAgentCommand(agentCmd, repository.WorkDir())`.

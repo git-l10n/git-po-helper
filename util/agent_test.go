@@ -153,64 +153,50 @@ func TestReplacePlaceholders(t *testing.T) {
 	tests := []struct {
 		name     string
 		template string
-		prompt   string
-		source   string
-		commit   string
+		kv       PlaceholderVars
 		expected string
 	}{
 		{
 			name:     "all placeholders",
 			template: "cmd -p {prompt} -s {source} -c {commit}",
-			prompt:   "update pot",
-			source:   "po/zh_CN.po",
-			commit:   "HEAD",
+			kv:       PlaceholderVars{"prompt": "update pot", "source": "po/zh_CN.po", "commit": "HEAD"},
 			expected: "cmd -p update pot -s po/zh_CN.po -c HEAD",
 		},
 		{
 			name:     "only prompt placeholder",
 			template: "cmd -p {prompt}",
-			prompt:   "update pot",
-			source:   "",
-			commit:   "",
+			kv:       PlaceholderVars{"prompt": "update pot"},
 			expected: "cmd -p update pot",
 		},
 		{
 			name:     "multiple occurrences",
 			template: "{prompt} {prompt} {prompt}",
-			prompt:   "test",
-			source:   "",
-			commit:   "",
+			kv:       PlaceholderVars{"prompt": "test"},
 			expected: "test test test",
 		},
 		{
 			name:     "empty values",
 			template: "cmd -p {prompt} -s {source} -c {commit}",
-			prompt:   "",
-			source:   "",
-			commit:   "",
+			kv:       PlaceholderVars{"prompt": "", "source": "", "commit": ""},
 			expected: "cmd -p  -s  -c ",
 		},
 		{
 			name:     "no placeholders",
 			template: "cmd -p test",
-			prompt:   "update pot",
-			source:   "po/zh_CN.po",
-			commit:   "HEAD",
+			kv:       PlaceholderVars{"prompt": "update pot", "source": "po/zh_CN.po", "commit": "HEAD"},
 			expected: "cmd -p test",
 		},
 		{
 			name:     "special characters in values",
 			template: "cmd -p {prompt}",
-			prompt:   "update 'pot' file",
-			source:   "",
-			commit:   "",
+			kv:       PlaceholderVars{"prompt": "update 'pot' file"},
 			expected: "cmd -p update 'pot' file",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ReplacePlaceholders(tt.template, tt.prompt, tt.source, tt.commit)
+			result := ReplacePlaceholders(tt.template, tt.kv)
 			if result != tt.expected {
 				t.Errorf("Expected %q, got %q", tt.expected, result)
 			}
