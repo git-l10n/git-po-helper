@@ -63,7 +63,7 @@ func (v checkPotCommand) Execute(args []string) error {
 		return util.ShowManpageConfigs(true)
 	}
 
-	if util.CheckCamelCaseConfigVariableInPotFile() != nil {
+	if err := util.CheckCamelCaseConfigVariableInPotFile(); err != nil {
 		return errExecute
 	}
 	return nil

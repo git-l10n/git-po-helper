@@ -68,7 +68,7 @@ func (v statCommand) Execute(args []string) error {
 
 	stats, err := util.CountPoReportStats(poFile)
 	if err != nil {
-		return err
+		return newUserErrorF("%v", err)
 	}
 
 	if flag.Verbose() > 0 {
@@ -90,10 +90,7 @@ func (v statCommand) Execute(args []string) error {
 func (v statCommand) executeReviewReport(args []string) error {
 	result, err := util.ReportReviewFromJSON(v.O.Review)
 	if err != nil {
-		if strings.Contains(err.Error(), "does not exist") {
-			return newUserError(err.Error())
-		}
-		return err
+		return newUserErrorF("%v", err)
 	}
 
 	jsonFile, _ := util.DeriveReviewPaths(v.O.Review)

@@ -77,7 +77,10 @@ Examples:
 				return newUserError("update-pot command needs no arguments")
 			}
 
-			return util.CmdAgentRunUpdatePot(v.O.Agent)
+			if err := util.CmdAgentRunUpdatePot(v.O.Agent); err != nil {
+				return newUserErrorF("%v", err)
+			}
+			return nil
 		},
 	}
 
@@ -132,7 +135,10 @@ Examples:
 				poFile = args[0]
 			}
 
-			return util.CmdAgentRunUpdatePo(v.O.Agent, poFile)
+			if err := util.CmdAgentRunUpdatePo(v.O.Agent, poFile); err != nil {
+				return newUserErrorF("%v", err)
+			}
+			return nil
 		},
 	}
 
@@ -190,7 +196,10 @@ Examples:
 				poFile = args[0]
 			}
 
-			return util.CmdAgentRunTranslate(v.O.Agent, poFile)
+			if err := util.CmdAgentRunTranslate(v.O.Agent, poFile); err != nil {
+				return newUserErrorF("%v", err)
+			}
+			return nil
 		},
 	}
 
@@ -235,7 +244,10 @@ With two file arguments, compare worktree files (revisions not allowed).`,
 			if err != nil {
 				return newUserErrorF("%v", err)
 			}
-			return util.CmdAgentRunReview(v.O.Agent, target, v.O.Output, v.O.AllWithLLM)
+			if err := util.CmdAgentRunReview(v.O.Agent, target, v.O.Output, v.O.AllWithLLM); err != nil {
+				return newUserErrorF("%v", err)
+			}
+			return nil
 		},
 	}
 
@@ -288,7 +300,10 @@ Examples:
 			if len(args) > 1 {
 				return newUserError("parse-log expects at most one argument: log-file")
 			}
-			return util.CmdAgentRunParseLog(logFile)
+			if err := util.CmdAgentRunParseLog(logFile); err != nil {
+				return newUserErrorF("%v", err)
+			}
+			return nil
 		},
 	}
 
@@ -317,7 +332,10 @@ will be displayed.`,
 				return newUserError("show-config command needs no arguments")
 			}
 
-			return util.CmdAgentRunShowConfig()
+			if err := util.CmdAgentRunShowConfig(); err != nil {
+				return newUserErrorF("%v", err)
+			}
+			return nil
 		},
 	}
 

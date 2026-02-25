@@ -31,7 +31,7 @@ func (v *updateCommand) Command() *cobra.Command {
 			}
 			for _, locale := range args {
 				if !util.CmdUpdate(locale) {
-					err = errExecute
+					return errExecute
 				}
 			}
 			return err
@@ -59,7 +59,7 @@ func (v updateCommand) Execute(args []string) error {
 	}
 	for _, locale := range args {
 		if !util.CmdUpdate(locale) {
-			err = errExecute
+			return errExecute
 		}
 	}
 	return err

@@ -59,10 +59,10 @@ func (v checkCommand) Execute(args []string) error {
 		return newUserError("check command needs no arguments")
 	}
 	if !util.CmdCheckPo() {
-		err = errExecute
+		return errExecute
 	}
 	if !util.CmdCheckCommits() {
-		err = errExecute
+		return errExecute
 	}
 	return err
 }

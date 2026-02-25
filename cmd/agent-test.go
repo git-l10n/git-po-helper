@@ -108,7 +108,10 @@ Examples:
 				return newUserError("update-pot command needs no arguments")
 			}
 
-			return util.CmdAgentTestUpdatePot(v.O.Agent, v.O.Runs, v.O.DangerouslyRemovePoDir)
+			if err := util.CmdAgentTestUpdatePot(v.O.Agent, v.O.Runs, v.O.DangerouslyRemovePoDir); err != nil {
+				return newUserErrorF("%v", err)
+			}
+			return nil
 		},
 	}
 
@@ -176,7 +179,10 @@ Examples:
 				poFile = args[0]
 			}
 
-			return util.CmdAgentTestUpdatePo(v.O.Agent, poFile, v.O.Runs, v.O.DangerouslyRemovePoDir)
+			if err := util.CmdAgentTestUpdatePo(v.O.Agent, poFile, v.O.Runs, v.O.DangerouslyRemovePoDir); err != nil {
+				return newUserErrorF("%v", err)
+			}
+			return nil
 		},
 	}
 
@@ -237,7 +243,10 @@ Examples:
 				poFile = args[0]
 			}
 
-			return util.CmdAgentTestTranslate(v.O.Agent, poFile, v.O.Runs, v.O.DangerouslyRemovePoDir)
+			if err := util.CmdAgentTestTranslate(v.O.Agent, poFile, v.O.Runs, v.O.DangerouslyRemovePoDir); err != nil {
+				return newUserErrorF("%v", err)
+			}
+			return nil
 		},
 	}
 
@@ -280,7 +289,10 @@ With two file arguments, compare worktree files (revisions not allowed).`,
 			if err != nil {
 				return newUserErrorF("%v", err)
 			}
-			return util.CmdAgentTestReview(v.O.Agent, target, v.O.Runs, v.O.DangerouslyRemovePoDir, v.O.Output, v.O.AllWithLLM)
+			if err := util.CmdAgentTestReview(v.O.Agent, target, v.O.Runs, v.O.DangerouslyRemovePoDir, v.O.Output, v.O.AllWithLLM); err != nil {
+				return newUserErrorF("%v", err)
+			}
+			return nil
 		},
 	}
 
@@ -337,7 +349,10 @@ will be displayed.`,
 				return newUserError("show-config command needs no arguments")
 			}
 
-			return util.CmdAgentRunShowConfig()
+			if err := util.CmdAgentRunShowConfig(); err != nil {
+				return newUserErrorF("%v", err)
+			}
+			return nil
 		},
 	}
 
