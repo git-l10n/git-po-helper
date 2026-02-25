@@ -3,6 +3,7 @@ package util
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -153,6 +154,66 @@ func FormatStatLine(stats *PoReportStats) string {
 		return "0 translated messages.\n"
 	}
 	return strings.Join(parts, ", ") + ".\n"
+}
+
+// ReviewReportResult holds the result of reporting from a review JSON file.
+type ReviewReportResult struct {
+	Review        *ReviewJSONResult
+	Score         int
+	CriticalCount int
+	MinorCount    int
+}
+
+// ReportReviewFromJSON reads a review JSON file, optionally fills total_entries
+// from a PO file when the JSON has none, and returns the report data.
+// poFileForCount is required when review.TotalEntries <= 0.
+func ReportReviewFromJSON(reviewFile string, poFileForCount string) (*ReviewReportResult, error) {
+	data, err := os.ReadFile(reviewFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read review JSON %s: %w", reviewFile, err)
+	}
+
+	var review ReviewJSONResult
+	if err := json.Unmarshal(data, &review); err != nil {
+		return nil, fmt.Errorf("failed to parse review JSON: %w", err)
+	}
+
+	if review.TotalEntries <= 0 {
+		if poFileForCount == "" {
+			return nil, fmt.Errorf("review JSON has no total_entries; provide po-file to count entries")
+		}
+		if !Exist(poFileForCount) {
+			return nil, fmt.Errorf("file does not exist: %s", poFileForCount)
+		}
+		count, err := CountPoEntries(poFileForCount)
+		if err != nil {
+			return nil, fmt.Errorf("failed to count entries in %s: %w", poFileForCount, err)
+		}
+		review.TotalEntries = count
+	}
+
+	score, err := CalculateReviewScore(&review)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate review score: %w", err)
+	}
+
+	criticalCount := 0
+	minorCount := 0
+	for _, issue := range review.Issues {
+		switch issue.Score {
+		case 0:
+			criticalCount++
+		case 2:
+			minorCount++
+		}
+	}
+
+	return &ReviewReportResult{
+		Review:        &review,
+		Score:         score,
+		CriticalCount: criticalCount,
+		MinorCount:    minorCount,
+	}, nil
 }
 
 // countObsoleteEntries counts lines starting with "#~ msgid " in the file.

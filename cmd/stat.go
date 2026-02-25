@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/flag"
@@ -85,54 +83,29 @@ func (v statCommand) Execute(args []string) error {
 }
 
 func (v statCommand) executeReviewReport(args []string) error {
-	data, err := os.ReadFile(v.O.Review)
+	poFileForCount := ""
+	if len(args) == 1 {
+		poFileForCount = args[0]
+	}
+
+	result, err := util.ReportReviewFromJSON(v.O.Review, poFileForCount)
 	if err != nil {
-		return fmt.Errorf("failed to read review JSON %s: %w", v.O.Review, err)
-	}
-
-	var review util.ReviewJSONResult
-	if err := json.Unmarshal(data, &review); err != nil {
-		return fmt.Errorf("failed to parse review JSON: %w", err)
-	}
-
-	if review.TotalEntries <= 0 {
-		if len(args) != 1 {
+		if strings.Contains(err.Error(), "does not exist") {
+			return newUserError(err.Error())
+		}
+		if strings.Contains(err.Error(), "provide po-file") {
 			return newUserError("review JSON has no total_entries; provide <po-file> to count entries")
 		}
-		poFile := args[0]
-		if !util.Exist(poFile) {
-			return newUserError("file does not exist:", poFile)
-		}
-		count, err := util.CountPoEntries(poFile)
-		if err != nil {
-			return fmt.Errorf("failed to count entries in %s: %w", poFile, err)
-		}
-		review.TotalEntries = count
-	}
-
-	score, err := util.CalculateReviewScore(&review)
-	if err != nil {
-		return fmt.Errorf("failed to calculate review score: %w", err)
-	}
-
-	criticalCount := 0
-	minorCount := 0
-	for _, issue := range review.Issues {
-		switch issue.Score {
-		case 0:
-			criticalCount++
-		case 2:
-			minorCount++
-		}
+		return err
 	}
 
 	fmt.Printf("Review JSON: %s\n", v.O.Review)
-	fmt.Printf("  Total entries: %d\n", review.TotalEntries)
-	fmt.Printf("  Issues found: %d\n", len(review.Issues))
-	fmt.Printf("  Review score: %d/100\n", score)
-	if len(review.Issues) > 0 {
-		fmt.Printf("  Critical (score 0): %d\n", criticalCount)
-		fmt.Printf("  Minor (score 2):   %d\n", minorCount)
+	fmt.Printf("  Total entries: %d\n", result.Review.TotalEntries)
+	fmt.Printf("  Issues found: %d\n", len(result.Review.Issues))
+	fmt.Printf("  Review score: %d/100\n", result.Score)
+	if len(result.Review.Issues) > 0 {
+		fmt.Printf("  Critical (score 0): %d\n", result.CriticalCount)
+		fmt.Printf("  Minor (score 2):   %d\n", result.MinorCount)
 	}
 
 	return nil
