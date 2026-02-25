@@ -875,11 +875,13 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 }
 
 // RunAgentTestReview runs the agent-test review operation multiple times.
-// It reuses RunAgentReview for each run, aggregates JSON results (for same msgid
-// takes lowest score), and saves one aggregated JSON at the end. No per-run backup.
+// It reuses RunAgentReview (or RunAgentReviewAllWithLLM when allWithLLM) for each run,
+// aggregates JSON results (for same msgid takes lowest score), and saves one aggregated
+// JSON at the end. No per-run backup.
 // Returns scores for each run, aggregated score (from merged JSON), and error.
 // outputBase: base path for review output files (e.g. "po/review"); empty uses default.
-func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, runs int, outputBase string) ([]RunResult, int, error) {
+// allWithLLM: if true, use pure LLM approach (--all-with-llm).
+func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, runs int, outputBase string, allWithLLM bool) ([]RunResult, int, error) {
 	_, reviewJSONFile := ReviewOutputPaths(outputBase)
 	// Determine the agent to use
 	_, err := SelectAgent(cfg, agentName)
@@ -914,8 +916,13 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 			log.Warnf("run %d: failed to clean po/ directory: %v", runNum, err)
 		}
 
-		// Reuse RunAgentReview for each run
-		agentResult, err := RunAgentReview(cfg, agentName, target, true, outputBase)
+		// Reuse RunAgentReview or RunAgentReviewAllWithLLM for each run
+		var agentResult *AgentRunResult
+		if allWithLLM {
+			agentResult, err = RunAgentReviewAllWithLLM(cfg, agentName, target, true, outputBase)
+		} else {
+			agentResult, err = RunAgentReview(cfg, agentName, target, true, outputBase)
+		}
 
 		// Calculate execution time for this iteration
 		iterExecutionTime := time.Since(iterStartTime)
@@ -1092,7 +1099,8 @@ func displayTranslateTestResults(results []RunResult, averageScore float64, tota
 // CmdAgentTestReview implements the agent-test review command logic.
 // It runs the agent-run review operation multiple times and calculates an average score.
 // outputBase: base path for review output files (e.g. "po/review"); empty uses default.
-func CmdAgentTestReview(agentName string, target *CompareTarget, runs int, skipConfirmation bool, outputBase string) error {
+// allWithLLM: if true, use pure LLM approach (--all-with-llm).
+func CmdAgentTestReview(agentName string, target *CompareTarget, runs int, skipConfirmation bool, outputBase string, allWithLLM bool) error {
 	// Require user confirmation before proceeding
 	if err := ConfirmAgentTestExecution(skipConfirmation); err != nil {
 		return err
@@ -1124,7 +1132,7 @@ func CmdAgentTestReview(agentName string, target *CompareTarget, runs int, skipC
 	startTime := time.Now()
 
 	// Run the test
-	results, aggregatedScore, err := RunAgentTestReview(cfg, agentName, target, runs, outputBase)
+	results, aggregatedScore, err := RunAgentTestReview(cfg, agentName, target, runs, outputBase, allWithLLM)
 	if err != nil {
 		log.Errorf("agent-test execution failed: %v", err)
 		return fmt.Errorf("agent-test failed: %w", err)

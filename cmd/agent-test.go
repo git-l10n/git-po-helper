@@ -18,6 +18,7 @@ type agentTestCommand struct {
 		Since                  string
 		Prompt                 string
 		Output                 string
+		AllWithLLM             bool
 	}
 }
 
@@ -279,10 +280,12 @@ With two file arguments, compare worktree files (revisions not allowed).`,
 			if err != nil {
 				return newUserErrorF("%v", err)
 			}
-			return util.CmdAgentTestReview(v.O.Agent, target, v.O.Runs, v.O.DangerouslyRemovePoDir, v.O.Output)
+			return util.CmdAgentTestReview(v.O.Agent, target, v.O.Runs, v.O.DangerouslyRemovePoDir, v.O.Output, v.O.AllWithLLM)
 		},
 	}
 
+	reviewCmd.Flags().BoolVar(&v.O.AllWithLLM, "all-with-llm", false,
+		"use pure LLM approach: agent does extraction, review, and writes review.json")
 	reviewCmd.Flags().StringVarP(&v.O.Output, "output", "o", "",
 		"base path for review output files (default: po/review); .po/.json are appended")
 	reviewCmd.Flags().StringVar(&v.O.Agent,

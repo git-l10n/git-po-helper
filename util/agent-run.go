@@ -1609,6 +1609,139 @@ func parseAndAccumulateReviewJSON(stdout []byte, entryCount int, reviewFilePath 
 	return reviewJSON, nil
 }
 
+// buildReviewAllWithLLMPrompt constructs a dynamic prompt for RunAgentReviewAllWithLLM
+func buildReviewAllWithLLMPrompt(target *CompareTarget) string {
+	var taskDesc string
+	if target.OldFile != target.NewFile {
+		taskDesc = fmt.Sprintf("Review %s changes between %s and %s", target.NewFile, target.OldFile, target.NewFile)
+	} else if target.NewCommit != "" && (target.OldCommit == target.NewCommit+"~" ||
+		target.OldCommit == target.NewCommit+"~1" ||
+		target.OldCommit == target.NewCommit+"^") {
+		taskDesc = fmt.Sprintf("Review %s changes in commit %s", target.NewFile, target.NewCommit)
+	} else if target.NewCommit == "" && target.OldCommit != "" {
+		if target.OldCommit == "HEAD" {
+			taskDesc = fmt.Sprintf("Review %s local changes", target.NewFile)
+		} else {
+			taskDesc = fmt.Sprintf("Review %s changes since commit %s", target.NewFile, target.OldCommit)
+		}
+	} else if target.OldCommit != "" && target.NewCommit != "" {
+		taskDesc = fmt.Sprintf("Review %s changes in range %s..%s", target.NewFile, target.OldCommit, target.NewCommit)
+	} else {
+		taskDesc = fmt.Sprintf("Review %s local changes", target.NewFile)
+	}
+
+	return taskDesc + " according to @po/AGENTS.md."
+}
+
+// RunAgentReviewAllWithLLM executes review using a pure LLM approach (--all-with-llm).
+// No programmatic extraction or batching; the LLM does everything and writes review.json.
+// Before execution: deletes review.po and review.json. After: expects review.json to exist.
+func RunAgentReviewAllWithLLM(cfg *config.AgentConfig, agentName string, target *CompareTarget, agentTest bool, outputBase string) (*AgentRunResult, error) {
+	reviewPOFile, reviewJSONFile := ReviewOutputPaths(outputBase)
+	workDir := repository.WorkDir()
+	startTime := time.Now()
+	result := &AgentRunResult{Score: 0}
+
+	selectedAgent, err := SelectAgent(cfg, agentName)
+	if err != nil {
+		result.AgentError = err.Error()
+		return result, err
+	}
+
+	poFile, err := GetPoFileAbsPath(cfg, target.NewFile)
+	if err != nil {
+		return result, err
+	}
+	if !Exist(poFile) {
+		result.AgentError = fmt.Sprintf("PO file does not exist: %s", poFile)
+		return result, fmt.Errorf("PO file does not exist: %s\nHint: Ensure the PO file exists before running review", poFile)
+	}
+
+	// Delete existing review output files
+	os.Remove(reviewPOFile)
+	os.Remove(reviewJSONFile)
+	log.Infof("removed existing %s and %s", reviewPOFile, reviewJSONFile)
+
+	poFileRel := target.NewFile
+	if rel, err := filepath.Rel(workDir, poFile); err == nil && rel != "" && rel != "." {
+		poFileRel = filepath.ToSlash(rel)
+	}
+	prompt := buildReviewAllWithLLMPrompt(target)
+	agentCmd := BuildAgentCommand(selectedAgent, prompt, poFileRel, "")
+
+	outputFormat := normalizeOutputFormat(selectedAgent.Output)
+	if outputFormat == "" {
+		outputFormat = "default"
+	}
+
+	log.Infof("executing agent command (all-with-llm, output=%s): %s", outputFormat, truncateCommandDisplay(strings.Join(agentCmd, " ")))
+	result.AgentExecuted = true
+
+	kind := selectedAgent.Kind
+	isCodex := kind == config.AgentKindCodex
+	isOpencode := kind == config.AgentKindOpencode
+
+	var stdout, stderr []byte
+	if outputFormat == "json" {
+		stdoutReader, stderrBuf, cmdProcess, err := ExecuteAgentCommandStream(agentCmd, workDir)
+		if err != nil {
+			result.AgentError = err.Error()
+			return result, fmt.Errorf("agent command failed: %w", err)
+		}
+		defer stdoutReader.Close()
+		_, streamResult, _ := parseStreamByKind(kind, stdoutReader)
+		applyAgentDiagnostics(result, streamResult)
+		if waitErr := cmdProcess.Wait(); waitErr != nil {
+			result.AgentError = waitErr.Error()
+			return result, fmt.Errorf("agent command failed: %w", waitErr)
+		}
+		stderr = stderrBuf.Bytes()
+	} else {
+		var err error
+		stdout, stderr, err = ExecuteAgentCommand(agentCmd, workDir)
+		if err != nil {
+			result.AgentError = err.Error()
+			return result, err
+		}
+		if !isCodex && !isOpencode {
+			parsedStdout, parsedResult, _ := ParseClaudeAgentOutput(stdout, outputFormat)
+			stdout = parsedStdout
+			applyAgentDiagnostics(result, parsedResult)
+		}
+	}
+
+	result.AgentSuccess = true
+	log.Infof("agent command completed successfully")
+
+	if len(stdout) > 0 {
+		log.Debugf("agent stdout: %s", string(stdout))
+	}
+	if len(stderr) > 0 {
+		log.Debugf("agent stderr: %s", string(stderr))
+	}
+
+	if !Exist(reviewJSONFile) {
+		return result, fmt.Errorf("review JSON not generated at %s\nHint: The agent must write the review result to this file", reviewJSONFile)
+	}
+
+	reportResult, err := ReportReviewFromJSON(reviewJSONFile, poFile)
+	if err != nil {
+		return result, fmt.Errorf("failed to read review JSON: %w", err)
+	}
+
+	result.ReviewJSON = reportResult.Review
+	result.ReviewJSONPath = reviewJSONFile
+	result.ReviewScore = reportResult.Score
+	result.Score = reportResult.Score
+	result.ReviewedFilePath = poFile
+	result.ExecutionTime = time.Since(startTime)
+
+	log.Infof("review completed (score: %d/100, total entries: %d, issues: %d)",
+		reportResult.Score, reportResult.Review.TotalEntries, len(reportResult.Review.Issues))
+
+	return result, nil
+}
+
 // RunAgentReview executes a single agent-run review operation with the new workflow:
 // 1. Prepare review data (orig.po, new.po, review-input.po)
 // 2. Copy review-input.po to review-output.po
@@ -1723,9 +1856,10 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 }
 
 // CmdAgentRunReview implements the agent-run review command logic.
-// It loads configuration and calls RunAgentReview, then handles errors appropriately.
+// It loads configuration and calls RunAgentReview or RunAgentReviewAllWithLLM.
 // outputBase: base path for review output files (e.g. "po/review"); empty uses default.
-func CmdAgentRunReview(agentName string, target *CompareTarget, outputBase string) error {
+// allWithLLM: if true, use pure LLM approach (--all-with-llm).
+func CmdAgentRunReview(agentName string, target *CompareTarget, outputBase string, allWithLLM bool) error {
 	// Load configuration
 	log.Debugf("loading agent configuration")
 	cfg, err := config.LoadAgentConfig()
@@ -1736,7 +1870,12 @@ func CmdAgentRunReview(agentName string, target *CompareTarget, outputBase strin
 
 	startTime := time.Now()
 
-	result, err := RunAgentReview(cfg, agentName, target, false, outputBase)
+	var result *AgentRunResult
+	if allWithLLM {
+		result, err = RunAgentReviewAllWithLLM(cfg, agentName, target, false, outputBase)
+	} else {
+		result, err = RunAgentReview(cfg, agentName, target, false, outputBase)
+	}
 	if err != nil {
 		log.Errorf("failed to run agent review: %v", err)
 		return err

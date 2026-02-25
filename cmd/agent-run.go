@@ -10,12 +10,13 @@ import (
 type agentRunCommand struct {
 	cmd *cobra.Command
 	O   struct {
-		Agent  string
-		Range  string
-		Commit string
-		Since  string
-		Prompt string
-		Output string
+		Agent      string
+		Range      string
+		Commit     string
+		Since      string
+		Prompt     string
+		Output     string
+		AllWithLLM bool
 	}
 }
 
@@ -234,10 +235,12 @@ With two file arguments, compare worktree files (revisions not allowed).`,
 			if err != nil {
 				return newUserErrorF("%v", err)
 			}
-			return util.CmdAgentRunReview(v.O.Agent, target, v.O.Output)
+			return util.CmdAgentRunReview(v.O.Agent, target, v.O.Output, v.O.AllWithLLM)
 		},
 	}
 
+	reviewCmd.Flags().BoolVar(&v.O.AllWithLLM, "all-with-llm", false,
+		"use pure LLM approach: agent does extraction, review, and writes review.json")
 	reviewCmd.Flags().StringVarP(&v.O.Output, "output", "o", "",
 		"base path for review output files (default: po/review); .po/.json are appended")
 	reviewCmd.Flags().StringVar(&v.O.Agent,
