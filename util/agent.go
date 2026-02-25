@@ -261,29 +261,18 @@ func ReplacePlaceholders(template string, kv PlaceholderVars) string {
 //   - Executes the command in the specified working directory
 //   - Captures both stdout and stderr separately
 //   - Returns an error if the command exits with a non-zero status code
-func ExecuteAgentCommand(cmd []string, workDir string) ([]byte, []byte, error) {
+func ExecuteAgentCommand(cmd []string) ([]byte, []byte, error) {
 	if len(cmd) == 0 {
 		return nil, nil, fmt.Errorf("command cannot be empty")
 	}
 
-	// Determine working directory
-	if workDir == "" {
-		// Use current working directory as default
-		// Callers should provide repository.WorkDir() explicitly if they want repository root
-		var err error
-		workDir, err = os.Getwd()
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to get working directory: %w", err)
-		}
-	}
+	cwd, _ := os.Getwd()
 
 	// Replace placeholders in command arguments
 	// Note: Placeholders should be replaced before calling this function,
 	// but we'll handle it here for safety
 	execCmd := exec.Command(cmd[0], cmd[1:]...)
-	execCmd.Dir = workDir
-
-	log.Debugf("executing agent command: %s (workDir: %s)", strings.Join(cmd, " "), workDir)
+	log.Debugf("executing agent command: %s (workDir: %s)", strings.Join(cmd, " "), cwd)
 
 	// Capture stdout and stderr separately
 	var stdoutBuf, stderrBuf bytes.Buffer
@@ -324,25 +313,14 @@ func ExecuteAgentCommand(cmd []string, workDir string) ([]byte, []byte, error) {
 //   - stderr: Standard error from the command (captured after execution)
 //   - cmdProcess: *exec.Cmd for waiting on command completion
 //   - error: Error if command setup fails
-func ExecuteAgentCommandStream(cmd []string, workDir string) (stdoutReader io.ReadCloser, stderrBuf *bytes.Buffer, cmdProcess *exec.Cmd, err error) {
+func ExecuteAgentCommandStream(cmd []string) (stdoutReader io.ReadCloser, stderrBuf *bytes.Buffer, cmdProcess *exec.Cmd, err error) {
 	if len(cmd) == 0 {
 		return nil, nil, nil, fmt.Errorf("command cannot be empty")
 	}
 
-	// Determine working directory
-	if workDir == "" {
-		var err error
-		workDir, err = os.Getwd()
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to get working directory: %w", err)
-		}
-	}
-
 	// Create command
 	execCmd := exec.Command(cmd[0], cmd[1:]...)
-	execCmd.Dir = workDir
-
-	log.Debugf("executing agent command (streaming): %s (workDir: %s)", strings.Join(cmd, " "), workDir)
+	log.Debugf("executing agent command (streaming): %s", strings.Join(cmd, " "))
 
 	// Get stdout pipe for real-time reading
 	stdoutPipe, err := execCmd.StdoutPipe()

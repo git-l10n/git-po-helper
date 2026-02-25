@@ -214,7 +214,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 			cmd = []string{"sh", "-c", "echo 'test output'"}
 		}
 
-		stdout, stderr, err := ExecuteAgentCommand(cmd, "")
+		stdout, stderr, err := ExecuteAgentCommand(cmd)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -238,7 +238,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 			cmd = []string{"sh", "-c", "echo 'test error' >&2"}
 		}
 
-		stdout, stderr, err := ExecuteAgentCommand(cmd, "")
+		stdout, stderr, err := ExecuteAgentCommand(cmd)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -259,7 +259,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 			cmd = []string{"sh", "-c", "exit 1"}
 		}
 
-		stdout, stderr, err := ExecuteAgentCommand(cmd, "")
+		stdout, stderr, err := ExecuteAgentCommand(cmd)
 		if err == nil {
 			t.Error("Expected error for failing command, got nil")
 		}
@@ -275,7 +275,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 
 	// Test empty command
 	t.Run("empty command", func(t *testing.T) {
-		_, _, err := ExecuteAgentCommand([]string{}, "")
+		_, _, err := ExecuteAgentCommand([]string{})
 		if err == nil {
 			t.Error("Expected error for empty command, got nil")
 		}
@@ -286,15 +286,14 @@ func TestExecuteAgentCommand(t *testing.T) {
 
 	// Test non-existent command
 	t.Run("non-existent command", func(t *testing.T) {
-		_, _, err := ExecuteAgentCommand([]string{"nonexistent-command-xyz123"}, "")
+		_, _, err := ExecuteAgentCommand([]string{"nonexistent-command-xyz123"})
 		if err == nil {
 			t.Error("Expected error for non-existent command, got nil")
 		}
 	})
 
-	// Test command with custom working directory
-	t.Run("custom working directory", func(t *testing.T) {
-		tmpDir := t.TempDir()
+	// Test command that produces output (pwd/cd)
+	t.Run("command produces output", func(t *testing.T) {
 		var cmd []string
 		if runtime.GOOS == "windows" {
 			cmd = []string{"cmd", "/c", "cd"}
@@ -302,7 +301,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 			cmd = []string{"pwd"}
 		}
 
-		stdout, stderr, err := ExecuteAgentCommand(cmd, tmpDir)
+		stdout, stderr, err := ExecuteAgentCommand(cmd)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -332,7 +331,7 @@ func TestExecuteAgentCommand_PlaceholderReplacement(t *testing.T) {
 			cmd = []string{"sh", "-c", "echo '{prompt}'"}
 		}
 
-		stdout, _, err := ExecuteAgentCommand(cmd, "")
+		stdout, _, err := ExecuteAgentCommand(cmd)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -361,7 +360,7 @@ func TestExecuteAgentCommand_RealCommand(t *testing.T) {
 		t.Skipf("Command %s not found, skipping test", cmd[0])
 	}
 
-	stdout, stderr, err := ExecuteAgentCommand(cmd, "")
+	stdout, stderr, err := ExecuteAgentCommand(cmd)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

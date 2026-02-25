@@ -669,7 +669,6 @@ func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string, agentTest bool
 	outputFormat = normalizeOutputFormat(outputFormat)
 
 	// Execute agent command
-	workDir := repository.WorkDir()
 	log.Infof("executing agent command (output=%s, streaming=%v): %s", outputFormat, outputFormat == "json", truncateCommandDisplay(strings.Join(agentCmd, " ")))
 	result.AgentExecuted = true
 
@@ -683,7 +682,7 @@ func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string, agentTest bool
 
 	// Use streaming execution for json format (treated as stream-json)
 	if outputFormat == "json" {
-		stdoutReader, stderrBuf, cmdProcess, err := ExecuteAgentCommandStream(agentCmd, workDir)
+		stdoutReader, stderrBuf, cmdProcess, err := ExecuteAgentCommandStream(agentCmd)
 		if err != nil {
 			log.Errorf("agent command execution failed: %v", err)
 			return result, fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", err)
@@ -707,7 +706,7 @@ func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string, agentTest bool
 		log.Infof("agent command completed successfully")
 	} else {
 		var err error
-		stdout, stderr, err = ExecuteAgentCommand(agentCmd, workDir)
+		stdout, stderr, err = ExecuteAgentCommand(agentCmd)
 		if err != nil {
 			if len(stderr) > 0 {
 				log.Debugf("agent command stderr: %s", string(stderr))
@@ -888,7 +887,7 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 
 	// Use streaming execution for json format (treated as stream-json)
 	if outputFormat == "json" {
-		stdoutReader, stderrBuf, cmdProcess, err := ExecuteAgentCommandStream(agentCmd, workDir)
+		stdoutReader, stderrBuf, cmdProcess, err := ExecuteAgentCommandStream(agentCmd)
 		if err != nil {
 			log.Errorf("agent command execution failed: %v", err)
 			return result, fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", err)
@@ -912,7 +911,7 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 		log.Infof("agent command completed successfully")
 	} else {
 		var err error
-		stdout, stderr, err = ExecuteAgentCommand(agentCmd, workDir)
+		stdout, stderr, err = ExecuteAgentCommand(agentCmd)
 		if err != nil {
 			if len(stderr) > 0 {
 				log.Debugf("agent command stderr: %s", string(stderr))
@@ -1262,7 +1261,7 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 
 	// Use streaming execution for json format (treated as stream-json)
 	if outputFormat == "json" {
-		stdoutReader, stderrBuf, cmdProcess, err := ExecuteAgentCommandStream(agentCmd, workDir)
+		stdoutReader, stderrBuf, cmdProcess, err := ExecuteAgentCommandStream(agentCmd)
 		if err != nil {
 			log.Errorf("agent command execution failed: %v", err)
 			return result, fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", err)
@@ -1286,7 +1285,7 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 		log.Infof("agent command completed successfully")
 	} else {
 		var err error
-		stdout, stderr, err = ExecuteAgentCommand(agentCmd, workDir)
+		stdout, stderr, err = ExecuteAgentCommand(agentCmd)
 		if err != nil {
 			if len(stderr) > 0 {
 				log.Debugf("agent command stderr: %s", string(stderr))
@@ -1420,7 +1419,7 @@ func CmdAgentRunTranslate(agentName, poFile string) error {
 // vars contains placeholder values (e.g. "prompt", "source" for the file to review).
 // Returns stdout (for JSON extraction), stderr, originalStdout (raw before parsing), streamResult.
 // Updates result with AgentExecuted, AgentSuccess, AgentError, AgentStdout, AgentStderr.
-func executeReviewAgent(selectedAgent config.Agent, vars PlaceholderVars, workDir string, result *AgentRunResult) (stdout, stderr, originalStdout []byte, streamResult AgentStreamResult, err error) {
+func executeReviewAgent(selectedAgent config.Agent, vars PlaceholderVars, result *AgentRunResult) (stdout, stderr, originalStdout []byte, streamResult AgentStreamResult, err error) {
 	agentCmd := BuildAgentCommand(selectedAgent, vars)
 
 	outputFormat := selectedAgent.Output
@@ -1437,7 +1436,7 @@ func executeReviewAgent(selectedAgent config.Agent, vars PlaceholderVars, workDi
 	isOpencode := kind == config.AgentKindOpencode
 
 	if outputFormat == "json" {
-		stdoutReader, stderrBuf, cmdProcess, execErr := ExecuteAgentCommandStream(agentCmd, workDir)
+		stdoutReader, stderrBuf, cmdProcess, execErr := ExecuteAgentCommandStream(agentCmd)
 		if execErr != nil {
 			log.Errorf("agent command execution failed: %v", execErr)
 			return nil, nil, nil, streamResult, fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", execErr)
@@ -1465,7 +1464,7 @@ func executeReviewAgent(selectedAgent config.Agent, vars PlaceholderVars, workDi
 		log.Infof("agent command completed successfully")
 	} else {
 		var execErr error
-		stdout, stderr, execErr = ExecuteAgentCommand(agentCmd, workDir)
+		stdout, stderr, execErr = ExecuteAgentCommand(agentCmd)
 		originalStdout = stdout
 		result.AgentStdout = stdout
 		result.AgentStderr = stderr
@@ -1512,8 +1511,8 @@ func executeReviewAgent(selectedAgent config.Agent, vars PlaceholderVars, workDi
 }
 
 // runReviewSingleBatch runs review on the full file (single batch).
-func runReviewSingleBatch(selectedAgent config.Agent, vars PlaceholderVars, workDir string, result *AgentRunResult, entryCount int) (*ReviewJSONResult, error) {
-	stdout, _, _, _, err := executeReviewAgent(selectedAgent, vars, workDir, result)
+func runReviewSingleBatch(selectedAgent config.Agent, vars PlaceholderVars, result *AgentRunResult, entryCount int) (*ReviewJSONResult, error) {
+	stdout, _, _, _, err := executeReviewAgent(selectedAgent, vars, result)
 	if err != nil {
 		return nil, err
 	}
@@ -1521,7 +1520,7 @@ func runReviewSingleBatch(selectedAgent config.Agent, vars PlaceholderVars, work
 }
 
 // runReviewBatched runs review in batches using msg-select when entry count > 100.
-func runReviewBatched(selectedAgent config.Agent, vars PlaceholderVars, workDir string, result *AgentRunResult, entryCount int) (*ReviewJSONResult, error) {
+func runReviewBatched(selectedAgent config.Agent, vars PlaceholderVars, result *AgentRunResult, entryCount int) (*ReviewJSONResult, error) {
 	reviewPOFile := vars["source"]
 	num := 50
 	if entryCount > 500 {
@@ -1561,7 +1560,7 @@ func runReviewBatched(selectedAgent config.Agent, vars PlaceholderVars, workDir 
 			batchVars[k] = v
 		}
 		batchVars["source"] = batchFile
-		stdout, _, _, _, err := executeReviewAgent(selectedAgent, batchVars, workDir, result)
+		stdout, _, _, _, err := executeReviewAgent(selectedAgent, batchVars, result)
 		os.Remove(batchFile) // Clean up batch file
 		if err != nil {
 			return nil, err
@@ -1688,7 +1687,7 @@ func RunAgentReviewAllWithLLM(cfg *config.AgentConfig, agentName string, target 
 
 	var stdout, stderr []byte
 	if outputFormat == "json" {
-		stdoutReader, stderrBuf, cmdProcess, err := ExecuteAgentCommandStream(agentCmd, workDir)
+		stdoutReader, stderrBuf, cmdProcess, err := ExecuteAgentCommandStream(agentCmd)
 		if err != nil {
 			result.AgentError = err.Error()
 			return result, fmt.Errorf("agent command failed: %w", err)
@@ -1703,7 +1702,7 @@ func RunAgentReviewAllWithLLM(cfg *config.AgentConfig, agentName string, target 
 		stderr = stderrBuf.Bytes()
 	} else {
 		var err error
-		stdout, stderr, err = ExecuteAgentCommand(agentCmd, workDir)
+		stdout, stderr, err = ExecuteAgentCommand(agentCmd)
 		if err != nil {
 			result.AgentError = err.Error()
 			return result, err
@@ -1760,7 +1759,6 @@ func RunAgentReviewAllWithLLM(cfg *config.AgentConfig, agentName string, target 
 func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, agentTest bool, outputBase string) (*AgentRunResult, error) {
 	reviewPOFile, reviewJSONFile := ReviewOutputPaths(outputBase)
 	var (
-		workDir    = repository.WorkDir()
 		reviewJSON *ReviewJSONResult
 	)
 
@@ -1823,13 +1821,13 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 	}
 	if entryCount <= 100 {
 		// Single run: review entire file
-		reviewJSON, err = runReviewSingleBatch(selectedAgent, reviewVars, workDir, result, entryCount)
+		reviewJSON, err = runReviewSingleBatch(selectedAgent, reviewVars, result, entryCount)
 		if err != nil {
 			return result, err
 		}
 	} else {
 		// Batch mode: iterate with msg-select
-		reviewJSON, err = runReviewBatched(selectedAgent, reviewVars, workDir, result, entryCount)
+		reviewJSON, err = runReviewBatched(selectedAgent, reviewVars, result, entryCount)
 		if err != nil {
 			return result, err
 		}
