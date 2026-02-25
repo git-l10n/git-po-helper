@@ -36,4 +36,36 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 	if score < 95 || score > 100 {
 		t.Errorf("expected score ~98, got %d", score)
 	}
+
+	// Test ReportReviewFromJSON with the written file
+	result, err := ReportReviewFromJSON(jsonFile)
+	if err != nil {
+		t.Fatalf("ReportReviewFromJSON failed: %v", err)
+	}
+	if result.Review.TotalEntries != 100 {
+		t.Errorf("expected TotalEntries 100, got %d", result.Review.TotalEntries)
+	}
+	if len(result.Review.Issues) != 2 {
+		t.Errorf("expected 2 issues, got %d", len(result.Review.Issues))
+	}
+}
+
+func TestReportReviewMarkdownWrappedJSON(t *testing.T) {
+	// JSON wrapped in markdown (common LLM output) - tests preprocessing
+	validInMarkdown := "```json\n" + `{"total_entries": 5, "issues": [{"msgid": "x", "msgstr": "y", "score": 2, "description": "d", "suggestion": "s"}]}` + "\n```"
+	tmpDir := t.TempDir()
+	jsonFile := filepath.Join(tmpDir, "review.json")
+	if err := os.WriteFile(jsonFile, []byte(validInMarkdown), 0644); err != nil {
+		t.Fatalf("write failed: %v", err)
+	}
+	result, err := ReportReviewFromJSON(jsonFile)
+	if err != nil {
+		t.Fatalf("ReportReviewFromJSON failed: %v", err)
+	}
+	if result.Review.TotalEntries != 5 {
+		t.Errorf("expected TotalEntries 5, got %d", result.Review.TotalEntries)
+	}
+	if len(result.Review.Issues) != 1 {
+		t.Errorf("expected 1 issue, got %d", len(result.Review.Issues))
+	}
 }
