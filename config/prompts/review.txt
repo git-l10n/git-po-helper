@@ -6,15 +6,21 @@ You need to review all translation entries in the file, identify issues, and dir
 
 1. Read the PO file `{source}` carefully
 2. Review each translation entry for:
-   - Terminology accuracy
-   - Consistency with other translations
-   - Style and readability
-   - Correctness of meaning
-3. **Directly modify the PO file** to fix issues you find:
-   - Update msgstr values for better translations
-   - Fix terminology errors
-   - Improve consistency
-   - Refine style
+   - Accuracy: faithfully conveys the original meaning; no omissions or distortions.
+   - Terminology: uses correct, consistent terms per glossary or domain standards.
+   - Grammar and fluency: grammatically correct and reads naturally.
+   - Placeholders: preserves variables (e.g. `%s`, `{name}`, `$1`) exactly. If
+     reordering is needed for the target language, use positional parameters as
+     described below.
+   - Plurals and gender: handles plural forms, gender, and agreement correctly.
+   - Context fit: suitable for UI space, tone, and usage (e.g. error vs. tooltip).
+   - Cultural appropriateness: avoids offensive or ambiguous content.
+   - Consistency: matches prior translations of the same source string.
+   - Technical integrity: do not translate code, paths, commands, brand names, or
+     proper nouns.
+   - Readability: clear, concise, and user-friendly.
+3. **Directly modify the `{source}` file** to fix issues you find by updating
+   msgstr values for better translations.
 4. After modifying the file, output a JSON summary of all issues you found and fixed
 
 ## Output Format
