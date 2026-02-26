@@ -70,6 +70,8 @@ func CountPoReportStats(poFile string) (*PoReportStats, error) {
 		}
 		if msgstrValue == e.MsgID {
 			stats.Same++
+			// To be compatible with msgfmt --statistics, we count same as translated.
+			stats.Translated++
 			continue
 		}
 		stats.Translated++

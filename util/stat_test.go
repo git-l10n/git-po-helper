@@ -50,8 +50,9 @@ msgstr "好"
 		t.Fatalf("CountPoReportStats failed: %v", err)
 	}
 
-	if stats.Translated != 2 {
-		t.Errorf("translated: want 2, got %d", stats.Translated)
+	// Same-as-source entries are counted as translated (msgfmt compatibility).
+	if stats.Translated != 3 {
+		t.Errorf("translated: want 3, got %d", stats.Translated)
 	}
 	if stats.Untranslated != 1 {
 		t.Errorf("untranslated: want 1, got %d", stats.Untranslated)
