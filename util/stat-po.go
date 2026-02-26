@@ -17,6 +17,11 @@ type PoReportStats struct {
 	Obsolete     int // Obsolete entries (#~ format)
 }
 
+// Total returns the sum of Translated, Untranslated, and Fuzzy (excludes Obsolete and Same).
+func (s *PoReportStats) Total() int {
+	return s.Translated + s.Untranslated + s.Fuzzy
+}
+
 // CountPoReportStats reads a PO file and returns entry statistics.
 func CountPoReportStats(poFile string) (*PoReportStats, error) {
 	data, err := os.ReadFile(poFile)

@@ -50,26 +50,18 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 	// Pre-validation: Count new and fuzzy entries before translation
 	log.Infof("performing pre-validation: counting new and fuzzy entries")
 
-	// Count new entries
-	newCountBefore, err := CountNewEntries(poFile)
+	statsBefore, err := CountPoReportStats(poFile)
 	if err != nil {
-		log.Errorf("failed to count new entries: %v", err)
-		return result, fmt.Errorf("failed to count new entries: %w", err)
+		log.Errorf("failed to count PO stats: %v", err)
+		return result, fmt.Errorf("failed to count PO stats: %w", err)
 	}
-	result.BeforeNewCount = newCountBefore
-	log.Infof("new (untranslated) entries before translation: %d", newCountBefore)
-
-	// Count fuzzy entries
-	fuzzyCountBefore, err := CountFuzzyEntries(poFile)
-	if err != nil {
-		log.Errorf("failed to count fuzzy entries: %v", err)
-		return result, fmt.Errorf("failed to count fuzzy entries: %w", err)
-	}
-	result.BeforeFuzzyCount = fuzzyCountBefore
-	log.Infof("fuzzy entries before translation: %d", fuzzyCountBefore)
+	result.BeforeNewCount = statsBefore.Untranslated
+	result.BeforeFuzzyCount = statsBefore.Fuzzy
+	log.Infof("new (untranslated) entries before translation: %d", statsBefore.Untranslated)
+	log.Infof("fuzzy entries before translation: %d", statsBefore.Fuzzy)
 
 	// Check if there's anything to translate
-	if newCountBefore == 0 && fuzzyCountBefore == 0 {
+	if statsBefore.Untranslated == 0 && statsBefore.Fuzzy == 0 {
 		log.Infof("no new or fuzzy entries to translate, PO file is already complete")
 		result.PreValidationPass = true
 		result.PostValidationPass = true
@@ -201,28 +193,20 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 	// Post-validation: Count new and fuzzy entries after translation
 	log.Infof("performing post-validation: counting new and fuzzy entries")
 
-	// Count new entries
-	newCountAfter, err := CountNewEntries(poFile)
+	statsAfter, err := CountPoReportStats(poFile)
 	if err != nil {
-		log.Errorf("failed to count new entries after translation: %v", err)
-		return result, fmt.Errorf("failed to count new entries after translation: %w", err)
+		log.Errorf("failed to count PO stats after translation: %v", err)
+		return result, fmt.Errorf("failed to count PO stats after translation: %w", err)
 	}
-	result.AfterNewCount = newCountAfter
-	log.Infof("new (untranslated) entries after translation: %d", newCountAfter)
-
-	// Count fuzzy entries
-	fuzzyCountAfter, err := CountFuzzyEntries(poFile)
-	if err != nil {
-		log.Errorf("failed to count fuzzy entries after translation: %v", err)
-		return result, fmt.Errorf("failed to count fuzzy entries after translation: %w", err)
-	}
-	result.AfterFuzzyCount = fuzzyCountAfter
-	log.Infof("fuzzy entries after translation: %d", fuzzyCountAfter)
+	result.AfterNewCount = statsAfter.Untranslated
+	result.AfterFuzzyCount = statsAfter.Fuzzy
+	log.Infof("new (untranslated) entries after translation: %d", statsAfter.Untranslated)
+	log.Infof("fuzzy entries after translation: %d", statsAfter.Fuzzy)
 
 	// Validate translation success: both new and fuzzy entries must be 0
-	if newCountAfter != 0 || fuzzyCountAfter != 0 {
-		log.Errorf("post-validation failed: translation incomplete (new: %d, fuzzy: %d)", newCountAfter, fuzzyCountAfter)
-		result.PostValidationError = fmt.Sprintf("translation incomplete: %d new entries and %d fuzzy entries remaining", newCountAfter, fuzzyCountAfter)
+	if statsAfter.Untranslated != 0 || statsAfter.Fuzzy != 0 {
+		log.Errorf("post-validation failed: translation incomplete (new: %d, fuzzy: %d)", statsAfter.Untranslated, statsAfter.Fuzzy)
+		result.PostValidationError = fmt.Sprintf("translation incomplete: %d new entries and %d fuzzy entries remaining", statsAfter.Untranslated, statsAfter.Fuzzy)
 		result.Score = 0
 		return result, fmt.Errorf("post-validation failed: %s\nHint: The agent should translate all new entries and resolve all fuzzy entries", result.PostValidationError)
 	}

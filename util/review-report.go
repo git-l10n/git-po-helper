@@ -101,11 +101,11 @@ func ReportReviewFromJSON(path string) (*ReviewReportResult, error) {
 		if !Exist(poFile) {
 			return nil, fmt.Errorf("file does not exist: %s", poFile)
 		}
-		count, err := CountPoEntries(poFile)
+		stats, err := CountPoReportStats(poFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to count entries in %s: %w", poFile, err)
 		}
-		review.TotalEntries = count
+		review.TotalEntries = stats.Total()
 	}
 
 	score, err := CalculateReviewScore(&review)

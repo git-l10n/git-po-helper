@@ -100,8 +100,8 @@ msgstr ""
 				t.Fatalf("Failed to create test POT file: %v", err)
 			}
 
-			// Test CountPotEntries
-			count, err := CountPotEntries(potFile)
+			// Test CountPoReportStats (POT uses same format)
+			stats, err := CountPoReportStats(potFile)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected error but got none")
@@ -114,7 +114,7 @@ msgstr ""
 				return
 			}
 
-			if count != tt.expected {
+			if count := stats.Total(); count != tt.expected {
 				t.Errorf("Expected count %d, got %d", tt.expected, count)
 			}
 		})
@@ -123,7 +123,7 @@ msgstr ""
 
 func TestCountPotEntries_InvalidFile(t *testing.T) {
 	// Test with non-existent file
-	_, err := CountPotEntries("/nonexistent/file.pot")
+	_, err := CountPoReportStats("/nonexistent/file.pot")
 	if err == nil {
 		t.Error("Expected error for non-existent file, got nil")
 	}
@@ -140,11 +140,11 @@ func TestCountPotEntries_EmptyFile(t *testing.T) {
 	}
 	file.Close()
 
-	count, err := CountPotEntries(potFile)
+	stats, err := CountPoReportStats(potFile)
 	if err != nil {
 		t.Errorf("Unexpected error for empty file: %v", err)
 	}
-	if count != 0 {
+	if count := stats.Total(); count != 0 {
 		t.Errorf("Expected count 0 for empty file, got %d", count)
 	}
 }
@@ -510,8 +510,8 @@ msgstr ""
 				t.Fatalf("Failed to create test PO file: %v", err)
 			}
 
-			// Test CountPoEntries
-			count, err := CountPoEntries(poFile)
+			// Test CountPoReportStats
+			stats, err := CountPoReportStats(poFile)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected error but got none")
@@ -524,7 +524,7 @@ msgstr ""
 				return
 			}
 
-			if count != tt.expected {
+			if count := stats.Total(); count != tt.expected {
 				t.Errorf("Expected count %d, got %d", tt.expected, count)
 			}
 		})
@@ -533,7 +533,7 @@ msgstr ""
 
 func TestCountPoEntries_InvalidFile(t *testing.T) {
 	// Test with non-existent file
-	_, err := CountPoEntries("/nonexistent/file.po")
+	_, err := CountPoReportStats("/nonexistent/file.po")
 	if err == nil {
 		t.Error("Expected error for non-existent PO file, got nil")
 	}
@@ -550,11 +550,11 @@ func TestCountPoEntries_EmptyFile(t *testing.T) {
 	}
 	file.Close()
 
-	count, err := CountPoEntries(poFile)
+	stats, err := CountPoReportStats(poFile)
 	if err != nil {
 		t.Errorf("Unexpected error for empty PO file: %v", err)
 	}
-	if count != 0 {
+	if count := stats.Total(); count != 0 {
 		t.Errorf("Expected count 0 for empty PO file, got %d", count)
 	}
 }
@@ -617,11 +617,6 @@ msgstr ""
 }
 
 func TestCountNewEntries(t *testing.T) {
-	// Check if msgattrib is available
-	if _, err := exec.LookPath("msgattrib"); err != nil {
-		t.Skip("msgattrib not found, skipping test")
-	}
-
 	tests := []struct {
 		name        string
 		poContent   string
@@ -698,7 +693,7 @@ msgstr "另一个字符串"
 				t.Fatalf("Failed to create test PO file: %v", err)
 			}
 
-			count, err := CountNewEntries(poFile)
+			stats, err := CountPoReportStats(poFile)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected error but got none")
@@ -711,31 +706,21 @@ msgstr "另一个字符串"
 				return
 			}
 
-			if count != tt.expected {
-				t.Errorf("Expected count %d, got %d", tt.expected, count)
+			if count := stats.Untranslated; count != tt.expected {
+				t.Errorf("Expected untranslated count %d, got %d", tt.expected, count)
 			}
 		})
 	}
 }
 
 func TestCountNewEntries_InvalidFile(t *testing.T) {
-	// Check if msgattrib is available
-	if _, err := exec.LookPath("msgattrib"); err != nil {
-		t.Skip("msgattrib not found, skipping test")
-	}
-
-	_, err := CountNewEntries("/nonexistent/file.po")
+	_, err := CountPoReportStats("/nonexistent/file.po")
 	if err == nil {
 		t.Error("Expected error for non-existent file, got nil")
 	}
 }
 
 func TestCountFuzzyEntries(t *testing.T) {
-	// Check if msgattrib is available
-	if _, err := exec.LookPath("msgattrib"); err != nil {
-		t.Skip("msgattrib not found, skipping test")
-	}
-
 	tests := []struct {
 		name        string
 		poContent   string
@@ -833,7 +818,7 @@ msgstr "普通字符串"
 				t.Fatalf("Failed to create test PO file: %v", err)
 			}
 
-			count, err := CountFuzzyEntries(poFile)
+			stats, err := CountPoReportStats(poFile)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected error but got none")
@@ -846,20 +831,15 @@ msgstr "普通字符串"
 				return
 			}
 
-			if count != tt.expected {
-				t.Errorf("Expected count %d, got %d", tt.expected, count)
+			if count := stats.Fuzzy; count != tt.expected {
+				t.Errorf("Expected fuzzy count %d, got %d", tt.expected, count)
 			}
 		})
 	}
 }
 
 func TestCountFuzzyEntries_InvalidFile(t *testing.T) {
-	// Check if msgattrib is available
-	if _, err := exec.LookPath("msgattrib"); err != nil {
-		t.Skip("msgattrib not found, skipping test")
-	}
-
-	_, err := CountFuzzyEntries("/nonexistent/file.po")
+	_, err := CountPoReportStats("/nonexistent/file.po")
 	if err == nil {
 		t.Error("Expected error for non-existent file, got nil")
 	}

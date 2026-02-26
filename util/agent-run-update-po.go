@@ -48,7 +48,9 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 		if !Exist(poFile) {
 			result.BeforeCount = 0
 		} else {
-			result.BeforeCount, _ = CountPoEntries(poFile)
+			if stats, err := CountPoReportStats(poFile); err == nil {
+				result.BeforeCount = stats.Total()
+			}
 		}
 
 		if err := ValidatePoEntryCount(poFile, cfg.AgentTest.PoEntriesBeforeUpdate, "before update"); err != nil {
@@ -63,7 +65,9 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 		if !Exist(poFile) {
 			result.BeforeCount = 0
 		} else {
-			result.BeforeCount, _ = CountPoEntries(poFile)
+			if stats, err := CountPoReportStats(poFile); err == nil {
+				result.BeforeCount = stats.Total()
+			}
 		}
 		result.PreValidationPass = true // Consider it passed if not configured
 	}
@@ -182,7 +186,9 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 
 		// Get after count for result
 		if Exist(poFile) {
-			result.AfterCount, _ = CountPoEntries(poFile)
+			if stats, err := CountPoReportStats(poFile); err == nil {
+				result.AfterCount = stats.Total()
+			}
 		}
 
 		if err := ValidatePoEntryCount(poFile, cfg.AgentTest.PoEntriesAfterUpdate, "after update"); err != nil {
@@ -197,7 +203,9 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 	} else {
 		// No post-validation configured, score based on agent exit code
 		if Exist(poFile) {
-			result.AfterCount, _ = CountPoEntries(poFile)
+			if stats, err := CountPoReportStats(poFile); err == nil {
+				result.AfterCount = stats.Total()
+			}
 		}
 		if result.AgentSuccess {
 			result.Score = 100
