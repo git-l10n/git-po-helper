@@ -1,4 +1,4 @@
-// Package util provides utility functions for agent execution.
+// Package util provides agent JSONL parsing and display utilities.
 package util
 
 import (
@@ -7,18 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"sort"
 	"strings"
-	"text/template"
 	"time"
 
-	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -27,755 +20,6 @@ const (
 	// maxDisplayLines is the maximum number of lines to display for agent messages.
 	maxDisplayLines = 10
 )
-
-// flushStdout flushes stdout to ensure agent output (🤖 etc.) is visible immediately.
-// Without this, stdout may be buffered when not a TTY, causing output to appear only with -v
-// (which produces more stderr activity that can trigger flushing in some environments).
-func flushStdout() {
-	_ = os.Stdout.Sync()
-}
-
-// CountPotEntries counts msgid entries in a POT file.
-// It excludes the header entry (which has an empty msgid) and counts
-// only non-empty msgid entries.
-//
-// The function:
-// - Opens the POT file
-// - Scans for lines starting with "msgid " (excluding commented entries)
-// - Parses msgid values to identify the header entry (empty msgid)
-// - Returns the count of non-empty msgid entries
-func CountPotEntries(potFile string) (int, error) {
-	f, err := os.Open(potFile)
-	if err != nil {
-		return 0, fmt.Errorf("failed to open POT file %s: %w", potFile, err)
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	count := 0
-	inMsgid := false
-	msgidValue := ""
-	headerFound := false
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		trimmed := strings.TrimSpace(line)
-
-		// Skip comment lines (obsolete entries, etc.)
-		if strings.HasPrefix(trimmed, "#") {
-			continue
-		}
-
-		// Check for msgid line
-		if strings.HasPrefix(trimmed, "msgid ") {
-			// If we were already in a msgid, finish the previous one
-			if inMsgid {
-				if !headerFound && strings.Trim(msgidValue, `"`) == "" {
-					headerFound = true
-				} else if strings.Trim(msgidValue, `"`) != "" {
-					// Non-empty msgid entry
-					count++
-				}
-			}
-			// Start new msgid entry
-			inMsgid = true
-			// Extract the msgid value (may be on same line or continue on next lines)
-			msgidValue = strings.TrimPrefix(trimmed, "msgid ")
-			msgidValue = strings.TrimSpace(msgidValue)
-			// Remove quotes if present
-			msgidValue = strings.Trim(msgidValue, `"`)
-			continue
-		}
-
-		// If we're in a msgid entry and this line continues it (starts with quote)
-		if inMsgid && strings.HasPrefix(trimmed, `"`) {
-			// Continuation line - append to msgidValue (remove quotes)
-			contValue := strings.Trim(trimmed, `"`)
-			msgidValue += contValue
-			continue
-		}
-
-		// If we encounter msgstr, it means we've finished the msgid
-		if inMsgid && strings.HasPrefix(trimmed, "msgstr") {
-			// End of msgid entry
-			if !headerFound && strings.Trim(msgidValue, `"`) == "" {
-				headerFound = true
-			} else if strings.Trim(msgidValue, `"`) != "" {
-				// Non-empty msgid entry
-				count++
-			}
-			inMsgid = false
-			msgidValue = ""
-			continue
-		}
-
-		// Empty line might indicate end of entry, but we'll rely on msgstr
-		// to be more accurate
-	}
-
-	// Handle last entry if file doesn't end with newline or msgstr
-	if inMsgid {
-		if !headerFound && strings.Trim(msgidValue, `"`) == "" {
-			headerFound = true
-		} else if strings.Trim(msgidValue, `"`) != "" {
-			count++
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("failed to read POT file %s: %w", potFile, err)
-	}
-
-	return count, nil
-}
-
-// CountPoEntries counts msgid entries in a PO file.
-// It excludes the header entry (which has an empty msgid) and counts
-// only non-empty msgid entries.
-//
-// The function:
-// - Opens the PO file
-// - Scans for lines starting with "msgid " (excluding commented entries)
-// - Parses msgid values to identify the header entry (empty msgid)
-// - Returns the count of non-empty msgid entries
-func CountPoEntries(poFile string) (int, error) {
-	f, err := os.Open(poFile)
-	if err != nil {
-		return 0, fmt.Errorf("failed to open PO file %s: %w", poFile, err)
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	count := 0
-	inMsgid := false
-	msgidValue := ""
-	headerFound := false
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		trimmed := strings.TrimSpace(line)
-
-		// Skip comment lines (obsolete entries, etc.)
-		if strings.HasPrefix(trimmed, "#") {
-			continue
-		}
-
-		// Check for msgid line
-		if strings.HasPrefix(trimmed, "msgid ") {
-			// If we were already in a msgid, finish the previous one
-			if inMsgid {
-				if !headerFound && strings.Trim(msgidValue, `"`) == "" {
-					headerFound = true
-				} else if strings.Trim(msgidValue, `"`) != "" {
-					// Non-empty msgid entry
-					count++
-				}
-			}
-			// Start new msgid entry
-			inMsgid = true
-			// Extract the msgid value (may be on same line or continue on next lines)
-			msgidValue = strings.TrimPrefix(trimmed, "msgid ")
-			msgidValue = strings.TrimSpace(msgidValue)
-			// Remove quotes if present
-			msgidValue = strings.Trim(msgidValue, `"`)
-			continue
-		}
-
-		// If we're in a msgid entry and this line continues it (starts with quote)
-		if inMsgid && strings.HasPrefix(trimmed, `"`) {
-			// Continuation line - append to msgidValue (remove quotes)
-			contValue := strings.Trim(trimmed, `"`)
-			msgidValue += contValue
-			continue
-		}
-
-		// If we encounter msgstr, it means we've finished the msgid
-		if inMsgid && strings.HasPrefix(trimmed, "msgstr") {
-			// End of msgid entry
-			if !headerFound && strings.Trim(msgidValue, `"`) == "" {
-				headerFound = true
-			} else if strings.Trim(msgidValue, `"`) != "" {
-				// Non-empty msgid entry
-				count++
-			}
-			inMsgid = false
-			msgidValue = ""
-			continue
-		}
-
-		// Empty line might indicate end of entry, but we'll rely on msgstr
-		// to be more accurate
-	}
-
-	// Handle last entry if file doesn't end with newline or msgstr
-	if inMsgid {
-		if !headerFound && strings.Trim(msgidValue, `"`) == "" {
-			headerFound = true
-		} else if strings.Trim(msgidValue, `"`) != "" {
-			count++
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("failed to read PO file %s: %w", poFile, err)
-	}
-
-	return count, nil
-}
-
-// PlaceholderVars holds key-value pairs for placeholder replacement.
-// Keys correspond to placeholder names in template (e.g. {prompt}, {source}).
-type PlaceholderVars map[string]string
-
-// ExecutePromptTemplate executes a Go text template with the given data.
-// The template uses {{.key}} syntax (e.g. {{.source}}, {{.dest}}).
-// Data is built from vars; the "prompt" key is excluded to avoid circular reference.
-// Returns the executed template string or an error if template parsing/execution fails.
-func ExecutePromptTemplate(tmpl string, vars PlaceholderVars) (string, error) {
-	data := make(map[string]interface{})
-	for k, v := range vars {
-		if k != "prompt" {
-			data[k] = v
-		}
-	}
-	t, err := template.New("prompt").Parse(tmpl)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse prompt template: %w", err)
-	}
-	var buf strings.Builder
-	if err := t.Execute(&buf, data); err != nil {
-		return "", fmt.Errorf("failed to execute prompt template: %w", err)
-	}
-	return buf.String(), nil
-}
-
-// ReplacePlaceholders replaces placeholders in a template string with actual values.
-// Uses Go text/template syntax: {{.key}}, e.g. {{.prompt}}, {{.source}}, {{.commit}}.
-//
-// Example:
-//
-//	ReplacePlaceholders("cmd -p {{.prompt}} -s {{.source}}", PlaceholderVars{
-//	    "prompt": "update",
-//	    "source": "po/zh_CN.po",
-//	})
-func ReplacePlaceholders(tmpl string, kv PlaceholderVars) (string, error) {
-	data := make(map[string]interface{})
-	for k, v := range kv {
-		data[k] = v
-	}
-	t, err := template.New("cmd").Parse(tmpl)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse command template: %w", err)
-	}
-	var buf strings.Builder
-	if err := t.Execute(&buf, data); err != nil {
-		return "", fmt.Errorf("failed to execute command template: %w", err)
-	}
-	return buf.String(), nil
-}
-
-// ExecuteAgentCommand executes an agent command and captures both stdout and stderr.
-// The command is executed in the specified working directory.
-//
-// Parameters:
-//   - cmd: Command and arguments as a slice (e.g., []string{"claude", "-p", "{prompt}"})
-//   - workDir: Working directory for command execution (empty string uses current working directory).
-//     To use repository root, pass repository.WorkDir() explicitly.
-//
-// Returns:
-//   - stdout: Standard output from the command
-//   - stderr: Standard error from the command
-//   - error: Error if command execution fails (includes non-zero exit codes)
-//
-// The function:
-//   - Replaces placeholders in command arguments using ReplacePlaceholders
-//   - Executes the command in the specified working directory
-//   - Captures both stdout and stderr separately
-//   - Returns an error if the command exits with a non-zero status code
-func ExecuteAgentCommand(cmd []string) ([]byte, []byte, error) {
-	if len(cmd) == 0 {
-		return nil, nil, fmt.Errorf("command cannot be empty")
-	}
-
-	cwd, _ := os.Getwd()
-
-	// Replace placeholders in command arguments
-	// Note: Placeholders should be replaced before calling this function,
-	// but we'll handle it here for safety
-	execCmd := exec.Command(cmd[0], cmd[1:]...)
-	log.Debugf("executing agent command: %s (workDir: %s)", strings.Join(cmd, " "), cwd)
-
-	// Capture stdout and stderr separately
-	var stdoutBuf, stderrBuf bytes.Buffer
-	execCmd.Stdout = &stdoutBuf
-	execCmd.Stderr = &stderrBuf
-
-	// Execute the command
-	err := execCmd.Run()
-	stdout := stdoutBuf.Bytes()
-	stderr := stderrBuf.Bytes()
-
-	// Check for execution errors
-	if err != nil {
-		// If command exited with non-zero status, include stderr in error message
-		if exitError, ok := err.(*exec.ExitError); ok {
-			return stdout, stderr, fmt.Errorf("agent command failed with exit code %d: %w\nstderr: %s",
-				exitError.ExitCode(), err, string(stderr))
-		}
-		return stdout, stderr, fmt.Errorf("failed to execute agent command: %w\nstderr: %s", err, string(stderr))
-	}
-
-	log.Debugf("agent command completed successfully (stdout: %d bytes, stderr: %d bytes)",
-		len(stdout), len(stderr))
-
-	return stdout, stderr, nil
-}
-
-// ExecuteAgentCommandStream executes an agent command and returns a reader for real-time stdout streaming.
-// The command is executed in the specified working directory.
-// This function is used for json format (stream-json internally) to process output in real-time.
-//
-// Parameters:
-//   - cmd: Command and arguments as a slice
-//   - workDir: Working directory for command execution
-//
-// Returns:
-//   - stdoutReader: io.ReadCloser for reading stdout in real-time
-//   - stderr: Standard error from the command (captured after execution)
-//   - cmdProcess: *exec.Cmd for waiting on command completion
-//   - error: Error if command setup fails
-func ExecuteAgentCommandStream(cmd []string) (stdoutReader io.ReadCloser, stderrBuf *bytes.Buffer, cmdProcess *exec.Cmd, err error) {
-	if len(cmd) == 0 {
-		return nil, nil, nil, fmt.Errorf("command cannot be empty")
-	}
-
-	// Create command
-	execCmd := exec.Command(cmd[0], cmd[1:]...)
-	log.Debugf("executing agent command (streaming): %s", strings.Join(cmd, " "))
-
-	// Get stdout pipe for real-time reading
-	stdoutPipe, err := execCmd.StdoutPipe()
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to create stdout pipe: %w", err)
-	}
-
-	// Capture stderr separately
-	var stderrBuffer bytes.Buffer
-	execCmd.Stderr = &stderrBuffer
-
-	// Start command execution
-	if err := execCmd.Start(); err != nil {
-		stdoutPipe.Close()
-		return nil, nil, nil, fmt.Errorf("failed to start agent command: %w", err)
-	}
-
-	return stdoutPipe, &stderrBuffer, execCmd, nil
-}
-
-// normalizeOutputFormat normalizes output format by converting underscores to hyphens
-// and unifying stream-json/stream_json to json.
-// This allows both "stream_json" and "stream-json" to be treated as "json".
-func normalizeOutputFormat(format string) string {
-	normalized := strings.ReplaceAll(format, "_", "-")
-	// Unify stream-json to json (claude uses stream-json internally, but we simplify it to json)
-	if normalized == "stream-json" {
-		return "json"
-	}
-	return normalized
-}
-
-// SelectAgent selects an agent from the configuration based on the provided agent name.
-// If agentName is empty, it auto-selects an agent (only works if exactly one agent is configured).
-// Returns the selected agent and an error if selection fails.
-// Validates that agent.Kind is one of the known types (claude, gemini, codex, opencode, echo).
-func SelectAgent(cfg *config.AgentConfig, agentName string) (config.Agent, error) {
-	var agent config.Agent
-
-	if agentName != "" {
-		// Use specified agent
-		log.Debugf("using specified agent: %s", agentName)
-		a, ok := cfg.Agents[agentName]
-		if !ok {
-			agentList := make([]string, 0, len(cfg.Agents))
-			for k := range cfg.Agents {
-				agentList = append(agentList, k)
-			}
-			log.Errorf("agent '%s' not found in configuration. Available agents: %v", agentName, agentList)
-			return config.Agent{}, fmt.Errorf("agent '%s' not found in configuration\nAvailable agents: %s\nHint: Check git-po-helper.yaml for configured agents", agentName, strings.Join(agentList, ", "))
-		}
-		agent = a
-	} else {
-		// Auto-select agent
-		log.Debugf("auto-selecting agent from configuration")
-		if len(cfg.Agents) == 0 {
-			log.Error("no agents configured")
-			return config.Agent{}, fmt.Errorf("no agents configured\nHint: Add at least one agent to git-po-helper.yaml in the 'agents' section")
-		}
-		if len(cfg.Agents) > 1 {
-			agentList := make([]string, 0, len(cfg.Agents))
-			for k := range cfg.Agents {
-				agentList = append(agentList, k)
-			}
-			log.Errorf("multiple agents configured (%s), --agent flag required", strings.Join(agentList, ", "))
-			return config.Agent{}, fmt.Errorf("multiple agents configured (%s), please specify --agent\nHint: Use --agent flag to select one of the available agents", strings.Join(agentList, ", "))
-		}
-		for k, v := range cfg.Agents {
-			agent, agentName = v, k
-			break
-		}
-	}
-
-	// Set agent.Kind initial value when empty: try agentName then command name
-	if agent.Kind == "" {
-		// Try agentName (config key) converted to lowercase
-		if lower := strings.ToLower(agentName); config.KnownAgentKinds[lower] {
-			agent.Kind = lower
-		} else {
-			// Try first command argument (command name): use basename for paths
-			if len(agent.Cmd) > 0 {
-				base := strings.ToLower(filepath.Base(agent.Cmd[0]))
-				if config.KnownAgentKinds[base] {
-					agent.Kind = base
-				}
-			}
-		}
-		if agent.Kind == "" {
-			return config.Agent{}, fmt.Errorf(
-				"agent '%s' has unknown kind (cmd=%v)\n"+
-					"Hint: Add 'kind' field (claude, gemini, codex, opencode, echo, qwen) to agent in git-po-helper.yaml",
-				agentName, agent.Cmd)
-		}
-	}
-
-	// Validate agent.Kind is a known type
-	if !config.KnownAgentKinds[agent.Kind] {
-		return config.Agent{}, fmt.Errorf(
-			"agent '%s' has unknown kind '%s' (must be one of: claude, gemini, codex, opencode, echo, qwen)\n"+
-				"Hint: Set 'kind' to a valid value in git-po-helper.yaml", agentName, agent.Kind)
-	}
-
-	return agent, nil
-}
-
-// BuildAgentCommand builds an agent command by replacing placeholders in the agent's command template.
-// Uses Go text/template syntax (e.g. {{.prompt}}, {{.source}}, {{.commit}}).
-// For claude/codex/opencode/gemini commands, it adds stream-json parameters based on agent.Output.
-// Uses agent.Kind for type-safe detection (Kind must be validated by SelectAgent).
-func BuildAgentCommand(agent config.Agent, vars PlaceholderVars) ([]string, error) {
-	cmd := make([]string, len(agent.Cmd))
-	for i, arg := range agent.Cmd {
-		resolved, err := ReplacePlaceholders(arg, vars)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve command arg %q: %w", arg, err)
-		}
-		cmd[i] = resolved
-	}
-
-	// Use agent.Kind for type detection (validated by SelectAgent)
-	kind := agent.Kind
-	isClaude := kind == config.AgentKindClaude
-	isCodex := kind == config.AgentKindCodex
-	isOpencode := kind == config.AgentKindOpencode
-	isGemini := kind == config.AgentKindGemini || kind == config.AgentKindQwen
-
-	// For claude command, add --output-format parameter if output format is specified
-	if isClaude {
-		// Check if --output-format parameter already exists in the command
-		hasOutputFormat := false
-		for i, arg := range cmd {
-			if arg == "--output-format" || arg == "-o" {
-				hasOutputFormat = true
-				// Skip the next argument (the format value)
-				if i+1 < len(cmd) {
-					_ = cmd[i+1]
-				}
-				break
-			}
-		}
-
-		// Only add --output-format if it doesn't already exist
-		if !hasOutputFormat {
-			outputFormat := normalizeOutputFormat(agent.Output)
-			if outputFormat == "" {
-				outputFormat = "default"
-			}
-
-			// Add --output-format parameter for json format (claude uses stream-json internally)
-			if outputFormat == "json" {
-				cmd = append(cmd, "--verbose", "--output-format", "stream-json")
-			}
-			// For "default" format, no additional parameter is needed
-		}
-	}
-
-	// For codex command, add --json parameter if output format is json
-	if isCodex {
-		// Check if --json parameter already exists in the command
-		hasJSON := false
-		for _, arg := range cmd {
-			if arg == "--json" {
-				hasJSON = true
-				break
-			}
-		}
-
-		// Only add --json if it doesn't already exist
-		if !hasJSON {
-			outputFormat := normalizeOutputFormat(agent.Output)
-			if outputFormat == "" {
-				outputFormat = "default"
-			}
-
-			// Add --json parameter for json format (codex uses JSONL format)
-			if outputFormat == "json" {
-				cmd = append(cmd, "--json")
-			}
-			// For "default" format, no additional parameter is needed
-		}
-	}
-
-	// For opencode command, add --format json parameter if output format is json
-	if isOpencode {
-		// Check if --format parameter already exists in the command
-		hasFormat := false
-		for i, arg := range cmd {
-			if arg == "--format" {
-				hasFormat = true
-				// Skip the next argument (the format value)
-				if i+1 < len(cmd) {
-					_ = cmd[i+1]
-				}
-				break
-			}
-		}
-
-		// Only add --format if it doesn't already exist
-		if !hasFormat {
-			outputFormat := normalizeOutputFormat(agent.Output)
-			if outputFormat == "" {
-				outputFormat = "default"
-			}
-
-			// Add --format json parameter for json format (opencode uses JSONL format)
-			if outputFormat == "json" {
-				cmd = append(cmd, "--format", "json")
-			}
-			// For "default" format, no additional parameter is needed
-		}
-	}
-
-	// For gemini/qwen command, add --output-format stream-json parameter if output format is json
-	// (Applicable to Claude Code and Gemini-CLI)
-	if isGemini {
-		// Check if --output-format or -o parameter already exists in the command
-		hasOutputFormat := false
-		for i, arg := range cmd {
-			if arg == "--output-format" || arg == "-o" {
-				hasOutputFormat = true
-				// Skip the next argument (the format value)
-				if i+1 < len(cmd) {
-					_ = cmd[i+1]
-				}
-				break
-			}
-		}
-
-		// Only add --output-format if it doesn't already exist
-		if !hasOutputFormat {
-			outputFormat := normalizeOutputFormat(agent.Output)
-			if outputFormat == "" {
-				outputFormat = "default"
-			}
-
-			// Add --output-format stream-json parameter for json format (gemini uses stream-json)
-			if outputFormat == "json" {
-				cmd = append(cmd, "--output-format", "stream-json")
-			}
-			// For "default" format, no additional parameter is needed
-		}
-	}
-
-	return cmd, nil
-}
-
-// GetPotFilePath returns the full path to the POT file in the repository.
-func GetPotFilePath() string {
-	workDir := repository.WorkDir()
-	return filepath.Join(workDir, PoDir, GitPot)
-}
-
-// GetRawPrompt returns the prompt for the specified action from configuration, or an error if not configured.
-// Supported actions: "update-pot", "update-po", "translate", "review"
-// If --prompt flag is provided via viper, it overrides the configuration value.
-func GetRawPrompt(cfg *config.AgentConfig, action string) (string, error) {
-	// Check if --prompt flag is provided via viper (from command line)
-	// Check both agent-run--prompt and agent-test--prompt
-	overridePrompt := viper.GetString("agent-run--prompt")
-	if overridePrompt == "" {
-		overridePrompt = viper.GetString("agent-test--prompt")
-	}
-
-	// If override prompt is provided, use it directly
-	if overridePrompt != "" {
-		log.Debugf("using override prompt from --prompt flag for action %s: %s", action, overridePrompt)
-		return overridePrompt, nil
-	}
-
-	var prompt string
-	var promptName string
-
-	switch action {
-	case "update-pot":
-		prompt = cfg.Prompt.UpdatePot
-		promptName = "prompt.update_pot"
-	case "update-po":
-		prompt = cfg.Prompt.UpdatePo
-		promptName = "prompt.update_po"
-	case "translate":
-		prompt = cfg.Prompt.Translate
-		promptName = "prompt.translate"
-	case "review":
-		prompt = cfg.Prompt.Review
-		promptName = "prompt.review"
-	default:
-		return "", fmt.Errorf("unknown action: %s\nHint: Supported actions are: update-pot, update-po, translate, review", action)
-	}
-
-	if prompt == "" {
-		log.Errorf("%s is not configured", promptName)
-		return "", fmt.Errorf("%s is not configured\nHint: Add '%s' to git-po-helper.yaml", promptName, promptName)
-	}
-	log.Debugf("using %s prompt: %s", action, prompt)
-	return prompt, nil
-}
-
-// CountNewEntries counts untranslated entries in a PO file.
-// It uses `msgattrib --untranslated` to extract untranslated entries,
-// then counts the msgid entries excluding the header entry (empty msgid).
-//
-// The function:
-// - Executes `msgattrib --untranslated poFile`
-// - Scans output for lines starting with "msgid "
-// - Excludes the header entry (msgid "")
-// - Returns the count of untranslated msgid entries
-func CountNewEntries(poFile string) (int, error) {
-	cmd := exec.Command("msgattrib", "--untranslated", poFile)
-	output, err := cmd.Output()
-	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			return 0, fmt.Errorf("msgattrib failed for %s: %w\nstderr: %s",
-				poFile, err, string(exitError.Stderr))
-		}
-		return 0, fmt.Errorf("failed to execute msgattrib for %s: %w", poFile, err)
-	}
-
-	scanner := bufio.NewScanner(bytes.NewReader(output))
-	count := 0
-	inMsgid := false
-	msgidValue := ""
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		trimmed := strings.TrimSpace(line)
-
-		// Check for msgid line
-		if strings.HasPrefix(trimmed, "msgid ") {
-			// Extract msgid value
-			msgidValue = strings.TrimPrefix(trimmed, "msgid ")
-			msgidValue = strings.TrimSpace(msgidValue)
-			inMsgid = true
-			continue
-		}
-
-		// If we're in a msgid and encounter a continuation line
-		if inMsgid && strings.HasPrefix(trimmed, `"`) {
-			// This is a multi-line msgid, just mark it as non-empty
-			msgidValue += "continuation"
-			continue
-		}
-
-		// If we encounter msgstr, finish the msgid
-		if inMsgid && strings.HasPrefix(trimmed, "msgstr") {
-			// Check if msgid is non-empty (not the header)
-			if strings.Trim(msgidValue, `"`) != "" {
-				count++
-			}
-			inMsgid = false
-			msgidValue = ""
-			continue
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("failed to scan msgattrib output: %w", err)
-	}
-
-	return count, nil
-}
-
-// CountFuzzyEntries counts fuzzy entries in a PO file.
-// It uses `msgattrib --only-fuzzy` to extract fuzzy entries,
-// then counts the msgid entries excluding the header entry (empty msgid).
-//
-// The function:
-// - Executes `msgattrib --only-fuzzy poFile`
-// - Scans output for lines starting with "msgid "
-// - Excludes the header entry (msgid "")
-// - Returns the count of fuzzy msgid entries
-func CountFuzzyEntries(poFile string) (int, error) {
-	cmd := exec.Command("msgattrib", "--only-fuzzy", poFile)
-	output, err := cmd.Output()
-	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			return 0, fmt.Errorf("msgattrib failed for %s: %w\nstderr: %s",
-				poFile, err, string(exitError.Stderr))
-		}
-		return 0, fmt.Errorf("failed to execute msgattrib for %s: %w", poFile, err)
-	}
-
-	scanner := bufio.NewScanner(bytes.NewReader(output))
-	count := 0
-	inMsgid := false
-	msgidValue := ""
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		trimmed := strings.TrimSpace(line)
-
-		// Check for msgid line
-		if strings.HasPrefix(trimmed, "msgid ") {
-			// Extract msgid value
-			msgidValue = strings.TrimPrefix(trimmed, "msgid ")
-			msgidValue = strings.TrimSpace(msgidValue)
-			inMsgid = true
-			continue
-		}
-
-		// If we're in a msgid and encounter a continuation line
-		if inMsgid && strings.HasPrefix(trimmed, `"`) {
-			// This is a multi-line msgid, just mark it as non-empty
-			msgidValue += "continuation"
-			continue
-		}
-
-		// If we encounter msgstr, finish the msgid
-		if inMsgid && strings.HasPrefix(trimmed, "msgstr") {
-			// Check if msgid is non-empty (not the header)
-			if strings.Trim(msgidValue, `"`) != "" {
-				count++
-			}
-			inMsgid = false
-			msgidValue = ""
-			continue
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("failed to scan msgattrib output: %w", err)
-	}
-
-	return count, nil
-}
 
 // ClaudeJSONOutput represents the JSON output format from Claude API.
 type ClaudeJSONOutput struct {
@@ -1160,30 +404,24 @@ func parseClaudeStreamJSON(output []byte) (content []byte, result *ClaudeJSONOut
 }
 
 // ParseClaudeStreamJSONRealtime parses stream JSON format in real-time, displaying messages as they arrive.
-// It reads from the provided reader line by line, parses each JSON object, and displays
-// system, assistant, and result messages in real-time.
-// Returns the final result message and accumulated result text.
 func ParseClaudeStreamJSONRealtime(reader io.Reader) (content []byte, result *ClaudeJSONOutput, err error) {
 	var resultBuilder strings.Builder
 	var lastResult *ClaudeJSONOutput
 	var turnCount int
 
 	scanner := bufio.NewScanner(reader)
-	// Increase buffer size to handle long lines (1MB initial, 10MB max)
 	buf := make([]byte, 0, 1024*1024)
-	scanner.Buffer(buf, 10*1024*1024) // Max token size: 10MB
+	scanner.Buffer(buf, 10*1024*1024)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
 		}
 
-		// Try to parse as JSON to determine message type
 		var baseMsg struct {
 			Type string `json:"type"`
 		}
 		if err := json.Unmarshal([]byte(line), &baseMsg); err != nil {
-			// If line is not valid JSON, treat it as plain text
 			log.Debugf("stream-json: non-JSON line: %s", line)
 			resultBuilder.WriteString(line)
 			resultBuilder.WriteString("\n")
@@ -1191,7 +429,6 @@ func ParseClaudeStreamJSONRealtime(reader io.Reader) (content []byte, result *Cl
 			continue
 		}
 
-		// Parse based on message type
 		switch baseMsg.Type {
 		case "system":
 			var sysMsg ClaudeSystemMessage
@@ -1212,19 +449,15 @@ func ParseClaudeStreamJSONRealtime(reader io.Reader) (content []byte, result *Cl
 		case "result":
 			var resultMsg ClaudeJSONOutput
 			if err := json.Unmarshal([]byte(line), &resultMsg); err == nil {
-				// Print result parsing process
 				resultSize := len(resultMsg.Result)
 				printClaudeResultParsing(&resultMsg, resultSize)
-				// Merge usage information: prefer the result with more complete usage info
 				if lastResult == nil {
 					lastResult = &resultMsg
 				} else {
-					// Merge usage information if the new result has it
 					if resultMsg.Usage != nil && (resultMsg.Usage.InputTokens > 0 || resultMsg.Usage.OutputTokens > 0) {
 						if lastResult.Usage == nil {
 							lastResult.Usage = resultMsg.Usage
 						} else {
-							// Use the values from the new result if they are non-zero
 							if resultMsg.Usage.InputTokens > 0 {
 								lastResult.Usage.InputTokens = resultMsg.Usage.InputTokens
 							}
@@ -1233,15 +466,12 @@ func ParseClaudeStreamJSONRealtime(reader io.Reader) (content []byte, result *Cl
 							}
 						}
 					}
-					// Always update duration_api_ms with the latest value
 					if resultMsg.DurationAPIMS > 0 {
 						lastResult.DurationAPIMS = resultMsg.DurationAPIMS
 					}
-					// Update result text if present
 					if resultMsg.Result != "" {
 						lastResult.Result = resultMsg.Result
 					}
-					// Merge NumTurns: use the maximum value
 					if resultMsg.NumTurns > lastResult.NumTurns {
 						lastResult.NumTurns = resultMsg.NumTurns
 					}
@@ -1258,7 +488,6 @@ func ParseClaudeStreamJSONRealtime(reader io.Reader) (content []byte, result *Cl
 				log.Debugf("stream-json: failed to parse user message: %v", err)
 			}
 		default:
-			// Unknown type, log at debug level and output as-is
 			log.Debugf("stream-json: unknown message type: %s", baseMsg.Type)
 			resultBuilder.WriteString(line)
 			resultBuilder.WriteString("\n")
@@ -1273,8 +502,6 @@ func ParseClaudeStreamJSONRealtime(reader io.Reader) (content []byte, result *Cl
 	return []byte(resultBuilder.String()), lastResult, nil
 }
 
-// printClaudeSystemMessage displays system initialization information.
-// (Applicable to Claude Code and Gemini-CLI)
 func printClaudeSystemMessage(msg *ClaudeSystemMessage) {
 	fmt.Println()
 	fmt.Println("🤖 System Initialization")
@@ -1302,8 +529,6 @@ func printClaudeSystemMessage(msg *ClaudeSystemMessage) {
 	flushStdout()
 }
 
-// parseClaudeContentBlock parses a raw content block and returns (contentType, displayText, resultText, ok).
-// displayText is formatted for console output; resultText is the raw text to accumulate (for text type).
 func parseClaudeContentBlock(raw json.RawMessage) (contentType, displayText, resultText string, ok bool) {
 	var typeOnly struct {
 		Type string `json:"type"`
@@ -1345,8 +570,6 @@ func parseClaudeContentBlock(raw json.RawMessage) (contentType, displayText, res
 	}
 }
 
-// truncateCommandDisplay truncates long command/agent output for display.
-// Shows first 128 bytes + "..." + last 32 bytes when len > 160.
 func truncateCommandDisplay(s string) string {
 	const headLen, tailLen = 128, 32
 	if len(s) <= headLen+tailLen {
@@ -1355,11 +578,7 @@ func truncateCommandDisplay(s string) string {
 	return s[:headLen] + "..." + s[len(s)-tailLen:]
 }
 
-// truncateText truncates text to maxBytes bytes and/or maxLines lines, appending "..." if truncated.
-// If maxLines > 0, the text is first limited to maxLines lines, then to maxBytes.
-// Returns text without trailing newline so callers can use fmt.Println without double newlines.
 func truncateText(text string, maxBytes int, maxLines int) string {
-	// First, limit by lines if maxLines > 0
 	if maxLines > 0 {
 		lines := strings.Split(text, "\n")
 		if len(lines) > maxLines {
@@ -1367,22 +586,17 @@ func truncateText(text string, maxBytes int, maxLines int) string {
 			text = strings.Join(lines, "\n")
 		}
 	}
-
-	// Then, limit by bytes
 	if len(text) <= maxBytes {
 		return strings.TrimRight(text, "\n")
 	}
-	// Truncate to maxBytes - 3 to leave room for "..."
 	truncated := text[:maxBytes-3]
 	return strings.TrimRight(truncated, "\n") + "..."
 }
 
-// indentSubsequentLines prefixes each line after the first with indent, and wraps long lines (>80 chars)
-// at word boundaries. Wrapped continuations are also indented.
 func indentSubsequentLines(text string) string {
 	const indentStr = "   "
 	const maxLineWidth = 99
-	contentWidth := maxLineWidth - len(indentStr) // width for indented continuation
+	contentWidth := maxLineWidth - len(indentStr)
 
 	wrapAt := func(s string, width int) []string {
 		var out []string
@@ -1410,7 +624,6 @@ func indentSubsequentLines(text string) string {
 		parts := wrapAt(line, maxLineWidth)
 		for j, p := range parts {
 			if i > 0 || j > 0 {
-				// Indented: wrap content at contentWidth, then prefix each part
 				sub := wrapAt(p, contentWidth)
 				for _, s := range sub {
 					result = append(result, indentStr+s)
@@ -1426,14 +639,10 @@ func indentSubsequentLines(text string) string {
 	return strings.Join(result, "\n")
 }
 
-// printClaudeAssistantMessage displays assistant message content, printing each block with type-specific icons.
-// (Applicable to Claude Code and Gemini-CLI)
-// Icons: 🤔 thinking, 🔧 tool_use, 🤖 text, ❓ unknown
 func printClaudeAssistantMessage(msg *ClaudeAssistantMessage, resultBuilder *strings.Builder) {
 	if msg.Message.Content == nil {
 		return
 	}
-
 	for _, raw := range msg.Message.Content {
 		contentType, displayText, resultText, ok := parseClaudeContentBlock(raw)
 		if !ok {
@@ -1463,17 +672,14 @@ func printClaudeAssistantMessage(msg *ClaudeAssistantMessage, resultBuilder *str
 	}
 }
 
-// printClaudeResultParsing displays the parsing process of a result message.
 func printClaudeResultParsing(msg *ClaudeJSONOutput, resultSize int) {
 	fmt.Printf("🤖 return result (%d bytes)\n", resultSize)
 	flushStdout()
 }
 
-// parseClaudeUserContentType parses user message content to determine content subtype.
-// Returns "tool_result" if all content items are tool_result, otherwise the first non-tool_result type.
 func parseClaudeUserContentType(msg *ClaudeUserMessage) string {
 	if len(msg.Message.Content) == 0 {
-		return "tool_result" // default
+		return "tool_result"
 	}
 	var firstOther string
 	for _, raw := range msg.Message.Content {
@@ -1495,8 +701,6 @@ func parseClaudeUserContentType(msg *ClaudeUserMessage) string {
 	return "tool_result"
 }
 
-// printClaudeUserMessage displays user message (e.g. tool result) with user icon.
-// For tool_result: shows "... xxx bytes ...". For other types: "type: ... xxx bytes ...".
 func printClaudeUserMessage(rawLine []byte, msg *ClaudeUserMessage) {
 	size := len(rawLine)
 	contentType := parseClaudeUserContentType(msg)
@@ -1511,13 +715,11 @@ func printClaudeUserMessage(rawLine []byte, msg *ClaudeUserMessage) {
 	flushStdout()
 }
 
-// printClaudeResultMessage displays the final result message.
 func printClaudeResultMessage(msg *ClaudeJSONOutput, resultBuilder *strings.Builder) {
 	if msg.Result != "" {
 		fmt.Println()
 		fmt.Println("✅ Final Result")
 		fmt.Println("==========================================")
-		// Print result text (may be multi-line); trim trailing empty from split to avoid extra blank
 		lines := strings.Split(msg.Result, "\n")
 		for len(lines) > 0 && lines[len(lines)-1] == "" {
 			lines = lines[:len(lines)-1]
@@ -1532,14 +734,12 @@ func printClaudeResultMessage(msg *ClaudeJSONOutput, resultBuilder *strings.Buil
 }
 
 // PrintAgentDiagnostics prints diagnostic information in a beautiful format.
-// It accepts ClaudeJSONOutput, CodexJSONOutput, OpenCodeJSONOutput, or GeminiJSONOutput.
 func PrintAgentDiagnostics(result interface{}) {
 	var numTurns int
 	var inputTokens, outputTokens int
 	var durationAPIMS int
 	hasInfo := false
 
-	// Extract information based on type
 	switch r := result.(type) {
 	case *GeminiJSONOutput:
 		if r == nil {
@@ -1657,26 +857,21 @@ func PrintAgentDiagnostics(result interface{}) {
 	flushStdout()
 }
 
-// ParseCodexJSONLRealtime parses Codex JSONL format in real-time, displaying messages as they arrive.
-// It reads from the provided reader line by line, parses each JSON object, and displays
-// thread.started, item.completed (agent_message), and turn.completed messages in real-time.
-// Returns the final result and accumulated result text.
+// ParseCodexJSONLRealtime parses Codex JSONL format in real-time.
 func ParseCodexJSONLRealtime(reader io.Reader) (content []byte, result *CodexJSONOutput, err error) {
 	var lastResult *CodexJSONOutput
 	var lastAgentMessage string
 	startTime := time.Now()
 
 	scanner := bufio.NewScanner(reader)
-	// Increase buffer size to handle long lines (1MB initial, 10MB max)
 	buf := make([]byte, 0, 1024*1024)
-	scanner.Buffer(buf, 10*1024*1024) // Max token size: 10MB
+	scanner.Buffer(buf, 10*1024*1024)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
 		}
 
-		// Try to parse as JSON to determine message type
 		var baseMsg map[string]json.RawMessage
 		if err := json.Unmarshal([]byte(line), &baseMsg); err != nil {
 			log.Debugf("codex-json: non-JSON lines, error: %s", err)
@@ -1685,7 +880,6 @@ func ParseCodexJSONLRealtime(reader io.Reader) (content []byte, result *CodexJSO
 			continue
 		}
 
-		// Skip JSON with only "type" and no other fields
 		if len(baseMsg) <= 1 {
 			log.Debugf("codex-json: skipping message with only type field")
 			continue
@@ -1765,11 +959,9 @@ func ParseCodexJSONLRealtime(reader io.Reader) (content []byte, result *CodexJSO
 		return []byte(lastAgentMessage), lastResult, fmt.Errorf("failed to parse codex JSONL: %w", err)
 	}
 
-	// Only return the last agent message
 	return []byte(lastAgentMessage), lastResult, nil
 }
 
-// printCodexThreadStarted displays thread initialization information.
 func printCodexThreadStarted(msg *CodexThreadStarted) {
 	fmt.Println()
 	fmt.Println("🤖 Session Started")
@@ -1782,10 +974,6 @@ func printCodexThreadStarted(msg *CodexThreadStarted) {
 	flushStdout()
 }
 
-// printCodexItem displays item.started or item.completed based on item type.
-// When dedup is false (item.started): show command for command_execution.
-// When dedup is true (item.completed): show bytes for command_execution, full message for agent_message.
-// Returns last agent message text.
 func printCodexItem(itemRaw json.RawMessage, lastResult *CodexJSONOutput, lastAgentMessage string, dedup bool) string {
 	var typeOnly struct {
 		Type string `json:"type"`
@@ -1831,7 +1019,6 @@ func printCodexItem(itemRaw json.RawMessage, lastResult *CodexJSONOutput, lastAg
 	return lastAgentMessage
 }
 
-// stripThinkTags removes <think>...</think> tags from text, returning the inner content and any text outside.
 func stripThinkTags(text string) string {
 	text = strings.TrimSpace(text)
 	lower := strings.ToLower(text)
@@ -1843,7 +1030,6 @@ func stripThinkTags(text string) string {
 	if thinkEnd == -1 {
 		return text
 	}
-	// Extract content: before <think>, content inside, after </think>
 	before := strings.TrimSpace(text[:thinkStart])
 	inner := strings.TrimSpace(text[thinkStart+7 : thinkStart+thinkEnd])
 	after := strings.TrimSpace(text[thinkStart+thinkEnd+8:])
@@ -1860,15 +1046,12 @@ func stripThinkTags(text string) string {
 	return strings.Join(parts, "\n\n")
 }
 
-// hasThinkTags returns true if text contains <think> </think> tags (after trim).
 func hasThinkTags(text string) bool {
 	text = strings.TrimSpace(text)
 	lower := strings.ToLower(text)
 	return strings.Contains(lower, "<think>") && strings.Contains(lower, "</think>")
 }
 
-// printCodexAgentMessage displays agent message content.
-// For agent_message: trim text, use 🤔 if wrapped in <think> </think>, else 🤖. Strip think tags from display.
 func printCodexAgentMessage(item *CodexItem, resultBuilder *strings.Builder) {
 	text := strings.TrimSpace(item.Text)
 	if text == "" {
@@ -1890,7 +1073,6 @@ func printCodexAgentMessage(item *CodexItem, resultBuilder *strings.Builder) {
 	flushStdout()
 }
 
-// printCodexTurnCompleted displays turn.completed usage when values are non-zero.
 func printCodexTurnCompleted(usage *CodexUsage) {
 	if usage == nil {
 		return
@@ -1911,10 +1093,7 @@ func printCodexTurnCompleted(usage *CodexUsage) {
 	}
 }
 
-// ParseOpenCodeJSONLRealtime parses OpenCode JSONL format in real-time, displaying messages as they arrive.
-// It reads from the provided reader line by line, parses each JSON object, and displays
-// step_start, text, tool_use, and step_finish messages in real-time.
-// Returns the final result and accumulated result text.
+// ParseOpenCodeJSONLRealtime parses OpenCode JSONL format in real-time.
 func ParseOpenCodeJSONLRealtime(reader io.Reader) (content []byte, result *OpenCodeJSONOutput, err error) {
 	var resultBuilder strings.Builder
 	var lastResult *OpenCodeJSONOutput
@@ -1922,38 +1101,32 @@ func ParseOpenCodeJSONLRealtime(reader io.Reader) (content []byte, result *OpenC
 	startTime := time.Now()
 
 	scanner := bufio.NewScanner(reader)
-	// Increase buffer size to handle long lines (1MB initial, 10MB max)
 	buf := make([]byte, 0, 1024*1024)
-	scanner.Buffer(buf, 10*1024*1024) // Max token size: 10MB
+	scanner.Buffer(buf, 10*1024*1024)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
 		}
 
-		// Try to parse as JSON to determine message type
 		var baseMsg struct {
 			Type string `json:"type"`
 		}
 		if err := json.Unmarshal([]byte(line), &baseMsg); err != nil {
-			// If line is not valid JSON, log at debug level only
 			log.Debugf("opencode-json: non-JSON lines, error: %s", err)
 			fmt.Print("❓ ")
 			fmt.Println(indentSubsequentLines(line))
 			continue
 		}
 
-		// Parse based on message type
 		switch baseMsg.Type {
 		case "step_start":
 			var stepMsg OpenCodeStepStart
 			if err := json.Unmarshal([]byte(line), &stepMsg); err == nil {
-				// Initialize result if needed
 				if lastResult == nil {
 					lastResult = &OpenCodeJSONOutput{}
 				}
 				lastResult.SessionID = stepMsg.SessionID
-				// Increment NumTurns when step starts
 				lastResult.NumTurns++
 				inStep = true
 				log.Debugf("opencode-json: turn %d", lastResult.NumTurns)
@@ -1966,23 +1139,18 @@ func ParseOpenCodeJSONLRealtime(reader io.Reader) (content []byte, result *OpenC
 				if lastResult == nil {
 					lastResult = &OpenCodeJSONOutput{}
 				}
-				// Extract token usage information
 				if stepMsg.Part.Tokens != nil {
 					if lastResult.Usage == nil {
 						lastResult.Usage = &OpenCodeUsage{}
 					}
-					// Use total tokens as input tokens, output tokens from the tokens structure
 					if stepMsg.Part.Tokens.Total > 0 {
-						// For opencode, we use total as a reference, but extract input/output separately
 						lastResult.Usage.InputTokens = stepMsg.Part.Tokens.Input
 						lastResult.Usage.OutputTokens = stepMsg.Part.Tokens.Output
 					}
 				}
-				// Calculate duration if not provided
 				elapsed := time.Since(startTime)
 				lastResult.DurationAPIMS = int(elapsed.Milliseconds())
 				inStep = false
-				// When Reason is "stop", it usually means the session has ended
 				if stepMsg.Part.Reason == "stop" {
 					fmt.Println("✅ Step complete (reason: stop)")
 					flushStdout()
@@ -2014,7 +1182,6 @@ func ParseOpenCodeJSONLRealtime(reader io.Reader) (content []byte, result *OpenC
 				log.Debugf("opencode-json: failed to parse tool_use message: %v", err)
 			}
 		default:
-			// Unknown type, only display if in step
 			if inStep {
 				log.Debugf("opencode-json: unknown message type: %s", baseMsg.Type)
 				resultBuilder.WriteString(line)
@@ -2033,12 +1200,9 @@ func ParseOpenCodeJSONLRealtime(reader io.Reader) (content []byte, result *OpenC
 	return []byte(resultBuilder.String()), lastResult, nil
 }
 
-// printOpenCodeText displays text message content.
 func printOpenCodeText(msg *OpenCodeText, resultBuilder *strings.Builder) {
 	if msg.Part.Text != "" {
-		// Truncate text to 4KB and 10 lines for display
 		displayText := truncateText(msg.Part.Text, maxDisplayBytes, maxDisplayLines)
-		// Print agent marker with robot emoji at the beginning of agent output
 		fmt.Print("🤖 ")
 		fmt.Println(indentSubsequentLines(displayText))
 		flushStdout()
@@ -2046,10 +1210,8 @@ func printOpenCodeText(msg *OpenCodeText, resultBuilder *strings.Builder) {
 	}
 }
 
-// maxInputValueLen is the max length for each input value when displaying (truncate if longer).
 const maxInputValueLen = 100
 
-// printOpenCodeToolUse displays tool use message content.
 func printOpenCodeToolUse(msg *OpenCodeToolUse, resultBuilder *strings.Builder) {
 	if msg.Part.State == nil {
 		return
@@ -2060,7 +1222,6 @@ func printOpenCodeToolUse(msg *OpenCodeToolUse, resultBuilder *strings.Builder) 
 		toolType = "unknown"
 	}
 
-	// Format input as key=value pairs (generalized dict), truncate long values
 	var inputParts []string
 	if msg.Part.State.Input != nil {
 		for k, v := range msg.Part.State.Input {
@@ -2071,9 +1232,7 @@ func printOpenCodeToolUse(msg *OpenCodeToolUse, resultBuilder *strings.Builder) 
 			inputParts = append(inputParts, fmt.Sprintf("%s=%s", k, valStr))
 		}
 	}
-	// Sort for deterministic output
 	if len(inputParts) > 1 {
-		// Keep simple order: prefer common keys first
 		sort.Slice(inputParts, func(i, j int) bool { return inputParts[i] < inputParts[j] })
 	}
 
@@ -2086,7 +1245,6 @@ func printOpenCodeToolUse(msg *OpenCodeToolUse, resultBuilder *strings.Builder) 
 	fmt.Printf("🔧 %s\n", indentSubsequentLines(truncateCommandDisplay(displayLine)))
 	resultBuilder.WriteString(displayLine + "\n")
 
-	// Display output as size only
 	if msg.Part.State.Output != "" {
 		fmt.Printf("💬 ... %d bytes ...\n", len(msg.Part.State.Output))
 		resultBuilder.WriteString(msg.Part.State.Output)
@@ -2094,8 +1252,6 @@ func printOpenCodeToolUse(msg *OpenCodeToolUse, resultBuilder *strings.Builder) 
 	flushStdout()
 }
 
-// printGeminiAssistantMessage displays assistant message content with type-specific icons.
-// Uses same content format as Claude (text, thinking, tool_use). Icons: 🤔 thinking, 🔧 tool_use, 🤖 text, ❓ unknown.
 func printGeminiAssistantMessage(msg *GeminiAssistantMessage, resultBuilder *strings.Builder) {
 	if len(msg.Message.Content) == 0 {
 		return
@@ -2129,7 +1285,6 @@ func printGeminiAssistantMessage(msg *GeminiAssistantMessage, resultBuilder *str
 	}
 }
 
-// parseGeminiUserContentType parses user message content to determine content subtype.
 func parseGeminiUserContentType(msg *GeminiUserMessage) string {
 	if len(msg.Message.Content) == 0 {
 		return "tool_result"
@@ -2154,7 +1309,6 @@ func parseGeminiUserContentType(msg *GeminiUserMessage) string {
 	return "tool_result"
 }
 
-// printGeminiUserMessage displays user message (e.g. tool result) with conversation icon.
 func printGeminiUserMessage(rawLine []byte, msg *GeminiUserMessage) {
 	size := len(rawLine)
 	contentType := parseGeminiUserContentType(msg)
@@ -2169,17 +1323,15 @@ func printGeminiUserMessage(rawLine []byte, msg *GeminiUserMessage) {
 	flushStdout()
 }
 
-// ParseGeminiJSONLRealtime parses Gemini-CLI JSONL output in real-time from an io.Reader.
-// It displays messages as they arrive and returns the final parsed result.
+// ParseGeminiJSONLRealtime parses Gemini-CLI JSONL output in real-time.
 func ParseGeminiJSONLRealtime(reader io.Reader) (content []byte, result *GeminiJSONOutput, err error) {
 	var lastResult *GeminiJSONOutput
 	var lastAssistantText string
 	startTime := time.Now()
 
 	scanner := bufio.NewScanner(reader)
-	// Increase buffer size to handle long lines (1MB initial, 10MB max)
 	buf := make([]byte, 0, 1024*1024)
-	scanner.Buffer(buf, 10*1024*1024) // Max token size: 10MB
+	scanner.Buffer(buf, 10*1024*1024)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -2187,25 +1339,21 @@ func ParseGeminiJSONLRealtime(reader io.Reader) (content []byte, result *GeminiJ
 			continue
 		}
 
-		// Try to parse as JSON to determine message type
 		var baseMsg struct {
 			Type string `json:"type"`
 		}
 		if err := json.Unmarshal([]byte(line), &baseMsg); err != nil {
-			// If line is not valid JSON, treat it as plain text
 			fmt.Print("❓ ")
 			fmt.Println(indentSubsequentLines(line))
 			log.Debugf("gemini-json: non-JSON line: %s", line)
 			continue
 		}
 
-		// Parse based on message type
 		switch baseMsg.Type {
 		case "system":
 			var sysMsg GeminiSystemMessage
 			if err := json.Unmarshal([]byte(line), &sysMsg); err == nil {
 				if sysMsg.Subtype == "init" {
-					// Print session info (similar to Claude's printSystemMessage)
 					fmt.Println()
 					fmt.Println("🚀 Session Initialized")
 					fmt.Println("==========================================")
@@ -2225,7 +1373,6 @@ func ParseGeminiJSONLRealtime(reader io.Reader) (content []byte, result *GeminiJ
 					fmt.Println()
 					flushStdout()
 
-					// Initialize result
 					if lastResult == nil {
 						lastResult = &GeminiJSONOutput{
 							SessionID: sysMsg.SessionID,
@@ -2238,7 +1385,6 @@ func ParseGeminiJSONLRealtime(reader io.Reader) (content []byte, result *GeminiJ
 		case "assistant":
 			var asstMsg GeminiAssistantMessage
 			if err := json.Unmarshal([]byte(line), &asstMsg); err == nil {
-				// Increment NumTurns
 				if lastResult == nil {
 					lastResult = &GeminiJSONOutput{
 						SessionID: asstMsg.SessionID,
@@ -2247,17 +1393,14 @@ func ParseGeminiJSONLRealtime(reader io.Reader) (content []byte, result *GeminiJ
 				lastResult.NumTurns++
 				log.Debugf("gemini-json: turn %d", lastResult.NumTurns)
 
-				// Display assistant content with type-specific icons (same as Claude)
 				var assistantText strings.Builder
 				printGeminiAssistantMessage(&asstMsg, &assistantText)
 				lastAssistantText = assistantText.String()
 
-				// Extract usage from message.usage and merge into lastResult.Usage
 				if asstMsg.Message.Usage != nil {
 					if lastResult.Usage == nil {
 						lastResult.Usage = &GeminiUsage{}
 					}
-					// Merge usage information (keep maximum values to ensure completeness)
 					if asstMsg.Message.Usage.InputTokens > 0 {
 						lastResult.Usage.InputTokens += asstMsg.Message.Usage.InputTokens
 					}
@@ -2287,7 +1430,6 @@ func ParseGeminiJSONLRealtime(reader io.Reader) (content []byte, result *GeminiJ
 		return nil, nil, fmt.Errorf("failed to parse gemini JSONL: %w", err)
 	}
 
-	// Calculate DurationAPIMS from elapsed time
 	if lastResult != nil {
 		elapsed := time.Since(startTime)
 		lastResult.DurationAPIMS = int(elapsed.Milliseconds())
