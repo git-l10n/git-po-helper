@@ -1813,27 +1813,13 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 
 	log.Debugf("using agent: %s (%s)", agentName, selectedAgent.Kind)
 
-	// Determine PO file path (convert to absolute) - use newFile as the file being reviewed
-	poFile, err := GetPoFileAbsPath(cfg, target.NewFile)
-	if err != nil {
-		return result, err
-	}
-
-	log.Debugf("PO file path: %s", poFile)
-
-	// Check if PO file exists
-	if !Exist(poFile) {
-		log.Errorf("PO file does not exist: %s", poFile)
-		return result, fmt.Errorf("PO file does not exist: %s\nHint: Ensure the PO file exists before running review", poFile)
-	}
-
-	// Step 1: Prepare review data
+	// Prepare review data
 	log.Infof("preparing review data: %s", reviewPOFile)
 	if err := PrepareReviewData(target.OldCommit, target.OldFile, target.NewCommit, target.NewFile, reviewPOFile); err != nil {
 		return result, fmt.Errorf("failed to prepare review data: %w", err)
 	}
 
-	// Step 2: Get prompt.review
+	// Get prompt.review
 	prompt, err := GetRawPrompt(cfg, "review")
 	if err != nil {
 		return result, err
