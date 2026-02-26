@@ -72,6 +72,7 @@ type ReviewJSONResult struct {
 
 var (
 	ReviewDefaultOutputFile = filepath.Join(PoDir, "review.json")
+	ReviewDefaultBatchFile  = filepath.Join(PoDir, "review-batch.po")
 )
 
 // ReviewOutputPaths returns (poFile, jsonFile) for the given output base path.
@@ -1562,7 +1563,7 @@ func runReviewBatched(selectedAgent config.Agent, vars PlaceholderVars, result *
 		num = 75
 	}
 
-	batchFile := filepath.Join(PoDir, "review-batch.po")
+	batchFile := ReviewDefaultBatchFile
 
 	var allIssues []ReviewIssue
 	for batchNum := 1; ; batchNum++ {
@@ -1849,25 +1850,37 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 		entryCount-- // Exclude header
 	}
 
-	reviewVars := PlaceholderVars{
-		"prompt": prompt,
-		"source": reviewPOFile,
-		"dest":   reviewPOFile,
-		"json":   reviewJSONFile,
-	}
-	resolvedPrompt, err := ExecutePromptTemplate(prompt, reviewVars)
-	if err != nil {
-		return result, fmt.Errorf("failed to resolve prompt template: %w", err)
-	}
-	reviewVars["prompt"] = resolvedPrompt
-
 	if entryCount <= 100 {
+		reviewVars := PlaceholderVars{
+			"prompt": prompt,
+			"source": reviewPOFile,
+			"dest":   reviewPOFile,
+			"json":   reviewJSONFile,
+		}
+		resolvedPrompt, err := ExecutePromptTemplate(prompt, reviewVars)
+		if err != nil {
+			return result, fmt.Errorf("failed to resolve prompt template: %w", err)
+		}
+		reviewVars["prompt"] = resolvedPrompt
+
 		// Single run: review entire file
 		reviewJSON, err = runReviewSingleBatch(selectedAgent, reviewVars, result, entryCount)
 		if err != nil {
 			return result, err
 		}
 	} else {
+		reviewVars := PlaceholderVars{
+			"prompt": prompt,
+			"source": ReviewDefaultBatchFile,
+			"dest":   reviewPOFile,
+			"json":   reviewJSONFile,
+		}
+		resolvedPrompt, err := ExecutePromptTemplate(prompt, reviewVars)
+		if err != nil {
+			return result, fmt.Errorf("failed to resolve prompt template: %w", err)
+		}
+		reviewVars["prompt"] = resolvedPrompt
+
 		// Batch mode: iterate with msg-select
 		reviewJSON, err = runReviewBatched(selectedAgent, reviewVars, result, entryCount)
 		if err != nil {
