@@ -66,6 +66,10 @@ msgstr "好"
 	if stats.Obsolete != 1 {
 		t.Errorf("obsolete: want 1, got %d", stats.Obsolete)
 	}
+	// Total() = Translated + Untranslated + Fuzzy (excludes Same and Obsolete)
+	if got := stats.Total(); got != 5 {
+		t.Errorf("Total() = %d, want 5 (3 translated + 1 untranslated + 1 fuzzy)", got)
+	}
 }
 
 // TestReportMatchesMsgfmtStatistics verifies that report output matches
@@ -154,6 +158,132 @@ func TestFormatMsgfmtStatistics(t *testing.T) {
 			got := FormatMsgfmtStatistics(tt.stats)
 			if got != tt.expected {
 				t.Errorf("FormatMsgfmtStatistics() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPoReportStats_Total verifies Total() = Translated + Untranslated + Fuzzy (excludes Same and Obsolete).
+func TestPoReportStats_Total(t *testing.T) {
+	tests := []struct {
+		name     string
+		stats    *PoReportStats
+		expected int
+	}{
+		{"all zeros", &PoReportStats{}, 0},
+		{"only translated", &PoReportStats{Translated: 5}, 5},
+		{"only untranslated", &PoReportStats{Untranslated: 3}, 3},
+		{"only fuzzy", &PoReportStats{Fuzzy: 2}, 2},
+		{"translated plus untranslated", &PoReportStats{Translated: 2, Untranslated: 1}, 3},
+		{"translated plus fuzzy", &PoReportStats{Translated: 1, Fuzzy: 1}, 2},
+		{"all three", &PoReportStats{Translated: 4, Untranslated: 2, Fuzzy: 1}, 7},
+		{"same and obsolete excluded", &PoReportStats{Translated: 10, Same: 10, Obsolete: 5}, 10},
+		{"mixed with same and obsolete", &PoReportStats{Translated: 5, Untranslated: 2, Fuzzy: 1, Same: 3, Obsolete: 30}, 8},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.stats.Total()
+			if got != tt.expected {
+				t.Errorf("Total() = %d, want %d", got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestCountPoReportStats_POTFile verifies CountPoReportStats on POT files (template: all msgstr empty).
+func TestCountPoReportStats_POTFile(t *testing.T) {
+	tests := []struct {
+		name             string
+		potContent       string
+		wantTotal        int
+		wantUntranslated int
+	}{
+		{
+			name: "POT with multiple entries",
+			potContent: `# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "First string"
+msgstr ""
+
+msgid "Second string"
+msgstr ""
+
+msgid "Third string"
+msgstr ""
+`,
+			wantTotal:        3,
+			wantUntranslated: 3,
+		},
+		{
+			name: "POT with only header",
+			potContent: `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+`,
+			wantTotal:        0,
+			wantUntranslated: 0,
+		},
+		{
+			name: "POT with multi-line msgid",
+			potContent: `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Line one "
+"line two"
+msgstr ""
+
+msgid "Single"
+msgstr ""
+`,
+			wantTotal:        2,
+			wantUntranslated: 2,
+		},
+		{
+			name: "POT with obsolete (obsolete not in Total)",
+			potContent: `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#~ msgid "Obsolete"
+#~ msgstr ""
+
+msgid "Active"
+msgstr ""
+`,
+			wantTotal:        1,
+			wantUntranslated: 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			potFile := filepath.Join(tmpDir, "test.pot")
+			if err := os.WriteFile(potFile, []byte(tt.potContent), 0644); err != nil {
+				t.Fatalf("write POT file: %v", err)
+			}
+			stats, err := CountPoReportStats(potFile)
+			if err != nil {
+				t.Fatalf("CountPoReportStats: %v", err)
+			}
+			if got := stats.Total(); got != tt.wantTotal {
+				t.Errorf("Total() = %d, want %d", got, tt.wantTotal)
+			}
+			if stats.Untranslated != tt.wantUntranslated {
+				t.Errorf("Untranslated = %d, want %d", stats.Untranslated, tt.wantUntranslated)
+			}
+			// POT: no translations, no same, no fuzzy
+			if stats.Translated != 0 {
+				t.Errorf("POT Translated = %d, want 0", stats.Translated)
+			}
+			if stats.Same != 0 {
+				t.Errorf("POT Same = %d, want 0", stats.Same)
+			}
+			if stats.Fuzzy != 0 {
+				t.Errorf("POT Fuzzy = %d, want 0", stats.Fuzzy)
 			}
 		})
 	}
