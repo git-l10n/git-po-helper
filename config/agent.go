@@ -151,27 +151,27 @@ func getDefaultConfig() *AgentConfig {
 		},
 		Agents: map[string]Agent{
 			"claude": {
-				Cmd:    []string{"claude", "--dangerously-skip-permissions", "-p", "{prompt}"},
+				Cmd:    []string{"claude", "--dangerously-skip-permissions", "-p", "{{.prompt}}"},
 				Kind:   AgentKindClaude,
 				Output: "json",
 			},
 			"codex": {
-				Cmd:    []string{"codex", "exec", "--yolo", "{prompt}"},
+				Cmd:    []string{"codex", "exec", "--yolo", "{{.prompt}}"},
 				Kind:   AgentKindCodex,
 				Output: "json",
 			},
 			"opencode": {
-				Cmd:    []string{"opencode", "run", "--thinking", "{prompt}"},
+				Cmd:    []string{"opencode", "run", "--thinking", "{{.prompt}}"},
 				Kind:   AgentKindOpencode,
 				Output: "json",
 			},
 			"gemini": {
-				Cmd:    []string{"gemini", "--yolo", "{prompt}"},
+				Cmd:    []string{"gemini", "--yolo", "{{.prompt}}"},
 				Kind:   AgentKindGemini,
 				Output: "json",
 			},
 			"echo": {
-				Cmd:  []string{"echo", "{prompt}"},
+				Cmd:  []string{"echo", "{{.prompt}}"},
 				Kind: AgentKindEcho,
 			},
 		},
@@ -280,7 +280,7 @@ func applyDefaults(cfg *AgentConfig) {
 	if len(cfg.Agents) == 0 {
 		cfg.Agents = map[string]Agent{
 			"test": {
-				Cmd:  []string{"echo", "{prompt}"},
+				Cmd:  []string{"echo", "{{.prompt}}"},
 				Kind: AgentKindEcho,
 			},
 		}

@@ -306,20 +306,20 @@ func TestGetDefaultConfig(t *testing.T) {
 	if config.Prompt.UpdatePo == "" {
 		t.Fatal("UpdatePo should not be empty")
 	}
-	if !strings.Contains(config.Prompt.UpdatePo, "{source}") {
-		t.Fatalf("UpdatePo should contain '{source}', got '%s'", config.Prompt.UpdatePo)
+	if !strings.Contains(config.Prompt.UpdatePo, "{{.source}}") {
+		t.Fatalf("UpdatePo should contain '{{.source}}', got '%s'", config.Prompt.UpdatePo)
 	}
 	if config.Prompt.Translate == "" {
 		t.Fatal("Translate should not be empty")
 	}
-	if !strings.Contains(config.Prompt.Translate, "{source}") {
-		t.Fatalf("Translate should contain '{source}', got '%s'", config.Prompt.Translate)
+	if !strings.Contains(config.Prompt.Translate, "{{.source}}") {
+		t.Fatalf("Translate should contain '{{.source}}', got '%s'", config.Prompt.Translate)
 	}
 	if config.Prompt.Review == "" {
 		t.Fatal("Review should not be empty")
 	}
-	if !strings.Contains(config.Prompt.Review, "{source}") {
-		t.Fatalf("Review should contain '{source}', got '%s'", config.Prompt.Review)
+	if !strings.Contains(config.Prompt.Review, "{{.source}}") {
+		t.Fatalf("Review should contain '{{.source}}', got '%s'", config.Prompt.Review)
 	}
 	if !strings.Contains(config.Prompt.Review, "JSON") {
 		t.Fatalf("Review should contain 'JSON' (extended prompt), got '%s'", config.Prompt.Review)
@@ -347,8 +347,8 @@ func TestGetDefaultConfig(t *testing.T) {
 	if testAgent.Cmd[0] != "echo" {
 		t.Fatalf("expected echo agent command 'echo', got '%s'", testAgent.Cmd[0])
 	}
-	if testAgent.Cmd[1] != "{prompt}" {
-		t.Fatalf("expected echo agent command '{prompt}', got '%s'", testAgent.Cmd[1])
+	if testAgent.Cmd[1] != "{{.prompt}}" {
+		t.Fatalf("expected echo agent command '{{.prompt}}', got '%s'", testAgent.Cmd[1])
 	}
 }
 
@@ -558,7 +558,7 @@ agents:
 	if config.Prompt.UpdatePo == "" {
 		t.Fatal("Prompt.UpdatePo should be filled with default")
 	}
-	if config.Prompt.UpdatePo != "Update file \"{source}\" according to @po/AGENTS.md." {
+	if config.Prompt.UpdatePo != "Update file \"{{.source}}\" according to @po/AGENTS.md." {
 		t.Fatalf("expected UpdatePo default, got '%s'", config.Prompt.UpdatePo)
 	}
 }

@@ -1,1 +1,1 @@
-Translate file "{source}" according to @po/AGENTS.md.
+Translate file "{{.source}}" according to @po/AGENTS.md.

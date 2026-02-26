@@ -348,7 +348,7 @@ agent-test:
    - If empty, return an error instructing the user to set `prompt.update_po`.
 6. **Build agent command**:
    - Use `BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": source})`, where `source` is the PO file path (e.g., `po/zh_CN.po`).
-   - Placeholders `{prompt}`, `{source}`, and `{commit}` are replaced before execution.
+   - Placeholders `{{.prompt}}`, `{{.source}}`, and `{{.commit}}` are replaced before execution.
 7. **Execute agent command**:
    - Use `ExecuteAgentCommand(agentCmd, repository.WorkDir())`.
    - Capture stdout and stderr for debugging and error reporting.
@@ -429,7 +429,7 @@ agent-test:
 **Existing Code Reuse**:
 - `util/agent.go`:
   - `SelectAgent()` – Agent selection.
-  - `BuildAgentCommand()` – Placeholder replacement for `{prompt}`, `{source}`, `{commit}`.
+  - `BuildAgentCommand()` – Placeholder replacement for `{{.prompt}}`, `{{.source}}`, `{{.commit}}`.
   - `ExecuteAgentCommand()` – Command execution and logging.
 - `util/agent-run.go`:
   - `RunAgentUpdatePot()` and `ValidatePotEntryCount()` as patterns for implementing PO variants.

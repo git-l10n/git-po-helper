@@ -456,7 +456,7 @@ func CountPotEntries(potFile string) (int, error)
 **Functions to Implement**:
 ```go
 type PlaceholderVars map[string]string
-func ReplacePlaceholders(template string, kv PlaceholderVars) string
+func ReplacePlaceholders(template string, kv PlaceholderVars) (string, error)
 func ExecuteAgentCommand(cmd []string, workDir string) ([]byte, []byte, error)
 ```
 

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
@@ -226,21 +227,51 @@ func CountPoEntries(poFile string) (int, error) {
 // Keys correspond to placeholder names in template (e.g. {prompt}, {source}).
 type PlaceholderVars map[string]string
 
+// ExecutePromptTemplate executes a Go text template with the given data.
+// The template uses {{.key}} syntax (e.g. {{.source}}, {{.dest}}).
+// Data is built from vars; the "prompt" key is excluded to avoid circular reference.
+// Returns the executed template string or an error if template parsing/execution fails.
+func ExecutePromptTemplate(tmpl string, vars PlaceholderVars) (string, error) {
+	data := make(map[string]interface{})
+	for k, v := range vars {
+		if k != "prompt" {
+			data[k] = v
+		}
+	}
+	t, err := template.New("prompt").Parse(tmpl)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse prompt template: %w", err)
+	}
+	var buf strings.Builder
+	if err := t.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("failed to execute prompt template: %w", err)
+	}
+	return buf.String(), nil
+}
+
 // ReplacePlaceholders replaces placeholders in a template string with actual values.
-// Placeholders in template use {key} format, e.g. {prompt}, {source}, {commit}.
+// Uses Go text/template syntax: {{.key}}, e.g. {{.prompt}}, {{.source}}, {{.commit}}.
 //
 // Example:
 //
-//	ReplacePlaceholders("cmd -p {prompt} -s {source}", PlaceholderVars{
+//	ReplacePlaceholders("cmd -p {{.prompt}} -s {{.source}}", PlaceholderVars{
 //	    "prompt": "update",
 //	    "source": "po/zh_CN.po",
 //	})
-func ReplacePlaceholders(template string, kv PlaceholderVars) string {
-	result := template
-	for key, value := range kv {
-		result = strings.ReplaceAll(result, "{"+key+"}", value)
+func ReplacePlaceholders(tmpl string, kv PlaceholderVars) (string, error) {
+	data := make(map[string]interface{})
+	for k, v := range kv {
+		data[k] = v
 	}
-	return result
+	t, err := template.New("cmd").Parse(tmpl)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse command template: %w", err)
+	}
+	var buf strings.Builder
+	if err := t.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("failed to execute command template: %w", err)
+	}
+	return buf.String(), nil
 }
 
 // ExecuteAgentCommand executes an agent command and captures both stdout and stderr.
@@ -427,13 +458,17 @@ func SelectAgent(cfg *config.AgentConfig, agentName string) (config.Agent, error
 }
 
 // BuildAgentCommand builds an agent command by replacing placeholders in the agent's command template.
-// It replaces placeholders (e.g. {prompt}, {source}, {commit}) with values from vars.
+// Uses Go text/template syntax (e.g. {{.prompt}}, {{.source}}, {{.commit}}).
 // For claude/codex/opencode/gemini commands, it adds stream-json parameters based on agent.Output.
 // Uses agent.Kind for type-safe detection (Kind must be validated by SelectAgent).
-func BuildAgentCommand(agent config.Agent, vars PlaceholderVars) []string {
+func BuildAgentCommand(agent config.Agent, vars PlaceholderVars) ([]string, error) {
 	cmd := make([]string, len(agent.Cmd))
 	for i, arg := range agent.Cmd {
-		cmd[i] = ReplacePlaceholders(arg, vars)
+		resolved, err := ReplacePlaceholders(arg, vars)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve command arg %q: %w", arg, err)
+		}
+		cmd[i] = resolved
 	}
 
 	// Use agent.Kind for type detection (validated by SelectAgent)
@@ -560,7 +595,7 @@ func BuildAgentCommand(agent config.Agent, vars PlaceholderVars) []string {
 		}
 	}
 
-	return cmd
+	return cmd, nil
 }
 
 // GetPotFilePath returns the full path to the POT file in the repository.
@@ -569,10 +604,10 @@ func GetPotFilePath() string {
 	return filepath.Join(workDir, PoDir, GitPot)
 }
 
-// GetPrompt returns the prompt for the specified action from configuration, or an error if not configured.
+// GetRawPrompt returns the prompt for the specified action from configuration, or an error if not configured.
 // Supported actions: "update-pot", "update-po", "translate", "review"
 // If --prompt flag is provided via viper, it overrides the configuration value.
-func GetPrompt(cfg *config.AgentConfig, action string) (string, error) {
+func GetRawPrompt(cfg *config.AgentConfig, action string) (string, error) {
 	// Check if --prompt flag is provided via viper (from command line)
 	// Check both agent-run--prompt and agent-test--prompt
 	overridePrompt := viper.GetString("agent-run--prompt")

@@ -652,13 +652,22 @@ func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string, agentTest bool
 	}
 
 	// Get prompt from configuration
-	prompt, err := GetPrompt(cfg, "update-pot")
+	prompt, err := GetRawPrompt(cfg, "update-pot")
 	if err != nil {
 		return result, err
 	}
+	vars := PlaceholderVars{"prompt": prompt}
+	resolvedPrompt, err := ExecutePromptTemplate(prompt, vars)
+	if err != nil {
+		return result, fmt.Errorf("failed to resolve prompt template: %w", err)
+	}
+	vars["prompt"] = resolvedPrompt
 
 	// Build agent command with placeholders replaced
-	agentCmd := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt})
+	agentCmd, err := BuildAgentCommand(selectedAgent, vars)
+	if err != nil {
+		return result, fmt.Errorf("failed to build agent command: %w", err)
+	}
 
 	// Determine output format
 	outputFormat := selectedAgent.Output
@@ -851,18 +860,28 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 	}
 
 	// Get prompt for update-po from configuration
-	prompt, err := GetPrompt(cfg, "update-po")
+	prompt, err := GetRawPrompt(cfg, "update-po")
 	if err != nil {
 		return result, err
 	}
 
-	// Build agent command with placeholders replaced
 	workDir := repository.WorkDir()
 	sourcePath := poFile
 	if rel, err := filepath.Rel(workDir, poFile); err == nil && rel != "" && rel != "." {
 		sourcePath = filepath.ToSlash(rel)
 	}
-	agentCmd := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": sourcePath})
+	vars := PlaceholderVars{"prompt": prompt, "source": sourcePath}
+	resolvedPrompt, err := ExecutePromptTemplate(prompt, vars)
+	if err != nil {
+		return result, fmt.Errorf("failed to resolve prompt template: %w", err)
+	}
+	vars["prompt"] = resolvedPrompt
+
+	// Build agent command with placeholders replaced
+	agentCmd, err := BuildAgentCommand(selectedAgent, vars)
+	if err != nil {
+		return result, fmt.Errorf("failed to build agent command: %w", err)
+	}
 
 	// Determine output format
 	outputFormat := selectedAgent.Output
@@ -1225,7 +1244,7 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 	// decide whether to use this feature.
 	//
 	// Now, load the simple prompt for translate the file.
-	prompt, err := GetPrompt(cfg, "translate")
+	prompt, err := GetRawPrompt(cfg, "translate")
 	if err != nil {
 		return result, err
 	}
@@ -1236,7 +1255,18 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 	if rel, err := filepath.Rel(workDir, poFile); err == nil && rel != "" && rel != "." {
 		sourcePath = filepath.ToSlash(rel)
 	}
-	agentCmd := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": sourcePath})
+	vars := PlaceholderVars{"prompt": prompt, "source": sourcePath}
+	resolvedPrompt, err := ExecutePromptTemplate(prompt, vars)
+	if err != nil {
+		return result, fmt.Errorf("failed to resolve prompt template: %w", err)
+	}
+	vars["prompt"] = resolvedPrompt
+
+	// Build agent command with placeholders replaced
+	agentCmd, err := BuildAgentCommand(selectedAgent, vars)
+	if err != nil {
+		return result, fmt.Errorf("failed to build agent command: %w", err)
+	}
 
 	// Determine output format
 	outputFormat := selectedAgent.Output
@@ -1420,7 +1450,10 @@ func CmdAgentRunTranslate(agentName, poFile string) error {
 // Returns stdout (for JSON extraction), stderr, originalStdout (raw before parsing), streamResult.
 // Updates result with AgentExecuted, AgentSuccess, AgentError, AgentStdout, AgentStderr.
 func executeReviewAgent(selectedAgent config.Agent, vars PlaceholderVars, result *AgentRunResult) (stdout, stderr, originalStdout []byte, streamResult AgentStreamResult, err error) {
-	agentCmd := BuildAgentCommand(selectedAgent, vars)
+	agentCmd, err := BuildAgentCommand(selectedAgent, vars)
+	if err != nil {
+		return nil, nil, nil, streamResult, fmt.Errorf("failed to build agent command: %w", err)
+	}
 
 	outputFormat := selectedAgent.Output
 	if outputFormat == "" {
@@ -1671,7 +1704,10 @@ func RunAgentReviewAllWithLLM(cfg *config.AgentConfig, agentName string, target 
 		poFileRel = filepath.ToSlash(rel)
 	}
 	prompt := buildReviewAllWithLLMPrompt(target)
-	agentCmd := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": poFileRel})
+	agentCmd, err := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": poFileRel})
+	if err != nil {
+		return result, fmt.Errorf("failed to build agent command: %w", err)
+	}
 
 	outputFormat := normalizeOutputFormat(selectedAgent.Output)
 	if outputFormat == "" {
@@ -1757,9 +1793,9 @@ func RunAgentReviewAllWithLLM(cfg *config.AgentConfig, agentName string, target 
 // does not use AgentTest configuration.
 // outputBase: base path for review output files (e.g. "po/review"); empty uses default.
 func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, agentTest bool, outputBase string) (*AgentRunResult, error) {
-	reviewPOFile, reviewJSONFile := ReviewOutputPaths(outputBase)
 	var (
-		reviewJSON *ReviewJSONResult
+		reviewPOFile, reviewJSONFile = ReviewOutputPaths(outputBase)
+		reviewJSON                   *ReviewJSONResult
 	)
 
 	startTime := time.Now()
@@ -1797,7 +1833,7 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 	}
 
 	// Step 2: Get prompt.review
-	prompt, err := GetPrompt(cfg, "review")
+	prompt, err := GetRawPrompt(cfg, "review")
 	if err != nil {
 		return result, err
 	}
@@ -1819,6 +1855,12 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 		"dest":   reviewPOFile,
 		"json":   reviewJSONFile,
 	}
+	resolvedPrompt, err := ExecutePromptTemplate(prompt, reviewVars)
+	if err != nil {
+		return result, fmt.Errorf("failed to resolve prompt template: %w", err)
+	}
+	reviewVars["prompt"] = resolvedPrompt
+
 	if entryCount <= 100 {
 		// Single run: review entire file
 		reviewJSON, err = runReviewSingleBatch(selectedAgent, reviewVars, result, entryCount)
@@ -1837,7 +1879,6 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 	log.Infof("saving review JSON to %s", reviewJSONFile)
 	if err := saveReviewJSON(reviewJSON, reviewJSONFile); err != nil {
 		log.Errorf("failed to save review JSON: %v", err)
-		log.Debugf("PO file path: %s", poFile)
 		return result, fmt.Errorf("failed to save review JSON: %w", err)
 	}
 	result.ReviewJSON = reviewJSON

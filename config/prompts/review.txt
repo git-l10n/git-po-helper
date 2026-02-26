@@ -1,7 +1,7 @@
-Review and improve the translation quality in file "{source}" according to @po/AGENTS.md.
+Review and improve the translation quality in file "{{.source}}" according to @po/AGENTS.md.
 
-You need to review the "{source}" file, identify issues in the translations,
-and fix them directly in the "{dest}" file. After review, output a JSON report
+You need to review the "{{.source}}" file, identify issues in the translations,
+and fix them directly in the "{{.dest}}" file. After review, output a JSON report
 in the format specified in the "Output Format" section below.
 
 
@@ -267,19 +267,19 @@ was detected. Use this information to locate and fix the issue.
 
 1. **Read context**: Reference the "Background Knowledge for Translators
    and Reviewers" section for PO format, placeholder rules, and terminology.
-   Read the glossary section if present in `${source}` and add it to
+   Read the glossary section if present in `{{.source}}` and add it to
    your context for reference.
 
 2. **Review entries**:
    - Do not review or modify the header entry, which has an empty `msgid`
      and contains metadata about the translation in its `msgstr`.
-   - For all entries in `{source}` other than the header, check the
+   - For all entries in `{{.source}}` other than the header, check the
      translations against the "Quality checklist" section above.
    - If you identify issues, apply suggested corrections directly to
-     `{dest}`. The human translator will decide whether to apply
-     those corrections from `{dest}` to `po/XX.po` (or the appropriate
+     `{{.dest}}`. The human translator will decide whether to apply
+     those corrections from `{{.dest}}` to `po/XX.po` (or the appropriate
      source file).
-   - **Do NOT** remove the `{dest}` file.
+   - **Do NOT** remove the `{{.dest}}` file.
 
 3. **Output in JSON format**: At the end of the review process, provide review
    feedback by outputing a JSON report with all the issues you found and
@@ -287,7 +287,7 @@ was detected. Use this information to locate and fix the issue.
    - Only include entries with issues you found, perfect entries with score 3
      should not be included.
    - The "suggestion" field of JSON should contain the improved translation
-     which you've already applied to `{dest}`.
+     which you've already applied to `{{.dest}}`.
    - Output **ONLY the JSON object** - no additional text before or after.
 
 

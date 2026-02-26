@@ -155,28 +155,29 @@ func TestReplacePlaceholders(t *testing.T) {
 		template string
 		kv       PlaceholderVars
 		expected string
+		wantErr  bool
 	}{
 		{
 			name:     "all placeholders",
-			template: "cmd -p {prompt} -s {source} -c {commit}",
+			template: "cmd -p {{.prompt}} -s {{.source}} -c {{.commit}}",
 			kv:       PlaceholderVars{"prompt": "update pot", "source": "po/zh_CN.po", "commit": "HEAD"},
 			expected: "cmd -p update pot -s po/zh_CN.po -c HEAD",
 		},
 		{
 			name:     "only prompt placeholder",
-			template: "cmd -p {prompt}",
+			template: "cmd -p {{.prompt}}",
 			kv:       PlaceholderVars{"prompt": "update pot"},
 			expected: "cmd -p update pot",
 		},
 		{
 			name:     "multiple occurrences",
-			template: "{prompt} {prompt} {prompt}",
+			template: "{{.prompt}} {{.prompt}} {{.prompt}}",
 			kv:       PlaceholderVars{"prompt": "test"},
 			expected: "test test test",
 		},
 		{
 			name:     "empty values",
-			template: "cmd -p {prompt} -s {source} -c {commit}",
+			template: "cmd -p {{.prompt}} -s {{.source}} -c {{.commit}}",
 			kv:       PlaceholderVars{"prompt": "", "source": "", "commit": ""},
 			expected: "cmd -p  -s  -c ",
 		},
@@ -188,7 +189,7 @@ func TestReplacePlaceholders(t *testing.T) {
 		},
 		{
 			name:     "special characters in values",
-			template: "cmd -p {prompt}",
+			template: "cmd -p {{.prompt}}",
 			kv:       PlaceholderVars{"prompt": "update 'pot' file"},
 			expected: "cmd -p update 'pot' file",
 		},
@@ -196,7 +197,53 @@ func TestReplacePlaceholders(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ReplacePlaceholders(tt.template, tt.kv)
+			result, err := ReplacePlaceholders(tt.template, tt.kv)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ReplacePlaceholders() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if result != tt.expected {
+				t.Errorf("Expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestExecutePromptTemplate(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		vars     PlaceholderVars
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "source and dest",
+			template: `Review "{{.source}}" and fix in "{{.dest}}"`,
+			vars:     PlaceholderVars{"prompt": "ignored", "source": "po/zh_CN.po", "dest": "po/zh_CN.po"},
+			expected: `Review "po/zh_CN.po" and fix in "po/zh_CN.po"`,
+		},
+		{
+			name:     "no template vars",
+			template: "Update file po/git.pot",
+			vars:     PlaceholderVars{"prompt": "x"},
+			expected: "Update file po/git.pot",
+		},
+		{
+			name:     "literal braces",
+			template: `Placeholders like {{` + "`{name}`" + `}} preserved`,
+			vars:     PlaceholderVars{},
+			expected: `Placeholders like {name} preserved`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ExecutePromptTemplate(tt.template, tt.vars)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ExecutePromptTemplate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 			if result != tt.expected {
 				t.Errorf("Expected %q, got %q", tt.expected, result)
 			}
@@ -957,7 +1004,7 @@ func TestGetPrompt(t *testing.T) {
 			}
 
 			// Run test
-			result, err := GetPrompt(tt.cfg, tt.action)
+			result, err := GetRawPrompt(tt.cfg, tt.action)
 
 			// Restore original viper values
 			if originalAgentRunPrompt != "" {

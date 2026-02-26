@@ -68,7 +68,7 @@ prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -94,7 +94,7 @@ prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -127,7 +127,7 @@ agent-test:
   pot_entries_after_update: $ENTRY_COUNT
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -164,7 +164,7 @@ agent-test:
   pot_entries_before_update: $WRONG_COUNT
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -199,7 +199,7 @@ agent-test:
   pot_entries_after_update: $WRONG_COUNT
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -256,12 +256,12 @@ test_expect_success "agent-test update-po: basic test with default runs" '
 	cat >workdir/git-po-helper.yaml <<-EOF &&
 default_lang_code: "zh_CN"
 prompt:
-  update_po: "update {source} according to po/AGENTS.md"
+  update_po: "update {{.source}} according to po/AGENTS.md"
 agent-test:
   runs: 2
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}", "{source}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}", "{{.source}}"]
     kind: echo
 EOF
 
@@ -289,7 +289,7 @@ agent-test:
   runs: 2
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -322,7 +322,7 @@ agent-test:
   runs: 2
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}", "{source}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}", "{{.source}}"]
     kind: echo
 EOF
 
