@@ -1,27 +1,295 @@
 Review and improve the translation quality in file "{source}" according to @po/AGENTS.md.
 
-You need to review all translation entries in the file, identify issues, and directly modify the PO file to fix them. After reviewing, output a JSON summary of the issues found.
+You need to review the "{source}" file, identify issues in the translations,
+and fix them directly in the "{dest}" file. After review, output a JSON report
+in the format specified in the "Output Format" section below.
+
+
+## Background Knowledge for Translators and Reviewers
+
+This section provides essential background knowledge about PO file structure
+and format that is required for both translation and review tasks. Understanding
+these concepts is fundamental before performing any translation or review
+operations on `po/XX.po` files.
+
+
+### Header Entry
+
+Every PO file (`po/XX.po`) contains a special entry called the "header entry"
+at the beginning of the file. This entry has an empty `msgid` and contains
+metadata about the translation in its `msgstr`:
+
+```po
+msgid ""
+msgstr ""
+"Project-Id-Version: Git\n"
+"Report-Msgid-Bugs-To: Git Mailing List <git@vger.kernel.org>\n"
+"POT-Creation-Date: 2026-02-14 13:38+0800\n"
+"PO-Revision-Date: 2026-02-14 11:41+0800\n"
+"Last-Translator: Teng Long <dyroneteng@gmail.com>\n"
+"Language-Team: GitHub <https://github.com/dyrone/git/>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Gtranslator 42.0\n"
+```
+
+**CRITICAL**: The header entry's `msgstr` contains important metadata and
+**MUST NEVER be modified** during translation. When using `msgattrib` to
+extract entries, the extracted files (e.g., `po/XX.po.pending`) will also
+contain this header entry. Always preserve it exactly as-is.
+
+The header entry serves several purposes:
+- Contains translation metadata (translator, language, dates)
+- Defines pluralization rules (`Plural-Forms`) for the target language
+- Provides encoding and MIME type information
+- Stores project and version information
+
+
+### Glossary Section
+
+PO files may contain a glossary section in comments that appears before the
+header entry (the first `msgid ""` entry). This section provides terminology
+guidelines for consistent translation:
+
+```po
+# Git glossary for Chinese translators
+#
+#   English                          |  Chinese
+#   ---------------------------------+--------------------------------------
+#   3-way merge                      |  三路合并
+#   branch                           |  分支
+#   commit                           |  提交
+#   ...
+```
+
+**IMPORTANT**: Always read and reference the glossary section when translating
+or reviewing entries. It ensures consistent terminology throughout the
+translation. The glossary appears in comments (lines starting with `#`), so
+it is preserved when extracting entries with `msgattrib`.
+
+
+### Single-line vs Multi-line Entries
+
+PO files contain two types of entries based on their structure:
+
+**Single-line entries** have a simple format:
+```po
+msgid "commit message"
+msgstr "提交说明"
+```
+
+**Multi-line entries** have a more complex structure where the first line
+of both `msgid` and `msgstr` is an empty string:
+```po
+msgid ""
+"Line 1\n"
+"Line 2"
+msgstr ""
+"行 1\n"
+"行 2"
+```
+
+**CRITICAL**: For multi-line entries:
+- The first line of `msgid` is always `msgid ""` (empty string)
+- The first line of `msgstr` is always `msgstr ""` (empty string)
+- Each subsequent line is a quoted string
+- Line breaks within the text are represented as `\n` escape sequences
+- All quote marks and line structure must be preserved exactly
+
+
+### Locating untranslated, fuzzy, and obsolete entries
+
+The structure of multi-line entries is why you **MUST NOT** use
+`grep '^msgstr ""$'` to locate untranslated entries - it would incorrectly
+match all multi-line entries, causing false positives. Always use GNU gettext
+tools (`msgattrib`) to reliably identify untranslated entries.
+
+- **Untranslated entries**:
+
+  ```shell
+  msgattrib --untranslated --no-obsolete po/XX.po
+  ```
+
+- **Fuzzy entries**:
+
+  ```shell
+  msgattrib --only-fuzzy --no-obsolete po/XX.po
+  ```
+
+- **Obsolete entries** (marked with `#~`):
+
+  ```shell
+  msgattrib --obsolete --no-wrap po/XX.po
+  ```
+
+If you only want the message IDs, you can pipe to:
+
+```shell
+msgattrib --untranslated --no-obsolete po/XX.po | sed -n '/^msgid /,/^$/p'
+```
+
+```shell
+msgattrib --only-fuzzy --no-obsolete po/XX.po | sed -n '/^msgid /,/^$/p'
+```
+
+**Note**: When counting entries, remember that the header entry (with empty
+`msgid`) is included in the count. When calculating statistics, subtract 1
+from the total count to exclude the header entry.
+
+
+### Preserving Special Characters
+
+When translating or reviewing translations, it is critical to preserve special
+characters and escape sequences exactly as they appear in the `msgid`:
+
+- **Escape sequences**: Keep `\n`, `\"`, `\\`, `\t`, etc. within quotes
+  exactly as they appear. Do NOT convert `\n` to `\\n` (double backslash),
+  and do NOT replace `\n` with actual line breaks.
+
+- **Placeholders**: Preserve format specifiers like `%s`, `%d`, `%.*s`, etc.
+  exactly as they appear. Only reorder them using positional syntax when
+  necessary (see Placeholder Reordering section below).
+
+- **Quotes**: Keep all quote marks (`"`) as-is. Do not add or remove quotes.
+
+**Example of correct preservation**:
+```po
+msgid "Line 1\nLine 2"
+msgstr "行 1\n行 2"  # Correct: \n preserved as escape sequence
+```
+
+**WRONG examples**:
+```po
+msgstr "行 1\\n行 2"  # WRONG: double backslash
+msgstr "行 1
+行 2"  # WRONG: actual line break instead of \n
+```
+
+
+### Placeholder Reordering
+
+When a translation requires reordering placeholders from the original `msgid`,
+you must use positional parameter syntax (`%n$`) to ensure each argument maps
+to the correct source value. Keep width/precision modifiers intact and place
+the position specifier before them.
+
+**Example 1: positional parameters with precision specifier**:
+
+```po
+#, c-format
+msgid "missing environment variable '%s' for configuration '%.*s'"
+msgstr "配置 '%3$.*2$s' 缺少环境变量 '%1$s'"
+```
+
+In this example:
+- `%s` in the original is argument 1, so it becomes `%1$s` in the translation
+- `%.*s` in the original requires two arguments: argument 2 (precision value)
+  and argument 3 (string). In the translation, it becomes `%3$.*2$s`, which
+  means: use argument 3 (the string) with precision from argument 2
+
+**Example 2: positional parameters across multiple lines**:
+
+```po
+#, c-format
+msgid ""
+"the 'submodule.%s.gitdir' config does not exist for module '%s'. Please "
+"ensure it is set, for example by running something like: 'git config "
+"submodule.%s.gitdir .git/modules/%s'. For details see the "
+"extensions.submodulePathConfig documentation."
+msgstr ""
+"模块 '%2$s' 的 'submodule.%1$s.gitdir' 配置不存在。请确保已设置，例如运行类"
+"似：'git config submodule.%3$s.gitdir .git/modules/%4$s'。详细信息请参见 "
+"extensions.submodulePathConfig 文档。"
+```
+
+In this example:
+- The original msgid has 4 `%s` placeholders that appear in order across
+  multiple lines
+- In the translation, the placeholders are reordered:
+  * First `%s` (submodule name) → `%1$s` appears second in Chinese
+  * Second `%s` (module name) → `%2$s` appears first in Chinese
+  * Third `%s` (submodule name again) → `%3$s` remains in similar position
+  * Fourth `%s` (path) → `%4$s` remains in similar position
+- Each line in the multi-line string must be a complete quoted string
+
+**Rules for placeholder reordering**:
+1. Use `%n$` syntax where `n` is the argument position (1-based)
+2. Place the position specifier before width/precision modifiers
+3. For `%.*s` style placeholders, map both the precision and string arguments
+4. Always verify that all placeholders are accounted for and correctly mapped
+
+
+### Validating PO File Format
+
+This section describes how to validate PO files and handle validation errors.
+This is a general-purpose validation procedure that can be applied to any PO
+file, including `po/XX.po`, `po/XX.po.pending`, or any extracted PO file.
+
+Validate a PO file:
+
+```shell
+msgfmt --check -o /dev/null po/XX.po
+```
+
+Common validation errors include:
+- Unclosed quotes
+- Missing escape sequences
+- Invalid placeholder syntax
+- Malformed multi-line entries
+- Incorrect line breaks in multi-line strings
+
+**Handling validation errors with automatic repair**:
+When `msgfmt` reports an error, it provides the line number where the error
+was detected. Use this information to locate and fix the issue.
+
+
+#### Quality checklist
+
+- Accuracy: faithfully conveys the original meaning; no omissions or distortions.
+- Terminology: uses correct, consistent terms per glossary or domain standards.
+- Grammar and fluency: grammatically correct and reads naturally.
+- Placeholders: preserves variables (e.g. `%s`, `{name}`, `$1`) exactly. If
+  reordering is needed for the target language, use positional parameters as
+  described below.
+- Plurals and gender: handles plural forms, gender, and agreement correctly.
+- Context fit: suitable for UI space, tone, and usage (e.g. error vs. tooltip).
+- Cultural appropriateness: avoids offensive or ambiguous content.
+- Consistency: matches prior translations of the same source string.
+- Technical integrity: do not translate code, paths, commands, brand names, or
+  proper nouns.
+- Readability: clear, concise, and user-friendly.
+
 
 ## Review Process
 
-1. Read the PO file `{source}` carefully
-2. Review each translation entry for:
-   - Accuracy: faithfully conveys the original meaning; no omissions or distortions.
-   - Terminology: uses correct, consistent terms per glossary or domain standards.
-   - Grammar and fluency: grammatically correct and reads naturally.
-   - Placeholders: preserves variables (e.g. `%s`, `{name}`, `$1`) exactly. If
-     reordering is needed for the target language, use positional parameters as
-     described below.
-   - Plurals and gender: handles plural forms, gender, and agreement correctly.
-   - Context fit: suitable for UI space, tone, and usage (e.g. error vs. tooltip).
-   - Cultural appropriateness: avoids offensive or ambiguous content.
-   - Consistency: matches prior translations of the same source string.
-   - Technical integrity: do not translate code, paths, commands, brand names, or
-     proper nouns.
-   - Readability: clear, concise, and user-friendly.
-3. **Directly modify the `{source}` file** to fix issues you find by updating
-   msgstr values for better translations.
-4. After modifying the file, output a JSON summary of all issues you found and fixed
+1. **Read context**: Reference the "Background Knowledge for Translators
+   and Reviewers" section for PO format, placeholder rules, and terminology.
+   Read the glossary section if present in `${source}` and add it to
+   your context for reference.
+
+2. **Review entries**:
+   - Do not review or modify the header entry, which has an empty `msgid`
+     and contains metadata about the translation in its `msgstr`.
+   - For all entries in `{source}` other than the header, check the
+     translations against the "Quality checklist" section above.
+   - If you identify issues, apply suggested corrections directly to
+     `{dest}`. The human translator will decide whether to apply
+     those corrections from `{dest}` to `po/XX.po` (or the appropriate
+     source file).
+   - **Do NOT** remove the `{dest}` file.
+
+3. **Output in JSON format**: At the end of the review process, provide review
+   feedback by outputing a JSON report with all the issues you found and
+   suggestions. See the "Output Format" section below.
+   - Only include entries with issues you found, perfect entries with score 3
+     should not be included.
+   - The "suggestion" field of JSON should contain the improved translation
+     which you've already applied to `{dest}`.
+   - Output **ONLY the JSON object** - no additional text before or after.
+
 
 ## Output Format
 
@@ -89,10 +357,3 @@ After modifying the PO file, output a JSON object with the following structure:
     }
   ]
 }
-
-## Instructions
-
-1. **First, read and modify the PO file {source} directly** - fix all issues you find
-2. **Then, output only the JSON object** - no additional text before or after
-3. Only include entries with issues in the issues array (perfect entries with score 3 should not be included)
-4. The "suggestion" field should contain the improved translation (which you've already applied to the file)
