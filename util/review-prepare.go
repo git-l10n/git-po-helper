@@ -1,4 +1,4 @@
-// Package util provides review-related utilities for agent-run.
+// Package util provides review data preparation utilities.
 package util
 
 import (

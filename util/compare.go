@@ -5,8 +5,116 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
+
+// CompareTarget holds the resolved old/new commit and file for compare operations.
+type CompareTarget struct {
+	OldCommit string
+	NewCommit string
+	OldFile   string
+	NewFile   string
+}
+
+// ResolveRevisionsAndFiles resolves range/commit/since flags and args into a CompareTarget.
+// Exactly one of rangeStr, commitStr, and sinceStr may be non-empty.
+// Args may be 0, 1, or 2 po file paths. With 2 args, revisions are not allowed.
+// When args is empty, the po file is auto-selected from changed files.
+func ResolveRevisionsAndFiles(rangeStr, commitStr, sinceStr string, args []string) (*CompareTarget, error) {
+	// --range, --commit, --since are mutually exclusive
+	nSet := 0
+	if strings.TrimSpace(rangeStr) != "" {
+		nSet++
+	}
+	if strings.TrimSpace(commitStr) != "" {
+		nSet++
+	}
+	if strings.TrimSpace(sinceStr) != "" {
+		nSet++
+	}
+	if nSet > 1 {
+		return nil, fmt.Errorf("only one of --range, --commit, or --since may be specified")
+	}
+
+	// Resolve range for both modes
+	var revRange string
+	if c := strings.TrimSpace(commitStr); c != "" {
+		revRange = c + "^.." + c
+	} else if s := strings.TrimSpace(sinceStr); s != "" {
+		revRange = s + ".."
+	} else {
+		revRange = strings.TrimSpace(rangeStr)
+	}
+	if revRange == "" {
+		switch len(args) {
+		case 0:
+			revRange = "HEAD.."
+		case 1:
+			revRange = "HEAD.."
+		case 2:
+			// Compare two files in worktree
+		}
+	}
+
+	if len(args) > 2 {
+		return nil, fmt.Errorf("too many arguments (%d > 2)", len(args))
+	}
+
+	repository.ChdirProjectRoot()
+
+	var (
+		oldCommit, newCommit string
+		oldFile, newFile     string
+	)
+	// Parse revision: "a..b", "a..", or "a"
+	if strings.Contains(revRange, "..") {
+		parts := strings.SplitN(revRange, "..", 2)
+		oldCommit = strings.TrimSpace(parts[0])
+		newCommit = strings.TrimSpace(parts[1])
+	} else if revRange != "" {
+		// a : first is a~, second is a
+		oldCommit = revRange + "~"
+		newCommit = revRange
+	}
+
+	// Set File
+	switch len(args) {
+	case 0:
+		// Automatically or manually select PO file from changed files
+	case 1:
+		oldFile = args[0]
+		newFile = args[0]
+	case 2:
+		oldFile = args[0]
+		newFile = args[1]
+		if oldCommit != "" || newCommit != "" {
+			return nil, fmt.Errorf("cannot specify revision for multiple files: %s and %s",
+				oldFile, newFile)
+		}
+	}
+
+	// Resolve poFile when not specified
+	if len(args) == 0 {
+		changedPoFiles, err := GetChangedPoFilesRange(oldCommit, newCommit)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get changed po files: %w", err)
+		}
+
+		oldFile, err = ResolvePoFile(oldFile, changedPoFiles)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve default po file: %w", err)
+		}
+		newFile = oldFile
+	}
+
+	return &CompareTarget{
+		OldCommit: oldCommit,
+		NewCommit: newCommit,
+		OldFile:   oldFile,
+		NewFile:   newFile,
+	}, nil
+}
 
 // DiffStat holds the diff statistics between two PO files.
 type DiffStat struct {
