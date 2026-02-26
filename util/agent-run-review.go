@@ -135,7 +135,7 @@ func runReviewBatched(selectedAgent config.Agent, vars PlaceholderVars, result *
 
 	batchFile := ReviewDefaultBatchFile
 
-	var allIssues []ReviewIssue
+	var batchReviews []*ReviewJSONResult
 	for batchNum := 1; ; batchNum++ {
 		start := (batchNum-1)*num + 1
 		end := batchNum * num
@@ -170,13 +170,13 @@ func runReviewBatched(selectedAgent config.Agent, vars PlaceholderVars, result *
 			return nil, err
 		}
 
-		// Parse JSON and accumulate issues
+		// Parse JSON and accumulate batch results
 		batchJSON, err := parseAndAccumulateReviewJSON(stdout, entryCount)
 		if err != nil {
 			return nil, err
 		}
 		if batchJSON != nil {
-			allIssues = append(allIssues, batchJSON.Issues...)
+			batchReviews = append(batchReviews, batchJSON)
 		}
 
 		if end >= entryCount {
@@ -184,7 +184,15 @@ func runReviewBatched(selectedAgent config.Agent, vars PlaceholderVars, result *
 		}
 	}
 
-	return &ReviewJSONResult{TotalEntries: entryCount, Issues: allIssues}, nil
+	// Merge issues using same logic as AggregateReviewJSON: keep the most severe
+	// (lowest score) per msgid. We do not use simple array append because the
+	// model may not follow instructions when executing; deduplication by msgid
+	// with severity preference is required for consistent results.
+	merged := AggregateReviewJSON(batchReviews, true)
+	if merged == nil {
+		return &ReviewJSONResult{TotalEntries: entryCount, Issues: []ReviewIssue{}}, nil
+	}
+	return merged, nil
 }
 
 // formatMsgSelectRange returns the range spec for msg-select (e.g. "-50", "51-100", "101-").

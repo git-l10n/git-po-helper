@@ -258,7 +258,8 @@ func getRelativePath(absPath string) string {
 // AggregateReviewJSON merges multiple review JSON results. For each msgid that
 // appears in multiple runs, the issue with the lowest score (most severe) is kept.
 // total_entries is taken from the first non-empty review. Returns nil if no valid input.
-func AggregateReviewJSON(reviews []*ReviewJSONResult) *ReviewJSONResult {
+// If warnDup is true, logs an error when duplicate msgid issues are found.
+func AggregateReviewJSON(reviews []*ReviewJSONResult, warnDup bool) *ReviewJSONResult {
 	if len(reviews) == 0 {
 		return nil
 	}
@@ -276,6 +277,9 @@ func AggregateReviewJSON(reviews []*ReviewJSONResult) *ReviewJSONResult {
 			issue := &r.Issues[i]
 			key := issue.MsgID
 			existing, ok := byMsgID[key]
+			if ok && warnDup {
+				log.Errorf("duplicate msgid in review issues: %q (runs on overlaped batches)", key)
+			}
 			if !ok || issue.Score < existing.Score {
 				byMsgID[key] = issue
 			}

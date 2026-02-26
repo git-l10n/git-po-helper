@@ -164,7 +164,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 
 	// Aggregate JSONs (for same msgid, take lowest score) and save
 	aggregatedScore := 0
-	aggregated := AggregateReviewJSON(reviewJSONs)
+	aggregated := AggregateReviewJSON(reviewJSONs, false)
 	if aggregated != nil {
 		var scoreErr error
 		aggregatedScore, scoreErr = CalculateReviewScore(aggregated)
