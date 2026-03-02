@@ -28,9 +28,9 @@ The commands read from `git-po-helper.yaml` configuration file. Example:
 default_lang_code: "zh_CN"
 prompt:
   update_pot: "update po/git.pot according to po/README.md"
-  update_po: "update {source} according to po/README.md"
-  translate: "translate {source} according to po/README.md"
-  review: "review and improve {source} according to po/README.md"
+  update_po: "update {{.source}} according to po/README.md"
+  translate: "translate {{.source}} according to po/README.md"
+  review: "review and improve {{.source}} according to po/README.md"
 agent-test:
   runs: 5
   pot_entries_before_update: null
@@ -41,9 +41,9 @@ agent-test:
   po_fuzzy_entries_after_update: null
 agents:
   claude:
-    cmd: ["claude", "-p", "{prompt}"]
+    cmd: ["claude", "-p", "{{.prompt}}"]
   gemini:
-    cmd: ["gemini", "--prompt", "{prompt}"]
+    cmd: ["gemini", "--prompt", "{{.prompt}}"]
 ```
 
 ### 1.3 Key Requirements
@@ -51,8 +51,8 @@ agents:
 1. **Agent Selection**: If only one agent is configured, `--agent` flag is optional. If multiple agents exist, `--agent` is required.
 
 2. **Prompt Template**: The prompt from `prompt.update_pot` is used, with placeholders replaced:
-   - `{prompt}` → the actual prompt text
-   - `{source}` → po file path (not used in update-pot)
+   - `{{.prompt}}` → the actual prompt text
+   - `{{.source}}` → po file path (not used in update-pot)
    - `{commit}` → commit ID (default: HEAD, not used in update-pot)
 
 3. **Command Execution**: The agent command from `agents.<agent-name>.cmd` is executed with placeholders replaced.
@@ -168,7 +168,7 @@ type Agent struct {
    - If mismatch, return error and exit (score = 0)
 4. Get prompt from `prompt.update_pot`
 5. Replace placeholders in agent command:
-   - `{prompt}` → prompt text
+   - `{{.prompt}}` → prompt text
 6. Execute agent command
 7. **Post-validation** (if `pot_entries_after_update` is configured and not 0):
    - Count entries in `po/git.pot` using `CountPotEntries()`
@@ -448,14 +448,15 @@ func CountPotEntries(potFile string) (int, error)
 ### Step 4: Implement Agent Command Execution
 
 **Tasks**:
-1. Implement placeholder replacement (`{prompt}`, `{source}`, `{commit}`)
+1. Implement placeholder replacement (`{{.prompt}}`, `{{.source}}`, `{{.commit}}`)
 2. Implement `ExecuteAgentCommand()` function
 3. Handle command execution errors
 4. Capture stdout/stderr
 
 **Functions to Implement**:
 ```go
-func ReplacePlaceholders(template string, prompt, source, commit string) string
+type PlaceholderVars map[string]string
+func ReplacePlaceholders(template string, kv PlaceholderVars) (string, error)
 func ExecuteAgentCommand(cmd []string, workDir string) ([]byte, []byte, error)
 ```
 

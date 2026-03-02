@@ -70,9 +70,9 @@ The commands read from `git-po-helper.yaml` configuration file. Relevant configu
 default_lang_code: "zh_CN"
 prompt:
   update_pot: "update po/git.pot according to po/README.md"
-  update_po: "update {source} according to po/README.md"
-  translate: "translate {source} according to po/README.md"
-  review: "review and improve {source} according to po/README.md"
+  update_po: "update {{.source}} according to po/README.md"
+  translate: "translate {{.source}} according to po/README.md"
+  review: "review and improve {{.source}} according to po/README.md"
 agent-test:
   runs: 5
   pot_entries_before_update: null
@@ -83,9 +83,9 @@ agent-test:
   po_fuzzy_entries_after_update: 0   # Expected fuzzy entries after translate (0 = all fixed)
 agents:
   claude:
-    cmd: ["claude", "-p", "{prompt}"]
+    cmd: ["claude", "-p", "{{.prompt}}"]
   gemini:
-    cmd: ["gemini", "--prompt", "{prompt}"]
+    cmd: ["gemini", "--prompt", "{{.prompt}}"]
 ```
 
 ### 1.3 Key Requirements
@@ -97,8 +97,8 @@ agents:
 2. **PO File Location**: If no `po/XX.po` argument is given, the PO file is derived from `default_lang_code` in configuration (e.g., `po/zh_CN.po`).
 
 3. **Prompt Template**: The prompt from `prompt.translate` is used, with placeholders replaced:
-   - `{prompt}` → the actual prompt text
-   - `{source}` → po file path
+   - `{{.prompt}}` → the actual prompt text
+   - `{{.source}}` → po file path
 
 4. **Translation Validation**: Before and after calling the agent:
    - Count new entries (untranslated strings with empty msgstr)
@@ -125,7 +125,7 @@ agents:
    - **Since mode** (`--since <commit>`): Review changes since a specific commit
 
 4. **Prompt Template**:
-   - Use `prompt.review` with `{source}` placeholder
+   - Use `prompt.review` with `{{.source}}` placeholder
 
 5. **Review Validation**: No automatic validation for review operations. The agent should provide feedback/suggestions, but the operation is considered successful if the agent command completes without error.
 
@@ -228,8 +228,8 @@ Error Handling:
    - Log the counts for reference
 5. Get prompt from `prompt.translate`
 6. Replace placeholders in agent command:
-   - `{prompt}` → prompt text
-   - `{source}` → PO file path
+   - `{{.prompt}}` → prompt text
+   - `{{.source}}` → PO file path
 7. Execute agent command
 8. **Post-validation**:
    - Count new entries in PO file using `CountNewEntries()`
@@ -263,10 +263,10 @@ Error Handling:
    - If `--since` provided: review changes since that commit
    - Otherwise: review local changes (using HEAD as reference)
 5. Get prompt based on review mode:
-   - Use `prompt.review` with `{source}` placeholder
+   - Use `prompt.review` with `{{.source}}` placeholder
 6. Replace placeholders in agent command:
-   - `{prompt}` → prompt text
-   - `{source}` → PO file path
+   - `{{.prompt}}` → prompt text
+   - `{{.source}}` → PO file path
    - `{commit}` → commit ID (HEAD, specific commit, or since commit)
 7. Execute agent command
 8. No post-validation required (review is informational)

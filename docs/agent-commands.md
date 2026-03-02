@@ -24,8 +24,8 @@ The repository config takes precedence over the user config when both exist.
 default_lang_code: "zh_CN"   # or system locale (LC_ALL/LC_MESSAGES/LANG)
 prompt:
   update_pot: "update po/git.pot according to po/README.md"
-  update_po: "update {source} according to po/README.md"
-  translate: "translate {source} according to po/README.md"
+  update_po: "update {{.source}} according to po/README.md"
+  translate: "translate {{.source}} according to po/README.md"
   review:
 agent-test:
   runs: 1
@@ -37,23 +37,23 @@ agent-test:
   po_fuzzy_entries_after_update: null
 agents:
   claude:
-    cmd: ["claude", "--dangerously-skip-permissions", "-p", "{prompt}"]
+    cmd: ["claude", "--dangerously-skip-permissions", "-p", "{{.prompt}}"]
     kind: claude
     output: json
   codex:
-    cmd: ["codex", "exec", "--yolo", "{prompt}"]
+    cmd: ["codex", "exec", "--yolo", "{{.prompt}}"]
     kind: codex
     output: json
   opencode:
-    cmd: ["opencode", "run", "--thinking", "{prompt}"]
+    cmd: ["opencode", "run", "--thinking", "{{.prompt}}"]
     kind: opencode
     output: json
   gemini:
-    cmd: ["gemini", "--yolo", "{prompt}"]
+    cmd: ["gemini", "--yolo", "{{.prompt}}"]
     kind: gemini
     output: json
   echo:
-    cmd: ["echo", "{prompt}"]
+    cmd: ["echo", "{{.prompt}}"]
     kind: echo
 ```
 
@@ -62,9 +62,10 @@ agents:
 #### Prompt Templates
 
 - `prompt.update_pot`: Prompt for updating the POT file
-- `prompt.update_po`: Prompt for updating a PO file (uses `{source}` placeholder)
-- `prompt.translate`: Prompt for translating a PO file (uses `{source}` placeholder)
-- `prompt.review`: Prompt for reviewing translations in a PO file (uses `{source}` placeholder)
+- `prompt.update_po`: Prompt for updating a PO file (uses `{{.source}}` placeholder)
+- `prompt.translate`: Prompt for translating a PO file (uses `{{.source}}` placeholder)
+- `prompt.local_orchestration_translation`: Prompt for batch JSON translation when using `--use-local-orchestration` (uses `{{.source}}` and `{{.dest}}` placeholders; loaded from `config/prompts/local-orchestration-translation.md`)
+- `prompt.review`: Prompt for reviewing translations in a PO file (uses `{{.source}}` placeholder)
 
 #### Agent Test Configuration
 
@@ -85,8 +86,8 @@ Each agent is defined with a name and a command. Supported agent kinds: `claude`
 - `output`: Output format: `default`, `json`, or `stream_json` (optional; `json` enables real-time streaming display)
 
 Placeholders in commands:
-- `{prompt}`: Replaced with the actual prompt text
-- `{source}`: Replaced with the source file path (PO file)
+- `{{.prompt}}`: Replaced with the actual prompt text
+- `{{.source}}`: Replaced with the source file path (PO file)
 - `{commit}`: Replaced with the commit ID (default: HEAD)
 
 ## Commands
@@ -162,7 +163,7 @@ git-po-helper agent-run update-po --agent claude po/zh_CN.po
 4. Performs pre-validation (if `po_entries_before_update` is configured):
    - Counts entries in the target `po/XX.po`
    - Verifies count matches expected value
-5. Executes the agent command with the `prompt.update_po` template and `{source}` pointing to the PO file
+5. Executes the agent command with the `prompt.update_po` template and `{{.source}}` pointing to the PO file
 6. Performs post-validation (if `po_entries_after_update` is configured):
    - Counts entries in the target `po/XX.po`
    - Verifies count matches expected value
@@ -174,23 +175,62 @@ git-po-helper agent-run update-po --agent claude po/zh_CN.po
 - Pre-validation passes (if configured)
 - Post-validation passes (if configured)
 
+### agent-run translate
+
+Translate new (untranslated) and fuzzy entries in a PO file using a configured agent.
+
+**Usage:**
+```bash
+git-po-helper agent-run translate [--use-agent-md | --use-local-orchestration] [--agent <agent-name>] [--batch-size <n>] [po/XX.po]
+```
+
+**Options:**
+- `--use-agent-md`: Use existing flow: agent receives full/extracted PO, does translation (default)
+- `--use-local-orchestration`: Use local orchestration: agent only translates batch JSON files
+- `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
+- `--batch-size <n>`: Min entries per batch when using `--use-local-orchestration` (default: 50)
+- `po/XX.po`: Optional PO file path; if omitted, `default_lang_code` is used
+
+**Note:** `--use-agent-md` and `--use-local-orchestration` are mutually exclusive. If neither is specified, defaults to `--use-agent-md`.
+
+**Examples:**
+```bash
+# Use default flow (agent receives full PO)
+git-po-helper agent-run translate po/zh_CN.po
+
+# Use local orchestration (agent translates batch JSONs only)
+git-po-helper agent-run translate --use-local-orchestration po/zh_CN.po
+
+# With custom batch size
+git-po-helper agent-run translate --use-local-orchestration --batch-size 30 po/zh_CN.po
+```
+
+**Local orchestration mode** uses a separate prompt from `config/prompts/local-orchestration-translation.md`. The agent receives `{{.source}}` (input JSON) and `{{.dest}}` (output JSON) placeholders and must write the translated gettext JSON directly to the output file.
+
+**Success Criteria:**
+- Agent command exits with code 0
+- All new and fuzzy entries are translated (counts become 0)
+- PO file syntax is valid (msgfmt)
+
 ### agent-run review
 
 Review translations in a PO file using a configured agent. The agent reviews translations and generates a JSON report with issues and scores.
 
 **Usage:**
 ```bash
-git-po-helper agent-run review [--agent <agent-name>] [-r range | --commit <commit> | --since <commit>] [[<src>] <target>]
+git-po-helper agent-run review [--use-agent-md | --use-local-orchestration] [--agent <agent-name>] [-r range | --commit <commit> | --since <commit>] [[<src>] <target>]
 ```
 
 **Options:**
+- `--use-agent-md`: Use agent with po/AGENTS.md: agent does extraction, review, writes review.json (default)
+- `--use-local-orchestration`: Use local orchestration: agent only reviews batch JSON files
 - `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
 - `-r`, `--range <range>`: Revision range: `a..b` (compare a with b), `a..` (compare a with working tree), or `a` (compare a~ with a)
 - `--commit <commit>`: Equivalent to `-r <commit>^..<commit>` (review changes in the specified commit)
 - `--since <commit>`: Equivalent to `-r <commit>..` (compare commit with working tree)
 - `[<src>] <target>`: Zero, one, or two PO file paths. With two files, compare worktree files (revisions not allowed)
 
-**Note:** Exactly one of `--range`, `--commit`, or `--since` may be specified. If none is provided, defaults to reviewing local changes (since HEAD). With no file arguments, the PO file is auto-selected from changed files or `default_lang_code`.
+**Note:** `--use-agent-md` and `--use-local-orchestration` are mutually exclusive. If neither is specified, defaults to `--use-agent-md`. Exactly one of `--range`, `--commit`, or `--since` may be specified. If none is provided, defaults to reviewing local changes (since HEAD). With no file arguments, the PO file is auto-selected from changed files or `default_lang_code`.
 
 **Examples:**
 ```bash
@@ -214,6 +254,9 @@ git-po-helper agent-run review po/zh_CN.po po/zh_TW.po
 
 # Use a specific agent
 git-po-helper agent-run review --agent claude po/zh_CN.po
+
+# Use agent with po/AGENTS.md (agent does extraction, review, and writes review.json)
+git-po-helper agent-run review --use-agent-md po/zh_CN.po
 ```
 
 **What it does:**
@@ -270,6 +313,35 @@ The command displays:
 - Total entries reviewed
 - Number of issues found (broken down by score: critical, minor, perfect)
 - Path to saved JSON file
+
+### agent-run report
+
+Report aggregated review statistics from batch or single review JSON. Use this after running `agent-run review` or `agent-test review` to display total entries, issues, and score. When multiple batch JSON files exist (e.g. `po/review-batch-*.json`), they are aggregated; otherwise the single review JSON is used.
+
+**Usage:**
+```bash
+git-po-helper agent-run report [path]
+```
+
+**Options:**
+- `path`: Base path for review files (default: `po/review.po`). May end with `.json` or `.po`; the tool derives both `<base>.json` and `<base>.po`. If any files match `po/review-batch-*.json`, they are loaded and aggregated into one result; otherwise `po/review.json` is used.
+
+**Examples:**
+```bash
+# Report from default path (po/review.po → po/review.json)
+git-po-helper agent-run report
+
+# Report from a specific path
+git-po-helper agent-run report po/zh_CN.po
+git-po-helper agent-run report po/review.json
+```
+
+**Output:**
+- Review JSON path
+- Total entries
+- Issues found (count)
+- Review score (0-100)
+- Critical (score 0), Major (score 2), Minor (score 1), Perfect (no issue) counts
 
 ### agent-run parse-log
 
@@ -397,24 +469,56 @@ The command displays:
 - Average score
 - Entry count validation results (if configured)
 
+### agent-test translate
+
+Test the `translate` operation multiple times and calculate an average score.
+
+**Usage:**
+```bash
+git-po-helper agent-test translate [--use-agent-md | --use-local-orchestration] [--agent <agent-name>] [--runs <n>] [--batch-size <n>] [po/XX.po]
+```
+
+**Options:**
+- `--use-agent-md`: Use agent with po/AGENTS.md (default, same as agent-run translate)
+- `--use-local-orchestration`: Use local orchestration (same as agent-run translate)
+- `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
+- `--runs <n>`: Number of test runs (default: 5, or from config file)
+- `--batch-size <n>`: Min entries per batch when using `--use-local-orchestration` (default: 50)
+- `po/XX.po`: Optional PO file path; if omitted, `default_lang_code` is used
+
+**Note:** `--use-agent-md` and `--use-local-orchestration` are mutually exclusive. If neither is specified, defaults to `--use-agent-md`.
+
+**Examples:**
+```bash
+# Run 5 tests using default flow
+git-po-helper agent-test translate po/zh_CN.po
+
+# Run tests with local orchestration
+git-po-helper agent-test translate --use-local-orchestration po/zh_CN.po
+
+# Run 10 tests with a specific agent
+git-po-helper agent-test translate --agent claude --runs 10 po/zh_CN.po
+```
+
 ### agent-test review
 
 Test the `review` operation multiple times and calculate an average score. Aggregates JSON from all runs: for each msgid, uses the lowest score; final result is written to one review file.
 
 **Usage:**
 ```bash
-git-po-helper agent-test review [--agent <agent-name>] [--runs <n>] [-r range | --commit <commit> | --since <commit>] [[<src>] <target>]
+git-po-helper agent-test review [--use-agent-md | --use-local-orchestration] [--agent <agent-name>] [--runs <n>] [-r range | --commit <commit> | --since <commit>] [[<src>] <target>]
 ```
 
 **Options:**
-- `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
+- `--use-agent-md`: Use agent with po/AGENTS.md (default, same as agent-run review)
+- `--use-local-orchestration`: Use local orchestration (same as agent-run review)
 - `--runs <n>`: Number of test runs (default: 1, or from config file)
 - `-r`, `--range <range>`: Revision range (same as agent-run review)
 - `--commit <commit>`: Review changes in the specified commit
 - `--since <commit>`: Review changes since the specified commit
 - `[<src>] <target>`: Zero, one, or two PO file paths (same as agent-run review)
 
-**Note:** Exactly one of `--range`, `--commit`, or `--since` may be specified. If none is provided, defaults to reviewing local changes (since HEAD).
+**Note:** `--use-agent-md` and `--use-local-orchestration` are mutually exclusive. If neither is specified, defaults to `--use-agent-md`. Exactly one of `--range`, `--commit`, or `--since` may be specified. If none is provided, defaults to reviewing local changes (since HEAD).
 
 **Examples:**
 ```bash
@@ -429,6 +533,9 @@ git-po-helper agent-test review --agent claude --runs 10 po/zh_CN.po
 
 # Run tests reviewing changes since a specific commit
 git-po-helper agent-test review --since abc123 po/zh_CN.po
+
+# Run tests with --use-agent-md (agent uses po/AGENTS.md)
+git-po-helper agent-test review --use-agent-md --runs 3 po/zh_CN.po
 ```
 
 **What it does:**
@@ -570,7 +677,7 @@ prompt:
   update_pot: "update po/git.pot according to po/README.md"
 agents:
   my-agent:
-    cmd: ["my-agent", "--prompt", "{prompt}"]
+    cmd: ["my-agent", "--prompt", "{{.prompt}}"]
 ```
 
 2. Run the agent:
@@ -592,7 +699,7 @@ agent-test:
   pot_entries_after_update: 5100
 agents:
   my-agent:
-    cmd: ["my-agent", "--prompt", "{prompt}"]
+    cmd: ["my-agent", "--prompt", "{{.prompt}}"]
 ```
 
 2. Run tests:

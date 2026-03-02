@@ -2,8 +2,8 @@
 package repository
 
 import (
+	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/jiangxin/goconfig"
 	log "github.com/sirupsen/logrus"
@@ -29,6 +29,30 @@ func OpenRepository(dir string) {
 	_ = theRepository.Open(dir)
 }
 
+// Opened returns true if a repository was successfully opened (e.g. when running inside a git worktree).
+// Commands that can run without a repo (e.g. stat with explicit paths) may skip ChdirProjectRoot when !Opened().
+func Opened() bool {
+	return theRepository.error == nil && theRepository.repository != nil
+}
+
+// Err returns the error from the last OpenRepository call, or nil if open succeeded.
+func Err() error {
+	return theRepository.error
+}
+
+// RequireOpened returns Err() if the repository is not opened.
+// Use before git calls in commands that can run without a repo; return the error
+// to the user instead of Fatal when repo is required but not available.
+func RequireOpened() error {
+	if !Opened() {
+		if theRepository.error != nil {
+			return theRepository.error
+		}
+		return fmt.Errorf("not in a git repository")
+	}
+	return nil
+}
+
 func assertRepositoryNotNil() {
 	if theRepository.error != nil {
 		log.Fatal(theRepository.error)
@@ -49,29 +73,17 @@ func WorkDir() string {
 	return theRepository.repository.WorkDir()
 }
 
-// IsGitProject checks current workdir is belong to git project.
-func IsGitProject() bool {
-	poDir := filepath.Join(WorkDir(), "po")
-	if _, err := os.Stat(poDir); err != nil {
-		log.Errorf("cannot find 'po/' in your worktree '%s': %s", WorkDir(), err)
-		return false
+// WorkDirOrCwd returns WorkDir() when a repository is opened, otherwise the current working directory.
+// Use this in commands that can run without a repo; paths will be relative to cwd when not in repo.
+func WorkDirOrCwd() string {
+	if Opened() {
+		return theRepository.repository.WorkDir()
 	}
-	return true
-}
-
-// ChdirProjectRoot changes current dir to project root.
-func ChdirProjectRoot() {
-	assertRepositoryNotNil()
-
-	if theRepository.repository.IsBare() {
-		log.Fatal("fail to change workdir, you are in a bare repository")
+	wd, err := os.Getwd()
+	if err != nil {
+		return "."
 	}
-	if !IsGitProject() {
-		log.Fatal("git-po-helper only works for git project.")
-	}
-	if err := os.Chdir(WorkDir()); err != nil {
-		log.Fatal(err)
-	}
+	return wd
 }
 
 // Config is git config for the repository.

@@ -23,8 +23,7 @@ level=error msg="config variable 'pack.writeBitmaps' in manpage does not match s
 level=error msg=" >> \"--no-write-bitmap-index or disable the pack.writebitmaps configuration.\""
 level=error msg="config variable 'http.postBuffer' in manpage does not match string in pot file:"
 level=error msg=" >> msgid \"negative value for http.postbuffer; defaulting to %d\""
-
-ERROR: fail to execute "git-po-helper check-pot"
+ERROR: 6 mismatched config variables
 EOF
 
 test_expect_success "check-pot on git 2.31.1" '

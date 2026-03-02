@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,9 +16,8 @@ func (v *checkPoCommand) Command() *cobra.Command {
 	}
 
 	v.cmd = &cobra.Command{
-		Use:           "check-po <XX.po>...",
-		Short:         "Check syntax of XX.po file",
-		SilenceErrors: true,
+		Use:   "check-po <XX.po>...",
+		Short: "Check syntax of XX.po file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return v.Execute(args)
 		},
@@ -41,11 +39,8 @@ func (v *checkPoCommand) Command() *cobra.Command {
 }
 
 func (v checkPoCommand) Execute(args []string) error {
-	// Execute in root of worktree.
-	repository.ChdirProjectRoot()
-
 	if !util.CmdCheckPo(args...) {
-		return errExecute
+		return NewStandardError("check-po command failed")
 	}
 	return nil
 }

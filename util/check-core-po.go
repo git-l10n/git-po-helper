@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -148,7 +147,6 @@ func genCorePot() ([]string, bool) {
 	cmdArgs = append(cmdArgs, localizedFiles...)
 	log.Debugf(`creating %s: %s`, corePotFile, "xgettext ...")
 	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	cmd.Dir = repository.WorkDir()
 	if err := cmd.Run(); err != nil {
 		msgs = append(msgs,
 			fmt.Sprintf(`fail to create "%s": %s`,

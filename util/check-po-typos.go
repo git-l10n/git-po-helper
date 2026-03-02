@@ -13,7 +13,6 @@ import (
 
 	"github.com/git-l10n/git-po-helper/dict"
 	"github.com/git-l10n/git-po-helper/flag"
-	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/gorilla/i18n/gettext"
 )
 
@@ -36,7 +35,6 @@ func checkEntriesInPoFile(locale, poFile string, fn CheckPoEntryFunc) (msgs []st
 		"-o",
 		moFile.Name(),
 		poFile)
-	cmd.Dir = repository.WorkDir()
 	err = cmd.Run()
 	if err != nil {
 		// There may be some non-fatal errors in the po-file.

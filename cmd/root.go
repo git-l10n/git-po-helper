@@ -2,9 +2,7 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
-	"regexp"
 
 	"github.com/git-l10n/git-po-helper/flag"
 	"github.com/git-l10n/git-po-helper/repository"
@@ -16,44 +14,37 @@ import (
 	"github.com/spf13/viper"
 )
 
-var (
-	rootCmd    = rootCommand{}
-	errExecute = errors.New("fail to execute")
-)
+var rootCmd = rootCommand{}
 
-// commandError is an error used to signal different error situations in command handling.
-type commandError struct {
-	s         string
-	userError bool
+// errorWithUsage marks an error that should display command usage.
+type errorWithUsage struct{ msg string }
+
+func (e errorWithUsage) Error() string { return e.msg }
+
+// NewErrorWithUsage creates an error that should display usage (e.g. argument/flag errors).
+func NewErrorWithUsage(a ...interface{}) error {
+	return errorWithUsage{msg: fmt.Sprintln(a...)}
 }
 
-func (c commandError) Error() string {
-	return c.s
+// NewErrorWithUsageF creates an error that should display usage.
+func NewErrorWithUsageF(format string, a ...interface{}) error {
+	return errorWithUsage{msg: fmt.Sprintf(format, a...)}
 }
 
-func (c commandError) isUserError() bool {
-	return c.userError
+// NewStandardError creates an error that should not display usage.
+func NewStandardError(a ...interface{}) error {
+	return fmt.Errorf("%s", fmt.Sprint(a...))
 }
 
-func newUserError(a ...interface{}) commandError {
-	return commandError{s: fmt.Sprintln(a...), userError: true}
+// NewStandardErrorF creates an error that should not display usage.
+func NewStandardErrorF(format string, a ...interface{}) error {
+	return fmt.Errorf(format, a...)
 }
 
-func newUserErrorF(format string, a ...interface{}) commandError {
-	return commandError{s: fmt.Sprintf(format, a...), userError: true}
-}
-
-// Catch some of the obvious user errors from Cobra.
-// We don't want to show the usage message for every error.
-// The below may be to generic. Time will show.
-var userErrorRegexp = regexp.MustCompile("argument|flag|shorthand")
-
-func isUserError(err error) bool {
-	if cErr, ok := err.(commandError); ok && cErr.isUserError() {
-		return true
-	}
-
-	return userErrorRegexp.MatchString(err.Error())
+// IsErrorWithUsage returns true if the error should display command usage.
+func IsErrorWithUsage(err error) bool {
+	_, ok := err.(errorWithUsage)
+	return ok
 }
 
 // Response wraps error for subcommand, and is returned from cmd package.
@@ -63,12 +54,6 @@ type Response struct {
 
 	// Cmd contains the command object.
 	Cmd *cobra.Command
-}
-
-// IsUserError indicates it is a user fault, and should display the command
-// usage in addition to displaying the error itself.
-func (r Response) IsUserError() bool {
-	return r.Err != nil && isUserError(r.Err)
 }
 
 type rootCommand struct {
@@ -115,8 +100,9 @@ func (v *rootCommand) Command() *cobra.Command {
 	v.cmd = &cobra.Command{
 		Use:   "git-po-helper",
 		Short: "Helper for git l10n",
-		// Do not want to show usage on every error
-		SilenceUsage: true,
+		// Let main.go handle error output; do not show usage on every error
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return v.Execute(args)
 		},
@@ -142,6 +128,9 @@ func (v *rootCommand) Command() *cobra.Command {
 	v.cmd.PersistentFlags().String("pot-file",
 		"auto",
 		"way to get latest pot file: 'auto', 'download', 'build', 'no' or filename such as po/git.pot")
+	v.cmd.PersistentFlags().String("config",
+		"",
+		"load agent configuration from this file (overrides ~/.git-po-helper.yaml and repo git-po-helper.yaml)")
 	_ = v.cmd.PersistentFlags().MarkHidden("dryrun")
 	_ = v.cmd.PersistentFlags().MarkHidden("no-special-gettext-versions")
 	_ = v.cmd.PersistentFlags().MarkHidden("github-action-event")
@@ -164,16 +153,25 @@ func (v *rootCommand) Command() *cobra.Command {
 	_ = viper.BindPFlag(
 		"pot-file",
 		v.cmd.PersistentFlags().Lookup("pot-file"))
+	_ = viper.BindPFlag(
+		"config",
+		v.cmd.PersistentFlags().Lookup("config"))
 
 	return v.cmd
 }
 
 func (v rootCommand) Execute(args []string) error {
-	return newUserError("run 'git-po-helper -h' for help")
+	return NewErrorWithUsage("run 'git-po-helper -h' for help")
 }
 
 func (v *rootCommand) AddCommand(cmds ...*cobra.Command) {
 	v.Command().AddCommand(cmds...)
+}
+
+// potFileVisibleCommands lists commands that use --pot-file; the flag is shown only for them.
+var potFileVisibleCommands = map[string]bool{
+	"check": true, "check-po": true, "check-commits": true,
+	"check-pot": true, "init": true, "update": true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -182,6 +180,12 @@ func Execute() Response {
 	var (
 		resp Response
 	)
+
+	// Hide --pot-file for commands that do not use it (must run before ExecuteC).
+	hidePotFileForCommands()
+
+	// Ensure all commands use SilenceErrors so main.go handles error output.
+	setSilenceErrorsRecursive(rootCmd.Command())
 
 	c, err := rootCmd.Command().ExecuteC()
 	resp.Err = err
@@ -193,4 +197,54 @@ func init() {
 	cobra.OnInitialize(rootCmd.initLog)
 	cobra.OnInitialize(rootCmd.initRepository)
 	cobra.OnInitialize(rootCmd.preCheck)
+}
+
+// setSilenceErrorsRecursive sets SilenceErrors on c and all its descendants.
+func setSilenceErrorsRecursive(c *cobra.Command) {
+	c.SilenceErrors = true
+	for _, child := range c.Commands() {
+		setSilenceErrorsRecursive(child)
+	}
+}
+
+// hidePotFileForCommands sets a custom help func for commands that do not use
+// --pot-file, so the flag is hidden only when showing help for those commands.
+// Commands in potFileVisibleCommands get the default help to avoid inheriting
+// the hiding behavior from root.
+func hidePotFileForCommands() {
+	root := rootCmd.Command()
+	defaultHelp := root.HelpFunc() // capture before modifying root
+	var visit func(*cobra.Command)
+	visit = func(c *cobra.Command) {
+		if potFileVisibleCommands[c.Name()] {
+			c.SetHelpFunc(defaultHelp)
+		} else {
+			markPotFileHiddenForHelp(c)
+		}
+		for _, child := range c.Commands() {
+			visit(child)
+		}
+	}
+	visit(root)
+}
+
+// markPotFileHiddenForHelp sets a help func that hides --pot-file before rendering.
+func markPotFileHiddenForHelp(c *cobra.Command) {
+	var baseHelp func(*cobra.Command, []string)
+	if c.Parent() != nil {
+		baseHelp = c.Parent().HelpFunc()
+	} else {
+		baseHelp = c.HelpFunc()
+	}
+	c.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		// For root, use PersistentFlags(); for children, use InheritedFlags()
+		f := cmd.InheritedFlags().Lookup("pot-file")
+		if f == nil {
+			f = cmd.PersistentFlags().Lookup("pot-file")
+		}
+		if f != nil {
+			f.Hidden = true
+		}
+		baseHelp(cmd, args)
+	})
 }

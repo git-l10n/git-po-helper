@@ -4,7 +4,8 @@ test_description="check typos in vi.po"
 
 . ./lib/test-lib.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=no --report-typos=warn --report-file-locations=none"
+HELPER="po-helper --no-special-gettext-versions --report-typos=warn --report-file-locations=none"
+POT_NO="--pot-file=no"
 
 test_expect_success "checkout po-2.31.1" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -92,12 +93,11 @@ level=warning msg="[po/vi.po]    mismatched patterns: %%(color:%s), %%(màu:%s)"
 level=warning msg="[po/vi.po]    >> msgid: unrecognized color: %%(color:%s)"
 level=warning msg="[po/vi.po]    >> msgstr: không nhận ra màu: %%(màu:%s)"
 level=warning msg="[po/vi.po]"
-
-ERROR: fail to execute "git-po-helper check-po"
+ERROR: check-po command failed
 EOF
 
 test_expect_success "check typos in vi.po" '
-	test_must_fail git -C workdir $HELPER check-po vi >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER check-po $POT_NO vi >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -105,7 +105,7 @@ test_expect_success "check typos in vi.po" '
 test_expect_success "no typos in master branch" '
 	git -C workdir checkout master &&
 	git -C workdir $HELPER \
-		check-po --report-typos=error vi
+		check-po $POT_NO --report-typos=error vi
 '
 
 test_done

@@ -4,7 +4,8 @@ test_description="test git-po-helper update"
 
 . ./lib/test-lib.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=po/git.pot"
+HELPER="po-helper --no-special-gettext-versions"
+POT_FILE="--pot-file=po/git.pot"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -23,8 +24,7 @@ level=error msg="[po/zh_CN.po]    fail to check po: exit status 1"
 ------------------------------------------------------------------------------
 level=error msg="[po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1"
 level=error msg="[po/zh_CN.po]    fail to generate mofile"
-
-ERROR: fail to execute "git-po-helper check-po"
+ERROR: check-po command failed
 EOF
 
 test_expect_success "bad syntax of zh_CN.po" '
@@ -55,7 +55,7 @@ test_expect_success "bad syntax of zh_CN.po" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz""
 	EOF
 
-	test_must_fail git -C workdir $HELPER check-po --report-file-locations=none zh_CN >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER check-po $POT_FILE --report-file-locations=none zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	test_cmp expect actual
@@ -89,7 +89,7 @@ test_expect_success "update zh_CN successfully" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz"
 	EOF
 
-	git -C workdir $HELPER update zh_CN
+	git -C workdir $HELPER update $POT_FILE zh_CN
 '
 
 cat >expect <<-\EOF
@@ -99,7 +99,7 @@ level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messag
 EOF
 
 test_expect_success "check update of zh_CN.po" '
-	git -C workdir $HELPER check-po --report-file-locations=none zh_CN >out 2>&1 &&
+	git -C workdir $HELPER check-po $POT_FILE --report-file-locations=none zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
 		head -3 >actual &&
 	test_cmp expect actual
@@ -121,7 +121,7 @@ level=warning msg="[po/zh_CN.po]"
 EOF
 
 test_expect_success "check core update of zh_CN.po" '
-	git -C workdir $HELPER check-po --report-file-locations=none --core zh_CN >out 2>&1 &&
+	git -C workdir $HELPER check-po $POT_FILE --report-file-locations=none --core zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

@@ -41,6 +41,10 @@ func GetChangedPoFiles(commit, since string) ([]string, error) {
 }
 
 func GetChangedPoFilesRange(rev1, rev2 string) ([]string, error) {
+	if err := repository.RequireOpened(); err != nil {
+		return nil, fmt.Errorf("git operation requires a repository: %w", err)
+	}
+
 	var (
 		cmd     *exec.Cmd
 		workDir = repository.WorkDir()
@@ -89,7 +93,7 @@ func CheckoutTmpfile(f *FileRevision) error {
 		tmpfile.Close()
 	}
 	if f.Revision == "" {
-		// Read file from f.File and write to f.Tmpfile
+		// Read file from f.File and write to f.Tmpfile (no git needed)
 		data, err := os.ReadFile(f.File)
 		if err != nil {
 			return fmt.Errorf("fail to read file: %w", err)
@@ -99,6 +103,9 @@ func CheckoutTmpfile(f *FileRevision) error {
 		}
 		log.Debugf("read file %s from %s and write to %s", f.File, f.Revision, f.Tmpfile)
 		return nil
+	}
+	if err := repository.RequireOpened(); err != nil {
+		return fmt.Errorf("git show requires a repository: %w", err)
 	}
 	cmd := exec.Command("git",
 		"show",

@@ -4,7 +4,8 @@ test_description="show hints for missing gettext 0.14"
 
 . ./lib/test-lib.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=no"
+HELPER="po-helper --no-special-gettext-versions"
+POT_NO="--pot-file=no"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -61,13 +62,12 @@ level=warning msg=" https://lore.kernel.org/git/874l8rwrh2.fsf@evledraar.gmail.c
 level=error msg="[po/fr.po]    2 translated messages."
 level=error msg="[po/fr.po]    too many obsolete entries (3) in comments, please remove them"
 level=error msg="[po/fr.po]    remove lines that start with '#~| msgid', for they are not compatible with gettext 0.14"
-
-ERROR: fail to execute "git-po-helper check-po"
+ERROR: check-po command failed
 EOF
 
 test_expect_success "show hints and errors for gettext 014" '
 	test_must_fail git -c gettext.useMultipleVersions=1 -C workdir \
-		$HELPER check-po --report-file-locations=none fr >out 2>&1 &&
+		$HELPER check-po $POT_NO --report-file-locations=none fr >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

@@ -22,7 +22,7 @@ start time as a prefix, so each iteration uses the same timestamp string
 2. Run `grep -c "^msgid " po/XX.po` and assert the count equals
    `assert.start_entry_count` if it is provided.
 3. Use `--agent` to select the corresponding `cmd` in
-   `po_ai_translator.yaml`, then run the command. Replace `{prompt}` with
+   `po_ai_translator.yaml`, then run the command. Replace `{{.prompt}}` with
    `agent.<agent-name>.prompt` if present, otherwise use the global `prompt`.
    Replace `{lang-code}` with the YAML `lang_code` value.
 4. While running the agent command, display output in the console. If `-v`
@@ -52,18 +52,18 @@ lang_code: "zh_CN"
 assert:
   start_entry_count: null
   end_entry_count: null
-prompt: "update {source} and translate it according to po/README.md"
+prompt: "update {{.source}} and translate it according to po/README.md"
 agents:
   claude:
-    cmd: ["claude", "-p", "{prompt}"]
+    cmd: ["claude", "-p", "{{.prompt}}"]
     # Empty prompt means using the global prompt
 
   gemini:
-    cmd: ["gemini", "--prompt", "{prompt}"]
+    cmd: ["gemini", "--prompt", "{{.prompt}}"]
     # Empty prompt means using the global prompt
 
   custom:
-    cmd: ["claude", "-p", "{prompt}"]
+    cmd: ["claude", "-p", "{{.prompt}}"]
     prompt: "custom prompt here"  # Override the global prompt
 </config>
 
@@ -106,7 +106,7 @@ agents:
    compare to `assert.start_entry_count` when provided.
 4. **Build agent command**:
    - Select `agents.<name>.cmd`.
-   - Use `agents.<name>.prompt` or the global `prompt` for `{prompt}`.
+   - Use `agents.<name>.prompt` or the global `prompt` for `{{.prompt}}`.
    - Use the effective `lang_code` for `{lang-code}`.
 5. **Run command and capture output**:
    - With `-v`, print stdout/stderr directly.
@@ -194,7 +194,7 @@ Step 4: Implement workspace reset and start validation
 
 Step 5: Build and execute the agent command
 - Parse `agents.<agent-name>.cmd`.
-- Substitute `{prompt}` and `{lang-code}`.
+- Substitute `{{.prompt}}` and `{lang-code}`.
 - Start the subprocess and handle output:
   - With `-v`, print directly.
   - Without `-v`, render rolling output and write full output to the log.

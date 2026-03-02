@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -76,7 +75,6 @@ func CmdInit(fileName string, onlyCore bool) bool {
 		return false
 	}
 	cmd = exec.Command("make", "-n", "po-init", "PO_FILE="+poFile)
-	cmd.Dir = repository.WorkDir()
 	if err = cmd.Run(); err != nil {
 		return cmdInitObsolete(locale, localeFullName, onlyCore)
 	}
@@ -85,7 +83,6 @@ func CmdInit(fileName string, onlyCore bool) bool {
 		cmdArgs = []string{"make", "po-init", "PO_FILE=" + poFile}
 		log.Infof(`creating po file for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
 		cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
-		cmd.Dir = repository.WorkDir()
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
 		return cmd.Run() == nil
@@ -164,7 +161,6 @@ func cmdInitObsolete(locale string, localeFullName string, onlyCore bool) bool {
 	}
 	log.Infof(`creating po file for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
 	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	cmd.Dir = repository.WorkDir()
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Errorf("fail to init: %s", err)

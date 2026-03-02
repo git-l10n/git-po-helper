@@ -1,4 +1,4 @@
-// Package util provides review-related utilities for agent-run.
+// Package util provides review data preparation utilities.
 package util
 
 import (
@@ -11,12 +11,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string) error {
+func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string, noHeader, useJSON bool) error {
 	var (
 		err                    error
-		workDir                = repository.WorkDir()
 		relOldFile, relNewFile string
 	)
+	if oldCommit != "" || newCommit != "" {
+		_ = repository.WorkDir() // assert repo when using revisions
+	}
 
 	// Use temp files for orig and new; they are deleted when the function returns
 	oldTmpFile, err := os.CreateTemp("", "review-old-*.po")
@@ -40,18 +42,21 @@ func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string
 	log.Debugf("preparing review data: orig=%s, new=%s, review-input=%s",
 		oldTmpFile.Name(), newTmpFile.Name(), outputFile)
 
-	// Get original file from git
+	// Get original file (from git when revision set, else from worktree)
 	log.Infof("getting old file from commit: %s", oldCommit)
-	// Convert absolute path to relative path for git show command
-	if filepath.IsAbs(oldFile) {
-		relOldFile, err = filepath.Rel(workDir, oldFile)
-		if err != nil {
-			return fmt.Errorf("failed to convert PO file path to relative: %w", err)
+	if oldCommit != "" {
+		workDir := repository.WorkDir()
+		if filepath.IsAbs(oldFile) {
+			relOldFile, err = filepath.Rel(workDir, oldFile)
+			if err != nil {
+				return fmt.Errorf("failed to convert PO file path to relative: %w", err)
+			}
+		} else {
+			relOldFile = oldFile
 		}
 	} else {
 		relOldFile = oldFile
 	}
-	// Normalize to use forward slashes (git uses forward slashes in paths)
 	relOldFile = filepath.ToSlash(relOldFile)
 	oldFileRevision := FileRevision{
 		Revision: oldCommit,
@@ -73,16 +78,19 @@ func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string
 	}
 
 	log.Infof("getting new file from commit: %s", newCommit)
-	// Convert absolute path to relative path for git show command
-	if filepath.IsAbs(newFile) {
-		relNewFile, err = filepath.Rel(workDir, newFile)
-		if err != nil {
-			return fmt.Errorf("failed to convert PO file path to relative: %w", err)
+	if newCommit != "" {
+		workDir := repository.WorkDir()
+		if filepath.IsAbs(newFile) {
+			relNewFile, err = filepath.Rel(workDir, newFile)
+			if err != nil {
+				return fmt.Errorf("failed to convert PO file path to relative: %w", err)
+			}
+		} else {
+			relNewFile = newFile
 		}
 	} else {
 		relNewFile = newFile
 	}
-	// Normalize to use forward slashes (git uses forward slashes in paths)
 	relNewFile = filepath.ToSlash(relNewFile)
 	newFileRevision := FileRevision{
 		Revision: newCommit,
@@ -112,18 +120,54 @@ func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string
 		return fmt.Errorf("failed to read new file: %w", err)
 	}
 
-	log.Debugf("extracting differences to review-input.po")
-	_, data, err := PoCompare(origData, newData)
+	oldJ, err := LoadFileToGettextJSON(origData, relOldFile)
+	if err != nil {
+		return err
+	}
+	newJ, err := LoadFileToGettextJSON(newData, relNewFile)
 	if err != nil {
 		return err
 	}
 
-	log.Infof("review data prepared: review-input=%s", outputFile)
-	if err = WriteFile(outputFile, data); err != nil {
-		return fmt.Errorf("failed to extract review input: %w", err)
+	log.Debugf("extracting differences to review-input")
+	_, reviewEntries := CompareGettextEntries(oldJ, newJ)
+
+	if len(reviewEntries) == 0 {
+		return WriteFile(outputFile, nil)
 	}
 
-	return nil
+	out := &GettextJSON{
+		HeaderComment: newJ.HeaderComment,
+		HeaderMeta:    newJ.HeaderMeta,
+		Entries:       reviewEntries,
+	}
+	if noHeader {
+		out.HeaderComment = ""
+		out.HeaderMeta = ""
+	}
+
+	if useJSON {
+		return writeGettextJSONToPath(outputFile, out)
+	}
+
+	poData, err := GettextJSONToPoBytes(out, noHeader)
+	if err != nil {
+		return fmt.Errorf("failed to build PO: %w", err)
+	}
+	log.Infof("review data prepared: review-input=%s", outputFile)
+	return WriteFile(outputFile, poData)
+}
+
+func writeGettextJSONToPath(outputFile string, j *GettextJSON) error {
+	if outputFile == "-" || outputFile == "" {
+		return WriteGettextJSONToJSON(j, os.Stdout)
+	}
+	f, err := os.Create(outputFile)
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
+	defer f.Close()
+	return WriteGettextJSONToJSON(j, f)
 }
 
 func WriteFile(outputFile string, data []byte) error {
@@ -139,7 +183,7 @@ func WriteFile(outputFile string, data []byte) error {
 
 // WritePoEntries writes the review input PO file with header and review entries.
 // When outputPath is "-" or "" and entries is empty, writes nothing (for new-entries command).
-func WritePoEntries(outputPath string, header []string, entries []*PoEntry) error {
+func WritePoEntries(outputPath string, header []string, entries []*GettextEntry) error {
 	data := BuildPoContent(header, entries)
 	return WriteFile(outputPath, data)
 }

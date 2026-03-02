@@ -13,14 +13,13 @@ test_expect_success "setup" '
 
 test_expect_success "update: zh_CN.po not exist" '
 	rm workdir/po/zh_CN.po &&
-	test_must_fail git -C workdir $HELPER --pot-file=po/git.pot \
-		update zh_CN >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER update --pot-file=po/git.pot \
+		zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
 	level=error msg="fail to update \"po/zh_CN.po\", does not exist"
-
-	ERROR: fail to execute "git-po-helper update"
+	ERROR: update command failed
 	EOF
 
 	test_cmp expect actual
@@ -54,8 +53,8 @@ test_expect_success "fail to update zh_CN: bad syntax of zh_CN.po" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz""
 	EOF
 
-	test_must_fail git -C workdir $HELPER --pot-file=po/git.pot \
-		update zh_CN >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER update --pot-file=po/git.pot \
+		zh_CN >out 2>&1 &&
 	grep "po/zh_CN.po:25: end-of-line within string" out >actual &&
 	grep "^level=error" out >>actual &&
 
@@ -95,8 +94,7 @@ test_expect_success "update zh_CN successfully" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz"
 	EOF
 
-	git -C workdir $HELPER --pot-file=po/git.pot \
-		update zh_CN
+	git -C workdir $HELPER update --pot-file=po/git.pot zh_CN
 '
 
 test_expect_success "check update of zh_CN.po" '
@@ -141,8 +139,7 @@ test_expect_success "update zh_CN with file and location" '
 	"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 	EOF
 
-	git -C workdir $HELPER --pot-file=po/git.pot \
-		update zh_CN &&
+	git -C workdir $HELPER update --pot-file=po/git.pot zh_CN &&
 
 	grep "^#: builtin/clean.c" workdir/po/zh_CN.po >output &&
 	sort output | head -1 >actual &&
@@ -169,8 +166,7 @@ test_expect_success "update zh_CN --no-location" '
 	"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 	EOF
 
-	git -C workdir $HELPER --pot-file=po/git.pot \
-		update --no-location zh_CN &&
+	git -C workdir $HELPER update --pot-file=po/git.pot --no-location zh_CN &&
 
 	grep "^#: builtin/clean.c" workdir/po/zh_CN.po >output &&
 	sort output | head -1 >actual &&
@@ -197,8 +193,7 @@ test_expect_success "update zh_CN --no-file-location" '
 	"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 	EOF
 
-	git -C workdir $HELPER --pot-file=po/git.pot \
-		update --no-file-location zh_CN &&
+	git -C workdir $HELPER update --pot-file=po/git.pot --no-file-location zh_CN &&
 	test_must_fail grep "^#: builtin/clean.c" workdir/po/zh_CN.po
 '
 

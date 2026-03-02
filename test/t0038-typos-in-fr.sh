@@ -4,7 +4,8 @@ test_description="check typos in fr.po"
 
 . ./lib/test-lib.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=no --report-typos=warn --report-file-locations=none"
+HELPER="po-helper --no-special-gettext-versions --report-typos=warn --report-file-locations=none"
+POT_NO="--pot-file=no"
 
 test_expect_success "checkout master branch" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -13,7 +14,7 @@ test_expect_success "checkout master branch" '
 
 test_expect_success "still has typos in master branch" '
 	test_must_fail git -C workdir $HELPER \
-		check-po --report-typos=error po/fr.po >out 2>&1 &&
+		check-po $POT_NO --report-typos=error po/fr.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	cat >expect <<-EOF &&
 		------------------------------------------------------------------------------
@@ -40,8 +41,7 @@ test_expect_success "still has typos in master branch" '
 		level=error msg="[po/fr.po]"
 		level=error msg="[po/fr.po]    Aucune n${SQ}a fonctionné, donc abandon. Veuillez spécifier une référence totalement qualifiée."
 		level=error msg="[po/fr.po]"
-
-		ERROR: fail to execute "git-po-helper check-po"
+		ERROR: check-po command failed
 	EOF
 	test_cmp expect actual
 '

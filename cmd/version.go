@@ -7,11 +7,10 @@ import (
 
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
-	Use:           "version",
-	Short:         "Display the version of git-po-helper",
-	SilenceErrors: true,
-	Run:           func(cmd *cobra.Command, args []string) {},
-	Version:       version.Version,
+	Use:     "version",
+	Short:   "Display the version of git-po-helper",
+	Run:     func(cmd *cobra.Command, args []string) {},
+	Version: version.Version,
 }
 
 func init() {

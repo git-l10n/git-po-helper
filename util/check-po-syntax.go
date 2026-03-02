@@ -9,7 +9,6 @@ import (
 
 	"github.com/git-l10n/git-po-helper/flag"
 	"github.com/git-l10n/git-po-helper/gettext"
-	"github.com/git-l10n/git-po-helper/repository"
 )
 
 func checkPoCommentEntries(poFile string) ([]string, bool) {
@@ -103,7 +102,6 @@ func checkPoSyntax(poFile string) ([]string, bool) {
 			"--check",
 			"--statistics",
 			poFile)
-		cmd.Dir = repository.WorkDir()
 		stderr, err := cmd.StderrPipe()
 		if err == nil {
 			err = cmd.Start()

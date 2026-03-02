@@ -4,7 +4,8 @@ test_description="check typos in sv.po"
 
 . ./lib/test-lib.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=no --report-typos=warn --report-file-locations=none"
+HELPER="po-helper --no-special-gettext-versions --report-typos=warn --report-file-locations=none"
+POT_NO="--pot-file=no"
 
 test_expect_success "checkout po-2.31.1" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -120,12 +121,11 @@ level=warning msg="[po/sv.po]    mismatched patterns: --group, --group-flagga"
 level=warning msg="[po/sv.po]    >> msgid: using multiple --group options with stdin is not supported"
 level=warning msg="[po/sv.po]    >> msgstr: mer än en --group-flagga stöds inte med standard in"
 level=warning msg="[po/sv.po]"
-
-ERROR: fail to execute "git-po-helper check-po"
+ERROR: check-po command failed
 EOF
 
 test_expect_success "check typos in sv.po" '
-	test_must_fail git -C workdir $HELPER check-po sv >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER check-po $POT_NO sv >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -155,14 +155,13 @@ level=error msg="[po/sv.po]     motsvarande refs/{heads,tags}/-prefix på fjärr
 level=error msg="[po/sv.po]"
 level=error msg="[po/sv.po]    Inget av dem fungerade, så vi gav upp. Ange fullständig referens."
 level=error msg="[po/sv.po]"
-
-ERROR: fail to execute "git-po-helper check-po"
+ERROR: check-po command failed
 EOF
 
 test_expect_success "typos in master branch" '
 	git -C workdir checkout master &&
 	test_must_fail git -C workdir $HELPER \
-		check-po --report-typos=error sv >out 2>&1 &&
+		check-po $POT_NO --report-typos=error sv >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

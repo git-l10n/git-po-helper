@@ -30,9 +30,9 @@ Both commands read from the `git-po-helper.yaml` configuration file. Example:
 default_lang_code: "zh_CN"
 prompt:
   update_pot: "update po/git.pot according to po/README.md"
-  update_po: "update {source} according to po/README.md"
-  translate: "translate {source} according to po/README.md"
-  review: "review and improve {source} according to po/README.md"
+  update_po: "update {{.source}} according to po/README.md"
+  translate: "translate {{.source}} according to po/README.md"
+  review: "review and improve {{.source}} according to po/README.md"
 agent-test:
   runs: 5
   pot_entries_before_update: null
@@ -43,9 +43,9 @@ agent-test:
   po_fuzzy_entries_after_update: null
 agents:
   claude:
-    cmd: ["claude", "-p", "{prompt}"]
+    cmd: ["claude", "-p", "{{.prompt}}"]
   gemini:
-    cmd: ["gemini", "--prompt", "{prompt}"]
+    cmd: ["gemini", "--prompt", "{{.prompt}}"]
 ```
 
 ### 1.3 Key Requirements
@@ -53,8 +53,8 @@ agents:
 1. **Agent Selection**: If only one agent is configured, the `--agent` flag is optional. If multiple agents exist, `--agent` is required.
 
 2. **Prompt Template**: The prompt from `prompt.update_po` is used, with placeholders replaced:
-   - `{prompt}` → the actual prompt text (from configuration)
-   - `{source}` → the PO file path, e.g., `po/zh_CN.po`
+   - `{{.prompt}}` → the actual prompt text (from configuration)
+   - `{{.source}}` → the PO file path, e.g., `po/zh_CN.po`
    - `{commit}` → commit ID (not used directly by `update-po`)
 
 3. **Command Execution**: The agent command from `agents.<agent-name>.cmd` is executed with placeholders replaced. The command runs in the repository root directory.
@@ -347,8 +347,8 @@ agent-test:
 5. **Get prompt** from `cfg.Prompt.UpdatePo`:
    - If empty, return an error instructing the user to set `prompt.update_po`.
 6. **Build agent command**:
-   - Use `BuildAgentCommand(selectedAgent, prompt, source, "")`, where `source` is the PO file path (e.g., `po/zh_CN.po`).
-   - Placeholders `{prompt}`, `{source}`, and `{commit}` are replaced before execution.
+   - Use `BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": source})`, where `source` is the PO file path (e.g., `po/zh_CN.po`).
+   - Placeholders `{{.prompt}}`, `{{.source}}`, and `{{.commit}}` are replaced before execution.
 7. **Execute agent command**:
    - Use `ExecuteAgentCommand(agentCmd, repository.WorkDir())`.
    - Capture stdout and stderr for debugging and error reporting.
@@ -429,7 +429,7 @@ agent-test:
 **Existing Code Reuse**:
 - `util/agent.go`:
   - `SelectAgent()` – Agent selection.
-  - `BuildAgentCommand()` – Placeholder replacement for `{prompt}`, `{source}`, `{commit}`.
+  - `BuildAgentCommand()` – Placeholder replacement for `{{.prompt}}`, `{{.source}}`, `{{.commit}}`.
   - `ExecuteAgentCommand()` – Command execution and logging.
 - `util/agent-run.go`:
   - `RunAgentUpdatePot()` and `ValidatePotEntryCount()` as patterns for implementing PO variants.

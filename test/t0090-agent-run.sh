@@ -61,57 +61,43 @@ test_expect_success "setup" '
 	# Create mock agent
 	create_mock_agent "$PWD/mock-agent" &&
 	# Create config file
-	cat >workdir/git-po-helper.yaml <<-\EOF &&
+	cat >workdir/.git-po-helper.yaml <<-\EOF &&
 prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 	# Replace $PWD with actual path in config
-	sed -i.bak "s|\$PWD|$PWD|g" workdir/git-po-helper.yaml &&
-	rm -f workdir/git-po-helper.yaml.bak
+	sed -i.bak "s|\$PWD|$PWD|g" workdir/.git-po-helper.yaml &&
+	rm -f workdir/.git-po-helper.yaml.bak
 '
 
 test_expect_success "agent-run update-pot: no config file" '
-	rm -f workdir/git-po-helper.yaml &&
+	rm -f workdir/.git-po-helper.yaml &&
 	# Without config file, default config is used (with default test agent)
 	test_must_fail git -C workdir $HELPER agent-run update-pot >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	# Should complete successfully with default agent
-	grep "multiple agents configured .*, please specify --agent" actual
-'
-
-test_expect_success "agent-run update-pot: empty agents uses default" '
-	cat >workdir/git-po-helper.yaml <<-\EOF &&
-prompt:
-  update_pot: "update po/git.pot"
-agents: {}
-EOF
-	# Empty agents: {} is automatically filled with default test agent
-	git -C workdir $HELPER agent-run update-pot >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
-
-	# Should complete successfully with default agent
-	grep "completed successfully" actual
+	grep "multiple agents configured .*, --agent flag required" actual
 '
 
 test_expect_success "agent-run update-pot: multiple agents without --agent" '
-	cat >workdir/git-po-helper.yaml <<-\EOF &&
+	cat >workdir/.git-po-helper.yaml <<-\EOF &&
 prompt:
   update_pot: "update po/git.pot"
 agents:
   agent1:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
   agent2:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
-	sed -i.bak "s|\$PWD|$PWD|g" workdir/git-po-helper.yaml &&
-	rm -f workdir/git-po-helper.yaml.bak &&
+	sed -i.bak "s|\$PWD|$PWD|g" workdir/.git-po-helper.yaml &&
+	rm -f workdir/.git-po-helper.yaml.bak &&
 
 	test_must_fail git -C workdir $HELPER agent-run update-pot >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
@@ -121,16 +107,16 @@ EOF
 '
 
 test_expect_success "agent-run update-pot: agent not found" '
-	cat >workdir/git-po-helper.yaml <<-\EOF &&
+	cat >workdir/.git-po-helper.yaml <<-\EOF &&
 prompt:
   update_pot: "update po/git.pot"
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
-	sed -i.bak "s|\$PWD|$PWD|g" workdir/git-po-helper.yaml &&
-	rm -f workdir/git-po-helper.yaml.bak &&
+	sed -i.bak "s|\$PWD|$PWD|g" workdir/.git-po-helper.yaml &&
+	rm -f workdir/.git-po-helper.yaml.bak &&
 
 	test_must_fail git -C workdir $HELPER agent-run update-pot --agent nonexistent >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
@@ -140,16 +126,16 @@ EOF
 '
 
 test_expect_success "agent-run update-pot: success with single agent" '
-	cat >workdir/git-po-helper.yaml <<\EOF &&
+	cat >workdir/.git-po-helper.yaml <<\EOF &&
 prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
-	sed -i.bak "s|\$PWD|$PWD|g" workdir/git-po-helper.yaml &&
-	rm -f workdir/git-po-helper.yaml.bak &&
+	sed -i.bak "s|\$PWD|$PWD|g" workdir/.git-po-helper.yaml &&
+	rm -f workdir/.git-po-helper.yaml.bak &&
 
 	# Save original pot file size
 	ORIG_SIZE=$(wc -l < workdir/po/git.pot) &&
@@ -165,19 +151,19 @@ EOF
 '
 
 test_expect_success "agent-run update-pot: success with --agent flag" '
-	cat >workdir/git-po-helper.yaml <<-\EOF &&
+	cat >workdir/.git-po-helper.yaml <<-\EOF &&
 prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
   mock2:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
-	sed -i.bak "s|\$PWD|$PWD|g" workdir/git-po-helper.yaml &&
-	rm -f workdir/git-po-helper.yaml.bak &&
+	sed -i.bak "s|\$PWD|$PWD|g" workdir/.git-po-helper.yaml &&
+	rm -f workdir/.git-po-helper.yaml.bak &&
 
 	# Remove previous mock agent comment
 	sed -i.bak "/Updated by mock agent/d" workdir/po/git.pot &&
@@ -198,14 +184,14 @@ test_expect_success "agent-run update-pot: with pre-validation" '
 	ENTRY_COUNT=$(grep -c "^msgid " workdir/po/git.pot | head -1) &&
 	ENTRY_COUNT=$((ENTRY_COUNT - 1)) &&
 
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agent-test:
   pot_entries_before_update: $ENTRY_COUNT
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -229,7 +215,7 @@ exit 1
 EOF
 	chmod +x "$PWD/failing-agent" &&
 
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agents:
@@ -248,13 +234,13 @@ EOF
 test_expect_success "agent-run update-po: success using default_lang_code" '
 	test -f workdir/po/zh_CN.po &&
 
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 default_lang_code: "zh_CN"
 prompt:
-  update_po: "update {source} according to po/AGENTS.md"
+  update_po: "update {{.source}} according to po/AGENTS.md"
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}", "{source}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}", "{{.source}}"]
     kind: echo
 EOF
 
@@ -273,12 +259,12 @@ EOF
 '
 
 test_expect_success "agent-run update-pot: with --prompt override" '
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 prompt:
   update_pot: "config prompt for update pot"
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -299,13 +285,13 @@ EOF
 test_expect_success "agent-run update-po: with --prompt override" '
 	test -f workdir/po/zh_CN.po &&
 
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 default_lang_code: "zh_CN"
 prompt:
   update_po: "config prompt for update po"
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}", "{source}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}", "{{.source}}"]
     kind: echo
 EOF
 

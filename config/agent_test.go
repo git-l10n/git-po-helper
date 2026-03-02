@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/git-l10n/git-po-helper/repository"
 )
 
 func TestLoadConfigFromFile_MissingFile(t *testing.T) {
@@ -27,7 +29,7 @@ func TestLoadConfigFromFile_MissingFile(t *testing.T) {
 	}
 }
 
-func TestLoadAgentConfig_ValidFile(t *testing.T) {
+func TestLoadConfigFromFile_ValidFile(t *testing.T) {
 	// Create a temporary directory
 	tmpDir, err := os.MkdirTemp("", "git-po-helper-test-*")
 	if err != nil {
@@ -41,12 +43,12 @@ func TestLoadAgentConfig_ValidFile(t *testing.T) {
 	validYAML := `default_lang_code: "zh_CN"
 prompt:
   update_pot: "update po/git.pot according to po/README.md"
-  update_po: "update {source} according to po/README.md"
+  update_po: "update {{.source}} according to po/README.md"
 agents:
   claude:
-    cmd: ["claude", "-p", "{prompt}"]
+    cmd: ["claude", "-p", "{{.prompt}}"]
   gemini:
-    cmd: ["gemini", "--prompt", "{prompt}"]
+    cmd: ["gemini", "--prompt", "{{.prompt}}"]
 `
 
 	if err := os.WriteFile(configPath, []byte(validYAML), 0644); err != nil {
@@ -74,7 +76,7 @@ agents:
 	}
 }
 
-func TestLoadAgentConfig_InvalidYAML(t *testing.T) {
+func TestLoadConfigFromFile_InvalidYAML(t *testing.T) {
 	// Create a temporary directory
 	tmpDir, err := os.MkdirTemp("", "git-po-helper-test-*")
 	if err != nil {
@@ -90,7 +92,7 @@ prompt:
   update_pot: "update po/git.pot according to po/README.md"
 agents:
   claude:
-    cmd: ["claude", "-p", "{prompt}"]
+    cmd: ["claude", "-p", "{{.prompt}}"]
     invalid: [unclosed bracket
 `
 
@@ -107,124 +109,6 @@ agents:
 	}
 }
 
-func TestAgentConfig_Validate(t *testing.T) {
-	tests := []struct {
-		name    string
-		config  *AgentConfig
-		wantErr bool
-		errMsg  string
-	}{
-		{
-			name: "valid config",
-			config: &AgentConfig{
-				Prompt: PromptConfig{
-					UpdatePot: "update pot",
-				},
-				Agents: map[string]Agent{
-					"claude": {
-						Cmd:  []string{"claude", "-p", "{prompt}"},
-						Kind: AgentKindClaude,
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "no agents",
-			config: &AgentConfig{
-				Prompt: PromptConfig{
-					UpdatePot: "update pot",
-				},
-				Agents: map[string]Agent{},
-			},
-			wantErr: true,
-			errMsg:  "at least one agent must be configured",
-		},
-		{
-			name: "empty agent command",
-			config: &AgentConfig{
-				Prompt: PromptConfig{
-					UpdatePot: "update pot",
-				},
-				Agents: map[string]Agent{
-					"claude": {
-						Cmd:  []string{},
-						Kind: AgentKindClaude,
-					},
-				},
-			},
-			wantErr: true,
-			errMsg:  "agent 'claude' has empty command",
-		},
-		{
-			name: "missing update_pot prompt",
-			config: &AgentConfig{
-				Prompt: PromptConfig{
-					UpdatePot: "",
-				},
-				Agents: map[string]Agent{
-					"claude": {
-						Cmd:  []string{"claude", "-p", "{prompt}"},
-						Kind: AgentKindClaude,
-					},
-				},
-			},
-			wantErr: true,
-			errMsg:  "prompt.update_pot is required",
-		},
-		{
-			name: "unknown agent kind",
-			config: &AgentConfig{
-				Prompt: PromptConfig{
-					UpdatePot: "update pot",
-				},
-				Agents: map[string]Agent{
-					"custom": {
-						Cmd:  []string{"custom", "{prompt}"},
-						Kind: "unknown",
-					},
-				},
-			},
-			wantErr: true,
-			errMsg:  "agent 'custom' has unknown kind 'unknown' (must be one of: claude, gemini, codex, opencode, echo, qwen)",
-		},
-		{
-			name: "empty agent kind",
-			config: &AgentConfig{
-				Prompt: PromptConfig{
-					UpdatePot: "update pot",
-				},
-				Agents: map[string]Agent{
-					"custom": {
-						Cmd:  []string{"custom", "{prompt}"},
-						Kind: "",
-					},
-				},
-			},
-			wantErr: true,
-			errMsg:  "agent 'custom' has empty kind (must be one of: claude, gemini, codex, opencode, echo, qwen)",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.config.Validate()
-			if tt.wantErr {
-				if err == nil {
-					t.Fatalf("Validate() expected error, got nil")
-				}
-				if tt.errMsg != "" && err.Error() != tt.errMsg {
-					t.Fatalf("Validate() expected error message '%s', got '%s'", tt.errMsg, err.Error())
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("Validate() unexpected error: %v", err)
-				}
-			}
-		})
-	}
-}
-
 func TestMergeConfigs(t *testing.T) {
 	baseConfig := &AgentConfig{
 		DefaultLangCode: "en_US",
@@ -234,11 +118,11 @@ func TestMergeConfigs(t *testing.T) {
 		},
 		Agents: map[string]Agent{
 			"claude": {
-				Cmd:  []string{"claude", "-p", "{prompt}"},
+				Cmd:  []string{"claude", "-p", "{{.prompt}}"},
 				Kind: AgentKindClaude,
 			},
 			"gemini": {
-				Cmd:  []string{"gemini", "--prompt", "{prompt}"},
+				Cmd:  []string{"gemini", "--prompt", "{{.prompt}}"},
 				Kind: AgentKindGemini,
 			},
 		},
@@ -251,13 +135,13 @@ func TestMergeConfigs(t *testing.T) {
 		},
 		Agents: map[string]Agent{
 			"claude": {
-				Cmd:  []string{"claude", "--new-flag", "{prompt}"},
+				Cmd:  []string{"claude", "--new-flag", "{{.prompt}}"},
 				Kind: AgentKindClaude,
 			},
 		},
 	}
 
-	merged := mergeConfigs(baseConfig, repoConfig)
+	merged := mergeConfigs(baseConfig, repoConfig, true)
 
 	// Check that repo config overrides base config
 	if merged.DefaultLangCode != "zh_CN" {
@@ -306,20 +190,20 @@ func TestGetDefaultConfig(t *testing.T) {
 	if config.Prompt.UpdatePo == "" {
 		t.Fatal("UpdatePo should not be empty")
 	}
-	if !strings.Contains(config.Prompt.UpdatePo, "{source}") {
-		t.Fatalf("UpdatePo should contain '{source}', got '%s'", config.Prompt.UpdatePo)
+	if !strings.Contains(config.Prompt.UpdatePo, "{{.source}}") {
+		t.Fatalf("UpdatePo should contain '{{.source}}', got '%s'", config.Prompt.UpdatePo)
 	}
 	if config.Prompt.Translate == "" {
 		t.Fatal("Translate should not be empty")
 	}
-	if !strings.Contains(config.Prompt.Translate, "{source}") {
-		t.Fatalf("Translate should contain '{source}', got '%s'", config.Prompt.Translate)
+	if !strings.Contains(config.Prompt.Translate, "{{.source}}") {
+		t.Fatalf("Translate should contain '{{.source}}', got '%s'", config.Prompt.Translate)
 	}
 	if config.Prompt.Review == "" {
 		t.Fatal("Review should not be empty")
 	}
-	if !strings.Contains(config.Prompt.Review, "{source}") {
-		t.Fatalf("Review should contain '{source}', got '%s'", config.Prompt.Review)
+	if !strings.Contains(config.Prompt.Review, "{{.source}}") {
+		t.Fatalf("Review should contain '{{.source}}', got '%s'", config.Prompt.Review)
 	}
 	if !strings.Contains(config.Prompt.Review, "JSON") {
 		t.Fatalf("Review should contain 'JSON' (extended prompt), got '%s'", config.Prompt.Review)
@@ -347,8 +231,8 @@ func TestGetDefaultConfig(t *testing.T) {
 	if testAgent.Cmd[0] != "echo" {
 		t.Fatalf("expected echo agent command 'echo', got '%s'", testAgent.Cmd[0])
 	}
-	if testAgent.Cmd[1] != "{prompt}" {
-		t.Fatalf("expected echo agent command '{prompt}', got '%s'", testAgent.Cmd[1])
+	if testAgent.Cmd[1] != "{{.prompt}}" {
+		t.Fatalf("expected echo agent command '{{.prompt}}', got '%s'", testAgent.Cmd[1])
 	}
 }
 
@@ -431,234 +315,240 @@ func TestGetSystemLocale(t *testing.T) {
 	}
 }
 
-func TestApplyDefaults(t *testing.T) {
-	// Test with empty config
-	config := &AgentConfig{
-		Agents: make(map[string]Agent),
-	}
-
-	applyDefaults(config)
-
-	// Check that defaults are applied
-	if config.DefaultLangCode == "" {
-		t.Fatal("DefaultLangCode should be set after applyDefaults")
-	}
-	if config.Prompt.UpdatePot == "" {
-		t.Fatal("Prompt.UpdatePot should be set after applyDefaults")
-	}
-	if config.AgentTest.Runs == nil {
-		t.Fatal("AgentTest.Runs should be set after applyDefaults")
-	}
-	if *config.AgentTest.Runs != 1 {
-		t.Fatalf("expected Runs default 1, got %d", *config.AgentTest.Runs)
-	}
-	if len(config.Agents) == 0 {
-		t.Fatal("Agents should have default 'test' agent after applyDefaults")
-	}
-	if _, ok := config.Agents["test"]; !ok {
-		t.Fatal("expected 'test' agent after applyDefaults")
-	}
-
-	// Test with partial config (should not override existing values)
-	config2 := &AgentConfig{
-		DefaultLangCode: "fr_FR",
-		Prompt: PromptConfig{
-			UpdatePot: "custom update pot",
-		},
-		Agents: map[string]Agent{
-			"custom": {
-				Cmd:  []string{"custom", "cmd"},
-				Kind: AgentKindEcho,
-			},
-		},
-	}
-
-	applyDefaults(config2)
-
-	// Check that existing values are preserved
-	if config2.DefaultLangCode != "fr_FR" {
-		t.Fatalf("expected DefaultLangCode 'fr_FR' to be preserved, got '%s'", config2.DefaultLangCode)
-	}
-	if config2.Prompt.UpdatePot != "custom update pot" {
-		t.Fatalf("expected UpdatePot 'custom update pot' to be preserved, got '%s'", config2.Prompt.UpdatePot)
-	}
-	if len(config2.Agents) != 1 {
-		t.Fatalf("expected 1 agent to be preserved, got %d", len(config2.Agents))
-	}
-	// Check that missing prompt fields are filled
-	if config2.Prompt.UpdatePo == "" {
-		t.Fatal("Prompt.UpdatePo should be set by applyDefaults")
-	}
-}
-
-func TestLoadAgentConfig_ConfigOverridesDefaults(t *testing.T) {
-	// Create a temporary directory
-	tmpDir, err := os.MkdirTemp("", "git-po-helper-test-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// Create a config file with custom values
-	configPath := filepath.Join(tmpDir, "git-po-helper.yaml")
-	customYAML := `default_lang_code: "fr_FR"
-prompt:
-  update_pot: "custom update pot prompt"
-agent-test:
-  runs: 10
-agents:
-  custom-agent:
-    kind: echo
-    cmd: ["custom", "agent", "{prompt}"]
-`
-
-	if err := os.WriteFile(configPath, []byte(customYAML), 0644); err != nil {
-		t.Fatalf("failed to write config file: %v", err)
-	}
-
-	// Mock repository.WorkDir() to return tmpDir
-	// We need to test LoadAgentConfig, but it uses repository.WorkDir()
-	// For now, let's test the merge and applyDefaults logic directly
-
-	// Test that config values override defaults
-	config, err := loadConfigFromFile(configPath)
-	if err != nil {
-		t.Fatalf("loadConfigFromFile should succeed, got error: %v", err)
-	}
-
-	// Apply defaults
-	applyDefaults(config)
-
-	// Check that config values are preserved (not overridden by defaults)
-	if config.DefaultLangCode != "fr_FR" {
-		t.Fatalf("expected DefaultLangCode 'fr_FR' from config, got '%s'", config.DefaultLangCode)
-	}
-	if config.Prompt.UpdatePot != "custom update pot prompt" {
-		t.Fatalf("expected UpdatePot 'custom update pot prompt' from config, got '%s'", config.Prompt.UpdatePot)
-	}
-	if config.AgentTest.Runs == nil || *config.AgentTest.Runs != 10 {
-		t.Fatalf("expected Runs 10 from config, got %v", config.AgentTest.Runs)
-	}
-
-	// Check that config agents are used (not default test agent)
-	if len(config.Agents) != 1 {
-		t.Fatalf("expected 1 agent from config, got %d", len(config.Agents))
-	}
-	if _, ok := config.Agents["test"]; ok {
-		t.Fatal("expected default 'test' agent to be removed when config has agents")
-	}
-	if _, ok := config.Agents["custom-agent"]; !ok {
-		t.Fatal("expected 'custom-agent' from config")
-	}
-	if config.Agents["custom-agent"].Cmd[0] != "custom" {
-		t.Fatalf("expected custom-agent command, got %v", config.Agents["custom-agent"].Cmd)
-	}
-
-	// Check that missing prompt fields are filled with defaults
-	if config.Prompt.UpdatePo == "" {
-		t.Fatal("Prompt.UpdatePo should be filled with default")
-	}
-	if config.Prompt.UpdatePo != "Update file \"{source}\" according to @po/AGENTS.md." {
-		t.Fatalf("expected UpdatePo default, got '%s'", config.Prompt.UpdatePo)
-	}
-}
-
 func TestApplyDefaults_ConfigAgentsOverrideDefaultTest(t *testing.T) {
-	// Test that when config has agents, default test agent is not added
+	// When config has agents, mergeConfigs(..., false) keeps config's agents (does not replace with default)
 	config := &AgentConfig{
 		Agents: map[string]Agent{
 			"claude": {
-				Cmd:  []string{"claude", "-p", "{prompt}"},
+				Cmd:  []string{"claude", "-p", "{{.prompt}}"},
 				Kind: AgentKindClaude,
 			},
 		},
 	}
+	defaultCfg := getDefaultConfig()
+	merged := mergeConfigs(config, defaultCfg, false)
 
-	applyDefaults(config)
-
-	// Check that only config agents are present
-	if len(config.Agents) != 1 {
-		t.Fatalf("expected 1 agent from config, got %d", len(config.Agents))
+	if len(merged.Agents) != 1 {
+		t.Fatalf("expected 1 agent from config, got %d", len(merged.Agents))
 	}
-	if _, ok := config.Agents["test"]; ok {
+	if _, ok := merged.Agents["test"]; ok {
 		t.Fatal("expected default 'test' agent to NOT be added when config has agents")
 	}
-	if _, ok := config.Agents["claude"]; !ok {
+	if _, ok := merged.Agents["claude"]; !ok {
 		t.Fatal("expected 'claude' agent from config")
 	}
 
-	// Test that when config has empty agents, default test agent is added
+	// When config has no agents, mergeConfigs(..., false) does not touch Agents (stays empty);
+	// LoadAgentConfig copies default's Agents after all merges when merged.Agents is empty.
 	config2 := &AgentConfig{
 		Agents: make(map[string]Agent),
 	}
+	merged2 := mergeConfigs(config2, getDefaultConfig(), false)
 
-	applyDefaults(config2)
-
-	// Check that default test agent is added
-	if len(config2.Agents) != 1 {
-		t.Fatalf("expected 1 default agent, got %d", len(config2.Agents))
-	}
-	if _, ok := config2.Agents["test"]; !ok {
-		t.Fatal("expected default 'test' agent to be added when config has no agents")
+	if len(merged2.Agents) != 0 {
+		t.Fatalf("mergeConfigs(..., false) must not merge Agents; got %d agents", len(merged2.Agents))
 	}
 }
 
-func TestLoadAgentConfig_PartialConfigWithDefaults(t *testing.T) {
-	// Create a temporary directory
+func TestMergeConfigs_NilBase(t *testing.T) {
+	defaultCfg := getDefaultConfig()
+
+	// mergeAgents true: result has overlay's values and overlay's agents
+	merged := mergeConfigs(nil, defaultCfg, true)
+	if merged.DefaultLangCode != defaultCfg.DefaultLangCode {
+		t.Fatalf("expected DefaultLangCode from overlay, got %q", merged.DefaultLangCode)
+	}
+	if merged.Prompt.UpdatePot != defaultCfg.Prompt.UpdatePot {
+		t.Fatalf("expected UpdatePot from overlay, got %q", merged.Prompt.UpdatePot)
+	}
+	if len(merged.Agents) != len(defaultCfg.Agents) {
+		t.Fatalf("expected %d agents from overlay, got %d", len(defaultCfg.Agents), len(merged.Agents))
+	}
+
+	// mergeAgents false: result has overlay's non-Agent fields, Agents not merged (stay empty)
+	merged2 := mergeConfigs(nil, defaultCfg, false)
+	if merged2.DefaultLangCode != defaultCfg.DefaultLangCode {
+		t.Fatalf("expected DefaultLangCode from overlay, got %q", merged2.DefaultLangCode)
+	}
+	if len(merged2.Agents) != 0 {
+		t.Fatalf("mergeConfigs(nil, overlay, false) must not set Agents; got %d", len(merged2.Agents))
+	}
+}
+
+func TestMergeConfigs_NilOverlay(t *testing.T) {
+	base := &AgentConfig{
+		DefaultLangCode: "fr_FR",
+		Prompt:          PromptConfig{UpdatePot: "base pot"},
+		Agents: map[string]Agent{
+			"x": {Cmd: []string{"x"}, Kind: AgentKindEcho},
+		},
+	}
+
+	merged := mergeConfigs(base, nil, true)
+	if merged.DefaultLangCode != "fr_FR" {
+		t.Fatalf("expected base DefaultLangCode fr_FR, got %q", merged.DefaultLangCode)
+	}
+	if merged.Prompt.UpdatePot != "base pot" {
+		t.Fatalf("expected base UpdatePot, got %q", merged.Prompt.UpdatePot)
+	}
+	if len(merged.Agents) != 1 || merged.Agents["x"].Cmd[0] != "x" {
+		t.Fatalf("expected base agent x, got %v", merged.Agents)
+	}
+
+	merged2 := mergeConfigs(base, nil, false)
+	if merged2.DefaultLangCode != "fr_FR" || len(merged2.Agents) != 1 {
+		t.Fatalf("expected base unchanged, got DefaultLangCode=%q agents=%d", merged2.DefaultLangCode, len(merged2.Agents))
+	}
+}
+
+func TestMergeConfigs_DefaultMergeOverwritesNonAgents(t *testing.T) {
+	// When mergeAgents is false, overlay still overwrites non-Agent fields when overlay has value; base's Agents are kept.
+	base := &AgentConfig{
+		DefaultLangCode: "fr_FR",
+		Prompt:          PromptConfig{UpdatePot: "base pot", UpdatePo: "base po"},
+		Agents: map[string]Agent{
+			"custom": {Cmd: []string{"custom", "{{.prompt}}"}, Kind: AgentKindEcho},
+		},
+	}
+	defaultCfg := getDefaultConfig()
+
+	merged := mergeConfigs(base, defaultCfg, false)
+
+	// Non-Agent fields come from overlay (default) when overlay has value
+	if merged.DefaultLangCode != defaultCfg.DefaultLangCode {
+		t.Fatalf("expected default DefaultLangCode, got %q", merged.DefaultLangCode)
+	}
+	if merged.Prompt.UpdatePot != defaultCfg.Prompt.UpdatePot {
+		t.Fatalf("expected default UpdatePot, got %q", merged.Prompt.UpdatePot)
+	}
+	// Agents from base only (overlay Agents not merged when mergeAgents false)
+	if len(merged.Agents) != 1 {
+		t.Fatalf("expected 1 agent from base, got %d", len(merged.Agents))
+	}
+	if _, ok := merged.Agents["custom"]; !ok {
+		t.Fatal("expected base agent 'custom' preserved")
+	}
+}
+
+func TestMergeConfigs_AgentTestFields(t *testing.T) {
+	runs := 3
+	potBefore := 10
+	base := &AgentConfig{
+		AgentTest: AgentTestConfig{Runs: func() *int { x := 1; return &x }()},
+	}
+	overlay := &AgentConfig{
+		AgentTest: AgentTestConfig{
+			Runs:                   &runs,
+			PotEntriesBeforeUpdate: &potBefore,
+		},
+	}
+
+	merged := mergeConfigs(base, overlay, true)
+	if merged.AgentTest.Runs == nil || *merged.AgentTest.Runs != 3 {
+		t.Fatalf("expected Runs 3, got %v", merged.AgentTest.Runs)
+	}
+	if merged.AgentTest.PotEntriesBeforeUpdate == nil || *merged.AgentTest.PotEntriesBeforeUpdate != 10 {
+		t.Fatalf("expected PotEntriesBeforeUpdate 10, got %v", merged.AgentTest.PotEntriesBeforeUpdate)
+	}
+
+	// mergeAgents false: overlay still overwrites *int when overlay has value
+	merged2 := mergeConfigs(base, overlay, false)
+	if merged2.AgentTest.Runs == nil || *merged2.AgentTest.Runs != 3 {
+		t.Fatalf("expected Runs 3 with mergeAgents false, got %v", merged2.AgentTest.Runs)
+	}
+	if merged2.AgentTest.PotEntriesBeforeUpdate == nil || *merged2.AgentTest.PotEntriesBeforeUpdate != 10 {
+		t.Fatalf("expected PotEntriesBeforeUpdate 10, got %v", merged2.AgentTest.PotEntriesBeforeUpdate)
+	}
+}
+
+func TestLoadAgentConfig_CustomPath_ValidConfig(t *testing.T) {
+	repository.OpenRepository("")
 	tmpDir, err := os.MkdirTemp("", "git-po-helper-test-*")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Create a partial config file (only agents, missing prompts)
-	configPath := filepath.Join(tmpDir, "git-po-helper.yaml")
-	partialYAML := `agents:
+	configPath := filepath.Join(tmpDir, "custom.yaml")
+	yaml := `default_lang_code: "de_DE"
+prompt:
+  update_pot: "custom update pot"
+agents:
   my-agent:
-    cmd: ["my-agent", "{prompt}"]
+    cmd: ["my-agent", "{{.prompt}}"]
+    kind: echo
 `
-
-	if err := os.WriteFile(configPath, []byte(partialYAML), 0644); err != nil {
-		t.Fatalf("failed to write config file: %v", err)
+	if err := os.WriteFile(configPath, []byte(yaml), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
 	}
 
-	config, err := loadConfigFromFile(configPath)
+	cfg, err := LoadAgentConfig(configPath)
 	if err != nil {
-		t.Fatalf("loadConfigFromFile should succeed, got error: %v", err)
+		t.Fatalf("LoadAgentConfig failed: %v", err)
+	}
+	if cfg == nil {
+		t.Fatal("LoadAgentConfig returned nil config")
+	}
+	// Custom config overrides: default_lang_code and prompt from custom file (merge order: default then user/repo/custom)
+	if cfg.DefaultLangCode != "de_DE" {
+		t.Fatalf("expected default_lang_code de_DE, got %q", cfg.DefaultLangCode)
+	}
+	if cfg.Prompt.UpdatePot != "custom update pot" {
+		t.Fatalf("expected custom UpdatePot, got %q", cfg.Prompt.UpdatePot)
+	}
+	// Custom defines my-agent; it is merged with user/repo agents by key (custom has highest priority)
+	if _, ok := cfg.Agents["my-agent"]; !ok {
+		t.Fatal("expected my-agent from custom config")
+	}
+	if cfg.Agents["my-agent"].Cmd[0] != "my-agent" {
+		t.Fatalf("expected my-agent command, got %v", cfg.Agents["my-agent"].Cmd)
+	}
+}
+
+func TestLoadAgentConfig_CustomPath_PartialConfigGetsDefaultAgents(t *testing.T) {
+	repository.OpenRepository("")
+	tmpDir, err := os.MkdirTemp("", "git-po-helper-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Partial config: only default_lang_code, no agents. After merge, Agents is empty so LoadAgentConfig copies default's Agents.
+	configPath := filepath.Join(tmpDir, "partial.yaml")
+	yaml := `default_lang_code: "it_IT"
+`
+	if err := os.WriteFile(configPath, []byte(yaml), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
 	}
 
-	// Apply defaults
-	applyDefaults(config)
+	cfg, err := LoadAgentConfig(configPath)
+	if err != nil {
+		t.Fatalf("LoadAgentConfig failed: %v", err)
+	}
+	if cfg == nil {
+		t.Fatal("LoadAgentConfig returned nil config")
+	}
+	if cfg.DefaultLangCode != "it_IT" {
+		t.Fatalf("expected default_lang_code it_IT from custom file, got %q", cfg.DefaultLangCode)
+	}
+	// Partial config has no agents; LoadAgentConfig copies default's Agents when merged.Agents is empty.
+	// (If user/repo configs added agents, we'd have those; we only require at least one agent here.)
+	if len(cfg.Agents) < 1 {
+		t.Fatalf("expected at least one agent (default copy or from repo), got %d", len(cfg.Agents))
+	}
+}
 
-	// Check that config agents are preserved
-	if len(config.Agents) != 1 {
-		t.Fatalf("expected 1 agent from config, got %d", len(config.Agents))
+func TestLoadAgentConfig_CustomPath_MissingFile(t *testing.T) {
+	repository.OpenRepository("")
+	tmpDir, err := os.MkdirTemp("", "git-po-helper-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	if _, ok := config.Agents["test"]; ok {
-		t.Fatal("expected default 'test' agent to NOT be added when config has agents")
-	}
-	if _, ok := config.Agents["my-agent"]; !ok {
-		t.Fatal("expected 'my-agent' from config")
-	}
+	defer os.RemoveAll(tmpDir)
 
-	// Check that missing prompts are filled with defaults
-	if config.Prompt.UpdatePot == "" {
-		t.Fatal("Prompt.UpdatePot should be filled with default")
-	}
-	if config.Prompt.UpdatePot != "Update file \"po/git.pot\" according to @po/AGENTS.md." {
-		t.Fatalf("expected UpdatePot default, got '%s'", config.Prompt.UpdatePot)
-	}
-
-	// Check that default_lang_code is set
-	if config.DefaultLangCode == "" {
-		t.Fatal("DefaultLangCode should be set by applyDefaults")
-	}
-
-	// Check that runs is set
-	if config.AgentTest.Runs == nil {
-		t.Fatal("AgentTest.Runs should be set by applyDefaults")
-	}
-	if *config.AgentTest.Runs != 1 {
-		t.Fatalf("expected Runs default 1, got %d", *config.AgentTest.Runs)
+	configPath := filepath.Join(tmpDir, "nonexistent.yaml")
+	_, err = LoadAgentConfig(configPath)
+	if err == nil {
+		t.Fatal("LoadAgentConfig expected error for missing custom file")
 	}
 }

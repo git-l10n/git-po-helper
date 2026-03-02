@@ -63,12 +63,12 @@ test_expect_success "setup" '
 '
 
 test_expect_success "agent-test update-pot: basic test with default runs" '
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -89,12 +89,12 @@ EOF
 '
 
 test_expect_success "agent-test update-pot: with --runs flag" '
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -118,7 +118,7 @@ test_expect_success "agent-test update-pot: with validation" '
 	ENTRY_COUNT=$(grep -c "^msgid " workdir/po/git.pot | head -1) &&
 	ENTRY_COUNT=$((ENTRY_COUNT - 1)) &&
 
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agent-test:
@@ -127,7 +127,7 @@ agent-test:
   pot_entries_after_update: $ENTRY_COUNT
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -156,7 +156,7 @@ test_expect_success "agent-test update-pot: pre-validation failure" '
 	ENTRY_COUNT=$((ENTRY_COUNT - 1)) &&
 	WRONG_COUNT=$((ENTRY_COUNT + 100)) &&
 
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agent-test:
@@ -164,7 +164,7 @@ agent-test:
   pot_entries_before_update: $WRONG_COUNT
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -191,7 +191,7 @@ test_expect_success "agent-test update-pot: post-validation failure" '
 	ENTRY_COUNT=$((ENTRY_COUNT - 1)) &&
 	WRONG_COUNT=$((ENTRY_COUNT + 100)) &&
 
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agent-test:
@@ -199,7 +199,7 @@ agent-test:
   pot_entries_after_update: $WRONG_COUNT
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -226,7 +226,7 @@ exit 1
 EOF
 	chmod +x "$PWD/failing-agent" &&
 
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 prompt:
   update_pot: "update po/git.pot according to po/AGENTS.md"
 agent-test:
@@ -253,15 +253,15 @@ EOF
 test_expect_success "agent-test update-po: basic test with default runs" '
 	test -f workdir/po/zh_CN.po &&
 
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 default_lang_code: "zh_CN"
 prompt:
-  update_po: "update {source} according to po/AGENTS.md"
+  update_po: "update {{.source}} according to po/AGENTS.md"
 agent-test:
   runs: 2
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}", "{source}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}", "{{.source}}"]
     kind: echo
 EOF
 
@@ -282,14 +282,14 @@ EOF
 '
 
 test_expect_success "agent-test update-pot: with --prompt override" '
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 prompt:
   update_pot: "config prompt for update pot"
 agent-test:
   runs: 2
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
     kind: echo
 EOF
 
@@ -314,7 +314,7 @@ EOF
 test_expect_success "agent-test update-po: with --prompt override" '
 	test -f workdir/po/zh_CN.po &&
 
-	cat >workdir/git-po-helper.yaml <<-EOF &&
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
 default_lang_code: "zh_CN"
 prompt:
   update_po: "config prompt for update po"
@@ -322,7 +322,7 @@ agent-test:
   runs: 2
 agents:
   mock:
-    cmd: ["$PWD/mock-agent", "--prompt", "{prompt}", "{source}"]
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}", "{{.source}}"]
     kind: echo
 EOF
 

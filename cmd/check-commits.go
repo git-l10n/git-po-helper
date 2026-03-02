@@ -16,9 +16,8 @@ func (v *checkCommitsCommand) Command() *cobra.Command {
 	}
 
 	v.cmd = &cobra.Command{
-		Use:           "check-commits [<range>]",
-		Short:         "Check commits for l10n conventions",
-		SilenceErrors: true,
+		Use:   "check-commits [<range>]",
+		Short: "Check commits for l10n conventions",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return v.Execute(args)
 		},
@@ -45,7 +44,7 @@ func (v *checkCommitsCommand) Command() *cobra.Command {
 
 func (v checkCommitsCommand) Execute(args []string) error {
 	if !util.CmdCheckCommits(args...) {
-		return errExecute
+		return NewStandardError("check-commits command failed")
 	}
 	return nil
 }

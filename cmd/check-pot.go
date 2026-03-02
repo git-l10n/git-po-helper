@@ -1,10 +1,7 @@
 package cmd
 
 import (
-	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/git-l10n/git-po-helper/util"
-
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -21,9 +18,8 @@ func (v *checkPotCommand) Command() *cobra.Command {
 	}
 
 	v.cmd = &cobra.Command{
-		Use:           "check-pot <XX.po>...",
-		Short:         "Check syntax of XX.po file",
-		SilenceErrors: true,
+		Use:   "check-pot <XX.po>...",
+		Short: "Check syntax of XX.po file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return v.Execute(args)
 		},
@@ -41,9 +37,6 @@ func (v *checkPotCommand) Command() *cobra.Command {
 }
 
 func (v checkPotCommand) Execute(args []string) error {
-	// Execute in root of worktree.
-	repository.ChdirProjectRoot()
-
 	n := 0
 	if v.OptShowAllConfigs {
 		n++
@@ -52,8 +45,7 @@ func (v checkPotCommand) Execute(args []string) error {
 		n++
 	}
 	if n > 1 {
-		log.Errorf("cannot use --show-all-configs and --show-camel-case-configs at the same time")
-		return errExecute
+		return NewErrorWithUsage("cannot use --show-all-configs and --show-camel-case-configs at the same time")
 	}
 
 	if v.OptShowAllConfigs {
@@ -63,8 +55,8 @@ func (v checkPotCommand) Execute(args []string) error {
 		return util.ShowManpageConfigs(true)
 	}
 
-	if util.CheckCamelCaseConfigVariableInPotFile() != nil {
-		return errExecute
+	if err := util.CheckCamelCaseConfigVariableInPotFile(); err != nil {
+		return NewStandardErrorF("%v", err)
 	}
 	return nil
 }

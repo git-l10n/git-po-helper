@@ -31,16 +31,16 @@ The commands read from `git-po-helper.yaml` configuration file. Example:
 default_lang_code: "zh_CN"
 prompt:
   update_pot: "update po/git.pot according to po/README.md"
-  update_po: "update {source} according to po/README.md"
-  translate: "translate {source} according to po/README.md"
-  review: "review and improve {source} according to po/README.md"
+  update_po: "update {{.source}} according to po/README.md"
+  translate: "translate {{.source}} according to po/README.md"
+  review: "review and improve {{.source}} according to po/README.md"
 agent-test:
   runs: 5
 agents:
   claude:
-    cmd: ["claude", "-p", "{prompt}"]
+    cmd: ["claude", "-p", "{{.prompt}}"]
   gemini:
-    cmd: ["gemini", "--prompt", "{prompt}"]
+    cmd: ["gemini", "--prompt", "{{.prompt}}"]
 ```
 
 ### 1.3 Key Requirements
@@ -48,11 +48,11 @@ agents:
 1. **Agent Selection**: If only one agent is configured, `--agent` flag is optional. If multiple agents exist, `--agent` is required.
 
 2. **Review Mode Selection**:
-   - Use `prompt.review` with `{source}` placeholder (review mode determined by `--range`, `--commit`, or `--since`)
+   - Use `prompt.review` with `{{.source}}` placeholder (review mode determined by `--range`, `--commit`, or `--since`)
 
 3. **Prompt Template**: The prompt from configuration is used, with placeholders replaced:
-   - `{prompt}` → the actual prompt text
-   - `{source}` → po file path (e.g., "po/XX.po")
+   - `{{.prompt}}` → the actual prompt text
+   - `{{.source}}` → po file path (e.g., "po/XX.po")
    - `{commit}` → commit ID (HEAD, specific commit, or since commit)
 
 4. **JSON Output**: The `agent-run review` command generates a JSON file `po/XX-reviewed.json` containing:
@@ -177,10 +177,10 @@ type Agent struct {
    - If `--since <commit>` provided: Use since mode
    - Otherwise: Default to `--since HEAD` (local changes)
 5. Get prompt based on review mode:
-   - Use `prompt.review` with `{source}` placeholder
+   - Use `prompt.review` with `{{.source}}` placeholder
 6. Replace placeholders in agent command:
-   - `{prompt}` → prompt text
-   - `{source}` → PO file path (e.g., "po/XX.po")
+   - `{{.prompt}}` → prompt text
+   - `{{.source}}` → PO file path (e.g., "po/XX.po")
    - `{commit}` → commit ID (HEAD, specific commit, or since commit)
 7. Execute agent command
 8. Parse agent output to extract JSON result:

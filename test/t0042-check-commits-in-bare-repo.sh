@@ -4,7 +4,8 @@ test_description="test git-po-helper check-commits in bare repo"
 
 . ./lib/test-lib.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=no --report-typos=warn"
+HELPER="po-helper --no-special-gettext-versions --report-typos=warn"
+POT_NO="--pot-file=no"
 
 test_expect_success "setup" '
 	git clone --mirror "$PO_HELPER_TEST_REPOSITORY" repo.git &&
@@ -72,7 +73,7 @@ level=info msg="checking commits: 1 passed."
 EOF
 
 test_expect_success "check-commits show typos" '
-	git -C repo.git $HELPER check-commits v1..v2 >out 2>&1 &&
+	git -C repo.git $HELPER check-commits $POT_NO v1..v2 >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -92,13 +93,12 @@ level=error msg="[po/zh_CN.po@rev]"
 ------------------------------------------------------------------------------
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 level=info msg="checking commits: 0 passed, 1 failed."
-
-ERROR: fail to execute "git-po-helper check-commits"
+ERROR: check-commits command failed
 EOF
 
 test_expect_success "check-commits show typos (--typos=error)" '
 	test_must_fail git -C repo.git $HELPER \
-		check-commits --report-typos=error v1..v2 >out 2>&1 &&
+		check-commits $POT_NO --report-typos=error v1..v2 >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -135,12 +135,11 @@ level=warning msg="[po/zh_CN.po@rev]"
 ------------------------------------------------------------------------------
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 level=info msg="checking commits: 1 passed, 1 failed."
-
-ERROR: fail to execute "git-po-helper check-commits"
+ERROR: check-commits command failed
 EOF
 
 test_expect_success "check-commits show typos and TEAMS file" '
-	test_must_fail git -C repo.git $HELPER check-commits v1..v3 >out 2>&1 &&
+	test_must_fail git -C repo.git $HELPER check-commits $POT_NO v1..v3 >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

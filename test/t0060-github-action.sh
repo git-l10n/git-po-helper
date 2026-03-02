@@ -4,7 +4,9 @@ test_description="check output for --github-action-event"
 
 . ./lib/test-lib.sh
 
-HELPER="po-helper --github-action-event=pull_request_target --pot-file=po/git.pot"
+HELPER="po-helper --github-action-event=pull_request_target"
+POT_FILE="--pot-file=po/git.pot"
+POT_NO="--pot-file=no"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -33,8 +35,7 @@ ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
 ------------------------------------------------------------------------------
 ERROR [po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1
 ERROR [po/zh_CN.po]    fail to generate mofile
-
-ERROR: fail to execute "git-po-helper check-po"
+ERROR: check-po command failed
 EOF
 
 test_expect_success "bad syntax of zh_CN.po" '
@@ -66,7 +67,7 @@ test_expect_success "bad syntax of zh_CN.po" '
 	EOF
 
 	test_must_fail git -C workdir $HELPER \
-		check-po zh_CN >out 2>&1 &&
+		check-po $POT_FILE zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	test_cmp expect actual
@@ -106,7 +107,7 @@ test_expect_success "update zh_CN (--add-location=file)" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz"
 	EOF
 
-	git -C workdir $HELPER update zh_CN 2>&1 |
+	git -C workdir $HELPER update $POT_FILE zh_CN 2>&1 |
 		make_user_friendly_and_stable_output |
 		sed "/^\.\./ d" >actual &&
 	test_cmp expect actual
@@ -119,7 +120,7 @@ test_expect_success "check update of zh_CN.po" '
 	EOF
 
 	git -C workdir $HELPER \
-		check-po zh_CN >out 2>&1 &&
+		check-po $POT_FILE zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
 		head -2 >actual &&
 	test_cmp expect actual
@@ -142,7 +143,7 @@ EOF
 
 test_expect_success "check core update of zh_CN.po" '
 	git -C workdir $HELPER \
-		check-po --core zh_CN >out 2>&1 &&
+		check-po $POT_FILE --core zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -155,13 +156,12 @@ ERROR commit <OID>: subject ("Add files ...") does not have prefix "l10n:"
 ------------------------------------------------------------------------------
 ERROR commit <OID>: empty body of the commit message, no s-o-b signature
 INFO checking commits: 0 passed, 1 failed.
-
-ERROR: fail to execute "git-po-helper check-commits"
+ERROR: check-commits command failed
 EOF
 
 test_expect_success "check-commits (old-oid is zero)" '
 	test_must_fail git -C workdir $HELPER \
-		check-commits 0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
+		check-commits $POT_NO 0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -183,13 +183,12 @@ ERROR         A.txt
 ERROR
 ERROR commit <OID>: break because this commit is not for git-l10n
 INFO checking commits: 0 passed, 1 failed, 1 skipped.
-
-ERROR: fail to execute "git-po-helper check-commits"
+ERROR: check-commits command failed
 EOF
 
 test_expect_success "check-commits (non-l10n commit)" '
 	test_must_fail git -C workdir $HELPER \
-		check-commits 0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
+		check-commits $POT_NO 0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

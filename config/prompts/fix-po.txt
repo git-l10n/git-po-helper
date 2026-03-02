@@ -1,0 +1,15 @@
+Fix the PO file "{{.source}}" so that it passes `msgfmt --check`.
+
+The file currently fails validation with the following error:
+
+```
+{{.error}}
+```
+
+Read the PO file, identify and fix the syntax errors reported by msgfmt. Common issues include:
+- Invalid escape sequences in msgid/msgstr (e.g. unescaped `\`, `"`, newlines)
+- Mismatched plural forms (msgstr_plural count vs Plural-Forms)
+- Malformed multi-line entries (msgid "" / msgstr "" with continuation lines)
+- Invalid format directives (e.g. %s, %d in c-format)
+
+Modify the file "{{.source}}" directly in place. Preserve the content and meaning of translations; only fix syntax. After fixing, the file must pass `msgfmt --check -o /dev/null {{.source}}`.

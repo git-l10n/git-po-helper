@@ -26,6 +26,12 @@ var promptTranslate string
 //go:embed prompts/review.txt
 var promptReview string
 
+//go:embed prompts/local-orchestration-translation.md
+var promptLocalOrchestrationTranslation string
+
+//go:embed prompts/fix-po.txt
+var promptFixPo string
+
 // AgentConfig holds the complete agent configuration.
 type AgentConfig struct {
 	DefaultLangCode string           `yaml:"default_lang_code"`
@@ -36,10 +42,12 @@ type AgentConfig struct {
 
 // PromptConfig holds prompt templates for different operations.
 type PromptConfig struct {
-	UpdatePot string `yaml:"update_pot"`
-	UpdatePo  string `yaml:"update_po"`
-	Translate string `yaml:"translate"`
-	Review    string `yaml:"review"`
+	UpdatePot                     string `yaml:"update_pot"`
+	UpdatePo                      string `yaml:"update_po"`
+	Translate                     string `yaml:"translate"`
+	Review                        string `yaml:"review"`
+	LocalOrchestrationTranslation string `yaml:"local_orchestration_translation"`
+	FixPo                         string `yaml:"fix_po"`
 }
 
 // AgentTestConfig holds configuration for agent-test command.
@@ -72,6 +80,9 @@ var KnownAgentKinds = map[string]bool{
 	AgentKindEcho:     true,
 	AgentKindQwen:     true,
 }
+
+// GitPoHelperConfigFileName is the name of the agent config file (user home and repository root).
+const GitPoHelperConfigFileName = ".git-po-helper.yaml"
 
 // Agent holds configuration for a single agent.
 type Agent struct {
@@ -141,160 +152,133 @@ func getDefaultConfig() *AgentConfig {
 	return &AgentConfig{
 		DefaultLangCode: systemLocale,
 		Prompt: PromptConfig{
-			UpdatePot: loadEmbeddedPrompt(promptUpdatePot),
-			UpdatePo:  loadEmbeddedPrompt(promptUpdatePo),
-			Translate: loadEmbeddedPrompt(promptTranslate),
-			Review:    loadEmbeddedPrompt(promptReview),
+			UpdatePot:                     loadEmbeddedPrompt(promptUpdatePot),
+			UpdatePo:                      loadEmbeddedPrompt(promptUpdatePo),
+			Translate:                     loadEmbeddedPrompt(promptTranslate),
+			Review:                        loadEmbeddedPrompt(promptReview),
+			LocalOrchestrationTranslation: loadEmbeddedPrompt(promptLocalOrchestrationTranslation),
+			FixPo:                         loadEmbeddedPrompt(promptFixPo),
 		},
 		AgentTest: AgentTestConfig{
 			Runs: &defaultRuns,
 		},
 		Agents: map[string]Agent{
 			"claude": {
-				Cmd:    []string{"claude", "--dangerously-skip-permissions", "-p", "{prompt}"},
+				Cmd:    []string{"claude", "--dangerously-skip-permissions", "-p", "{{.prompt}}"},
 				Kind:   AgentKindClaude,
 				Output: "json",
 			},
 			"codex": {
-				Cmd:    []string{"codex", "exec", "--yolo", "{prompt}"},
+				Cmd:    []string{"codex", "exec", "--yolo", "{{.prompt}}"},
 				Kind:   AgentKindCodex,
 				Output: "json",
 			},
 			"opencode": {
-				Cmd:    []string{"opencode", "run", "--thinking", "{prompt}"},
+				Cmd:    []string{"opencode", "run", "--thinking", "{{.prompt}}"},
 				Kind:   AgentKindOpencode,
 				Output: "json",
 			},
 			"gemini": {
-				Cmd:    []string{"gemini", "--yolo", "{prompt}"},
+				Cmd:    []string{"gemini", "--yolo", "{{.prompt}}"},
 				Kind:   AgentKindGemini,
 				Output: "json",
 			},
 			"echo": {
-				Cmd:  []string{"echo", "{prompt}"},
+				Cmd:  []string{"echo", "{{.prompt}}"},
 				Kind: AgentKindEcho,
 			},
 		},
 	}
 }
 
-// LoadAgentConfig loads agent configuration from multiple locations with priority:
-// 1. User home directory: ~/.git-po-helper.yaml (lower priority)
-// 2. Repository root: <repo-root>/git-po-helper.yaml (higher priority, overrides user config)
-// Returns the configuration and an error. If both config files are missing, it returns
-// a default empty config with a warning (not an error).
-func LoadAgentConfig() (*AgentConfig, error) {
-	var baseConfig, repoConfig AgentConfig
+// loadUserHomeConfig loads ~/AgentConfigFileName if it exists.
+// Returns (config, nil) on success, (nil, nil) when the file is missing, (nil, err) on read/parse error.
+func loadUserHomeConfig() (*AgentConfig, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, nil
+	}
+	userConfigPath := filepath.Join(homeDir, GitPoHelperConfigFileName)
+	if _, err := os.Stat(userConfigPath); err != nil {
+		return nil, nil
+	}
+	config, err := loadConfigFromFile(userConfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load user config from %s: %w", userConfigPath, err)
+	}
+	log.Debugf("loaded user config from %s", userConfigPath)
+	return config, nil
+}
+
+// loadRepoConfig loads <repo-root>/AgentConfigFileName if it exists.
+// Returns (config, nil) on success, (nil, nil) when the file is missing, (nil, err) on read/parse error.
+func loadRepoConfig() (*AgentConfig, error) {
+	workDir := repository.WorkDir()
+	repoConfigPath := filepath.Join(workDir, GitPoHelperConfigFileName)
+	if _, err := os.Stat(repoConfigPath); err != nil {
+		return nil, nil
+	}
+	config, err := loadConfigFromFile(repoConfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load repo config from %s: %w", repoConfigPath, err)
+	}
+	log.Debugf("loaded repo config from %s", repoConfigPath)
+	return config, nil
+}
+
+// LoadAgentConfig loads agent configuration. Merge order: default first (mergeAgents false), then user home, repo root, custom file (mergeAgents true). After all merges, if Agents is still empty, default's Agents are copied.
+// Returns the configuration and an error. If no config files are found and no custom path was given, returns a default config with a warning (not an error).
+func LoadAgentConfig(customConfigPath string) (*AgentConfig, error) {
+	var merged AgentConfig
 	configsLoaded := false
 
-	// Load user home directory config first (lower priority)
-	homeDir, err := os.UserHomeDir()
-	if err == nil {
-		userConfigPath := filepath.Join(homeDir, ".git-po-helper.yaml")
-		if _, err := os.Stat(userConfigPath); err == nil {
-			config, err := loadConfigFromFile(userConfigPath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load user config from %s: %w", userConfigPath, err)
-			}
-			baseConfig = *config
-			configsLoaded = true
-			log.Debugf("loaded user config from %s", userConfigPath)
-		}
-	}
+	// 1. Base: merge default config first (mergeAgents false — fill unset fields only, do not touch Agents)
+	defaultCfg := getDefaultConfig()
+	merged = *mergeConfigs(&merged, defaultCfg, false)
 
-	// Load repository root config (higher priority, overrides user config)
-	workDir := repository.WorkDir()
-	repoConfigPath := filepath.Join(workDir, "git-po-helper.yaml")
-	if _, err := os.Stat(repoConfigPath); err == nil {
-		config, err := loadConfigFromFile(repoConfigPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load repo config from %s: %w", repoConfigPath, err)
-		}
-		repoConfig = *config
+	// 2. Overlay: user home config (mergeAgents true)
+	if userConfig, err := loadUserHomeConfig(); err != nil {
+		return nil, err
+	} else if userConfig != nil {
+		merged = *mergeConfigs(&merged, userConfig, true)
 		configsLoaded = true
-		log.Debugf("loaded repo config from %s", repoConfigPath)
 	}
 
-	// If no config files were found, return default config
-	if !configsLoaded {
-		userConfigPath := ""
-		if homeDir != "" {
-			userConfigPath = filepath.Join(homeDir, ".git-po-helper.yaml")
-		} else {
-			userConfigPath = "~/.git-po-helper.yaml"
+	// 3. Overlay: repository root config (mergeAgents true)
+	if repoConfig, err := loadRepoConfig(); err != nil {
+		return nil, err
+	} else if repoConfig != nil {
+		merged = *mergeConfigs(&merged, repoConfig, true)
+		configsLoaded = true
+	}
+
+	// 4. Overlay: custom config file (mergeAgents true)
+	if customConfigPath != "" {
+		customConfig, err := loadConfigFromFile(customConfigPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load config from %s: %w", customConfigPath, err)
 		}
-		log.Warnf("no configuration files found (checked %s and %s), using defaults",
-			userConfigPath, repoConfigPath)
+		log.Debugf("loaded custom config from %s", customConfigPath)
+		merged = *mergeConfigs(&merged, customConfig, true)
+		configsLoaded = true
+	}
+
+	if !configsLoaded {
+		workDir := repository.WorkDir()
+		repoConfigPath := filepath.Join(workDir, GitPoHelperConfigFileName)
+		log.Warnf("no configuration files found (checked ~/%s and %s), using defaults",
+			GitPoHelperConfigFileName, repoConfigPath)
 		return getDefaultConfig(), nil
 	}
 
-	// Merge configurations: repo config overrides user config
-	mergedConfig := mergeConfigs(&baseConfig, &repoConfig)
-
-	// Initialize Agents map if nil
-	if mergedConfig.Agents == nil {
-		mergedConfig.Agents = make(map[string]Agent)
-	}
-
-	// Apply defaults for missing values
-	applyDefaults(mergedConfig)
-
-	// Validate configuration
-	if err := mergedConfig.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid configuration: %w", err)
-	}
-
-	return mergedConfig, nil
-}
-
-// applyDefaults applies default values to a configuration for missing fields.
-func applyDefaults(cfg *AgentConfig) {
-	defaultConfig := getDefaultConfig()
-
-	// Apply default_lang_code if not set
-	if cfg.DefaultLangCode == "" {
-		cfg.DefaultLangCode = defaultConfig.DefaultLangCode
-	}
-
-	// Apply prompt defaults if not set
-	if cfg.Prompt.UpdatePot == "" {
-		cfg.Prompt.UpdatePot = defaultConfig.Prompt.UpdatePot
-	}
-	if cfg.Prompt.UpdatePo == "" {
-		cfg.Prompt.UpdatePo = defaultConfig.Prompt.UpdatePo
-	}
-	if cfg.Prompt.Translate == "" {
-		cfg.Prompt.Translate = defaultConfig.Prompt.Translate
-	}
-	if cfg.Prompt.Review == "" {
-		cfg.Prompt.Review = defaultConfig.Prompt.Review
-	}
-
-	// Apply agent-test defaults if not set
-	if cfg.AgentTest.Runs == nil {
-		cfg.AgentTest.Runs = defaultConfig.AgentTest.Runs
-	}
-
-	// Apply default agent only if no agents configured
-	// If config file has agents, use them and don't add default test agent
-	if len(cfg.Agents) == 0 {
-		cfg.Agents = map[string]Agent{
-			"test": {
-				Cmd:  []string{"echo", "{prompt}"},
-				Kind: AgentKindEcho,
-			},
+	// 5. If Agents is still empty after all merges, use default's Agents
+	if len(merged.Agents) == 0 {
+		merged.Agents = make(map[string]Agent)
+		for k, v := range defaultCfg.Agents {
+			merged.Agents[k] = v
 		}
 	}
-
-	// Apply default Kind for agents that don't have it (backward compatibility)
-	for key, agent := range cfg.Agents {
-		if agent.Kind == "" {
-			if defaultAgent, ok := defaultConfig.Agents[key]; ok {
-				agent.Kind = defaultAgent.Kind
-				cfg.Agents[key] = agent
-			}
-		}
-	}
+	return &merged, nil
 }
 
 // loadConfigFromFile loads and parses a YAML config file without validation.
@@ -313,13 +297,14 @@ func loadConfigFromFile(configPath string) (*AgentConfig, error) {
 	return &config, nil
 }
 
-// mergeConfigs merges two AgentConfig structs, with repoConfig taking priority over baseConfig.
-func mergeConfigs(baseConfig, repoConfig *AgentConfig) *AgentConfig {
+// mergeConfigs merges baseConfig and overlay. mergeAgents controls Agents behavior:
+// - mergeAgents true: overlay overrides base; Agents are merged by key (overlay adds or overrides).
+// - mergeAgents false: overlay fills only unset fields in base; Agents are not modified (no merge, no copy).
+func mergeConfigs(baseConfig, overlay *AgentConfig, mergeAgents bool) *AgentConfig {
 	result := &AgentConfig{
 		Agents: make(map[string]Agent),
 	}
 
-	// Start with base config
 	if baseConfig != nil {
 		result.DefaultLangCode = baseConfig.DefaultLangCode
 		result.Prompt = baseConfig.Prompt
@@ -331,81 +316,55 @@ func mergeConfigs(baseConfig, repoConfig *AgentConfig) *AgentConfig {
 		}
 	}
 
-	// Override with repo config (higher priority)
-	if repoConfig != nil {
-		if repoConfig.DefaultLangCode != "" {
-			result.DefaultLangCode = repoConfig.DefaultLangCode
+	if overlay != nil {
+		if overlay.DefaultLangCode != "" {
+			result.DefaultLangCode = overlay.DefaultLangCode
 		}
-		// Merge Prompt config
-		if repoConfig.Prompt.UpdatePot != "" {
-			result.Prompt.UpdatePot = repoConfig.Prompt.UpdatePot
+		if overlay.Prompt.UpdatePot != "" {
+			result.Prompt.UpdatePot = overlay.Prompt.UpdatePot
 		}
-		if repoConfig.Prompt.UpdatePo != "" {
-			result.Prompt.UpdatePo = repoConfig.Prompt.UpdatePo
+		if overlay.Prompt.UpdatePo != "" {
+			result.Prompt.UpdatePo = overlay.Prompt.UpdatePo
 		}
-		if repoConfig.Prompt.Translate != "" {
-			result.Prompt.Translate = repoConfig.Prompt.Translate
+		if overlay.Prompt.Translate != "" {
+			result.Prompt.Translate = overlay.Prompt.Translate
 		}
-		if repoConfig.Prompt.Review != "" {
-			result.Prompt.Review = repoConfig.Prompt.Review
+		if overlay.Prompt.Review != "" {
+			result.Prompt.Review = overlay.Prompt.Review
 		}
-		// Merge AgentTest config (pointer fields need special handling)
-		if repoConfig.AgentTest.Runs != nil {
-			result.AgentTest.Runs = repoConfig.AgentTest.Runs
+		if overlay.Prompt.LocalOrchestrationTranslation != "" {
+			result.Prompt.LocalOrchestrationTranslation = overlay.Prompt.LocalOrchestrationTranslation
 		}
-		if repoConfig.AgentTest.PotEntriesBeforeUpdate != nil {
-			result.AgentTest.PotEntriesBeforeUpdate = repoConfig.AgentTest.PotEntriesBeforeUpdate
+		if overlay.Prompt.FixPo != "" {
+			result.Prompt.FixPo = overlay.Prompt.FixPo
 		}
-		if repoConfig.AgentTest.PotEntriesAfterUpdate != nil {
-			result.AgentTest.PotEntriesAfterUpdate = repoConfig.AgentTest.PotEntriesAfterUpdate
+		if overlay.AgentTest.Runs != nil {
+			result.AgentTest.Runs = overlay.AgentTest.Runs
 		}
-		if repoConfig.AgentTest.PoEntriesBeforeUpdate != nil {
-			result.AgentTest.PoEntriesBeforeUpdate = repoConfig.AgentTest.PoEntriesBeforeUpdate
+		if overlay.AgentTest.PotEntriesBeforeUpdate != nil {
+			result.AgentTest.PotEntriesBeforeUpdate = overlay.AgentTest.PotEntriesBeforeUpdate
 		}
-		if repoConfig.AgentTest.PoEntriesAfterUpdate != nil {
-			result.AgentTest.PoEntriesAfterUpdate = repoConfig.AgentTest.PoEntriesAfterUpdate
+		if overlay.AgentTest.PotEntriesAfterUpdate != nil {
+			result.AgentTest.PotEntriesAfterUpdate = overlay.AgentTest.PotEntriesAfterUpdate
 		}
-		if repoConfig.AgentTest.PoNewEntriesAfterUpdate != nil {
-			result.AgentTest.PoNewEntriesAfterUpdate = repoConfig.AgentTest.PoNewEntriesAfterUpdate
+		if overlay.AgentTest.PoEntriesBeforeUpdate != nil {
+			result.AgentTest.PoEntriesBeforeUpdate = overlay.AgentTest.PoEntriesBeforeUpdate
 		}
-		if repoConfig.AgentTest.PoFuzzyEntriesAfterUpdate != nil {
-			result.AgentTest.PoFuzzyEntriesAfterUpdate = repoConfig.AgentTest.PoFuzzyEntriesAfterUpdate
+		if overlay.AgentTest.PoEntriesAfterUpdate != nil {
+			result.AgentTest.PoEntriesAfterUpdate = overlay.AgentTest.PoEntriesAfterUpdate
 		}
-		// Merge Agents (repo config agents override base config agents)
-		if repoConfig.Agents != nil {
-			for k, v := range repoConfig.Agents {
+		if overlay.AgentTest.PoNewEntriesAfterUpdate != nil {
+			result.AgentTest.PoNewEntriesAfterUpdate = overlay.AgentTest.PoNewEntriesAfterUpdate
+		}
+		if overlay.AgentTest.PoFuzzyEntriesAfterUpdate != nil {
+			result.AgentTest.PoFuzzyEntriesAfterUpdate = overlay.AgentTest.PoFuzzyEntriesAfterUpdate
+		}
+		if mergeAgents && overlay.Agents != nil {
+			for k, v := range overlay.Agents {
 				result.Agents[k] = v
 			}
 		}
 	}
 
 	return result
-}
-
-// Validate validates the agent configuration and returns an error if invalid.
-func (c *AgentConfig) Validate() error {
-	// Check if at least one agent is configured
-	if len(c.Agents) == 0 {
-		return fmt.Errorf("at least one agent must be configured")
-	}
-
-	// Validate each agent
-	for name, agent := range c.Agents {
-		if len(agent.Cmd) == 0 {
-			return fmt.Errorf("agent '%s' has empty command", name)
-		}
-		if agent.Kind == "" {
-			return fmt.Errorf("agent '%s' has empty kind (must be one of: claude, gemini, codex, opencode, echo, qwen)", name)
-		}
-		if !KnownAgentKinds[agent.Kind] {
-			return fmt.Errorf("agent '%s' has unknown kind '%s' (must be one of: claude, gemini, codex, opencode, echo, qwen)", name, agent.Kind)
-		}
-	}
-
-	// Validate that update_pot prompt is set (required for update-pot command)
-	if c.Prompt.UpdatePot == "" {
-		return fmt.Errorf("prompt.update_pot is required")
-	}
-
-	return nil
 }

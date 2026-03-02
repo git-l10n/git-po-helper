@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/flag"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -81,7 +80,6 @@ func UpdatePotFile() (string, bool) {
 		cmd := exec.Command("make", "pot")
 		showHorizontalLine()
 		log.Info("update pot file by running: make pot")
-		cmd.Dir = repository.WorkDir()
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			for _, msg := range []string{
@@ -165,7 +163,6 @@ func CmdUpdate(fileName string) bool {
 	)
 	log.Infof(`run msgmerge for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
 	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	cmd.Dir = repository.WorkDir()
 	cmd.Stderr = os.Stderr
 
 	if optNoLocation {

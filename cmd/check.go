@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,9 +16,8 @@ func (v *checkCommand) Command() *cobra.Command {
 	}
 
 	v.cmd = &cobra.Command{
-		Use:           "check",
-		Short:         `Check all ".po" files and commits`,
-		SilenceErrors: true,
+		Use:   "check",
+		Short: `Check all ".po" files and commits`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return v.Execute(args)
 		},
@@ -50,21 +48,16 @@ func (v *checkCommand) Command() *cobra.Command {
 }
 
 func (v checkCommand) Execute(args []string) error {
-	var err error
-
-	// Execute in root of worktree.
-	repository.ChdirProjectRoot()
-
 	if len(args) != 0 {
-		return newUserError("check command needs no arguments")
+		return NewErrorWithUsage("check command needs no arguments")
 	}
 	if !util.CmdCheckPo() {
-		err = errExecute
+		return NewStandardError("check command failed")
 	}
 	if !util.CmdCheckCommits() {
-		err = errExecute
+		return NewStandardError("check command failed")
 	}
-	return err
+	return nil
 }
 
 var checkCmd = checkCommand{}

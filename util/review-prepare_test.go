@@ -20,12 +20,12 @@ func TestWriteReviewInputPo(t *testing.T) {
 	tests := []struct {
 		name    string
 		header  []string
-		entries []*PoEntry
+		entries []*GettextEntry
 	}{
 		{
 			name:   "simple header and entry",
 			header: []string{"msgid \"\"", "msgstr \"Content-Type: text/plain; charset=UTF-8\\n\""},
-			entries: []*PoEntry{
+			entries: []*GettextEntry{
 				{RawLines: []string{"msgid \"Hello\"", "msgstr \"你好\""}},
 			},
 		},
@@ -230,5 +230,36 @@ func TestParsePoEntriesRoundTrip(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestLoadFileToGettextJSON_JSON(t *testing.T) {
+	jsonData := []byte(`{"header_comment":"","header_meta":"Content-Type: text/plain; charset=UTF-8\n","entries":[{"msgid":"Hello","msgstr":"你好","fuzzy":false}]}`)
+	j, err := LoadFileToGettextJSON(jsonData, "test.json")
+	if err != nil {
+		t.Fatalf("LoadFileToGettextJSON with JSON: %v", err)
+	}
+	if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hello" || j.Entries[0].MsgStr != "你好" {
+		t.Errorf("expected Hello/你好, got %d entries: %+v", len(j.Entries), j.Entries)
+	}
+	if j.HeaderMeta == "" {
+		t.Errorf("expected non-empty header_meta")
+	}
+}
+
+func TestLoadFileToGettextJSON_PO(t *testing.T) {
+	poContent := []byte(`msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Hello"
+msgstr "你好"
+`)
+	j, err := LoadFileToGettextJSON(poContent, "test.po")
+	if err != nil {
+		t.Fatalf("LoadFileToGettextJSON with PO: %v", err)
+	}
+	if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hello" || j.Entries[0].MsgStr != "你好" {
+		t.Errorf("expected Hello/你好, got %+v", j.Entries)
 	}
 }

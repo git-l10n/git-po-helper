@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/flag"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -108,7 +107,6 @@ func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
 	// Run msgcmp to find untranslated missing entries in pot file.
 	cmd := exec.Command("msgcmp", "-N", poFile, poTemplate)
 	cmd.Env = append(os.Environ(), "LC_ALL=C")
-	cmd.Dir = repository.WorkDir()
 	stderr, err := cmd.StderrPipe()
 	if err == nil {
 		err = cmd.Start()

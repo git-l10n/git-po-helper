@@ -9,15 +9,18 @@ import (
 	"strings"
 )
 
-// PoEntry represents a single PO file entry.
-type PoEntry struct {
-	Comments     []string
-	MsgID        string
-	MsgStr       string
-	MsgIDPlural  string
-	MsgStrPlural []string
-	RawLines     []string // Original lines for the entry
-	IsFuzzy      bool
+// GettextEntry represents a single PO/JSON entry. Used for parsing, comparison, and output.
+// MsgID/MsgStr are normalized (unescaped). RawLines preserves exact PO format for round-trip.
+type GettextEntry struct {
+	MsgID         string   `json:"msgid"`
+	MsgStr        string   `json:"msgstr"`
+	MsgIDPlural   string   `json:"msgid_plural,omitempty"`
+	MsgStrPlural  []string `json:"msgstr_plural,omitempty"`
+	Comments      []string `json:"comments,omitempty"`
+	Fuzzy         bool     `json:"fuzzy"`
+	Obsolete      bool     `json:"obsolete,omitempty"`       // True for #~ obsolete entries
+	MsgIDPrevious string   `json:"msgid_previous,omitempty"` // For #~| format (gettext 0.19.8+)
+	RawLines      []string `json:"-"`                        // Original PO lines for round-trip; empty when built from JSON
 }
 
 // commentHasFuzzyFlag returns true if the line is a flag comment (e.g. "#, fuzzy" or "#, fuzzy, c-format")
@@ -36,6 +39,107 @@ func commentHasFuzzyFlag(line string) bool {
 	return false
 }
 
+// StripFuzzyFromCommentLine removes the "fuzzy" flag from a "#," comment line.
+// If the line is "#, fuzzy" only, returns "". If the line is "#, fuzzy, c-format" or similar,
+// returns "#, c-format" (other flags preserved). Non-flag lines are returned unchanged.
+func StripFuzzyFromCommentLine(line string) string {
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, "#,") {
+		return line
+	}
+	flagsStr := strings.TrimPrefix(trimmed, "#,")
+	var rest []string
+	for _, f := range strings.Split(flagsStr, ",") {
+		if strings.TrimSpace(f) != "fuzzy" {
+			rest = append(rest, strings.TrimSpace(f))
+		}
+	}
+	if len(rest) == 0 {
+		return ""
+	}
+	return "#, " + strings.Join(rest, ", ")
+}
+
+// StripFuzzyFromFlagLine removes "fuzzy" from a "#," flag line.
+// Returns the line with fuzzy stripped, or empty string if no flags remain.
+func StripFuzzyFromFlagLine(line string) string {
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, "#,") {
+		return line
+	}
+	flagsStr := strings.TrimPrefix(trimmed, "#,")
+	var flags []string
+	for _, f := range strings.Split(flagsStr, ",") {
+		s := strings.TrimSpace(f)
+		if s != "" && s != "fuzzy" {
+			flags = append(flags, s)
+		}
+	}
+	if len(flags) == 0 {
+		return ""
+	}
+	return "#, " + strings.Join(flags, ", ")
+}
+
+// MergeFuzzyIntoFlagLine returns a "#," flag line with "fuzzy" prepended to existing flags.
+// If addFuzzy is false, returns line unchanged. If addFuzzy is true, any existing "fuzzy"
+// in the line is not duplicated (input may be "#, c-format" or legacy "#, fuzzy").
+func MergeFuzzyIntoFlagLine(line string, addFuzzy bool) string {
+	if !addFuzzy {
+		return line
+	}
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, "#,") {
+		return line
+	}
+	flagsStr := strings.TrimPrefix(trimmed, "#,")
+	var flags []string
+	for _, f := range strings.Split(flagsStr, ",") {
+		s := strings.TrimSpace(f)
+		if s != "" && s != "fuzzy" {
+			flags = append(flags, s)
+		}
+	}
+	out := "#, fuzzy"
+	if len(flags) > 0 {
+		out += ", " + strings.Join(flags, ", ")
+	}
+	return out
+}
+
+// poUnescape decodes PO escape sequences in s into real characters.
+// PO uses \n (newline), \t (tab), \r (carriage return), \" (quote), \\ (backslash).
+func poUnescape(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' && i+1 < len(s) {
+			switch s[i+1] {
+			case 'n':
+				b.WriteByte('\n')
+				i++
+			case 't':
+				b.WriteByte('\t')
+				i++
+			case 'r':
+				b.WriteByte('\r')
+				i++
+			case '"':
+				b.WriteByte('"')
+				i++
+			case '\\':
+				b.WriteByte('\\')
+				i++
+			default:
+				b.WriteByte(s[i])
+			}
+		} else {
+			b.WriteByte(s[i])
+		}
+	}
+	return b.String()
+}
+
 // strDeQuote removes one quote character from each end of s if both ends have a quote.
 // Returns s unchanged otherwise.
 func strDeQuote(s string) string {
@@ -48,9 +152,9 @@ func strDeQuote(s string) string {
 // ParsePoEntries parses PO file entries and returns entries and header.
 // The header includes comments, the empty msgid/msgstr block, and any continuation lines.
 // Entries are 1-based for content (header entry with empty msgid is not included).
-func ParsePoEntries(data []byte) (entries []*PoEntry, header []string, err error) {
+func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err error) {
 	lines := strings.Split(string(data), "\n")
-	var currentEntry *PoEntry
+	var currentEntry *GettextEntry
 	var inHeader = true
 	var hasSeenHeaderBlock bool // true after we've seen msgid "" (the header block)
 	var headerLines []string
@@ -61,9 +165,71 @@ func ParsePoEntries(data []byte) (entries []*PoEntry, header []string, err error
 	var msgstrPluralValues []strings.Builder
 	var inMsgid, inMsgstr, inMsgidPlural bool
 	var currentPluralIndex int = -1
+	var inObsolete bool
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
+
+		// Obsolete entry format: #~ msgid, #~ msgstr, #~| msgid (check first, before header/comment)
+		if strings.HasPrefix(trimmed, "#~ ") {
+			rest := trimmed[3:] // "#~ " = 3 chars
+			// Only set inObsolete for continuation lines; #~ msgid starts new entry, save previous first
+			if strings.HasPrefix(strings.TrimSpace(rest), `"`) || strings.HasPrefix(strings.TrimSpace(rest), "msgstr") {
+				inObsolete = true
+			}
+			if strings.HasPrefix(strings.TrimSpace(rest), `"`) && (inMsgid || inMsgstr || inMsgidPlural) {
+				value := strDeQuote(strings.TrimSpace(rest))
+				if inMsgid {
+					msgidValue.WriteString(value)
+				} else if inMsgidPlural {
+					msgidPluralValue.WriteString(value)
+				} else if inMsgstr {
+					if currentPluralIndex >= 0 {
+						msgstrPluralValues[currentPluralIndex].WriteString(value)
+					} else {
+						msgstrValue.WriteString(value)
+					}
+				}
+				entryLines = append(entryLines, line)
+				continue
+			}
+			trimmed = rest
+		} else if strings.HasPrefix(trimmed, "#~| ") {
+			rest := trimmed[4:] // "#~| " = 4 chars
+			if strings.HasPrefix(rest, "msgid ") {
+				value := strings.TrimPrefix(rest, "msgid ")
+				value = strings.TrimSpace(value)
+				value = strDeQuote(value)
+				if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
+					currentEntry.MsgID = poUnescape(msgidValue.String())
+					currentEntry.MsgStr = poUnescape(msgstrValue.String())
+					if msgidPluralValue.Len() > 0 {
+						currentEntry.MsgIDPlural = poUnescape(msgidPluralValue.String())
+						currentEntry.MsgStrPlural = make([]string, len(msgstrPluralValues))
+						for i, b := range msgstrPluralValues {
+							currentEntry.MsgStrPlural[i] = poUnescape(b.String())
+						}
+					}
+					currentEntry.RawLines = entryLines
+					currentEntry.Fuzzy = entryHasFuzzyFlag(currentEntry.Comments)
+					currentEntry.Obsolete = inObsolete
+					entries = append(entries, currentEntry)
+				}
+				if currentEntry == nil || msgidValue.Len() > 0 || msgstrValue.Len() > 0 {
+					currentEntry = &GettextEntry{}
+					entryLines = []string{}
+					msgidValue.Reset()
+					msgstrValue.Reset()
+					msgidPluralValue.Reset()
+					msgstrPluralValues = []strings.Builder{}
+				}
+				currentEntry.MsgIDPrevious = poUnescape(value)
+				currentEntry.Obsolete = true
+				inObsolete = true
+				entryLines = append(entryLines, line)
+				continue
+			}
+		}
 
 		// Check for header (empty msgid entry)
 		if !hasSeenHeaderBlock && strings.HasPrefix(trimmed, "msgid ") {
@@ -154,32 +320,40 @@ func ParsePoEntries(data []byte) (entries []*PoEntry, header []string, err error
 		if strings.HasPrefix(trimmed, "#") {
 			// Comment line
 			if currentEntry == nil {
-				currentEntry = &PoEntry{}
+				currentEntry = &GettextEntry{}
 				entryLines = []string{}
 			}
 			currentEntry.Comments = append(currentEntry.Comments, line)
 			entryLines = append(entryLines, line)
 		} else if strings.HasPrefix(trimmed, "msgid ") {
-			// Start of new entry
+			// Start of new entry (or obsolete #~ msgid)
 			// Save previous entry if we have one and it has content
-			// (either msgid with continuation lines or msgstr)
 			if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
-				// Save previous entry
-				currentEntry.MsgID = msgidValue.String()
-				currentEntry.MsgStr = msgstrValue.String()
+				currentEntry.MsgID = poUnescape(msgidValue.String())
+				currentEntry.MsgStr = poUnescape(msgstrValue.String())
+				if msgidPluralValue.Len() > 0 {
+					currentEntry.MsgIDPlural = poUnescape(msgidPluralValue.String())
+					currentEntry.MsgStrPlural = make([]string, len(msgstrPluralValues))
+					for i, b := range msgstrPluralValues {
+						currentEntry.MsgStrPlural[i] = poUnescape(b.String())
+					}
+				}
 				currentEntry.RawLines = entryLines
-				currentEntry.IsFuzzy = entryHasFuzzyFlag(currentEntry.Comments)
+				currentEntry.Fuzzy = entryHasFuzzyFlag(currentEntry.Comments)
+				currentEntry.Obsolete = inObsolete
 				entries = append(entries, currentEntry)
 			}
 			// Start new entry (or continue existing entry if it only has comments)
 			if currentEntry == nil {
-				// Create a new entry
-				currentEntry = &PoEntry{}
+				currentEntry = &GettextEntry{}
 				entryLines = []string{}
 			} else if msgidValue.Len() > 0 || msgstrValue.Len() > 0 {
-				// Previous entry was saved, create new entry
-				currentEntry = &PoEntry{}
+				currentEntry = &GettextEntry{}
 				entryLines = []string{}
+			}
+			// If this line came from #~ msgid, mark the new entry as obsolete
+			if strings.HasPrefix(strings.TrimSpace(line), "#~ ") {
+				inObsolete = true
 			}
 			// If currentEntry has comments but no msgid/msgstr, keep it and continue
 			// entryLines already contains the comments, so we don't reset it
@@ -255,17 +429,18 @@ func ParsePoEntries(data []byte) (entries []*PoEntry, header []string, err error
 			// if we have collected any continuation lines (msgidValue.Len() > 0)
 			// or if we have a complete entry with msgstr
 			if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
-				currentEntry.MsgID = msgidValue.String()
-				currentEntry.MsgStr = msgstrValue.String()
+				currentEntry.MsgID = poUnescape(msgidValue.String())
+				currentEntry.MsgStr = poUnescape(msgstrValue.String())
 				if msgidPluralValue.Len() > 0 {
-					currentEntry.MsgIDPlural = msgidPluralValue.String()
+					currentEntry.MsgIDPlural = poUnescape(msgidPluralValue.String())
 					currentEntry.MsgStrPlural = make([]string, len(msgstrPluralValues))
 					for i, b := range msgstrPluralValues {
-						currentEntry.MsgStrPlural[i] = b.String()
+						currentEntry.MsgStrPlural[i] = poUnescape(b.String())
 					}
 				}
 				currentEntry.RawLines = entryLines
-				currentEntry.IsFuzzy = entryHasFuzzyFlag(currentEntry.Comments)
+				currentEntry.Fuzzy = entryHasFuzzyFlag(currentEntry.Comments)
+				currentEntry.Obsolete = inObsolete
 				entries = append(entries, currentEntry)
 			}
 			currentEntry = nil
@@ -278,6 +453,7 @@ func ParsePoEntries(data []byte) (entries []*PoEntry, header []string, err error
 			inMsgstr = false
 			inMsgidPlural = false
 			currentPluralIndex = -1
+			inObsolete = false
 		} else {
 			// Other lines (continuation, etc.)
 			if currentEntry != nil {
@@ -291,21 +467,19 @@ func ParsePoEntries(data []byte) (entries []*PoEntry, header []string, err error
 	}
 
 	// Handle last entry
-	// For entries with msgid starting with empty string, we need to check
-	// if we have collected any continuation lines (msgidValue.Len() > 0)
-	// or if we have a complete entry with msgstr
 	if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
-		currentEntry.MsgID = msgidValue.String()
-		currentEntry.MsgStr = msgstrValue.String()
+		currentEntry.MsgID = poUnescape(msgidValue.String())
+		currentEntry.MsgStr = poUnescape(msgstrValue.String())
 		if msgidPluralValue.Len() > 0 {
-			currentEntry.MsgIDPlural = msgidPluralValue.String()
+			currentEntry.MsgIDPlural = poUnescape(msgidPluralValue.String())
 			currentEntry.MsgStrPlural = make([]string, len(msgstrPluralValues))
 			for i, b := range msgstrPluralValues {
-				currentEntry.MsgStrPlural[i] = b.String()
+				currentEntry.MsgStrPlural[i] = poUnescape(b.String())
 			}
 		}
 		currentEntry.RawLines = entryLines
-		currentEntry.IsFuzzy = entryHasFuzzyFlag(currentEntry.Comments)
+		currentEntry.Fuzzy = entryHasFuzzyFlag(currentEntry.Comments)
+		currentEntry.Obsolete = inObsolete
 		entries = append(entries, currentEntry)
 	}
 
@@ -324,9 +498,11 @@ func entryHasFuzzyFlag(comments []string) bool {
 
 // BuildPoContent builds PO file content from header and entries.
 // It is the inverse of ParsePoEntries: the output can be parsed back to produce the same header and entries.
-func BuildPoContent(header []string, entries []*PoEntry) []byte {
+// When header is nil or empty, no header block is written (only content entries).
+// Entries with RawLines use them for round-trip; otherwise content is built from the entry.
+func BuildPoContent(header []string, entries []*GettextEntry) []byte {
 	var b strings.Builder
-	if len(entries) > 0 {
+	if len(entries) > 0 && len(header) > 0 {
 		for _, line := range header {
 			b.WriteString(line)
 			if !strings.HasSuffix(line, "\n") {
@@ -336,9 +512,13 @@ func BuildPoContent(header []string, entries []*PoEntry) []byte {
 		b.WriteString("\n")
 	}
 	for i, entry := range entries {
-		for _, line := range entry.RawLines {
-			b.WriteString(line)
-			b.WriteString("\n")
+		if len(entry.RawLines) > 0 {
+			for _, line := range entry.RawLines {
+				b.WriteString(line)
+				b.WriteString("\n")
+			}
+		} else {
+			writeGettextEntryToPO(&b, *entry)
 		}
 		// Add blank line between entries, but not after the last one
 		if i < len(entries)-1 {
@@ -348,16 +528,19 @@ func BuildPoContent(header []string, entries []*PoEntry) []byte {
 	return []byte(b.String())
 }
 
-// ParseEntryRange parses a range specification like "3,5,9-13", "-5", or "50-" into a set of entry indices.
-// Entry 0 is the header entry. Returns indices in ascending order, deduplicated.
-// Valid indices are 0 (header, always included) and 1 to maxEntry.
+// ParseEntryRange parses a range specification like "3,5,9-13", "-5", or "50-"
+// into a set of entry indices. Entry 0 (header) is handled by MsgSelect; this
+// returns only content entry indices (1 to maxEntry). Returns indices in
+// ascending order, deduplicated.
+// Empty spec selects all entries (equivalent to "1-").
 // Range formats:
 //   - N-M: entries N through M
 //   - -N: entries 1 through N (omit start)
 //   - N-: entries N through last (omit end)
 func ParseEntryRange(spec string, maxEntry int) ([]int, error) {
 	if spec == "" {
-		return nil, fmt.Errorf("empty entry range specification")
+		// Select all entries (1 through maxEntry)
+		spec = "1-"
 	}
 
 	seen := make(map[int]bool)
@@ -414,7 +597,7 @@ func ParseEntryRange(spec string, maxEntry int) ([]int, error) {
 				}
 			}
 			for i := start; i <= end; i++ {
-				if i >= 0 && i <= maxEntry {
+				if i > 0 && i <= maxEntry {
 					seen[i] = true
 				}
 			}
@@ -424,15 +607,15 @@ func ParseEntryRange(spec string, maxEntry int) ([]int, error) {
 			if err != nil {
 				return nil, fmt.Errorf("invalid entry number: %s", part)
 			}
-			if n >= 0 && n <= maxEntry {
+			if n > 0 && n <= maxEntry {
 				seen[n] = true
 			}
 		}
 	}
 
-	// Build result in ascending order (0, 1, 2, ...)
+	// Build result in ascending order (1, 2, ...)
 	var result []int
-	for i := 0; i <= maxEntry; i++ {
+	for i := 1; i <= maxEntry; i++ {
 		if seen[i] {
 			result = append(result, i)
 		}
@@ -440,10 +623,11 @@ func ParseEntryRange(spec string, maxEntry int) ([]int, error) {
 	return result, nil
 }
 
-// MsgSelect reads a PO/POT file, selects entries by the given range specification,
-// and writes the result to w. Entry 0 (header) is always included.
-// Range spec format: comma-separated numbers or ranges, e.g. "3,5,9-13".
-func MsgSelect(poFile, rangeSpec string, w io.Writer) error {
+// MsgSelect reads a PO/POT file, selects entries by state filter and range,
+// and writes the result to w. Entry 0 (header) is included when content entries
+// are selected, unless noHeader is true. If filter is nil, DefaultFilter() is used.
+// Range applies to the filtered entry list (1 = first matching, etc.).
+func MsgSelect(poFile, rangeSpec string, w io.Writer, noHeader bool, filter *EntryStateFilter) error {
 	data, err := os.ReadFile(poFile)
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", poFile, err)
@@ -454,47 +638,55 @@ func MsgSelect(poFile, rangeSpec string, w io.Writer) error {
 		return fmt.Errorf("failed to parse %s: %w", poFile, err)
 	}
 
-	// Entry 0 = header, entry 1..N = entries[0..N-1]
-	maxEntry := len(entries)
+	f := DefaultFilter()
+	if filter != nil {
+		f = *filter
+	}
+
+	// Filter by state first
+	entriesSlice := make([]GettextEntry, len(entries))
+	for i, e := range entries {
+		entriesSlice[i] = *e
+	}
+	filtered := FilterGettextEntries(entriesSlice, f)
+	maxEntry := len(filtered)
 	indices, err := ParseEntryRange(rangeSpec, maxEntry)
 	if err != nil {
 		return fmt.Errorf("invalid range %q: %w", rangeSpec, err)
 	}
 
-	// Always ensure entry 0 (header) is included
-	hasHeader := false
-	for _, i := range indices {
-		if i == 0 {
-			hasHeader = true
-			break
+	// Map range indices to filtered entries
+	var selected []*GettextEntry
+	for _, idx := range indices {
+		if idx > 0 && idx <= len(filtered) {
+			selected = append(selected, &filtered[idx-1])
 		}
-	}
-	if !hasHeader {
-		// Prepend 0 to indices
-		indices = append([]int{0}, indices...)
 	}
 
-	// Write header
-	for _, line := range header {
-		if _, err := io.WriteString(w, line); err != nil {
-			return err
-		}
-		if !strings.HasSuffix(line, "\n") {
-			if _, err := io.WriteString(w, "\n"); err != nil {
+	// If no content entries, output empty
+	if len(selected) == 0 {
+		return nil
+	}
+
+	// Write header (unless skipped)
+	if !noHeader {
+		for _, line := range header {
+			if _, err := io.WriteString(w, line); err != nil {
 				return err
 			}
+			if !strings.HasSuffix(line, "\n") {
+				if _, err := io.WriteString(w, "\n"); err != nil {
+					return err
+				}
+			}
 		}
-	}
-	if _, err := io.WriteString(w, "\n"); err != nil {
-		return err
+		if _, err := io.WriteString(w, "\n"); err != nil {
+			return err
+		}
 	}
 
-	// Write selected entries (index 0 = header already written, index 1+ = entries[i-1])
-	for _, idx := range indices {
-		if idx == 0 {
-			continue // Header already written
-		}
-		entry := entries[idx-1]
+	// Write selected entries
+	for _, entry := range selected {
 		for _, line := range entry.RawLines {
 			if _, err := io.WriteString(w, line); err != nil {
 				return err
@@ -511,4 +703,42 @@ func MsgSelect(poFile, rangeSpec string, w io.Writer) error {
 	}
 
 	return nil
+}
+
+// WriteGettextJSONFromPOFile reads a PO/POT file, selects entries by state filter and range,
+// and writes a single JSON object to w. If filter is nil, DefaultFilter() is used.
+func WriteGettextJSONFromPOFile(poFile, rangeSpec string, w io.Writer, filter *EntryStateFilter) error {
+	data, err := os.ReadFile(poFile)
+	if err != nil {
+		return fmt.Errorf("failed to read %s: %w", poFile, err)
+	}
+	entries, header, err := ParsePoEntries(data)
+	if err != nil {
+		return fmt.Errorf("failed to parse %s: %w", poFile, err)
+	}
+	headerComment, headerMeta, err := SplitHeader(header)
+	if err != nil {
+		return fmt.Errorf("split header: %w", err)
+	}
+	f := DefaultFilter()
+	if filter != nil {
+		f = *filter
+	}
+	entriesSlice := make([]GettextEntry, len(entries))
+	for i, e := range entries {
+		entriesSlice[i] = *e
+	}
+	filtered := FilterGettextEntries(entriesSlice, f)
+	maxEntry := len(filtered)
+	indices, err := ParseEntryRange(rangeSpec, maxEntry)
+	if err != nil {
+		return fmt.Errorf("invalid range %q: %w", rangeSpec, err)
+	}
+	var selected []*GettextEntry
+	for _, idx := range indices {
+		if idx > 0 && idx <= len(filtered) {
+			selected = append(selected, &filtered[idx-1])
+		}
+	}
+	return BuildGettextJSON(headerComment, headerMeta, selected, w)
 }

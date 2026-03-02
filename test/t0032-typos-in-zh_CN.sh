@@ -4,7 +4,8 @@ test_description="check typos in zh_CN.po"
 
 . ./lib/test-lib.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=no --report-typos=warn"
+HELPER="po-helper --no-special-gettext-versions --report-typos=warn"
+POT_NO="--pot-file=no"
 
 test_expect_success "checkout po-2.31.1" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -80,7 +81,7 @@ level=warning msg="[po/zh_CN.po]"
 EOF
 
 test_expect_success "check typos in zh_CN.po" '
-	git -C workdir $HELPER check-po --report-file-locations=none zh_CN >out 2>&1 &&
+	git -C workdir $HELPER check-po $POT_NO --report-file-locations=none zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -114,7 +115,7 @@ EOF
 test_expect_success "check typos in master branch" '
 	git -C workdir checkout master &&
 	git -C workdir $HELPER \
-		check-po --report-typos=warn --report-file-locations=warn zh_CN >out 2>&1 &&
+		check-po $POT_NO --report-typos=warn --report-file-locations=warn zh_CN >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

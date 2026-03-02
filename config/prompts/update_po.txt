@@ -1,1 +1,1 @@
-Update file "{source}" according to @po/AGENTS.md.
+Update file "{{.source}}" according to @po/AGENTS.md.

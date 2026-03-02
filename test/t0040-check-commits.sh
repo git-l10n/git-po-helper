@@ -4,7 +4,8 @@ test_description="test git-po-helper check-commits"
 
 . ./lib/test-lib.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=no"
+HELPER="po-helper --no-special-gettext-versions"
+POT_NO="--pot-file=no"
 
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -28,7 +29,7 @@ test_expect_success "new commit with changes outside of po/" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
@@ -39,8 +40,7 @@ test_expect_success "new commit with changes outside of po/" '
 	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -69,7 +69,7 @@ test_expect_success "new commit with unsupported hidden meta fields" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -78,8 +78,7 @@ test_expect_success "new commit with unsupported hidden meta fields" '
 	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -130,7 +129,7 @@ test_expect_success "new commits with datetime in the future" '
 
 test_expect_success "show errors of commit-date drift" '
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~2..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~2..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
 		sed -e "s/in the future, .* from now/in the future, XX from now/g" >actual &&
 
@@ -142,8 +141,7 @@ test_expect_success "show errors of commit-date drift" '
 	level=error msg="commit <OID>: bad author date: date is in the future, XX from now"
 	level=error msg="commit <OID>: bad committer date: date is in the future, XX from now"
 	level=info msg="checking commits: 0 passed, 2 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -151,7 +149,7 @@ test_expect_success "show errors of commit-date drift" '
 
 test_expect_success "suppress errors of commit-date drift for github actions" '
 	test_must_fail git -C workdir $HELPER --github-action-event=pull_request_target \
-		check-commits HEAD~2..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~2..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
 		sed -e "s/in the future, .* from now/in the future, XX from now/g" >actual &&
 
@@ -160,8 +158,7 @@ test_expect_success "suppress errors of commit-date drift for github actions" '
 	ERROR commit <OID>: bad author date: date is in the future, XX from now
 	ERROR commit <OID>: bad committer date: date is in the future, XX from now
 	INFO checking commits: 1 passed, 1 failed.
-	
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -190,7 +187,7 @@ test_expect_success "new commit with bad email address" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -198,8 +195,7 @@ test_expect_success "new commit with bad email address" '
 	level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
 	level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 	
 	test_cmp expect actual
@@ -207,7 +203,7 @@ test_expect_success "new commit with bad email address" '
 
 test_expect_success "too many commits to check" '
 	test_must_fail env MAX_COMMITS=1 git -C workdir $HELPER \
-		check-commits >out 2>&1 &&
+		check-commits $POT_NO >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
@@ -216,8 +212,7 @@ test_expect_success "too many commits to check" '
 	level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
 	level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -225,7 +220,7 @@ test_expect_success "too many commits to check" '
 
 test_expect_success "too many commits to check" '
 	test_must_fail env MAX_COMMITS=1 git -C workdir $HELPER \
-		check-commits --force >out 2>&1 &&
+		check-commits $POT_NO --force >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
 		sed -e "s/in the future, .* from now/in the future, XX from now/g" >actual &&
 
@@ -234,8 +229,7 @@ test_expect_success "too many commits to check" '
 	level=error msg="commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800"
 	level=error msg="commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -254,7 +248,7 @@ test_expect_success "long subject, exceed hard limit" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -265,8 +259,7 @@ test_expect_success "long subject, exceed hard limit" '
 	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: subject (\"l10n: this ...\") is too long: 74 > 72"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -285,7 +278,7 @@ test_expect_success "long subject, exceed soft limit" '
 	) &&
 
 	git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -311,7 +304,7 @@ test_expect_success "no empty line between subject and body" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -320,8 +313,7 @@ test_expect_success "no empty line between subject and body" '
 	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: no blank line between subject and body of commit message"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -340,7 +332,7 @@ test_expect_success "no l10n prefix in subject" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -349,8 +341,7 @@ test_expect_success "no l10n prefix in subject" '
 	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: subject (\"test: no ...\") does not have prefix \"l10n:\""
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -369,7 +360,7 @@ test_expect_success "non-ascii characters in subject" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -378,8 +369,7 @@ test_expect_success "non-ascii characters in subject" '
 	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: subject has non-ascii character \"简\""
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -398,7 +388,7 @@ test_expect_success "subject end with period" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -407,8 +397,7 @@ test_expect_success "subject end with period" '
 	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: subject should not end with period"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -428,7 +417,7 @@ test_expect_success "empty commit log" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -437,8 +426,7 @@ test_expect_success "empty commit log" '
 	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: do not have any commit message"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -455,7 +443,7 @@ test_expect_success "oneline commit message" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -464,8 +452,7 @@ test_expect_success "oneline commit message" '
 	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: empty body of the commit message, no s-o-b signature"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -485,7 +472,7 @@ test_expect_success "no s-o-b signature (has body message, but no s-o-b)" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -494,8 +481,7 @@ test_expect_success "no s-o-b signature (has body message, but no s-o-b)" '
 	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -517,7 +503,7 @@ test_expect_success "no s-o-b signature (has body message, no s-o-b, but has oth
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -526,8 +512,7 @@ test_expect_success "no s-o-b signature (has body message, no s-o-b, but has oth
 	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -545,7 +530,7 @@ test_expect_success "has s-o-b signature (only s-o-b, no body message)" '
 		git commit --allow-empty -F .git/commit-message
 	) &&
 
-	git -C workdir $HELPER check-commits HEAD~..HEAD
+	git -C workdir $HELPER check-commits $POT_NO HEAD~..HEAD
 '
 
 test_expect_success "has s-o-b signature (only s-o-b and other signature, no body message)" '
@@ -561,7 +546,7 @@ test_expect_success "has s-o-b signature (only s-o-b and other signature, no bod
 		git commit --allow-empty -F .git/commit-message
 	) &&
 
-	git -C workdir $HELPER check-commits HEAD~..HEAD
+	git -C workdir $HELPER check-commits $POT_NO HEAD~..HEAD
 '
 
 test_expect_success "has s-o-b signature (have s-o-b and other signature)" '
@@ -580,7 +565,7 @@ test_expect_success "has s-o-b signature (have s-o-b and other signature)" '
 		git commit --allow-empty -F .git/commit-message
 	) &&
 
-	git -C workdir $HELPER check-commits HEAD~..HEAD
+	git -C workdir $HELPER check-commits $POT_NO HEAD~..HEAD
 '
 
 test_expect_success "no s-o-b signature (tailing trash message)" '
@@ -602,7 +587,7 @@ test_expect_success "no s-o-b signature (tailing trash message)" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -611,8 +596,7 @@ test_expect_success "no s-o-b signature (tailing trash message)" '
 	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
 	level=info msg="checking commits: 0 passed, 1 failed."
-	
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -633,7 +617,7 @@ test_expect_success "too long message in commit log body" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -643,8 +627,7 @@ test_expect_success "too long message in commit log body" '
 	level=error msg="commit <OID>: cannot find \"Signed-off-by:\" signature"
 	level=error msg="commit <OID>: line #3 (\"Start body ...\") is too long: 84 > 72"
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -669,7 +652,7 @@ test_expect_success "merge commit with details" '
 	) &&
 
 	git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -702,7 +685,7 @@ test_expect_success "merge commit subject not start with Merge and no details" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -715,8 +698,7 @@ test_expect_success "merge commit subject not start with Merge and no details" '
 	------------------------------------------------------------------------------
 	level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 	level=info msg="checking commits: 1 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -739,7 +721,7 @@ test_expect_success "utf-8 characters in commit log" '
 	) &&
 
 	git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -768,7 +750,7 @@ test_expect_success "utf-8 characters in commit log with wrong encoding" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -778,8 +760,7 @@ test_expect_success "utf-8 characters in commit log with wrong encoding" '
 	level=error msg="commit <OID>: bad iso-8859-6 characters in: \"使用 utf-8 编码的提交说明。\""
 	level=error msg="    <iconv failure message>..."
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -802,7 +783,7 @@ test_expect_success "gbk characters in commit log with proper encoding" '
 		git cat-file commit HEAD >.git/commit-meta
 	) &&
 
-	git -C workdir $HELPER check-commits HEAD~..HEAD >out 2>&1 &&
+	git -C workdir $HELPER check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -832,7 +813,7 @@ test_expect_success "gbk characters in commit log with wrong encoding" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -842,8 +823,7 @@ test_expect_success "gbk characters in commit log with wrong encoding" '
 	level=error msg="commit <OID>: bad iso-8859-6 characters in: \"ʹ\xd3\xc3 gbk \xb1\xe0\xc2\xeb\xb5\xc4\xccύ˵\xc3\xf7\xa1\xa3\""
 	level=error msg="    <iconv failure message>..."
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -862,7 +842,7 @@ test_expect_success "bad utf-8 characters in commit log" '
 	) &&
 
 	test_must_fail git -C workdir $HELPER \
-		check-commits HEAD~..HEAD >out 2>&1 &&
+		check-commits $POT_NO HEAD~..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
@@ -871,8 +851,7 @@ test_expect_success "bad utf-8 characters in commit log" '
 	------------------------------------------------------------------------------
 	level=error msg="commit <OID>: bad UTF-8 characters in: \"ʹ\xd3\xc3 gbk \xb1\xe0\xc2\xeb\xb5\xc4\xccύ˵\xc3\xf7\xa1\xa3\""
 	level=info msg="checking commits: 0 passed, 1 failed."
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -880,13 +859,12 @@ test_expect_success "bad utf-8 characters in commit log" '
 
 test_expect_success "bad commit range" '
 	test_must_fail git -C workdir $HELPER \
-		check-commits -qq non_exist_commit..HEAD >out 2>&1 &&
+		check-commits $POT_NO -qq non_exist_commit..HEAD >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
 	level=error msg="fail to run git-rev-list: exit status 128"
-
-	ERROR: fail to execute "git-po-helper check-commits"
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual

@@ -4,7 +4,8 @@ test_description="check typos in bg.po"
 
 . ./lib/test-lib.sh
 
-HELPER="po-helper --no-special-gettext-versions --pot-file=no --report-typos=warn --report-file-locations=none"
+HELPER="po-helper --no-special-gettext-versions --report-typos=warn --report-file-locations=none"
+POT_NO="--pot-file=no"
 
 test_expect_success "checkout po-2.31.1" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
@@ -251,7 +252,7 @@ level=warning msg="[po/bg.po]"
 EOF
 
 test_expect_success "check typos in bg.po" '
-	git -C workdir $HELPER check-po bg >out 2>&1 &&
+	git -C workdir $HELPER check-po $POT_NO bg >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -284,14 +285,13 @@ level=error msg="[po/bg.po]    mismatched patterns: --mirror"
 level=error msg="[po/bg.po]    >> msgid: unknown mirror argument: %s"
 level=error msg="[po/bg.po]    >> msgstr: неправилна стойност за „--mirror“: %s"
 level=error msg="[po/bg.po]"
-
-ERROR: fail to execute "git-po-helper check-po"
+ERROR: check-po command failed
 EOF
 
 test_expect_success "still has typos in master branch" '
 	git -C workdir checkout master &&
 	test_must_fail git -C workdir $HELPER \
-		check-po --report-typos=error bg >out 2>&1 &&
+		check-po $POT_NO --report-typos=error bg >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 

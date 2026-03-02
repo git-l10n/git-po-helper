@@ -18,8 +18,7 @@ test_expect_success "fail to init: zh_CN.po already exist" '
 
 	cat >expect <<-\EOF &&
 	level=error msg="\"po/zh_CN.po\" exists already"
-
-	ERROR: fail to execute "git-po-helper init"
+	ERROR: init command failed
 	EOF
 
 	test_cmp expect actual
@@ -54,8 +53,7 @@ test_expect_success "init with invalid locale" '
 
 	cat >expect <<-\EOF &&
 	level=error msg="fail to init: invalid language code for locale \"xx\""
-
-	ERROR: fail to execute "git-po-helper init"
+	ERROR: init command failed
 	EOF
 
 	test_cmp expect actual &&
@@ -101,8 +99,7 @@ test_expect_success "init --core with invalid locale" '
 
 	cat >expect <<-\EOF &&
 	level=error msg="fail to init: invalid language code for locale \"xx\""
-
-	ERROR: fail to execute "git-po-helper init"
+	ERROR: init command failed
 	EOF
 
 	test_cmp expect actual &&

@@ -10,14 +10,14 @@ include $(TEST_LIB_DIRECTORY)/shared.mak
 # Copyright (c) 2005 Junio C Hamano
 #
 
-#GIT_TEST_OPTS = --verbose --debug
+GIT_PROVE_OPTS ?= --timer --jobs 10
 SHELL_PATH ?= $(SHELL)
 TEST_SHELL_PATH ?= $(SHELL_PATH)
 PERL_PATH ?= /usr/bin/perl
 TAR ?= $(TAR)
 RM ?= rm -f
 PROVE ?= prove
-DEFAULT_TEST_TARGET ?= test
+DEFAULT_TEST_TARGET ?= prove
 TEST_LINT ?= test-lint
 
 ifdef TEST_OUTPUT_DIRECTORY

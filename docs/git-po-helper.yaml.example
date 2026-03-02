@@ -11,21 +11,21 @@ default_lang_code: "zh_CN"
 
 # Prompt templates for different operations
 # Placeholders:
-#   {prompt} - replaced with the actual prompt text
-#   {source} - replaced with the source file path (po file)
+#   {{.prompt}} - replaced with the actual prompt text
+#   {{.source}} - replaced with the source file path (po file)
 #   {commit} - replaced with the commit ID (default: HEAD)
 prompt:
   # Prompt for updating the POT file
   update_pot: "update po/git.pot according to po/README.md"
 
   # Prompt for updating a PO file
-  update_po: "update {source} according to po/README.md"
+  update_po: "update {{.source}} according to po/README.md"
 
   # Prompt for translating a PO file
-  translate: "translate {source} according to po/README.md"
+  translate: "translate {{.source}} according to po/README.md"
 
   # Prompt for reviewing translations in a PO file
-  review: "review and improve {source} according to po/README.md"
+  review: "review and improve {{.source}} according to po/README.md"
 
 # Agent test configuration
 agent-test:
@@ -48,18 +48,18 @@ agent-test:
 # Agent definitions
 # Each agent has a name and a command list
 # Placeholders in commands will be replaced:
-#   {prompt} - replaced with the actual prompt text
-#   {source} - replaced with the source file path (po file)
+#   {{.prompt}} - replaced with the actual prompt text
+#   {{.source}} - replaced with the source file path (po file)
 #   {commit} - replaced with the commit ID (default: HEAD)
 agents:
   # Example: Claude agent
   claude:
-    cmd: ["claude", "-p", "{prompt}"]
+    cmd: ["claude", "-p", "{{.prompt}}"]
 
   # Example: Gemini agent
   gemini:
-    cmd: ["gemini", "--prompt", "{prompt}"]
+    cmd: ["gemini", "--prompt", "{{.prompt}}"]
 
   # Example: Custom agent script
   # my-custom-agent:
-  #   cmd: ["/path/to/my-agent", "--prompt", "{prompt}", "--workdir", "."]
+  #   cmd: ["/path/to/my-agent", "--prompt", "{{.prompt}}", "--workdir", "."]

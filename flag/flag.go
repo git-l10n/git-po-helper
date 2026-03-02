@@ -98,9 +98,17 @@ const (
 	PotFileFlagDownload
 )
 
+// getPotFileOpt returns the --pot-file value (defined on root command).
+func getPotFileOpt() string {
+	if viper.IsSet("pot-file") {
+		return viper.GetString("pot-file")
+	}
+	return "auto"
+}
+
 // GetPotFileLocation returns option "--pot-file".
 func GetPotFileLocation() string {
-	value := viper.GetString("pot-file")
+	value := getPotFileOpt()
 
 	switch GetPotFileFlag() {
 	case PotFileFlagNone:
@@ -118,7 +126,7 @@ func GetPotFileLocation() string {
 func GetPotFileFlag() int {
 	var (
 		ret int
-		opt = strings.ToLower(viper.GetString("pot-file"))
+		opt = strings.ToLower(getPotFileOpt())
 	)
 
 	if opt == "" {
@@ -169,4 +177,10 @@ func SetGettextUseMultipleVersions(value bool) {
 // GettextUseMultipleVersions returns option "gettext-use-multiple-versions".
 func GettextUseMultipleVersions() bool {
 	return viper.GetBool("gettext-use-multiple-versions")
+}
+
+// AgentConfigFile returns option "--config" (custom agent config file path).
+// If non-empty, agent config is loaded only from this file.
+func AgentConfigFile() string {
+	return viper.GetString("config")
 }

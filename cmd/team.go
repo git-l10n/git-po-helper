@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/git-l10n/git-po-helper/repository"
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,9 +16,8 @@ func (v *teamCommand) Command() *cobra.Command {
 	}
 
 	v.cmd = &cobra.Command{
-		Use:           "team [--leader | --all] [team]...",
-		Short:         "Show team leader/members",
-		SilenceErrors: true,
+		Use:   "team [--leader | --all] [team]...",
+		Short: "Show team leader/members",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return v.Execute(args)
 		},
@@ -53,11 +51,8 @@ func (v *teamCommand) Command() *cobra.Command {
 }
 
 func (v teamCommand) Execute(args []string) error {
-	// Execute in root of worktree.
-	repository.ChdirProjectRoot()
-
 	if !util.ShowTeams(args...) {
-		return errExecute
+		return NewStandardError("team command failed")
 	}
 	return nil
 }
