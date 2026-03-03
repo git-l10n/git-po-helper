@@ -1,5 +1,12 @@
 # Refactoring Design: agent-run review to Match po/AGENTS.md Task 4
 
+> **Note**: This document describes an earlier refactoring plan. The po/AGENTS.md Task 4
+> flow and file naming have since been updated. See
+> [agent-run-review-refactor-task4-2025.md](agent-run-review-refactor-task4-2025.md) for
+> the current refactoring plan that aligns with the new `review-input.po`,
+> `review-result.json`, `review-input-<N>.json`, `review-result-<N>.json`, and
+> `review-output.po` naming.
+
 This document describes the refactoring of `RunAgentReview`, `runReviewSingleBatch`, and `runReviewBatched` in `util/agent-run-review.go` so that the implementation follows the execution steps of **Task 4: review translation quality** in `po/AGENTS.md` (see `git-l10n/git-po` repository, or the project’s `po/AGENTS.md` when present).
 
 **Reference**: `po/AGENTS.md` section "Task 4: review translation quality" (steps 1–9), especially:
@@ -62,7 +69,7 @@ This document describes the refactoring of `RunAgentReview`, `runReviewSingleBat
 
 **Code changes**:
 
-- At the top of `RunAgentReview`, after resolving `reviewPOFile` and `reviewJSONFile` (e.g. via `ReviewOutputPaths(outputBase)`):
+- At the top of `RunAgentReview`, after resolving paths (e.g. via `ReviewPathSetFromBase(outputBase)`):
   - If `!Exist(reviewPOFile)` → keep current flow (prepare review data → step 2).
   - Else if `Exist(reviewJSONFile)` → run merge/summary only (step 9), then return. (New branch.)
   - Else → “resume” path: skip `PrepareReviewData` and “Prepare batches”; ensure batch numbering and file names match step 3 (see below), then jump to “select current batch” (step 4).

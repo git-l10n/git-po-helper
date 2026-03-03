@@ -21,13 +21,24 @@ type GettextJSON struct {
 	Entries       []GettextEntry `json:"entries"`
 }
 
-// poEscape encodes a string for PO quoted output: backslash, quote, newline, tab, carriage return.
+// poEscape encodes a string for PO quoted output. Value is in PO format (e.g. \n, \t
+// stored as backslash+char). Valid PO escape sequences (\n, \t, \r, \", \\) are
+// output as-is; standalone backslash and raw quote are escaped.
 func poEscape(s string) string {
 	var b strings.Builder
 	b.Grow(len(s) * 2)
 	for i := 0; i < len(s); i++ {
 		switch s[i] {
 		case '\\':
+			if i+1 < len(s) {
+				switch s[i+1] {
+				case 'n', 't', 'r', '"', '\\':
+					b.WriteByte('\\')
+					b.WriteByte(s[i+1])
+					i++
+					continue
+				}
+			}
 			b.WriteString(`\\`)
 		case '"':
 			b.WriteString(`\"`)
@@ -88,7 +99,7 @@ func SplitHeader(header []string) (headerComment, headerMeta string, err error) 
 		}
 	}
 	if len(msgstrLines) > 0 {
-		headerMeta = poUnescape(strings.Join(msgstrLines, ""))
+		headerMeta = strings.Join(msgstrLines, "")
 	}
 	return headerComment, headerMeta, nil
 }
@@ -136,12 +147,20 @@ func BuildGettextJSON(headerComment, headerMeta string, entries []*GettextEntry,
 }
 
 // WriteGettextJSONToJSON writes a GettextJSON value as JSON to w (same schema as --json output).
-func WriteGettextJSONToJSON(j *GettextJSON, w io.Writer) error {
+// When indent is true (default), outputs formatted JSON with 2-space indentation for consistency.
+func WriteGettextJSONToJSON(j *GettextJSON, w io.Writer, indent ...bool) error {
 	if j == nil {
 		j = &GettextJSON{}
 	}
+	doIndent := true
+	if len(indent) > 0 {
+		doIndent = indent[0]
+	}
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
+	if doIndent {
+		enc.SetIndent("", "  ")
+	}
 	if err := enc.Encode(j); err != nil {
 		return fmt.Errorf("encode gettext JSON: %w", err)
 	}
@@ -197,12 +216,33 @@ func parseGettextJSONWithGjson(data []byte, err error) *GettextJSON {
 }
 
 // ParseGettextJSON decodes gettext JSON from r into GettextJSON.
+// Converts JSON-decoded strings to PO format for GettextEntry consistency.
 func ParseGettextJSON(r io.Reader) (*GettextJSON, error) {
 	var out GettextJSON
 	if err := json.NewDecoder(r).Decode(&out); err != nil {
 		return nil, fmt.Errorf("decode gettext JSON: %w", err)
 	}
+	convertGettextJSONToPoFormat(&out)
 	return &out, nil
+}
+
+// convertGettextJSONToPoFormat converts JSON-decoded strings (newline, tab) to PO format.
+func convertGettextJSONToPoFormat(j *GettextJSON) {
+	if j == nil {
+		return
+	}
+	// HeaderComment uses newline as line separator; keep as-is.
+	j.HeaderMeta = jsonDecodedToPoFormat(j.HeaderMeta)
+	for i := range j.Entries {
+		e := &j.Entries[i]
+		e.MsgID = jsonDecodedToPoFormat(e.MsgID)
+		e.MsgStr = jsonDecodedToPoFormat(e.MsgStr)
+		e.MsgIDPlural = jsonDecodedToPoFormat(e.MsgIDPlural)
+		e.MsgIDPrevious = jsonDecodedToPoFormat(e.MsgIDPrevious)
+		for k := range e.MsgStrPlural {
+			e.MsgStrPlural[k] = jsonDecodedToPoFormat(e.MsgStrPlural[k])
+		}
+	}
 }
 
 // ParseGettextJSONBytes decodes gettext JSON from data.
@@ -213,6 +253,7 @@ func ParseGettextJSONBytes(data []byte) (*GettextJSON, error) {
 		prepared := PrepareJSONForParse(data, err)
 		if err2 := json.Unmarshal(prepared, &out); err2 != nil {
 			if parsed := parseGettextJSONWithGjson(prepared, err2); parsed != nil {
+				convertGettextJSONToPoFormat(parsed)
 				return parsed, nil
 			}
 			return nil, fmt.Errorf("decode gettext JSON: %w", err)
@@ -221,6 +262,7 @@ func ParseGettextJSONBytes(data []byte) (*GettextJSON, error) {
 	if out.Entries == nil {
 		out.Entries = []GettextEntry{}
 	}
+	convertGettextJSONToPoFormat(&out)
 	return &out, nil
 }
 
@@ -566,18 +608,16 @@ func WriteGettextJSONToPO(j *GettextJSON, w io.Writer, noHeader, addTrailingNewl
 		return err
 	}
 	if j.HeaderMeta != "" {
-		parts := strings.Split(j.HeaderMeta, "\n")
+		parts := strings.Split(j.HeaderMeta, "\\n")
 		for i, part := range parts {
-			var content string
 			if i < len(parts)-1 {
-				content = part + "\n"
+				if _, err := io.WriteString(w, "\""+poEscape(part)+"\\n\"\n"); err != nil {
+					return err
+				}
 			} else if part != "" {
-				content = part
-			} else {
-				continue
-			}
-			if _, err := io.WriteString(w, "\""+poEscape(content)+"\"\n"); err != nil {
-				return err
+				if _, err := io.WriteString(w, "\""+poEscape(part)+"\"\n"); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -717,8 +757,9 @@ func writeGettextEntryToPO(w io.Writer, entry GettextEntry) error {
 }
 
 // writePoStringWithPrefix writes a keyword and value with optional prefix (e.g. "#~ " for obsolete).
+// Value is in PO format; multi-line uses literal \n (backslash+n) as separator.
 func writePoStringWithPrefix(w io.Writer, prefix, keyword, value string) error {
-	parts := strings.Split(value, "\n")
+	parts := strings.Split(value, "\\n")
 	if len(parts) == 1 {
 		_, err := io.WriteString(w, prefix+keyword+" \""+poEscape(value)+"\"\n")
 		return err

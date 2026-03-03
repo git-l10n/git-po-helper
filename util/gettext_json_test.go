@@ -24,7 +24,7 @@ func TestSplitHeader_NoComment(t *testing.T) {
 	if comment != "" {
 		t.Errorf("header_comment: expected empty, got %q", comment)
 	}
-	expectedMeta := "Project-Id-Version: git\nContent-Type: text/plain; charset=UTF-8\n"
+	expectedMeta := "Project-Id-Version: git\\nContent-Type: text/plain; charset=UTF-8\\n"
 	if meta != expectedMeta {
 		t.Errorf("header_meta: got %q, want %q", meta, expectedMeta)
 	}
@@ -67,7 +67,7 @@ func TestSplitHeader_CommentAndHeaderBlock(t *testing.T) {
 	if comment != expectedComment {
 		t.Errorf("header_comment: got %q, want %q", comment, expectedComment)
 	}
-	expectedMeta := "Project-Id-Version: git\nContent-Type: text/plain; charset=UTF-8\n"
+	expectedMeta := "Project-Id-Version: git\\nContent-Type: text/plain; charset=UTF-8\\n"
 	if meta != expectedMeta {
 		t.Errorf("header_meta: got %q, want %q", meta, expectedMeta)
 	}
@@ -85,7 +85,7 @@ func TestSplitHeader_MultiLineHeaderMeta(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SplitHeader: %v", err)
 	}
-	expectedMeta := "Project-Id-Version: git\nContent-Type: text/plain; charset=UTF-8\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
+	expectedMeta := "Project-Id-Version: git\\nContent-Type: text/plain; charset=UTF-8\\nPlural-Forms: nplurals=2; plural=(n != 1);\\n"
 	if meta != expectedMeta {
 		t.Errorf("header_meta: got %q, want %q", meta, expectedMeta)
 	}
@@ -123,11 +123,11 @@ func TestBuildGettextJSON_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildGettextJSON: %v", err)
 	}
-	var decoded GettextJSON
-	if err := json.NewDecoder(&buf).Decode(&decoded); err != nil {
-		t.Fatalf("decode JSON: %v", err)
+	decoded, err := ParseGettextJSON(&buf)
+	if err != nil {
+		t.Fatalf("ParseGettextJSON: %v", err)
 	}
-	if decoded.HeaderMeta != "Project-Id-Version: git\n" {
+	if decoded.HeaderMeta != "Project-Id-Version: git\\n" {
 		t.Errorf("HeaderMeta: got %q", decoded.HeaderMeta)
 	}
 	if len(decoded.Entries) != 2 {
@@ -228,7 +228,7 @@ msgstr "你好"
 	if comment != expectedComment {
 		t.Errorf("header_comment: got %q", comment)
 	}
-	expectedMeta := "Project-Id-Version: git\nContent-Type: text/plain; charset=UTF-8\n"
+	expectedMeta := "Project-Id-Version: git\\nContent-Type: text/plain; charset=UTF-8\\n"
 	if meta != expectedMeta {
 		t.Errorf("header_meta: got %q", meta)
 	}
@@ -283,13 +283,13 @@ func TestWriteGettextJSONToPO_Example2RoundTrip(t *testing.T) {
 		t.Fatalf("expected 1 entry after round-trip, got %d", len(entries))
 	}
 	e := entries[0]
-	wantMsgid := "Line one\nLine two\twith tab, padding for line 2."
-	wantMsgstr := "第一行\n第二行\t带制表符, 第二行的填充。"
-	if poUnescape(e.MsgID) != wantMsgid {
-		t.Errorf("msgid round-trip: got %q", poUnescape(e.MsgID))
+	wantMsgid := "Line one\\nLine two\\twith tab, padding for line 2."
+	wantMsgstr := "第一行\\n第二行\\t带制表符, 第二行的填充。"
+	if e.MsgID != wantMsgid {
+		t.Errorf("msgid round-trip: got %q", e.MsgID)
 	}
-	if poUnescape(e.MsgStr) != wantMsgstr {
-		t.Errorf("msgstr round-trip: got %q", poUnescape(e.MsgStr))
+	if e.MsgStr != wantMsgstr {
+		t.Errorf("msgstr round-trip: got %q", e.MsgStr)
 	}
 	headerComment, headerMeta, _ := SplitHeader(header)
 	var jsonBuf bytes.Buffer
@@ -300,6 +300,7 @@ func TestWriteGettextJSONToPO_Example2RoundTrip(t *testing.T) {
 	if err := json.Unmarshal(jsonBuf.Bytes(), &j2); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
+	// Both j and j2 have PO format; entries from ParsePoEntries are in PO format
 	if j2.Entries[0].MsgID != j.Entries[0].MsgID || j2.Entries[0].MsgStr != j.Entries[0].MsgStr {
 		t.Errorf("round-trip JSON: msgid %q vs %q, msgstr %q vs %q",
 			j2.Entries[0].MsgID, j.Entries[0].MsgID, j2.Entries[0].MsgStr, j.Entries[0].MsgStr)
@@ -368,6 +369,180 @@ func TestWriteGettextJSONToPO_SpecialChars(t *testing.T) {
 	want := "Quote \" and backslash \\ and tab\t and newline\n"
 	if poUnescape(entries[0].MsgID) != want {
 		t.Errorf("msgid: got %q", poUnescape(entries[0].MsgID))
+	}
+}
+
+// TestEscapeChars_JSONInputWithNewlineTab verifies JSON with decoded \n, \t
+// is converted to PO format and round-trips correctly.
+func TestEscapeChars_JSONInputWithNewlineTab(t *testing.T) {
+	jsonStr := `{
+  "header_comment": "",
+  "header_meta": "Project-Id-Version: git\\nContent-Type: text/plain; charset=UTF-8\\n",
+  "entries": [
+    {
+      "msgid": "A\\nB\\tC\\rD",
+      "msgstr": "甲\\n乙\\t丙\\r丁",
+      "fuzzy": false
+    }
+  ]
+}`
+	j, err := ParseGettextJSONBytes([]byte(jsonStr))
+	if err != nil {
+		t.Fatalf("parse JSON: %v", err)
+	}
+	// After parse, strings are in PO format (backslash+n, backslash+t, etc.)
+	wantMsgid := `A\nB\tC\rD`
+	wantMsgstr := "甲\\n乙\\t丙\\r丁"
+	if j.Entries[0].MsgID != wantMsgid {
+		t.Errorf("MsgID after parse: got %q, want %q", j.Entries[0].MsgID, wantMsgid)
+	}
+	if j.Entries[0].MsgStr != wantMsgstr {
+		t.Errorf("MsgStr after parse: got %q, want %q", j.Entries[0].MsgStr, wantMsgstr)
+	}
+	var poBuf bytes.Buffer
+	if err := WriteGettextJSONToPO(j, &poBuf, false, false); err != nil {
+		t.Fatalf("WriteGettextJSONToPO: %v", err)
+	}
+	entries, _, err := ParsePoEntries(poBuf.Bytes())
+	if err != nil {
+		t.Fatalf("ParsePoEntries: %v", err)
+	}
+	if entries[0].MsgID != wantMsgid || entries[0].MsgStr != wantMsgstr {
+		t.Errorf("after PO round-trip: msgid=%q msgstr=%q", entries[0].MsgID, entries[0].MsgStr)
+	}
+}
+
+// TestEscapeChars_POInputAllSequences verifies PO with \n, \t, \r, \", \\
+// round-trips through JSON correctly.
+func TestEscapeChars_POInputAllSequences(t *testing.T) {
+	poContent := `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid ""
+"Quote \" and backslash \\ and tab\t and newline\n"
+"and carriage return\r end."
+msgstr ""
+"引号 \" 反斜杠 \\ 制表符\t 换行\n"
+"回车\r 结束。"
+`
+	entries, header, err := ParsePoEntries([]byte(poContent))
+	if err != nil {
+		t.Fatalf("ParsePoEntries: %v", err)
+	}
+	// PO format: \" = backslash+quote, \\ = backslash+backslash, \t \n \r as literal
+	wantMsgid := `Quote \" and backslash \\ and tab\t and newline\nand carriage return\r end.`
+	wantMsgstr := `引号 \" 反斜杠 \\ 制表符\t 换行\n回车\r 结束。`
+	if entries[0].MsgID != wantMsgid {
+		t.Errorf("MsgID: got %q, want %q", entries[0].MsgID, wantMsgid)
+	}
+	if entries[0].MsgStr != wantMsgstr {
+		t.Errorf("MsgStr: got %q, want %q", entries[0].MsgStr, wantMsgstr)
+	}
+	headerComment, headerMeta, _ := SplitHeader(header)
+	var jsonBuf bytes.Buffer
+	if err := BuildGettextJSON(headerComment, headerMeta, entries, &jsonBuf); err != nil {
+		t.Fatalf("BuildGettextJSON: %v", err)
+	}
+	j, err := ParseGettextJSONBytes(jsonBuf.Bytes())
+	if err != nil {
+		t.Fatalf("ParseGettextJSONBytes: %v", err)
+	}
+	if j.Entries[0].MsgID != wantMsgid || j.Entries[0].MsgStr != wantMsgstr {
+		t.Errorf("after JSON: msgid=%q msgstr=%q", j.Entries[0].MsgID, j.Entries[0].MsgStr)
+	}
+	var poBuf bytes.Buffer
+	if err := WriteGettextJSONToPO(j, &poBuf, false, false); err != nil {
+		t.Fatalf("WriteGettextJSONToPO: %v", err)
+	}
+	entries2, _, err := ParsePoEntries(poBuf.Bytes())
+	if err != nil {
+		t.Fatalf("ParsePoEntries (second): %v", err)
+	}
+	if entries2[0].MsgID != wantMsgid || entries2[0].MsgStr != wantMsgstr {
+		t.Errorf("after full round-trip: msgid=%q msgstr=%q", entries2[0].MsgID, entries2[0].MsgStr)
+	}
+}
+
+// TestEscapeChars_HeaderMetaWithNewlines verifies header_meta with \n
+// in JSON round-trips correctly.
+func TestEscapeChars_HeaderMetaWithNewlines(t *testing.T) {
+	jsonStr := `{
+  "header_comment": "",
+  "header_meta": "Project-Id-Version: git\nContent-Type: text/plain; charset=UTF-8\nPlural-Forms: nplurals=2; plural=(n != 1);\n",
+  "entries": [
+    {"msgid": "Hello", "msgstr": "你好", "fuzzy": false}
+  ]
+}`
+	j, err := ParseGettextJSONBytes([]byte(jsonStr))
+	if err != nil {
+		t.Fatalf("parse JSON: %v", err)
+	}
+	wantMeta := "Project-Id-Version: git\\nContent-Type: text/plain; charset=UTF-8\\nPlural-Forms: nplurals=2; plural=(n != 1);\\n"
+	if j.HeaderMeta != wantMeta {
+		t.Errorf("HeaderMeta: got %q, want %q", j.HeaderMeta, wantMeta)
+	}
+	var poBuf bytes.Buffer
+	if err := WriteGettextJSONToPO(j, &poBuf, false, false); err != nil {
+		t.Fatalf("WriteGettextJSONToPO: %v", err)
+	}
+	_, header, err := ParsePoEntries(poBuf.Bytes())
+	if err != nil {
+		t.Fatalf("ParsePoEntries: %v", err)
+	}
+	_, meta, _ := SplitHeader(header)
+	if meta != wantMeta {
+		t.Errorf("header_meta after round-trip: got %q, want %q", meta, wantMeta)
+	}
+}
+
+// TestJSONEscape_PythonCompatible verifies JSON escape/unescape matches Python json.dumps/json.loads.
+// Python: json.dumps("1 \n 2 \r 3 \" 4 \t 5 \a 6 \\") → '"1 \\n 2 \\r 3 \\" 4 \\t 5 \\u0007 6 \\\\"'
+// Python: json.loads('"1 \\n 2 \\r 3 \\" 4 \\t 5 \\u0007 6 \\\\"') → '1 \n 2 \r 3 " 4 \t 5 \x07 6 \\'
+func TestJSONEscape_PythonCompatible(t *testing.T) {
+	// String with newline, cr, quote, tab, bell, backslash (matches Python input)
+	pyInput := "1 \n 2 \r 3 \" 4 \t 5 \x07 6 \\"
+	// Expected JSON output (matches Python json.dumps)
+	pyDumpsExpected := `"1 \n 2 \r 3 \" 4 \t 5 \u0007 6 \\"`
+
+	// Verify json.Marshal produces same as Python json.dumps
+	marshaled, err := json.Marshal(pyInput)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
+	if string(marshaled) != pyDumpsExpected {
+		t.Errorf("json.Marshal: got %q, want %q", string(marshaled), pyDumpsExpected)
+	}
+
+	// Verify json.Unmarshal produces same as Python json.loads
+	var decoded string
+	if err := json.Unmarshal([]byte(pyDumpsExpected), &decoded); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if decoded != pyInput {
+		t.Errorf("json.Unmarshal: got %q, want %q", decoded, pyInput)
+	}
+
+	// Verify gettext JSON round-trip with this string
+	jsonStr := `{"header_comment":"","header_meta":"","entries":[{"msgid":"1 \n 2 \r 3 \" 4 \t 5 \u0007 6 \\","msgstr":"same","fuzzy":false}]}`
+	j, err := ParseGettextJSONBytes([]byte(jsonStr))
+	if err != nil {
+		t.Fatalf("ParseGettextJSONBytes: %v", err)
+	}
+	wantMsgid := "1 \\n 2 \\r 3 \\\" 4 \\t 5 \x07 6 \\\\"
+	if j.Entries[0].MsgID != wantMsgid {
+		t.Errorf("MsgID after parse: got %q, want %q", j.Entries[0].MsgID, wantMsgid)
+	}
+	var out bytes.Buffer
+	if err := WriteGettextJSONToJSON(j, &out, false); err != nil {
+		t.Fatalf("WriteGettextJSONToJSON: %v", err)
+	}
+	j2, err := ParseGettextJSONBytes(out.Bytes())
+	if err != nil {
+		t.Fatalf("ParseGettextJSONBytes (round-trip): %v", err)
+	}
+	if j2.Entries[0].MsgID != wantMsgid {
+		t.Errorf("MsgID after round-trip: got %q, want %q", j2.Entries[0].MsgID, wantMsgid)
 	}
 }
 
@@ -487,7 +662,7 @@ func TestWriteGettextJSONToPO_EmptyEntries(t *testing.T) {
 		t.Errorf("expected 0 entries, got %d", len(entries))
 	}
 	comment, meta, _ := SplitHeader(header)
-	if comment != "# empty\n" || meta != "Project-Id-Version: git\n" {
+	if comment != "# empty\n" || meta != "Project-Id-Version: git\\n" {
 		t.Errorf("header: comment=%q meta=%q", comment, meta)
 	}
 }
@@ -713,6 +888,176 @@ func TestMergeGettextJSON(t *testing.T) {
 	single := MergeGettextJSON([]*GettextJSON{a})
 	if len(single.Entries) != 2 || single.HeaderComment != "# first" {
 		t.Errorf("MergeGettextJSON([a]): got %d entries", len(single.Entries))
+	}
+}
+
+// gettextJSONEqualForTest compares two GettextJSON for equality (ignores RawLines).
+func gettextJSONEqualForTest(a, b *GettextJSON) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	if a.HeaderComment != b.HeaderComment || a.HeaderMeta != b.HeaderMeta {
+		return false
+	}
+	if len(a.Entries) != len(b.Entries) {
+		return false
+	}
+	for i := range a.Entries {
+		e1, e2 := &a.Entries[i], &b.Entries[i]
+		if !GettextEntriesEqual(e1, e2) {
+			return false
+		}
+		if e1.MsgIDPrevious != e2.MsgIDPrevious {
+			return false
+		}
+		if len(e1.Comments) != len(e2.Comments) {
+			return false
+		}
+		for j := range e1.Comments {
+			if e1.Comments[j] != e2.Comments[j] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// TestMsgSelectFromFile_POAndJSONRoundTrip verifies: poContent and jsonContent written to
+// two files, loaded as gettext objects, entries' msgid/msgstr compared for consistency.
+// Both objects written back to JSON and PO; output matches original files (JSON with indent).
+func TestMsgSelectFromFile_POAndJSONRoundTrip(t *testing.T) {
+	// PO content with \n, \t (backslash+n, backslash+t in PO format)
+	poContent := `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: src/a.c
+msgid ""
+"Line one\n"
+"Line two\twith tab"
+msgstr ""
+"第一行\n"
+"第二行\t带制表符"
+
+#, c-format
+msgid "Simple %s"
+msgstr "简单 %s"
+`
+	// JSON content with \n, \t (PO format in JSON: \\n, \\t)
+	// WriteGettextJSONToJSON with indent=true produces formatted output for consistency
+	jsonContent := `{
+  "header_comment": "",
+  "header_meta": "Content-Type: text/plain; charset=UTF-8\\n",
+  "entries": [
+    {
+      "msgid": "Line one\\nLine two\\twith tab",
+      "msgstr": "第一行\\n第二行\\t带制表符",
+      "comments": ["#: src/a.c"],
+      "fuzzy": false
+    },
+    {
+      "msgid": "Simple %s",
+      "msgstr": "简单 %s",
+      "comments": ["#, c-format"],
+      "fuzzy": false
+    }
+  ]
+}
+`
+
+	dir := t.TempDir()
+	poPath := filepath.Join(dir, "input.po")
+	jsonPath := filepath.Join(dir, "input.json")
+	if err := os.WriteFile(poPath, []byte(poContent), 0644); err != nil {
+		t.Fatalf("write PO: %v", err)
+	}
+	if err := os.WriteFile(jsonPath, []byte(jsonContent), 0644); err != nil {
+		t.Fatalf("write JSON: %v", err)
+	}
+
+	// Load from both files
+	jFromPO, err := ReadFileToGettextJSON(poPath)
+	if err != nil {
+		t.Fatalf("ReadFileToGettextJSON(PO): %v", err)
+	}
+	jFromJSON, err := ReadFileToGettextJSON(jsonPath)
+	if err != nil {
+		t.Fatalf("ReadFileToGettextJSON(JSON): %v", err)
+	}
+
+	// Compare entries: msgid and msgstr must be consistent
+	if !gettextJSONEqualForTest(jFromPO, jFromJSON) {
+		t.Errorf("entries from PO vs JSON: msgid/msgstr differ\nfrom PO: %+v\nfrom JSON: %+v",
+			jFromPO, jFromJSON)
+	}
+
+	// Write jFromPO to JSON and PO
+	outputFromPOJSON := filepath.Join(dir, "output_from_po.json")
+	outputFromPOPO := filepath.Join(dir, "output_from_po.po")
+	{
+		f, err := os.Create(outputFromPOJSON)
+		if err != nil {
+			t.Fatalf("create output_from_po.json: %v", err)
+		}
+		if err := WriteGettextJSONToJSON(jFromPO, f, true); err != nil {
+			f.Close()
+			t.Fatalf("WriteGettextJSONToJSON (indent): %v", err)
+		}
+		f.Close()
+		var poBuf bytes.Buffer
+		if err := WriteGettextJSONToPO(jFromPO, &poBuf, false, false); err != nil {
+			t.Fatalf("WriteGettextJSONToPO: %v", err)
+		}
+		if err := os.WriteFile(outputFromPOPO, poBuf.Bytes(), 0644); err != nil {
+			t.Fatalf("write output_from_po.po: %v", err)
+		}
+	}
+
+	// Write jFromJSON to JSON and PO
+	outputFromJSONJSON := filepath.Join(dir, "output_from_json.json")
+	outputFromJSONPO := filepath.Join(dir, "output_from_json.po")
+	{
+		f, err := os.Create(outputFromJSONJSON)
+		if err != nil {
+			t.Fatalf("create output_from_json.json: %v", err)
+		}
+		if err := WriteGettextJSONToJSON(jFromJSON, f, true); err != nil {
+			f.Close()
+			t.Fatalf("WriteGettextJSONToJSON (indent): %v", err)
+		}
+		f.Close()
+		var poBuf bytes.Buffer
+		if err := WriteGettextJSONToPO(jFromJSON, &poBuf, false, false); err != nil {
+			t.Fatalf("WriteGettextJSONToPO: %v", err)
+		}
+		if err := os.WriteFile(outputFromJSONPO, poBuf.Bytes(), 0644); err != nil {
+			t.Fatalf("write output_from_json.po: %v", err)
+		}
+	}
+
+	// Output JSON must match original JSON (parse and compare structure; formatting may differ)
+	origJSON, _ := os.ReadFile(jsonPath)
+	outFromPOJSON, _ := os.ReadFile(outputFromPOJSON)
+	outFromJSONJSON, _ := os.ReadFile(outputFromJSONJSON)
+	jOrigJSON, _ := ParseGettextJSONBytes(origJSON)
+	jOutFromPOJSON, _ := ParseGettextJSONBytes(outFromPOJSON)
+	jOutFromJSONJSON, _ := ParseGettextJSONBytes(outFromJSONJSON)
+	if !gettextJSONEqualForTest(jOrigJSON, jOutFromPOJSON) {
+		t.Errorf("output_from_po.json content != input.json")
+	}
+	if !gettextJSONEqualForTest(jOrigJSON, jOutFromJSONJSON) {
+		t.Errorf("output_from_json.json content != input.json")
+	}
+
+	// Output PO must match original PO (compare via parsed structure)
+	jOrigPO, _ := ReadFileToGettextJSON(poPath)
+	jOutFromPOPO, _ := ReadFileToGettextJSON(outputFromPOPO)
+	jOutFromJSONPO, _ := ReadFileToGettextJSON(outputFromJSONPO)
+	if !gettextJSONEqualForTest(jOrigPO, jOutFromPOPO) {
+		t.Errorf("output_from_po.po content != input.po")
+	}
+	if !gettextJSONEqualForTest(jOrigPO, jOutFromJSONPO) {
+		t.Errorf("output_from_json.po content != input.po")
 	}
 }
 

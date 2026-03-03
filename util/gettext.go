@@ -10,7 +10,8 @@ import (
 )
 
 // GettextEntry represents a single PO/JSON entry. Used for parsing, comparison, and output.
-// MsgID/MsgStr are normalized (unescaped). RawLines preserves exact PO format for round-trip.
+// MsgID/MsgStr/MsgIDPlural/MsgStrPlural use PO string format (escape sequences like \n, \t
+// stored as literal backslash+char, not decoded). RawLines preserves exact PO format for round-trip.
 type GettextEntry struct {
 	MsgID         string   `json:"msgid"`
 	MsgStr        string   `json:"msgstr"`
@@ -107,6 +108,49 @@ func MergeFuzzyIntoFlagLine(line string, addFuzzy bool) string {
 	return out
 }
 
+// poParsedToPoFormat converts PO-parsed string to GettextEntry storage format.
+// PO file uses escape sequences (\\, \n, \t, etc.); we unescape then convert
+// newline/tab/cr to backslash+n/t/r for consistent PO format storage.
+func poParsedToPoFormat(s string) string {
+	return jsonDecodedToPoFormat(poUnescape(s))
+}
+
+// jsonDecodedToPoFormat converts JSON-decoded string to PO format for GettextEntry storage.
+// Matches RFC 8259 / Python json.loads: \n→newline, \t→tab, \r→cr, \"→quote, \\→backslash,
+// \uXXXX→codepoint. We store as PO escape sequences: newline→\n, tab→\t, cr→\r, quote→\",
+// backslash→\\. When JSON has \\n (literal backslash+n), we get \ and n; output as-is.
+// Standalone backslash (not part of \n,\t,\r,\",\\) → output \\.
+func jsonDecodedToPoFormat(s string) string {
+	var b strings.Builder
+	b.Grow(len(s) * 2)
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '\n':
+			b.WriteString(`\n`)
+		case '\t':
+			b.WriteString(`\t`)
+		case '\r':
+			b.WriteString(`\r`)
+		case '"':
+			b.WriteString(`\"`)
+		case '\\':
+			if i+1 < len(s) {
+				switch s[i+1] {
+				case 'n', 't', 'r', '"', '\\':
+					b.WriteByte('\\')
+					b.WriteByte(s[i+1])
+					i++
+					continue
+				}
+			}
+			b.WriteString(`\\`)
+		default:
+			b.WriteByte(s[i])
+		}
+	}
+	return b.String()
+}
+
 // poUnescape decodes PO escape sequences in s into real characters.
 // PO uses \n (newline), \t (tab), \r (carriage return), \" (quote), \\ (backslash).
 func poUnescape(s string) string {
@@ -201,13 +245,13 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 				value = strings.TrimSpace(value)
 				value = strDeQuote(value)
 				if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
-					currentEntry.MsgID = poUnescape(msgidValue.String())
-					currentEntry.MsgStr = poUnescape(msgstrValue.String())
+					currentEntry.MsgID = poParsedToPoFormat(msgidValue.String())
+					currentEntry.MsgStr = poParsedToPoFormat(msgstrValue.String())
 					if msgidPluralValue.Len() > 0 {
-						currentEntry.MsgIDPlural = poUnescape(msgidPluralValue.String())
+						currentEntry.MsgIDPlural = poParsedToPoFormat(msgidPluralValue.String())
 						currentEntry.MsgStrPlural = make([]string, len(msgstrPluralValues))
 						for i, b := range msgstrPluralValues {
-							currentEntry.MsgStrPlural[i] = poUnescape(b.String())
+							currentEntry.MsgStrPlural[i] = poParsedToPoFormat(b.String())
 						}
 					}
 					currentEntry.RawLines = entryLines
@@ -223,7 +267,7 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 					msgidPluralValue.Reset()
 					msgstrPluralValues = []strings.Builder{}
 				}
-				currentEntry.MsgIDPrevious = poUnescape(value)
+				currentEntry.MsgIDPrevious = poParsedToPoFormat(value)
 				currentEntry.Obsolete = true
 				inObsolete = true
 				entryLines = append(entryLines, line)
@@ -329,13 +373,13 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			// Start of new entry (or obsolete #~ msgid)
 			// Save previous entry if we have one and it has content
 			if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
-				currentEntry.MsgID = poUnescape(msgidValue.String())
-				currentEntry.MsgStr = poUnescape(msgstrValue.String())
+				currentEntry.MsgID = poParsedToPoFormat(msgidValue.String())
+				currentEntry.MsgStr = poParsedToPoFormat(msgstrValue.String())
 				if msgidPluralValue.Len() > 0 {
-					currentEntry.MsgIDPlural = poUnescape(msgidPluralValue.String())
+					currentEntry.MsgIDPlural = poParsedToPoFormat(msgidPluralValue.String())
 					currentEntry.MsgStrPlural = make([]string, len(msgstrPluralValues))
 					for i, b := range msgstrPluralValues {
-						currentEntry.MsgStrPlural[i] = poUnescape(b.String())
+						currentEntry.MsgStrPlural[i] = poParsedToPoFormat(b.String())
 					}
 				}
 				currentEntry.RawLines = entryLines
@@ -429,13 +473,13 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			// if we have collected any continuation lines (msgidValue.Len() > 0)
 			// or if we have a complete entry with msgstr
 			if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
-				currentEntry.MsgID = poUnescape(msgidValue.String())
-				currentEntry.MsgStr = poUnescape(msgstrValue.String())
+				currentEntry.MsgID = poParsedToPoFormat(msgidValue.String())
+				currentEntry.MsgStr = poParsedToPoFormat(msgstrValue.String())
 				if msgidPluralValue.Len() > 0 {
-					currentEntry.MsgIDPlural = poUnescape(msgidPluralValue.String())
+					currentEntry.MsgIDPlural = poParsedToPoFormat(msgidPluralValue.String())
 					currentEntry.MsgStrPlural = make([]string, len(msgstrPluralValues))
 					for i, b := range msgstrPluralValues {
-						currentEntry.MsgStrPlural[i] = poUnescape(b.String())
+						currentEntry.MsgStrPlural[i] = poParsedToPoFormat(b.String())
 					}
 				}
 				currentEntry.RawLines = entryLines
@@ -468,13 +512,13 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 
 	// Handle last entry
 	if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
-		currentEntry.MsgID = poUnescape(msgidValue.String())
-		currentEntry.MsgStr = poUnescape(msgstrValue.String())
+		currentEntry.MsgID = poParsedToPoFormat(msgidValue.String())
+		currentEntry.MsgStr = poParsedToPoFormat(msgstrValue.String())
 		if msgidPluralValue.Len() > 0 {
-			currentEntry.MsgIDPlural = poUnescape(msgidPluralValue.String())
+			currentEntry.MsgIDPlural = poParsedToPoFormat(msgidPluralValue.String())
 			currentEntry.MsgStrPlural = make([]string, len(msgstrPluralValues))
 			for i, b := range msgstrPluralValues {
-				currentEntry.MsgStrPlural[i] = poUnescape(b.String())
+				currentEntry.MsgStrPlural[i] = poParsedToPoFormat(b.String())
 			}
 		}
 		currentEntry.RawLines = entryLines

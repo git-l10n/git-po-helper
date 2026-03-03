@@ -63,17 +63,39 @@ test_expect_success "compare PO vs PO: default output has new and changed entrie
 test_expect_success "compare --json: output JSON when there are new/changed entries" '
 	$HELPER compare --json -o out.json old.po new.po &&
 	test -s out.json &&
-	grep -q "^{" out.json &&
-	grep -q "\"msgid\":\"Hello\"" out.json &&
-	grep -q "\"msgstr\":\"您好\"" out.json &&
-	grep -q "\"msgid\":\"New entry\"" out.json &&
-	grep -q "\"entries\"" out.json
+
+	# 1. 检查 JSON 格式是否有效
+	jq -e . out.json &&
+
+	# 2. 检查是否有 entries 字段
+	jq -e "has(\"entries\")" out.json &&
+
+		# 4. 检查 Hello -> 您好
+	jq -e ".entries[] | select(.msgid == \"Hello\") | .msgstr == \"您好\"" out.json  &&
+
+	# 5. 检查 New entry 是否存在
+	jq -e ".entries[] | select(.msgid == \"New entry\")" out.json
 '
 
 test_expect_success "compare --json: empty output when no new/changed entries" '
 	$HELPER compare --json -o empty.json new.po new.po &&
 	test_path_is_file empty.json &&
 	test ! -s empty.json
+'
+
+test_expect_success "compare --msgid: same msgid unchanged (ignore msgstr, fuzzy)" '
+	$HELPER compare --stat --msgid old.po new.po >actual 2>&1 &&
+	cat >expect <<-\EOF &&
+	1 new
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success "compare --msgid: output has only new entries, not changed" '
+	$HELPER compare --msgid -o msgid-out.po old.po new.po &&
+	test -s msgid-out.po &&
+	grep -q "msgid \"New entry\"" msgid-out.po &&
+	! grep -q "msgid \"Hello\"" msgid-out.po
 '
 
 test_expect_success "setup: create PO files with obsolete entries" '
@@ -130,7 +152,7 @@ test_expect_success "compare PO with obsolete: output contains only new content 
 test_expect_success "compare PO with obsolete --json: JSON has new entry only" '
 	$HELPER compare --json -o out-obsolete.json old-with-obsolete.po new-with-obsolete.po &&
 	test -s out-obsolete.json &&
-	grep -q "\"msgid\":\"Added entry\"" out-obsolete.json &&
+	jq -e ".entries | any(.msgid == \"Added entry\")" out-obsolete.json &&
 	! grep -q "Obsolete" out-obsolete.json
 '
 
@@ -153,8 +175,8 @@ test_expect_success "compare JSON vs JSON: same result as PO vs PO" '
 test_expect_success "compare JSON vs JSON --json output" '
 	$HELPER compare --json -o out-json.json old.json new.json &&
 	test -s out-json.json &&
-	grep -q "\"msgid\":\"Hello\"" out-json.json &&
-	grep -q "\"msgid\":\"New entry\"" out-json.json
+	jq -e "recurse | objects | select(.msgid == \"Hello\")" out-json.json &&
+	jq -e "recurse | objects | select(.msgid == \"New entry\")" out-json.json
 '
 
 test_expect_success "compare PO vs JSON: mixed input works" '
@@ -171,6 +193,36 @@ test_expect_success "compare JSON vs PO: mixed input works" '
 	1 new, 1 changed
 	EOF
 	test_cmp expect actual
+'
+
+test_expect_success "compare --assert-no-changes: pass when no changes" '
+	$HELPER compare --assert-no-changes new.po new.po
+'
+
+test_expect_success "compare --assert-no-changes: fail when there are changes" '
+	test_must_fail $HELPER compare --assert-no-changes old.po new.po >out 2>&1 &&
+	grep -q "assert-no-changes failed" out &&
+	grep -q "msgid \"Hello\"" out &&
+	grep -q "msgid \"New entry\"" out
+'
+
+test_expect_success "compare --assert-changes: pass when there are changes" '
+	$HELPER compare --assert-changes old.po new.po
+'
+
+test_expect_success "compare --assert-changes: fail when no changes" '
+	test_must_fail $HELPER compare --assert-changes new.po new.po 2>stderr &&
+	grep -q "assert-changes failed" stderr
+'
+
+test_expect_success "compare --assert-no-changes and --assert-changes are mutually exclusive" '
+	test_must_fail $HELPER compare --assert-no-changes --assert-changes old.po new.po 2>&1 |
+	grep -q "mutually exclusive"
+'
+
+test_expect_success "compare --stat and --assert-no-changes are mutually exclusive" '
+	test_must_fail $HELPER compare --stat --assert-no-changes old.po new.po 2>&1 |
+	grep -q "cannot be used with"
 '
 
 test_done

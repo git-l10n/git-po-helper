@@ -222,8 +222,8 @@ git-po-helper agent-run review [--use-agent-md | --use-local-orchestration] [--a
 ```
 
 **Options:**
-- `--use-agent-md`: Use agent with po/AGENTS.md: agent does extraction, review, writes review.json (default)
-- `--use-local-orchestration`: Use local orchestration: agent only reviews batch JSON files
+- `--use-agent-md`: Use agent with po/AGENTS.md: agent does extraction, review, writes `po/review-result.json` (default)
+- `--use-local-orchestration`: Use local orchestration: extracts to `po/review-input.po`, splits into `po/review-input-<N>.json`, agent reviews each batch and writes `po/review-result-<N>.json`, merged to `po/review-result.json`
 - `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
 - `-r`, `--range <range>`: Revision range: `a..b` (compare a with b), `a..` (compare a with working tree), or `a` (compare a~ with a)
 - `--commit <commit>`: Equivalent to `-r <commit>^..<commit>` (review changes in the specified commit)
@@ -316,7 +316,7 @@ The command displays:
 
 ### agent-run report
 
-Report aggregated review statistics from batch or single review JSON. Use this after running `agent-run review` or `agent-test review` to display total entries, issues, and score. When multiple batch JSON files exist (e.g. `po/review-batch-*.json`), they are aggregated; otherwise the single review JSON is used.
+Report aggregated review statistics from batch or single review JSON. Use this after running `agent-run review` or `agent-test review` to display total entries, issues, and score. When multiple batch JSON files exist (e.g. `po/review-result-*.json`), they are aggregated; otherwise the single review JSON is used.
 
 **Usage:**
 ```bash
@@ -324,16 +324,16 @@ git-po-helper agent-run report [path]
 ```
 
 **Options:**
-- `path`: Base path for review files (default: `po/review.po`). May end with `.json` or `.po`; the tool derives both `<base>.json` and `<base>.po`. If any files match `po/review-batch-*.json`, they are loaded and aggregated into one result; otherwise `po/review.json` is used.
+- `path`: Base path for review files (default: `po/review`). Uses `review-input.po` for total count, `review-result.json` for output. If any files match `po/review-result-*.json`, they are loaded and aggregated; otherwise `po/review-result.json` is used.
 
 **Examples:**
 ```bash
-# Report from default path (po/review.po → po/review.json)
+# Report from default path (po/review)
 git-po-helper agent-run report
 
 # Report from a specific path
-git-po-helper agent-run report po/zh_CN.po
-git-po-helper agent-run report po/review.json
+git-po-helper agent-run report po/review
+git-po-helper agent-run report po/review-result.json
 ```
 
 **Output:**

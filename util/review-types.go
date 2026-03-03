@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -44,11 +46,14 @@ type AgentRunResult struct {
 
 // ReviewIssue represents a single issue in a review JSON result.
 type ReviewIssue struct {
-	MsgID       string `json:"msgid"`
-	MsgStr      string `json:"msgstr"`
-	Score       int    `json:"score"`
-	Description string `json:"description"`
-	Suggestion  string `json:"suggestion"`
+	MsgID               string   `json:"msgid"`                   // original msgid (singular)
+	MsgStr              string   `json:"msgstr"`                  // original translation (singular)
+	MsgIDPlural         string   `json:"msgid_plural,omitempty"`  // original msgid (plural)
+	MsgStrPlural        []string `json:"msgstr_plural,omitempty"` // original translation (plural)
+	Score               int      `json:"score"`                   // issue score (0-3)
+	Description         string   `json:"description"`             // issue description
+	SuggestMsgstr       string   `json:"suggest_msgstr"`          // corrected translation (singular)
+	SuggestMsgstrPlural []string `json:"suggest_msgstr_plural"`   // corrected translation (plural)
 }
 
 // ReviewJSONResult represents the overall review JSON format produced by an agent.
@@ -75,17 +80,50 @@ func (r *ReviewJSONResult) IssueCount() int {
 var (
 	ReviewDefaultOutputFile = filepath.Join(PoDir, "review.json")
 	ReviewDefaultBatchFile  = filepath.Join(PoDir, "review-batch.po")
+	// ReviewDefaultBase is the default base for Task 4 review paths (po/review).
+	ReviewDefaultBase = filepath.Join(PoDir, "review")
 )
 
-// ReviewOutputPaths returns (poFile, jsonFile) for the given output base path.
-// If base is empty, use ReviewDefaultOutputFile.
-// Uses DeriveReviewPaths to ensure consistent json/po derivation.
-func ReviewOutputPaths(base string) (poFile, jsonFile string) {
+// ReviewPathSet holds paths for Task 4 review workflow (AGENTS.md).
+// Naming: review-input.po, review-result.json, review-output.po,
+// review-input-<N>.json, review-result-<N>.json.
+type ReviewPathSet struct {
+	InputPO    string // po/review-input.po
+	ResultJSON string // po/review-result.json
+	OutputPO   string // po/review-output.po
+}
+
+// ReviewPathSetFromBase returns paths for the given base (e.g. "po/review").
+// If base is empty, uses ReviewDefaultBase.
+func ReviewPathSetFromBase(base string) ReviewPathSet {
 	if base == "" {
-		base = ReviewDefaultOutputFile
+		base = ReviewDefaultBase
 	}
-	jsonFile, poFile = DeriveReviewPaths(base)
-	return poFile, jsonFile
+	dir := filepath.Dir(base)
+	name := filepath.Base(base)
+	if name == "" || name == "." {
+		name = "review"
+		dir = PoDir
+	}
+	return ReviewPathSet{
+		InputPO:    filepath.Join(dir, name+"-input.po"),
+		ResultJSON: filepath.Join(dir, name+"-result.json"),
+		OutputPO:   filepath.Join(dir, name+"-output.po"),
+	}
+}
+
+// ReviewInputJSONPath returns po/review-input-<N>.json.
+func (p ReviewPathSet) ReviewInputJSONPath(n int) string {
+	dir := filepath.Dir(p.InputPO)
+	base := strings.TrimSuffix(filepath.Base(p.InputPO), ".po")
+	return filepath.Join(dir, base+"-"+strconv.Itoa(n)+".json")
+}
+
+// ReviewResultJSONPath returns po/review-result-<N>.json.
+func (p ReviewPathSet) ReviewResultJSONPath(n int) string {
+	dir := filepath.Dir(p.ResultJSON)
+	base := strings.TrimSuffix(filepath.Base(p.ResultJSON), ".json")
+	return filepath.Join(dir, base+"-"+strconv.Itoa(n)+".json")
 }
 
 // CalculateReviewScore calculates a 0-100 score from a ReviewJSONResult.

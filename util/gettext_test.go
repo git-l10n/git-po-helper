@@ -967,7 +967,7 @@ msgstr "第二个"
 	if err := json.NewDecoder(&buf).Decode(&decoded); err != nil {
 		t.Fatalf("decode JSON: %v", err)
 	}
-	if decoded.HeaderMeta != "Content-Type: text/plain; charset=UTF-8\n" {
+	if decoded.HeaderMeta != "Content-Type: text/plain; charset=UTF-8\\n" {
 		t.Errorf("HeaderMeta: got %q", decoded.HeaderMeta)
 	}
 	if len(decoded.Entries) != 1 {
@@ -1006,7 +1006,7 @@ msgstr "二"
 	if len(decoded.Entries) != 0 {
 		t.Errorf("expected 0 entries, got %d", len(decoded.Entries))
 	}
-	if decoded.HeaderMeta != "Content-Type: text/plain; charset=UTF-8\n" {
+	if decoded.HeaderMeta != "Content-Type: text/plain; charset=UTF-8\\n" {
 		t.Errorf("HeaderMeta: got %q", decoded.HeaderMeta)
 	}
 }

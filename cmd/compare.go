@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/git-l10n/git-po-helper/util"
 	log "github.com/sirupsen/logrus"
@@ -13,13 +14,16 @@ import (
 type compareCommand struct {
 	cmd *cobra.Command
 	O   struct {
-		Range    string
-		Commit   string
-		Since    string
-		Stat     bool
-		Output   string
-		NoHeader bool
-		JSON     bool
+		Range           string
+		Commit          string
+		Since           string
+		Stat            bool
+		AssertNoChanges bool
+		AssertChanges   bool
+		MsgIDOnly       bool
+		Output          string
+		NoHeader        bool
+		JSON            bool
 	}
 }
 
@@ -34,6 +38,13 @@ func (v *compareCommand) Command() *cobra.Command {
 		Long: `By default: output new or changed entries to stdout.
 Use -o <file> to write to a file (avoids stderr mixing when redirecting stdout).
 With --stat: show diff statistics between two l10n file versions.
+
+With --msgid: only compare msgid; same msgid is considered unchanged
+(ignore msgstr, fuzzy status changes).
+
+Assert modes (for CI; mutually exclusive with --stat):
+- --assert-no-changes: fail if there are new or changed entries; output goes to stderr on failure
+- --assert-changes: fail if there are no new or changed entries
 
 If no po/XX.po argument is given, the PO file is selected from changed files
 (interactive when multiple, auto when single).
@@ -50,6 +61,9 @@ Output is empty when there are no new or changed entries.`,
 		},
 	}
 	v.cmd.Flags().BoolVar(&v.O.Stat, "stat", false, "show diff statistics (default: output new or changed entries)")
+	v.cmd.Flags().BoolVar(&v.O.AssertNoChanges, "assert-no-changes", false, "fail (exit 1) if there are new or changed entries; output goes to stderr on failure")
+	v.cmd.Flags().BoolVar(&v.O.AssertChanges, "assert-changes", false, "fail (exit 1) if there are no new or changed entries")
+	v.cmd.Flags().BoolVar(&v.O.MsgIDOnly, "msgid", false, "only compare msgid; same msgid is unchanged (ignore msgstr, fuzzy)")
 	v.cmd.Flags().StringVarP(&v.O.Range, "range", "r", "",
 		"revision range: a..b (a and b), a.. (a and working tree), or a (a~ and a)")
 	v.cmd.Flags().StringVar(&v.O.Commit, "commit", "",
@@ -75,6 +89,14 @@ func (v compareCommand) Execute(args []string) error {
 		return NewStandardErrorF("%v", err)
 	}
 
+	// --assert-no-changes and --assert-changes are mutually exclusive with each other and with --stat
+	if v.O.AssertNoChanges && v.O.AssertChanges {
+		return NewErrorWithUsageF("--assert-no-changes and --assert-changes are mutually exclusive")
+	}
+	if v.O.Stat && (v.O.AssertNoChanges || v.O.AssertChanges) {
+		return NewErrorWithUsageF("--stat cannot be used with --assert-no-changes or --assert-changes")
+	}
+
 	if v.O.Stat {
 		return v.executeStat(target.OldCommit, target.OldFile, target.NewCommit, target.NewFile)
 	}
@@ -82,15 +104,44 @@ func (v compareCommand) Execute(args []string) error {
 }
 
 func (v compareCommand) executeNew(oldCommit, oldFile, newCommit, newFile string) error {
+	var printStdout bool
 	outputDest := v.O.Output
 	if outputDest == "" {
 		outputDest = "-"
 	}
+	if outputDest == "-" {
+		printStdout = true
+	}
+	// For assert mode, output to file so we can check if empty (use -o or fixed path)
+	if v.O.AssertNoChanges || v.O.AssertChanges {
+		if outputDest == "-" {
+			outputDest = filepath.Join(os.TempDir(), "git-po-helper-compare-assert.po")
+			defer os.Remove(outputDest)
+		}
+	}
+
 	log.Debugf("outputting new entries from '%s:%s' to '%s:%s'",
 		oldCommit, oldFile, newCommit, newFile)
-	err := util.PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputDest, v.O.NoHeader, v.O.JSON)
+	err := util.PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputDest, v.O.NoHeader, v.O.JSON, v.O.MsgIDOnly)
 	if err != nil {
 		return NewStandardErrorF("failed to prepare review data: %v", err)
+	}
+
+	if v.O.AssertNoChanges || v.O.AssertChanges {
+		data, err := os.ReadFile(outputDest)
+		if err != nil {
+			return NewStandardErrorF("failed to read compare output: %v", err)
+		}
+		hasChanges := len(data) > 0
+		if hasChanges && printStdout {
+			os.Stdout.Write(data)
+		}
+		if v.O.AssertNoChanges && hasChanges {
+			return NewStandardErrorF("assert-no-changes failed: found new or changed entries")
+		}
+		if v.O.AssertChanges && !hasChanges {
+			return NewStandardErrorF("assert-changes failed: no new or changed entries")
+		}
 	}
 	return nil
 }
@@ -131,7 +182,7 @@ func (v compareCommand) executeStat(oldCommit, oldFile, newCommit, newFile strin
 		return NewStandardErrorF("%v", err)
 	}
 
-	stat, _ := util.CompareGettextEntries(oldJ, newJ)
+	stat, _ := util.CompareGettextEntries(oldJ, newJ, v.O.MsgIDOnly)
 
 	diffStat := ""
 	if stat.Added != 0 {

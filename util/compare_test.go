@@ -455,3 +455,74 @@ func TestGettextEntriesEqual(t *testing.T) {
 		})
 	}
 }
+
+// TestCompareGettextEntries_MsgIDOnly tests that with msgidOnly=true, same msgid
+// is considered unchanged (ignore msgstr, fuzzy).
+func TestCompareGettextEntries_MsgIDOnly(t *testing.T) {
+	srcContent := poHeader + `msgid "Hello"
+msgstr "你好"
+`
+	destContent := poHeader + `msgid "Hello"
+msgstr "您好"
+`
+	oldJ, err := LoadFileToGettextJSON([]byte(srcContent), "src")
+	if err != nil {
+		t.Fatalf("LoadFileToGettextJSON src: %v", err)
+	}
+	newJ, err := LoadFileToGettextJSON([]byte(destContent), "dest")
+	if err != nil {
+		t.Fatalf("LoadFileToGettextJSON dest: %v", err)
+	}
+
+	// msgidOnly=true: same msgid → no change
+	stat, entries := CompareGettextEntries(oldJ, newJ, true)
+	if stat.Changed != 0 {
+		t.Errorf("msgidOnly=true: expected Changed=0, got %d", stat.Changed)
+	}
+	if len(entries) != 0 {
+		t.Errorf("msgidOnly=true: expected 0 review entries, got %d", len(entries))
+	}
+
+	// msgidOnly=false: different msgstr → changed
+	stat, entries = CompareGettextEntries(oldJ, newJ, false)
+	if stat.Changed != 1 {
+		t.Errorf("msgidOnly=false: expected Changed=1, got %d", stat.Changed)
+	}
+	if len(entries) != 1 {
+		t.Errorf("msgidOnly=false: expected 1 review entry, got %d", len(entries))
+	}
+}
+
+// TestCompareGettextEntries_MsgIDOnly_Fuzzy tests that msgidOnly ignores fuzzy change.
+func TestCompareGettextEntries_MsgIDOnly_Fuzzy(t *testing.T) {
+	srcContent := poHeader + `msgid "Hello"
+msgstr "你好"
+`
+	destContent := poHeader + `#, fuzzy
+msgid "Hello"
+msgstr "你好"
+`
+	oldJ, err := LoadFileToGettextJSON([]byte(srcContent), "src")
+	if err != nil {
+		t.Fatalf("LoadFileToGettextJSON src: %v", err)
+	}
+	newJ, err := LoadFileToGettextJSON([]byte(destContent), "dest")
+	if err != nil {
+		t.Fatalf("LoadFileToGettextJSON dest: %v", err)
+	}
+
+	// msgidOnly=true: same msgid → no change (fuzzy difference ignored)
+	stat, entries := CompareGettextEntries(oldJ, newJ, true)
+	if stat.Changed != 0 {
+		t.Errorf("msgidOnly=true: expected Changed=0 (fuzzy ignored), got %d", stat.Changed)
+	}
+	if len(entries) != 0 {
+		t.Errorf("msgidOnly=true: expected 0 review entries, got %d", len(entries))
+	}
+
+	// msgidOnly=false: fuzzy change → changed
+	stat, _ = CompareGettextEntries(oldJ, newJ, false)
+	if stat.Changed != 1 {
+		t.Errorf("msgidOnly=false: expected Changed=1 (fuzzy counts), got %d", stat.Changed)
+	}
+}

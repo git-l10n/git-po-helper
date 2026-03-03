@@ -28,7 +28,7 @@ test_expect_success "msg-select range 1-3 to JSON and PO" '
 
 test_expect_success "filter out fuzzy from range1-3.json" '
 	grep -q "\"fuzzy\"" range1-3.json &&
-	sed -e "s/,\"fuzzy\":true//g" -e "s/,\"fuzzy\":false//g" \
+	jq "walk(if type == \"object\" then del(.fuzzy) else . end)" \
 		range1-3.json >range1-3-no-fuzzy.json &&
 	test -s range1-3-no-fuzzy.json &&
 	! grep -q "\"fuzzy\"" range1-3-no-fuzzy.json

@@ -286,8 +286,9 @@ was detected. Use this information to locate and fix the issue.
    suggestions. See the "Output Format" section below.
    - Only include entries with issues you found, perfect entries with score 3
      should not be included.
-   - The "suggestion" field of JSON should contain the improved translation
-     which you've already applied to `{{.dest}}`.
+   - The "suggest_msgstr" (or "suggest_msgstr_plural" for plural entries) field
+     should contain the improved translation which you've already applied to
+     `{{.dest}}`.
    - Output **ONLY the JSON object** - no additional text before or after.
 
 
@@ -296,10 +297,13 @@ was detected. Use this information to locate and fix the issue.
 After modifying the PO file, output a JSON object with the following structure:
 - "issues": Array of review issues, each containing:
   - "msgid": Original message ID
-  - "msgstr": Translated message string (original, before your fix)
+  - "msgstr": Original translation (singular) before your fix
+  - "msgid_plural": (optional) For plural entries, the plural form of msgid
+  - "msgstr_plural": (optional) For plural entries, array of original plural forms
   - "score": Issue score (0 = critical/must fix, 1 = major/shoud fix, 2 = minor/needs adjustment, 3 = perfect)
   - "description": Description of the issue
-  - "suggestion": Suggested improvement (or the fixed translation)
+  - "suggest_msgstr": Corrected translation for singular entries
+  - "suggest_msgstr_plural": (optional) For plural entries, array of corrected plural forms
 
 ## Scoring Guidelines
 
@@ -339,21 +343,21 @@ After modifying the PO file, output a JSON object with the following structure:
       "msgstr": "承诺",
       "score": 0,
       "description": "严重错误：偏离业务背景",
-      "suggestion": "提交"
+      "suggest_msgstr": "提交"
     },
     {
       "msgid": "repository",
       "msgstr": "版本库",
       "score": 2,
       "description": "一致性问题：其他地方使用'仓库'",
-      "suggestion": "仓库"
+      "suggest_msgstr": "仓库"
     },
     {
       "msgid": "The file has been modified",
       "msgstr": "文件已被修改了",
       "score": 2,
       "description": "风格问题：表达冗余",
-      "suggestion": "文件已修改"
+      "suggest_msgstr": "文件已修改"
     }
   ]
 }

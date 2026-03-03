@@ -39,7 +39,9 @@ func GettextEntriesEqual(e1, e2 *GettextEntry) bool {
 
 // CompareGettextEntries compares old and new GettextJSON. Returns DiffStat and
 // review entries (new or changed in new compared to old). Skips obsolete entries.
-func CompareGettextEntries(oldJ, newJ *GettextJSON) (DiffStat, []GettextEntry) {
+// When msgidOnly is true, entries with the same msgid (and msgid_plural for plurals)
+// are considered equal; msgstr and fuzzy changes are ignored.
+func CompareGettextEntries(oldJ, newJ *GettextJSON, msgidOnly bool) (DiffStat, []GettextEntry) {
 	oldEntries := filterObsolete(oldJ.Entries)
 	newEntries := filterObsolete(newJ.Entries)
 	sort.Slice(oldEntries, func(i, j int) bool { return oldEntries[i].MsgID < oldEntries[j].MsgID })
@@ -58,7 +60,13 @@ func CompareGettextEntries(oldJ, newJ *GettextJSON) (DiffStat, []GettextEntry) {
 			reviewEntries = append(reviewEntries, newEntries[j])
 			j++
 		} else {
-			if !GettextEntriesEqual(&oldEntries[i], &newEntries[j]) {
+			equal := false
+			if msgidOnly {
+				equal = oldEntries[i].MsgIDPlural == newEntries[j].MsgIDPlural
+			} else {
+				equal = GettextEntriesEqual(&oldEntries[i], &newEntries[j])
+			}
+			if !equal {
 				stat.Changed++
 				reviewEntries = append(reviewEntries, newEntries[j])
 			}
@@ -222,7 +230,7 @@ func PoCompare(src, dest []byte, noHeader bool) (DiffStat, []string, []*GettextE
 		return DiffStat{}, nil, nil, fmt.Errorf("failed to parse dest file: %w", err)
 	}
 
-	stat, reviewEntries := CompareGettextEntries(oldJ, newJ)
+	stat, reviewEntries := CompareGettextEntries(oldJ, newJ, false)
 	entries := GettextEntriesWithRawLines(reviewEntries)
 
 	_, newHeader, err := ParsePoEntries(dest)

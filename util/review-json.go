@@ -8,6 +8,67 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// applyReviewJSON applies review suggestions from the review JSON result to PO entries,
+// then writes the result to the OutputPO file. It reads from InputPO, loads entities,
+// applies suggest_msgstr and suggest_msgstr_plural to matching entries (by msgid+msgid_plural),
+// and serializes to OutputPO.
+func applyReviewJSON(review *ReviewJSONResult, ps ReviewPathSet) error {
+	if review == nil {
+		return fmt.Errorf("review result is nil")
+	}
+	inputData, err := os.ReadFile(ps.InputPO)
+	if err != nil {
+		return fmt.Errorf("failed to read input PO %s: %w", ps.InputPO, err)
+	}
+	j, err := LoadFileToGettextJSON(inputData, ps.InputPO)
+	if err != nil {
+		return fmt.Errorf("failed to load input PO %s: %w", ps.InputPO, err)
+	}
+	byMsgID := make(map[string]*ReviewIssue)
+	for i := range review.Issues {
+		issue := &review.Issues[i]
+		byMsgID[issue.MsgID] = issue
+	}
+	applied := make(map[string]bool)
+	for i := range j.Entries {
+		entry := &j.Entries[i]
+		if entry.MsgID == "" {
+			continue
+		}
+		issue, ok := byMsgID[entry.MsgID]
+		if !ok {
+			continue
+		}
+		if entry.MsgIDPlural != "" {
+			if len(issue.SuggestMsgstrPlural) > 0 {
+				entry.MsgStrPlural = make([]string, len(issue.SuggestMsgstrPlural))
+				copy(entry.MsgStrPlural, issue.SuggestMsgstrPlural)
+				applied[entry.MsgID] = true
+			}
+		} else {
+			if issue.SuggestMsgstr != "" {
+				entry.MsgStr = issue.SuggestMsgstr
+				applied[entry.MsgID] = true
+			}
+		}
+	}
+	for _, issue := range review.Issues {
+		if !applied[issue.MsgID] {
+			fmt.Fprintf(os.Stderr, "review: msgid not applied (no matching entry in PO): %q\n", issue.MsgID)
+		}
+	}
+	f, err := os.Create(ps.OutputPO)
+	if err != nil {
+		return fmt.Errorf("failed to create output PO %s: %w", ps.OutputPO, err)
+	}
+	defer f.Close()
+	if err := WriteGettextJSONToPO(j, f, false, false); err != nil {
+		return fmt.Errorf("failed to write output PO %s: %w", ps.OutputPO, err)
+	}
+	log.Infof("applied review suggestions to %s", ps.OutputPO)
+	return nil
+}
+
 // ExtractJSONFromOutput extracts a JSON object from agent output.
 // It searches for JSON object boundaries ({ and }) and handles cases where
 // output contains other text before/after JSON.
@@ -112,6 +173,7 @@ func ParseReviewJSON(jsonData []byte) (*ReviewJSONResult, error) {
 		log.Debugf("issue[%d]: msgid=%q, score=%d, description=%q", i, issue.MsgID, issue.Score, issue.Description)
 	}
 
+	normalizeReviewIssuesToPoFormat(&review)
 	log.Debugf("JSON validation passed: %d total entries, %d issues", review.TotalEntries, len(review.Issues))
 	return &review, nil
 }
@@ -151,6 +213,28 @@ func AggregateReviewJSON(reviews []*ReviewJSONResult, warnDup bool) *ReviewJSONR
 		issues = append(issues, *issue)
 	}
 	return &ReviewJSONResult{TotalEntries: totalEntries, Issues: issues}
+}
+
+// normalizeReviewIssuesToPoFormat converts JSON-decoded strings in ReviewIssue to PO format.
+// JSON uses \n for newline, \t for tab, etc.; PO stores them as literal \n, \t (backslash+char).
+// This ensures matching works when looking up entries in PO files.
+func normalizeReviewIssuesToPoFormat(review *ReviewJSONResult) {
+	if review == nil {
+		return
+	}
+	for i := range review.Issues {
+		issue := &review.Issues[i]
+		issue.MsgID = jsonDecodedToPoFormat(issue.MsgID)
+		issue.MsgStr = jsonDecodedToPoFormat(issue.MsgStr)
+		issue.MsgIDPlural = jsonDecodedToPoFormat(issue.MsgIDPlural)
+		for k := range issue.MsgStrPlural {
+			issue.MsgStrPlural[k] = jsonDecodedToPoFormat(issue.MsgStrPlural[k])
+		}
+		issue.SuggestMsgstr = jsonDecodedToPoFormat(issue.SuggestMsgstr)
+		for k := range issue.SuggestMsgstrPlural {
+			issue.SuggestMsgstrPlural[k] = jsonDecodedToPoFormat(issue.SuggestMsgstrPlural[k])
+		}
+	}
 }
 
 // saveReviewJSON saves review JSON result to the given file path.

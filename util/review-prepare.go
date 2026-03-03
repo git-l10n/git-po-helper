@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string, noHeader, useJSON bool) error {
+func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string, noHeader, useJSON, msgidOnly bool) error {
 	var (
 		err                    error
 		relOldFile, relNewFile string
@@ -130,7 +130,7 @@ func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string
 	}
 
 	log.Debugf("extracting differences to review-input")
-	_, reviewEntries := CompareGettextEntries(oldJ, newJ)
+	_, reviewEntries := CompareGettextEntries(oldJ, newJ, msgidOnly)
 
 	if len(reviewEntries) == 0 {
 		return WriteFile(outputFile, nil)

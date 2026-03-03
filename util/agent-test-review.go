@@ -74,7 +74,7 @@ func CmdAgentTestReview(agentName string, target *CompareTarget, runs int, skipC
 // outputBase: base path for review output files (e.g. "po/review"); empty uses default.
 // useAgentMd: if true, use agent with po/AGENTS.md (--use-agent-md).
 func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, runs int, outputBase string, useAgentMd bool, batchSize int) ([]RunResult, int, error) {
-	reviewPOFile, reviewJSONFile := ReviewOutputPaths(outputBase)
+	ps := ReviewPathSetFromBase(outputBase)
 	// Determine the agent to use
 	_, err := SelectAgent(cfg, agentName)
 	if err != nil {
@@ -93,8 +93,18 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		iterStartTime := time.Now()
 
 		// Remove review output files before each run
-		_ = os.Remove(reviewPOFile)
-		_ = os.Remove(reviewJSONFile)
+		_ = os.Remove(ps.InputPO)
+		_ = os.Remove(ps.OutputPO)
+		_ = os.Remove(ps.ResultJSON)
+		for _, p := range []string{
+			filepath.Join(filepath.Dir(ps.InputPO), "review-input-*.json"),
+			filepath.Join(filepath.Dir(ps.InputPO), "review-result-*.json"),
+		} {
+			matches, _ := filepath.Glob(p)
+			for _, m := range matches {
+				_ = os.Remove(m)
+			}
+		}
 
 		// Reuse RunAgentReview or RunAgentReviewUseAgentMd for each run
 		var agentResult *AgentRunResult
@@ -161,7 +171,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		} else {
 			log.Infof("aggregated review: score=%d/100 (from %d runs, %d unique issues)",
 				aggregatedScore, len(reviewJSONs), len(aggregated.Issues))
-			if err := saveReviewJSON(aggregated, reviewJSONFile); err != nil {
+			if err := saveReviewJSON(aggregated, ps.ResultJSON); err != nil {
 				log.Warnf("failed to save aggregated review JSON: %v", err)
 			}
 		}
