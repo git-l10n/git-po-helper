@@ -142,15 +142,32 @@ func parseReviewJSONWithGjson(data []byte, err error) *ReviewJSONResult {
 	}
 	var issues []ReviewIssue
 	for _, r := range issuesResult.Array() {
-		issues = append(issues, ReviewIssue{
-			MsgID:       r.Get("msgid").String(),
-			MsgStr:      r.Get("msgstr").String(),
-			Score:       int(r.Get("score").Int()),
-			Description: r.Get("description").String(),
-			Suggestion:  r.Get("suggestion").String(),
-		})
+		issue := ReviewIssue{
+			MsgID:         r.Get("msgid").String(),
+			MsgStr:        r.Get("msgstr").String(),
+			MsgIDPlural:   r.Get("msgid_plural").String(),
+			Score:         int(r.Get("score").Int()),
+			Description:   r.Get("description").String(),
+			SuggestMsgstr: r.Get("suggest_msgstr").String(),
+		}
+		if s := r.Get("suggestion").String(); s != "" && issue.SuggestMsgstr == "" {
+			issue.SuggestMsgstr = s
+		}
+		if arr := r.Get("msgstr_plural"); arr.Exists() && arr.IsArray() {
+			for _, v := range arr.Array() {
+				issue.MsgStrPlural = append(issue.MsgStrPlural, v.String())
+			}
+		}
+		if arr := r.Get("suggest_msgstr_plural"); arr.Exists() && arr.IsArray() {
+			for _, v := range arr.Array() {
+				issue.SuggestMsgstrPlural = append(issue.SuggestMsgstrPlural, v.String())
+			}
+		}
+		issues = append(issues, issue)
 	}
-	return &ReviewJSONResult{TotalEntries: int(totalEntries), Issues: issues}
+	result := &ReviewJSONResult{TotalEntries: int(totalEntries), Issues: issues}
+	normalizeReviewIssuesToPoFormat(result)
+	return result
 }
 
 // ReportReviewFromJSON reads a review JSON file, optionally fills total_entries
@@ -178,6 +195,7 @@ func ReportReviewFromJSON(path string) (string, *ReviewReportResult, error) {
 			}
 		}
 	}
+	normalizeReviewIssuesToPoFormat(&review)
 
 	if Exist(resolved.POFileForCount) {
 		stats, err := CountReportStats(resolved.POFileForCount)
@@ -225,6 +243,7 @@ func loadReviewJSONFromFile(jsonFile string) (*ReviewJSONResult, error) {
 	if review.Issues == nil {
 		review.Issues = []ReviewIssue{}
 	}
+	normalizeReviewIssuesToPoFormat(&review)
 	return &review, nil
 }
 
@@ -312,6 +331,9 @@ func ReportReviewFromPathWithBatches(path string) (string, *ReviewReportResult, 
 	if err := saveReviewJSON(merged, jsonFile); err != nil {
 		return "", nil, fmt.Errorf("failed to save aggregated review to %s: %w", jsonFile, err)
 	}
+	if err := applyReviewJSON(merged, ps); err != nil {
+		return "", nil, fmt.Errorf("failed to apply review to %s: %w", ps.OutputPO, err)
+	}
 	score, err := CalculateReviewScore(merged)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to calculate review score: %w", err)
@@ -346,6 +368,7 @@ func reportReviewFromJSONWithPaths(jsonFile, poFile string) (string, *ReviewRepo
 			}
 		}
 	}
+	normalizeReviewIssuesToPoFormat(&review)
 	if Exist(poFile) {
 		stats, err := CountReportStats(poFile)
 		if err != nil {

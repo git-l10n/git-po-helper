@@ -46,11 +46,14 @@ type AgentRunResult struct {
 
 // ReviewIssue represents a single issue in a review JSON result.
 type ReviewIssue struct {
-	MsgID       string `json:"msgid"`
-	MsgStr      string `json:"msgstr"`
-	Score       int    `json:"score"`
-	Description string `json:"description"`
-	Suggestion  string `json:"suggestion"`
+	MsgID               string   `json:"msgid"`                   // original msgid (singular)
+	MsgStr              string   `json:"msgstr"`                  // original translation (singular)
+	MsgIDPlural         string   `json:"msgid_plural,omitempty"`  // original msgid (plural)
+	MsgStrPlural        []string `json:"msgstr_plural,omitempty"` // original translation (plural)
+	Score               int      `json:"score"`                   // issue score (0-3)
+	Description         string   `json:"description"`             // issue description
+	SuggestMsgstr       string   `json:"suggest_msgstr"`          // corrected translation (singular)
+	SuggestMsgstrPlural []string `json:"suggest_msgstr_plural"`   // corrected translation (plural)
 }
 
 // ReviewJSONResult represents the overall review JSON format produced by an agent.

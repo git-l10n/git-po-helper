@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -83,8 +84,8 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 	review := &ReviewJSONResult{
 		TotalEntries: 100,
 		Issues: []ReviewIssue{
-			{MsgID: "commit", MsgStr: "承诺", Score: 0, Description: "term error", Suggestion: "提交"},
-			{MsgID: "file", MsgStr: "文件", Score: 2, Description: "minor", Suggestion: "档案"},
+			{MsgID: "commit", Score: 0, Description: "term error", SuggestMsgstr: "提交"},
+			{MsgID: "file", Score: 2, Description: "minor", SuggestMsgstr: "档案"},
 		},
 	}
 	data, err := json.Marshal(review)
@@ -129,9 +130,53 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 	}
 }
 
+// TestApplyReviewJSONWithEscapes verifies that JSON escape sequences (\n, \t, etc.)
+// are correctly converted to PO format so entries can be matched and suggestions applied.
+func TestApplyReviewJSONWithEscapes(t *testing.T) {
+	// PO format uses literal \n (backslash+n); JSON uses \n for newline.
+	// After parsing, normalizeReviewIssuesToPoFormat converts JSON newline to PO \n.
+	inputPO := `# Translation
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "line1\nline2"
+msgstr "old"
+`
+	// JSON: "line1\nline2" decodes to line1+newline+line2; after normalize -> "line1\nline2" (PO format)
+	reviewJSON := `{"total_entries": 1, "issues": [{"msgid": "line1\nline2", "score": 0, "description": "fix", "suggest_msgstr": "new1\nnew2"}]}`
+
+	tmpDir := t.TempDir()
+	ps := ReviewPathSetFromBase(filepath.Join(tmpDir, "review"))
+	if err := os.WriteFile(ps.InputPO, []byte(inputPO), 0644); err != nil {
+		t.Fatalf("write input PO: %v", err)
+	}
+	if err := os.WriteFile(ps.ResultJSON, []byte(reviewJSON), 0644); err != nil {
+		t.Fatalf("write review JSON: %v", err)
+	}
+
+	review, err := loadReviewJSONFromFile(ps.ResultJSON)
+	if err != nil {
+		t.Fatalf("loadReviewJSONFromFile: %v", err)
+	}
+	if err := applyReviewJSON(review, ps); err != nil {
+		t.Fatalf("applyReviewJSON: %v", err)
+	}
+
+	outData, err := os.ReadFile(ps.OutputPO)
+	if err != nil {
+		t.Fatalf("read output PO: %v", err)
+	}
+	outStr := string(outData)
+	// PO format stores newline as literal \n (backslash+n); output should have the applied suggestion
+	if !strings.Contains(outStr, "new1") || !strings.Contains(outStr, "new2") {
+		t.Errorf("output PO should contain applied suggestion; got:\n%s", outStr)
+	}
+}
+
 func TestReportReviewMarkdownWrappedJSON(t *testing.T) {
 	// JSON wrapped in markdown (common LLM output) - tests preprocessing
-	validInMarkdown := "```json\n" + `{"total_entries": 5, "issues": [{"msgid": "x", "msgstr": "y", "score": 2, "description": "d", "suggestion": "s"}]}` + "\n```"
+	validInMarkdown := "```json\n" + `{"total_entries": 5, "issues": [{"msgid": "x", "score": 2, "description": "d", "suggest_msgstr": "s"}]}` + "\n```"
 	tmpDir := t.TempDir()
 	jsonFile := filepath.Join(tmpDir, "review.json")
 	poFile := filepath.Join(tmpDir, "review.po")
