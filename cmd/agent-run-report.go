@@ -11,13 +11,13 @@ func newAgentRunReportCmd() *cobra.Command {
 		Short: "Report aggregated review statistics from batch or single JSON",
 		Long: `Report review statistics for agent-run review output.
 
-If path is given (e.g. po/review.po), derives po/review.json and po/review.po.
-If any files match po/review-batch-*.json, they are loaded and aggregated
-into one result; otherwise po/review.json is used.
+Path is the base (e.g. po/review). Uses review-input.po for total count,
+review-result.json for output. If any files match po/review-result-*.json,
+they are aggregated; otherwise review-result.json is used.
 
-Default path is ` + util.DefaultReviewPoPath + ` when omitted.`,
+Default path is ` + util.DefaultReviewBase + ` when omitted.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path := util.DefaultReviewPoPath
+			path := util.DefaultReviewBase
 			if len(args) > 0 {
 				path = args[0]
 			}
