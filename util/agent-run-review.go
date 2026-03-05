@@ -3,9 +3,7 @@ package util
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -39,69 +37,18 @@ func executeReviewAgent(selectedAgent config.Agent, vars PlaceholderVars, result
 	result.AgentExecuted = true
 
 	kind := selectedAgent.Kind
-	isCodex := kind == config.AgentKindCodex
-	isOpencode := kind == config.AgentKindOpencode
-
-	if outputFormat == "json" {
-		stdoutReader, stderrBuf, cmdProcess, execErr := ExecuteAgentCommandStream(agentCmd)
-		if execErr != nil {
-			return nil, nil, nil, streamResult, fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", execErr)
+	stdout, originalStdout, stderr, streamResult, execErr := RunAgentAndParse(agentCmd, outputFormat, kind)
+	if execErr != nil {
+		if len(stderr) > 0 {
+			log.Debugf("agent command stderr: %s", string(stderr))
 		}
-		defer stdoutReader.Close()
-
-		var stdoutBuf bytes.Buffer
-		teeReader := io.TeeReader(stdoutReader, &stdoutBuf)
-
-		stdout, streamResult, _ = parseStreamByKind(kind, teeReader)
-		originalStdout = stdoutBuf.Bytes()
-
-		waitErr := cmdProcess.Wait()
-		stderr = stderrBuf.Bytes()
-
-		if waitErr != nil {
-			if len(stderr) > 0 {
-				log.Debugf("agent command stderr: %s", string(stderr))
-			}
-			result.AgentError = fmt.Errorf("agent command failed: %v (see logs for agent stderr output)", waitErr)
-			return nil, stderr, originalStdout, streamResult, fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", waitErr)
+		if len(stdout) > 0 {
+			log.Debugf("agent command stdout: %s", string(stdout))
 		}
-		log.Infof("agent command completed successfully")
-	} else {
-		var execErr error
-		stdout, stderr, execErr = ExecuteAgentCommand(agentCmd)
-		originalStdout = stdout
-		result.AgentStdout = stdout
-		result.AgentStderr = stderr
-
-		if execErr != nil {
-			if len(stderr) > 0 {
-				log.Debugf("agent command stderr: %s", string(stderr))
-			}
-			if len(stdout) > 0 {
-				log.Debugf("agent command stdout: %s", string(stdout))
-			}
-			result.AgentError = fmt.Errorf("agent command failed: %v (see logs for agent stderr output)", execErr)
-			return nil, stderr, originalStdout, streamResult, fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", execErr)
-		}
-		log.Infof("agent command completed successfully")
-
-		if !isCodex && !isOpencode {
-			var parsedStdout []byte
-			var parseErr error
-			if kind == config.AgentKindQoder {
-				parsedStdout, streamResult, parseErr = ParseQoderAgentOutput(stdout, outputFormat)
-			} else {
-				var parsedResult *ClaudeJSONOutput
-				parsedStdout, parsedResult, parseErr = ParseClaudeAgentOutput(stdout, outputFormat)
-				streamResult = parsedResult
-			}
-			if parseErr != nil {
-				log.Warnf("failed to parse agent output: %v, using raw output", parseErr)
-			} else {
-				stdout = parsedStdout
-			}
-		}
+		result.AgentError = execErr
+		return nil, stderr, originalStdout, streamResult, execErr
 	}
+	log.Infof("agent command completed successfully")
 
 	applyAgentDiagnostics(result, streamResult)
 	result.AgentStdout = originalStdout
@@ -356,46 +303,12 @@ func RunAgentReviewUseAgentMd(cfg *config.AgentConfig, agentName string, target 
 	result.AgentExecuted = true
 
 	kind := selectedAgent.Kind
-	isCodex := kind == config.AgentKindCodex
-	isOpencode := kind == config.AgentKindOpencode
-
-	var stdout, stderr []byte
-	if outputFormat == "json" {
-		stdoutReader, stderrBuf, cmdProcess, err := ExecuteAgentCommandStream(agentCmd)
-		if err != nil {
-			result.AgentError = err
-			return result, fmt.Errorf("agent command failed: %w", err)
-		}
-		defer stdoutReader.Close()
-		_, streamResult, _ := parseStreamByKind(kind, stdoutReader)
-		applyAgentDiagnostics(result, streamResult)
-		if waitErr := cmdProcess.Wait(); waitErr != nil {
-			result.AgentError = waitErr
-			return result, fmt.Errorf("agent command failed: %w", waitErr)
-		}
-		stderr = stderrBuf.Bytes()
-	} else {
-		var err error
-		stdout, stderr, err = ExecuteAgentCommand(agentCmd)
-		if err != nil {
-			result.AgentError = err
-			return result, err
-		}
-		if !isCodex && !isOpencode {
-			var parsedStdout []byte
-			var streamRes AgentStreamResult
-			if kind == config.AgentKindQoder {
-				parsedStdout, streamRes, _ = ParseQoderAgentOutput(stdout, outputFormat)
-			} else {
-				var parsedResult *ClaudeJSONOutput
-				parsedStdout, parsedResult, _ = ParseClaudeAgentOutput(stdout, outputFormat)
-				streamRes = parsedResult
-			}
-			stdout = parsedStdout
-			applyAgentDiagnostics(result, streamRes)
-		}
+	stdout, _, stderr, streamResult, err := RunAgentAndParse(agentCmd, outputFormat, kind)
+	if err != nil {
+		result.AgentError = err
+		return result, err
 	}
-
+	applyAgentDiagnostics(result, streamResult)
 	log.Infof("agent command completed successfully")
 
 	if len(stdout) > 0 {

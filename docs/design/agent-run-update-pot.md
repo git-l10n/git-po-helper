@@ -346,14 +346,15 @@ Counts `msgid` entries in a POT file by:
 #### 2.4.2 Execute Agent Command
 
 ```go
-func ExecuteAgentCommand(cmd []string, workDir string) (stdout, stderr []byte, err error)
+func RunAgentAndParse(cmd []string, outputFormat, kind string) (stdout, originalStdout, stderr []byte, streamResult AgentStreamResult, err error)
 ```
 
-Executes the agent command:
-- Replaces placeholders in command
-- Runs in specified working directory
-- Captures stdout and stderr
-- Returns exit code and outputs
+Executes the agent command (uses `ExecuteAgentCommandStream` internally):
+- Replaces placeholders in command before calling
+- Runs in current working directory
+- For json format: streams and parses output in real-time
+- For default format: buffers output then parses
+- Returns stdout, raw stdout, stderr, and stream result for diagnostics
 
 #### 2.4.3 Validate Pot File
 
@@ -449,7 +450,7 @@ func CountPotEntries(potFile string) (int, error)
 
 **Tasks**:
 1. Implement placeholder replacement (`{{.prompt}}`, `{{.source}}`, `{{.commit}}`)
-2. Implement `ExecuteAgentCommand()` function
+2. Implement `RunAgentAndParse()` function (or use `ExecuteAgentCommandStream` + parse)
 3. Handle command execution errors
 4. Capture stdout/stderr
 
@@ -457,7 +458,7 @@ func CountPotEntries(potFile string) (int, error)
 ```go
 type PlaceholderVars map[string]string
 func ReplacePlaceholders(template string, kv PlaceholderVars) (string, error)
-func ExecuteAgentCommand(cmd []string, workDir string) ([]byte, []byte, error)
+func RunAgentAndParse(cmd []string, outputFormat, kind string) ([]byte, []byte, []byte, AgentStreamResult, error)
 ```
 
 **Validation**:

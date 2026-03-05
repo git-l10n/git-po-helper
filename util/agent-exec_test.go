@@ -1,14 +1,32 @@
 package util
 
 import (
+	"io"
 	"os/exec"
 	"runtime"
 	"strings"
 	"testing"
 )
 
-func TestExecuteAgentCommand(t *testing.T) {
-	// Test successful command execution
+// runAgentViaStream runs a command using ExecuteAgentCommandStream and io.ReadAll.
+// This tests the unified execution path (streaming + buffer) used by RunAgentAndParse.
+func runAgentViaStream(cmd []string) (stdout, stderr []byte, err error) {
+	stdoutReader, stderrBuf, cmdProcess, execErr := ExecuteAgentCommandStream(cmd)
+	if execErr != nil {
+		return nil, nil, execErr
+	}
+	defer stdoutReader.Close()
+	stdout, _ = io.ReadAll(stdoutReader)
+	waitErr := cmdProcess.Wait()
+	stderr = stderrBuf.Bytes()
+	if waitErr != nil {
+		return stdout, stderr, waitErr
+	}
+	return stdout, stderr, nil
+}
+
+func TestExecuteAgentCommandStream(t *testing.T) {
+	// Test successful command execution (via stream + ReadAll)
 	t.Run("successful command", func(t *testing.T) {
 		var cmd []string
 		if runtime.GOOS == "windows" {
@@ -17,7 +35,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 			cmd = []string{"sh", "-c", "echo 'test output'"}
 		}
 
-		stdout, stderr, err := ExecuteAgentCommand(cmd)
+		stdout, stderr, err := runAgentViaStream(cmd)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -41,7 +59,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 			cmd = []string{"sh", "-c", "echo 'test error' >&2"}
 		}
 
-		stdout, stderr, err := ExecuteAgentCommand(cmd)
+		stdout, stderr, err := runAgentViaStream(cmd)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -62,14 +80,14 @@ func TestExecuteAgentCommand(t *testing.T) {
 			cmd = []string{"sh", "-c", "exit 1"}
 		}
 
-		stdout, stderr, err := ExecuteAgentCommand(cmd)
+		stdout, stderr, err := runAgentViaStream(cmd)
 		if err == nil {
 			t.Error("Expected error for failing command, got nil")
 		}
 
-		// Error should mention exit code
-		if !strings.Contains(err.Error(), "exit code") && !strings.Contains(err.Error(), "failed") {
-			t.Errorf("Error message should mention exit code or failure: %v", err)
+		// Error should mention exit status or failure
+		if err != nil && !strings.Contains(err.Error(), "exit") && !strings.Contains(err.Error(), "failed") {
+			t.Errorf("Error message should mention exit or failure: %v", err)
 		}
 
 		_ = stdout
@@ -78,18 +96,18 @@ func TestExecuteAgentCommand(t *testing.T) {
 
 	// Test empty command
 	t.Run("empty command", func(t *testing.T) {
-		_, _, err := ExecuteAgentCommand([]string{})
+		_, _, _, err := ExecuteAgentCommandStream([]string{})
 		if err == nil {
 			t.Error("Expected error for empty command, got nil")
 		}
-		if !strings.Contains(err.Error(), "cannot be empty") {
+		if err != nil && !strings.Contains(err.Error(), "cannot be empty") {
 			t.Errorf("Error should mention 'cannot be empty': %v", err)
 		}
 	})
 
 	// Test non-existent command
 	t.Run("non-existent command", func(t *testing.T) {
-		_, _, err := ExecuteAgentCommand([]string{"nonexistent-command-xyz123"})
+		_, _, err := runAgentViaStream([]string{"nonexistent-command-xyz123"})
 		if err == nil {
 			t.Error("Expected error for non-existent command, got nil")
 		}
@@ -104,7 +122,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 			cmd = []string{"pwd"}
 		}
 
-		stdout, stderr, err := ExecuteAgentCommand(cmd)
+		stdout, stderr, err := runAgentViaStream(cmd)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -119,14 +137,10 @@ func TestExecuteAgentCommand(t *testing.T) {
 	})
 }
 
-func TestExecuteAgentCommand_PlaceholderReplacement(t *testing.T) {
+func TestExecuteAgentCommandStream_PlaceholderReplacement(t *testing.T) {
 	// This test verifies that placeholder replacement should be done
-	// before calling ExecuteAgentCommand, not inside it.
-	// ExecuteAgentCommand should execute the command as-is.
-
+	// before calling the command, not inside it.
 	t.Run("command with literal placeholders", func(t *testing.T) {
-		// ExecuteAgentCommand should not replace placeholders
-		// (that's the caller's responsibility)
 		var cmd []string
 		if runtime.GOOS == "windows" {
 			cmd = []string{"cmd", "/c", "echo", "{{.prompt}}"}
@@ -134,7 +148,7 @@ func TestExecuteAgentCommand_PlaceholderReplacement(t *testing.T) {
 			cmd = []string{"sh", "-c", "echo '{{.prompt}}'"}
 		}
 
-		stdout, _, err := ExecuteAgentCommand(cmd)
+		stdout, _, err := runAgentViaStream(cmd)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -146,15 +160,12 @@ func TestExecuteAgentCommand_PlaceholderReplacement(t *testing.T) {
 	})
 }
 
-// Test helper: verify that ExecuteAgentCommand works with real commands
-func TestExecuteAgentCommand_RealCommand(t *testing.T) {
+func TestExecuteAgentCommandStream_RealCommand(t *testing.T) {
 	// Test with a command that should exist on all systems
 	var cmd []string
 	if runtime.GOOS == "windows" {
-		// On Windows, use cmd /c echo
 		cmd = []string{"cmd", "/c", "echo", "Hello World"}
 	} else {
-		// On Unix, use echo
 		cmd = []string{"echo", "Hello World"}
 	}
 
@@ -163,7 +174,7 @@ func TestExecuteAgentCommand_RealCommand(t *testing.T) {
 		t.Skipf("Command %s not found, skipping test", cmd[0])
 	}
 
-	stdout, stderr, err := ExecuteAgentCommand(cmd)
+	stdout, stderr, err := runAgentViaStream(cmd)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -176,4 +187,27 @@ func TestExecuteAgentCommand_RealCommand(t *testing.T) {
 	if len(stderr) > 0 {
 		t.Logf("stderr (non-fatal): %s", string(stderr))
 	}
+}
+
+func TestRunAgentAndParse(t *testing.T) {
+	// Test RunAgentAndParse with default format (non-json path)
+	t.Run("default format echo", func(t *testing.T) {
+		var cmd []string
+		if runtime.GOOS == "windows" {
+			cmd = []string{"cmd", "/c", "echo", "hello"}
+		} else {
+			cmd = []string{"sh", "-c", "echo 'hello'"}
+		}
+
+		stdout, _, stderr, _, err := RunAgentAndParse(cmd, "default", "echo")
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		output := strings.TrimSpace(string(stdout))
+		if !strings.Contains(output, "hello") {
+			t.Errorf("Expected stdout to contain 'hello', got %q", output)
+		}
+		_ = stderr
+	})
 }

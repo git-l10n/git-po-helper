@@ -117,7 +117,7 @@ agents:
 │         │   - LoadAgentConfig()       │                   │
 │         │   - SelectAgent()           │                   │
 │         │   - BuildAgentCommand()     │                   │
-│         │   - ExecuteAgentCommand()   │                   │
+│         │   - RunAgentAndParse()      │                   │
 │         │   - CountPotEntries()       │                   │
 │         │   - CountPoEntries()        │                   │
 │         └──────────────────────────────┘                   │
@@ -350,7 +350,7 @@ agent-test:
    - Use `BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": source})`, where `source` is the PO file path (e.g., `po/zh_CN.po`).
    - Placeholders `{{.prompt}}`, `{{.source}}`, and `{{.commit}}` are replaced before execution.
 7. **Execute agent command**:
-   - Use `ExecuteAgentCommand(agentCmd, repository.WorkDir())`.
+   - Use `RunAgentAndParse(agentCmd, outputFormat, kind)`.
    - Capture stdout and stderr for debugging and error reporting.
 8. **Post-validation** (if `po_entries_after_update` is configured and non-zero):
    - Count entries in the target PO file after update using `CountPoEntries()`.
@@ -430,7 +430,7 @@ agent-test:
 - `util/agent.go`:
   - `SelectAgent()` – Agent selection.
   - `BuildAgentCommand()` – Placeholder replacement for `{{.prompt}}`, `{{.source}}`, `{{.commit}}`.
-  - `ExecuteAgentCommand()` – Command execution and logging.
+  - `RunAgentAndParse()` – Command execution and output parsing.
 - `util/agent-run.go`:
   - `RunAgentUpdatePot()` and `ValidatePotEntryCount()` as patterns for implementing PO variants.
   - `ValidatePoFile()` for syntax checking.

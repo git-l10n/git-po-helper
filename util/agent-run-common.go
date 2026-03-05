@@ -2,6 +2,7 @@
 package util
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -270,6 +271,73 @@ func GetPoFileRelPath(cfg *config.AgentConfig, poFile string) (string, error) {
 	relPath = filepath.ToSlash(relPath)
 
 	return relPath, nil
+}
+
+// RunAgentAndParse executes the agent command and parses output.
+// It always uses ExecuteAgentCommandStream internally.
+//
+// Returns:
+//   - stdout: Parsed or raw stdout content (for downstream use)
+//   - originalStdout: Raw stdout bytes before parsing (for result.AgentStdout)
+//   - stderr: Stderr bytes
+//   - streamResult: AgentStreamResult for diagnostics (NumTurns, Usage, etc.)
+//   - err: Execution or parse error
+func RunAgentAndParse(cmd []string, outputFormat, kind string) (
+	stdout, originalStdout, stderr []byte,
+	streamResult AgentStreamResult,
+	err error,
+) {
+	stdoutReader, stderrBuf, cmdProcess, execErr := ExecuteAgentCommandStream(cmd)
+	if execErr != nil {
+		return nil, nil, nil, nil, fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", execErr)
+	}
+	defer stdoutReader.Close()
+
+	if outputFormat == "json" {
+		var rawBuf bytes.Buffer
+		teeReader := io.TeeReader(stdoutReader, &rawBuf)
+		stdout, streamResult, _ = parseStreamByKind(kind, teeReader)
+		originalStdout = rawBuf.Bytes()
+	} else {
+		rawStdout, readErr := io.ReadAll(stdoutReader)
+		if readErr != nil {
+			return nil, nil, nil, nil, fmt.Errorf("failed to read agent output: %w", readErr)
+		}
+		originalStdout = rawStdout
+
+		isCodex := kind == config.AgentKindCodex
+		isOpencode := kind == config.AgentKindOpencode
+		if isCodex || isOpencode {
+			stdout = rawStdout
+		} else {
+			var parsedStdout []byte
+			var parseErr error
+			if kind == config.AgentKindQoder {
+				parsedStdout, streamResult, parseErr = ParseQoderAgentOutput(rawStdout, outputFormat)
+			} else {
+				var parsedResult *ClaudeJSONOutput
+				parsedStdout, parsedResult, parseErr = ParseClaudeAgentOutput(rawStdout, outputFormat)
+				streamResult = parsedResult
+			}
+			if parseErr != nil {
+				log.Warnf("failed to parse agent output: %v, using raw output", parseErr)
+				stdout = rawStdout
+			} else {
+				stdout = parsedStdout
+			}
+		}
+	}
+
+	waitErr := cmdProcess.Wait()
+	stderr = stderrBuf.Bytes()
+	if waitErr != nil {
+		if len(stderr) > 0 {
+			log.Debugf("agent command stderr: %s", string(stderr))
+		}
+		return stdout, originalStdout, stderr, streamResult, fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", waitErr)
+	}
+
+	return stdout, originalStdout, stderr, streamResult, nil
 }
 
 // parseStreamByKind parses agent stream output based on kind, returns stdout and unified result.

@@ -235,22 +235,15 @@ func translateOneBatch(cfg *config.AgentConfig, selectedAgent config.Agent, todo
 	log.Infof("translating: %s -> %s (output=%s, streaming=%v)", sourceRel, destRel, outputFormat, outputFormat == "json")
 	result.AgentExecuted = true
 
-	stdoutReader, stderrBuf, cmdProcess, execErr := ExecuteAgentCommandStream(agentCmd)
+	_, _, stderr, streamResult, execErr := RunAgentAndParse(agentCmd, outputFormat, selectedAgent.Kind)
 	if execErr != nil {
-		return fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", execErr)
-	}
-	defer stdoutReader.Close()
-	_, streamResult, _ := parseStreamByKind(selectedAgent.Kind, stdoutReader)
-	applyAgentDiagnostics(result, streamResult)
-	waitErr := cmdProcess.Wait()
-	stderr := stderrBuf.Bytes()
-	if waitErr != nil {
 		if len(stderr) > 0 {
 			log.Debugf("agent stderr: %s", string(stderr))
 		}
-		result.AgentError = fmt.Errorf("agent command failed: %v (see logs for agent stderr output)", waitErr)
-		return fmt.Errorf("agent failed: %w", waitErr)
+		result.AgentError = execErr
+		return fmt.Errorf("agent failed: %w", execErr)
 	}
+	applyAgentDiagnostics(result, streamResult)
 
 	if !Exist(doneJSON) {
 		return fmt.Errorf("agent did not create output file %s\nHint: The agent must write the translated JSON to {{.dest}}", destRel)
@@ -358,34 +351,15 @@ func fixPoWithAgent(cfg *config.AgentConfig, selectedAgent config.Agent, poFile,
 	log.Infof("invoking agent to fix PO file: %s (output=%s, streaming=%v)", sourceRel, outputFormat, outputFormat == "json")
 	result.AgentExecuted = true
 
-	var stderr []byte
-	if outputFormat == "json" {
-		stdoutReader, stderrBuf, cmdProcess, execErr := ExecuteAgentCommandStream(agentCmd)
-		if execErr != nil {
-			return fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", execErr)
+	_, _, stderr, streamResult, execErr := RunAgentAndParse(agentCmd, outputFormat, selectedAgent.Kind)
+	if execErr != nil {
+		if len(stderr) > 0 {
+			log.Debugf("agent stderr: %s", string(stderr))
 		}
-		defer stdoutReader.Close()
-		_, streamResult, _ := parseStreamByKind(selectedAgent.Kind, stdoutReader)
-		applyAgentDiagnostics(result, streamResult)
-		waitErr := cmdProcess.Wait()
-		stderr = stderrBuf.Bytes()
-		if waitErr != nil {
-			if len(stderr) > 0 {
-				log.Debugf("agent stderr: %s", string(stderr))
-			}
-			result.AgentError = fmt.Errorf("agent command failed: %v (see logs for agent stderr output)", waitErr)
-			return fmt.Errorf("agent fix failed: %w", waitErr)
-		}
-	} else {
-		_, stderr, err = ExecuteAgentCommand(agentCmd)
-		if err != nil {
-			if len(stderr) > 0 {
-				log.Debugf("agent stderr: %s", string(stderr))
-			}
-			result.AgentError = err
-			return fmt.Errorf("agent fix failed: %w", err)
-		}
+		result.AgentError = execErr
+		return fmt.Errorf("agent fix failed: %w", execErr)
 	}
+	applyAgentDiagnostics(result, streamResult)
 	log.Infof("agent completed fix, re-validating with msgfmt")
 	return nil
 }
