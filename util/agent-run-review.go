@@ -21,19 +21,15 @@ import (
 // vars contains placeholder values (e.g. "prompt", "source" for the file to review).
 // Returns stdout (for JSON extraction), stderr, originalStdout (raw before parsing), streamResult.
 // Updates result with AgentExecuted, AgentError, AgentStdout, AgentStderr.
-func executeReviewAgent(selectedAgent config.Agent, vars PlaceholderVars, result *AgentRunResult) (stdout, stderr, originalStdout []byte, streamResult AgentStreamResult, err error) {
-	agentCmd, err := BuildAgentCommand(selectedAgent, vars)
+func executeReviewAgent(selectedAgent config.AgentEntry, vars PlaceholderVars, result *AgentRunResult) (stdout, stderr, originalStdout []byte, streamResult AgentStreamResult, err error) {
+	agentCmd, outputFormat, err := BuildAgentCommand(selectedAgent, vars)
 	if err != nil {
 		return nil, nil, nil, streamResult, fmt.Errorf("failed to build agent command: %w", err)
 	}
 
-	outputFormat := selectedAgent.Output
-	if outputFormat == "" {
-		outputFormat = "default"
-	}
-	outputFormat = normalizeOutputFormat(outputFormat)
-
-	log.Infof("executing agent command (output=%s, streaming=%v): %s", outputFormat, outputFormat == "json", truncateCommandDisplay(strings.Join(agentCmd, " ")))
+	log.Infof("executing agent command (output=%s, streaming=%v): %s", outputFormat,
+		outputFormat == config.OutputJSON || outputFormat == config.OutputStreamJSON,
+		truncateCommandDisplay(strings.Join(agentCmd, " ")))
 	result.AgentExecuted = true
 
 	kind := selectedAgent.Kind
@@ -68,7 +64,7 @@ func executeReviewAgent(selectedAgent config.Agent, vars PlaceholderVars, result
 
 // runReviewBatched runs review for each batch in batchInputJSONPaths, saves to po/review-result-<N>.json (step 7),
 // deletes each po/review-input-<N>.json (step 8), and does not merge; caller runs step 9.
-func runReviewBatched(cfg *config.AgentConfig, selectedAgent config.Agent, entryCount int, ps ReviewPathSet, batchInputJSONPaths []string, result *AgentRunResult) error {
+func runReviewBatched(cfg *config.AgentConfig, selectedAgent config.AgentEntry, entryCount int, ps ReviewPathSet, batchInputJSONPaths []string, result *AgentRunResult) error {
 	prompt, err := GetRawPrompt(cfg, "review")
 	if err != nil {
 		return err
@@ -289,14 +285,9 @@ func RunAgentReviewUseAgentMd(cfg *config.AgentConfig, agentName string, target 
 		poFileRel = filepath.ToSlash(rel)
 	}
 	prompt := buildReviewUseAgentMdPrompt(target)
-	agentCmd, err := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": poFileRel})
+	agentCmd, outputFormat, err := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": poFileRel})
 	if err != nil {
 		return result, fmt.Errorf("failed to build agent command: %w", err)
-	}
-
-	outputFormat := normalizeOutputFormat(selectedAgent.Output)
-	if outputFormat == "" {
-		outputFormat = "default"
 	}
 
 	log.Infof("executing agent command (use-agent-md, output=%s): %s", outputFormat, truncateCommandDisplay(strings.Join(agentCmd, " ")))

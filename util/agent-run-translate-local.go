@@ -192,7 +192,7 @@ func generateOneBatchJSON(todoPO, todoJSON string, minBatchSize int) error {
 	return nil
 }
 
-func translateOneBatch(cfg *config.AgentConfig, selectedAgent config.Agent, todoJSON, doneJSON string, result *AgentRunResult) error {
+func translateOneBatch(cfg *config.AgentConfig, selectedAgent config.AgentEntry, todoJSON, doneJSON string, result *AgentRunResult) error {
 	prompt, err := GetRawPrompt(cfg, "local-orchestration-translation")
 	if err != nil {
 		return err
@@ -221,18 +221,12 @@ func translateOneBatch(cfg *config.AgentConfig, selectedAgent config.Agent, todo
 	}
 	batchVars["prompt"] = resolvedPrompt
 
-	agentCmd, err := BuildAgentCommand(selectedAgent, batchVars)
+	agentCmd, outputFormat, err := BuildAgentCommand(selectedAgent, batchVars)
 	if err != nil {
 		return fmt.Errorf("failed to build agent command: %w", err)
 	}
-
-	outputFormat := selectedAgent.Output
-	if outputFormat == "" {
-		outputFormat = "default"
-	}
-	outputFormat = normalizeOutputFormat(outputFormat)
-
-	log.Infof("translating: %s -> %s (output=%s, streaming=%v)", sourceRel, destRel, outputFormat, outputFormat == "json")
+	log.Infof("translating: %s -> %s (output=%s, streaming=%v)", sourceRel, destRel, outputFormat,
+		outputFormat == config.OutputJSON || outputFormat == config.OutputStreamJSON)
 	result.AgentExecuted = true
 
 	_, _, stderr, streamResult, execErr := RunAgentAndParse(agentCmd, outputFormat, selectedAgent.Kind)
@@ -259,7 +253,7 @@ func translateOneBatch(cfg *config.AgentConfig, selectedAgent config.Agent, todo
 }
 
 // mergeAndComplete converts done JSON to PO (with --unset-fuzzy), validates, and merges into target.
-func mergeAndComplete(cfg *config.AgentConfig, selectedAgent config.Agent, doneJSON, donePO, targetPO, mergedPO string, result *AgentRunResult) error {
+func mergeAndComplete(cfg *config.AgentConfig, selectedAgent config.AgentEntry, doneJSON, donePO, targetPO, mergedPO string, result *AgentRunResult) error {
 	j, err := ReadFileToGettextJSON(doneJSON)
 	if err != nil {
 		return fmt.Errorf("read %s: %w", doneJSON, err)
@@ -312,7 +306,7 @@ func mergeAndComplete(cfg *config.AgentConfig, selectedAgent config.Agent, doneJ
 }
 
 // fixPoWithAgent invokes the agent to fix PO file syntax errors. The agent modifies the file in place.
-func fixPoWithAgent(cfg *config.AgentConfig, selectedAgent config.Agent, poFile, msgfmtError string, result *AgentRunResult) error {
+func fixPoWithAgent(cfg *config.AgentConfig, selectedAgent config.AgentEntry, poFile, msgfmtError string, result *AgentRunResult) error {
 	prompt, err := GetRawPrompt(cfg, "fix-po")
 	if err != nil {
 		return fmt.Errorf("fix-po prompt not configured: %w", err)
@@ -337,18 +331,12 @@ func fixPoWithAgent(cfg *config.AgentConfig, selectedAgent config.Agent, poFile,
 	}
 	vars["prompt"] = resolvedPrompt
 
-	agentCmd, err := BuildAgentCommand(selectedAgent, vars)
+	agentCmd, outputFormat, err := BuildAgentCommand(selectedAgent, vars)
 	if err != nil {
 		return fmt.Errorf("failed to build agent command: %w", err)
 	}
-
-	outputFormat := selectedAgent.Output
-	if outputFormat == "" {
-		outputFormat = "default"
-	}
-	outputFormat = normalizeOutputFormat(outputFormat)
-
-	log.Infof("invoking agent to fix PO file: %s (output=%s, streaming=%v)", sourceRel, outputFormat, outputFormat == "json")
+	log.Infof("invoking agent to fix PO file: %s (output=%s, streaming=%v)", sourceRel, outputFormat,
+		outputFormat == config.OutputJSON || outputFormat == config.OutputStreamJSON)
 	result.AgentExecuted = true
 
 	_, _, stderr, streamResult, execErr := RunAgentAndParse(agentCmd, outputFormat, selectedAgent.Kind)

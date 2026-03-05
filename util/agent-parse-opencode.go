@@ -9,8 +9,58 @@ import (
 	"strings"
 	"time"
 
+	"github.com/git-l10n/git-po-helper/config"
 	log "github.com/sirupsen/logrus"
 )
+
+// opencodeAgent implements config.Agent for OpenCode CLI.
+type opencodeAgent struct {
+	cmd          []string
+	outputFormat *struct {
+		format   string
+		explicit bool
+	}
+}
+
+func (a *opencodeAgent) getExplicitOutputFormat(flagNames ...string) (format string, found bool) {
+	defaultFormat := config.OutputStreamJSON
+	if a.outputFormat != nil {
+		return a.outputFormat.format, a.outputFormat.explicit
+	}
+	format, found = parseFormatFromCmd(a.cmd, defaultFormat, flagNames...)
+	if found && format == "json" {
+		format = config.OutputStreamJSON
+	}
+	a.outputFormat = &struct {
+		format   string
+		explicit bool
+	}{format, found}
+	return format, found
+}
+
+// BuildCommand returns the full command with --format json added if missing.
+func (a *opencodeAgent) BuildCommand(vars map[string]string) ([]string, error) {
+	cmd, err := replacePlaceholdersInCmd(a.cmd, vars)
+	if err != nil {
+		return nil, err
+	}
+	if format, explicit := a.getExplicitOutputFormat("--format"); !explicit {
+		formatArg := format
+		if format == config.OutputStreamJSON || format == config.OutputJSON {
+			formatArg = "json" // opencode CLI expects "json" and "default', not "stream-json"
+		} else {
+			formatArg = "default"
+		}
+		cmd = append(cmd, "--format", formatArg)
+	}
+	return cmd, nil
+}
+
+// GetOutputFormat parses format from cmd or returns stream-json.
+func (a *opencodeAgent) GetOutputFormat() string {
+	format, _ := a.getExplicitOutputFormat("--format")
+	return format
+}
 
 // OpenCodeUsage represents token usage information in OpenCode JSON output.
 type OpenCodeUsage struct {

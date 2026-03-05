@@ -34,10 +34,10 @@ var promptFixPo string
 
 // AgentConfig holds the complete agent configuration.
 type AgentConfig struct {
-	DefaultLangCode string           `yaml:"default_lang_code"`
-	Prompt          PromptConfig     `yaml:"prompt"`
-	AgentTest       AgentTestConfig  `yaml:"agent-test"`
-	Agents          map[string]Agent `yaml:"agents"`
+	DefaultLangCode string                `yaml:"default_lang_code"`
+	Prompt          PromptConfig          `yaml:"prompt"`
+	AgentTest       AgentTestConfig       `yaml:"agent-test"`
+	Agents          map[string]AgentEntry `yaml:"agents"`
 }
 
 // PromptConfig holds prompt templates for different operations.
@@ -86,11 +86,35 @@ var KnownAgentKinds = map[string]bool{
 // GitPoHelperConfigFileName is the name of the agent config file (user home and repository root).
 const GitPoHelperConfigFileName = ".git-po-helper.yaml"
 
-// Agent holds configuration for a single agent.
-type Agent struct {
-	Cmd    []string `yaml:"cmd"`
-	Kind   string   `yaml:"kind"`   // Agent kind: "claude", "gemini", "codex", or "opencode"
-	Output string   `yaml:"output"` // Output format: "default", "json", or "stream_json"
+// Agent output format enum. Output must be one of these when specified.
+const (
+	OutputText       = "text"        // Plain text output
+	OutputJSON       = "json"        // JSON output (agent-specific format)
+	OutputStreamJSON = "stream-json" // JSONL stream output
+)
+
+// ValidOutputFormats is the set of valid output format values for validation.
+var ValidOutputFormats = map[string]bool{
+	OutputText:       true,
+	OutputJSON:       true,
+	OutputStreamJSON: true,
+}
+
+// Agent is the interface for agent command building and output format resolution.
+// Implementations live in util/agent-parse-*.go.
+type Agent interface {
+	// BuildCommand returns the full command line with output format params added if missing.
+	// vars is used for placeholder replacement (e.g. {{.prompt}}, {{.source}}).
+	BuildCommand(vars map[string]string) ([]string, error)
+
+	// GetOutputFormat parses output format from the config Cmd, or returns the default.
+	GetOutputFormat() string
+}
+
+// AgentEntry holds configuration for a single agent (YAML deserialization).
+type AgentEntry struct {
+	Cmd  []string `yaml:"cmd"`
+	Kind string   `yaml:"kind"` // Agent kind: "claude", "gemini", "codex", "opencode", "echo", "qwen", "qoder"
 }
 
 // getSystemLocale gets the system locale from environment variables.
@@ -164,31 +188,26 @@ func getDefaultConfig() *AgentConfig {
 		AgentTest: AgentTestConfig{
 			Runs: &defaultRuns,
 		},
-		Agents: map[string]Agent{
+		Agents: map[string]AgentEntry{
 			"claude": {
-				Cmd:    []string{"claude", "--dangerously-skip-permissions", "-p", "{{.prompt}}"},
-				Kind:   AgentKindClaude,
-				Output: "json",
+				Cmd:  []string{"claude", "--dangerously-skip-permissions", "-p", "{{.prompt}}"},
+				Kind: AgentKindClaude,
 			},
 			"codex": {
-				Cmd:    []string{"codex", "exec", "--yolo", "{{.prompt}}"},
-				Kind:   AgentKindCodex,
-				Output: "json",
+				Cmd:  []string{"codex", "exec", "--yolo", "{{.prompt}}"},
+				Kind: AgentKindCodex,
 			},
 			"opencode": {
-				Cmd:    []string{"opencode", "run", "--thinking", "{{.prompt}}"},
-				Kind:   AgentKindOpencode,
-				Output: "json",
+				Cmd:  []string{"opencode", "run", "--thinking", "{{.prompt}}"},
+				Kind: AgentKindOpencode,
 			},
 			"gemini": {
-				Cmd:    []string{"gemini", "--yolo", "{{.prompt}}"},
-				Kind:   AgentKindGemini,
-				Output: "json",
+				Cmd:  []string{"gemini", "--yolo", "{{.prompt}}"},
+				Kind: AgentKindGemini,
 			},
 			"qoder": {
-				Cmd:    []string{"qodercli", "--yolo", "--output-format", "stream-json", "-p", "{{.prompt}}"},
-				Kind:   AgentKindQoder,
-				Output: "json",
+				Cmd:  []string{"qodercli", "--yolo", "--output-format", "stream-json", "-p", "{{.prompt}}"},
+				Kind: AgentKindQoder,
 			},
 			"echo": {
 				Cmd:  []string{"echo", "{{.prompt}}"},
@@ -280,7 +299,7 @@ func LoadAgentConfig(customConfigPath string) (*AgentConfig, error) {
 
 	// 5. If Agents is still empty after all merges, use default's Agents
 	if len(merged.Agents) == 0 {
-		merged.Agents = make(map[string]Agent)
+		merged.Agents = make(map[string]AgentEntry)
 		for k, v := range defaultCfg.Agents {
 			merged.Agents[k] = v
 		}
@@ -309,7 +328,7 @@ func loadConfigFromFile(configPath string) (*AgentConfig, error) {
 // - mergeAgents false: overlay fills only unset fields in base; Agents are not modified (no merge, no copy).
 func mergeConfigs(baseConfig, overlay *AgentConfig, mergeAgents bool) *AgentConfig {
 	result := &AgentConfig{
-		Agents: make(map[string]Agent),
+		Agents: make(map[string]AgentEntry),
 	}
 
 	if baseConfig != nil {

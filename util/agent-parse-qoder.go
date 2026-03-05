@@ -2,15 +2,55 @@ package util
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 
+	"github.com/git-l10n/git-po-helper/config"
 	log "github.com/sirupsen/logrus"
 )
+
+// qoderAgent implements config.Agent for Qoder CLI.
+type qoderAgent struct {
+	cmd          []string
+	outputFormat *struct {
+		format   string
+		explicit bool
+	}
+}
+
+func (a *qoderAgent) getExplicitOutputFormat(flagNames ...string) (format string, found bool) {
+	defaultFormat := config.OutputStreamJSON
+	if a.outputFormat != nil {
+		return a.outputFormat.format, a.outputFormat.explicit
+	}
+	format, found = parseFormatFromCmd(a.cmd, defaultFormat, flagNames...)
+	a.outputFormat = &struct {
+		format   string
+		explicit bool
+	}{format, found}
+	return format, found
+}
+
+// BuildCommand returns the full command with format params added if missing.
+func (a *qoderAgent) BuildCommand(vars map[string]string) ([]string, error) {
+	cmd, err := replacePlaceholdersInCmd(a.cmd, vars)
+	if err != nil {
+		return nil, err
+	}
+	if format, explicit := a.getExplicitOutputFormat("--output-format", "-f"); !explicit {
+		cmd = append(cmd, "--output-format", format)
+	}
+	return cmd, nil
+}
+
+// GetOutputFormat parses format from cmd or returns stream-json.
+func (a *qoderAgent) GetOutputFormat() string {
+	format, _ := a.getExplicitOutputFormat("--output-format", "-f")
+	return format
+}
 
 // QoderUsage represents usage information in Qoder JSON output.
 type QoderUsage struct {
@@ -172,103 +212,6 @@ func printQoderUserMessage(rawLine []byte, msg *QoderUserMessage) {
 	fmt.Print("💬 ")
 	fmt.Println(indentSubsequentLines(displayText))
 	flushStdout()
-}
-
-// ParseQoderAgentOutput parses agent output based on the output format.
-// Returns the actual content (result text) and the parsed JSON result.
-func ParseQoderAgentOutput(output []byte, outputFormat string) (content []byte, result *QoderJSONOutput, err error) {
-	outputFormat = normalizeOutputFormat(outputFormat)
-
-	if outputFormat == "" || outputFormat == "default" {
-		return output, nil, nil
-	}
-
-	if outputFormat == "json" {
-		return parseQoderStreamJSON(output)
-	}
-
-	log.Warnf("unknown output format: %s, treating as default", outputFormat)
-	return output, nil, nil
-}
-
-// parseQoderStreamJSON parses Qoder JSONL format and extracts result text.
-func parseQoderStreamJSON(output []byte) (content []byte, result *QoderJSONOutput, err error) {
-	var resultBuilder strings.Builder
-	var lastResult *QoderJSONOutput
-
-	scanner := bufio.NewScanner(bytes.NewReader(output))
-	buf := make([]byte, 0, 1024*1024)
-	scanner.Buffer(buf, 10*1024*1024)
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-
-		var baseMsg struct {
-			Type    string `json:"type"`
-			Subtype string `json:"subtype"`
-		}
-		if err := json.Unmarshal([]byte(line), &baseMsg); err != nil {
-			resultBuilder.WriteString(line)
-			resultBuilder.WriteString("\n")
-			continue
-		}
-
-		switch baseMsg.Type {
-		case "system":
-			var sysMsg QoderSystemMessage
-			if err := json.Unmarshal([]byte(line), &sysMsg); err == nil && lastResult == nil {
-				lastResult = &QoderJSONOutput{SessionID: sysMsg.SessionID}
-			}
-		case "assistant":
-			var asstMsg QoderAssistantMessage
-			if err := json.Unmarshal([]byte(line), &asstMsg); err == nil {
-				if lastResult == nil {
-					lastResult = &QoderJSONOutput{SessionID: asstMsg.SessionID}
-				}
-				lastResult.NumTurns++
-				for _, raw := range asstMsg.Message.Content {
-					_, _, resultText, ok := parseQoderContentBlock(raw)
-					if ok && resultText != "" {
-						resultBuilder.WriteString(resultText)
-					}
-				}
-				if asstMsg.Message.Usage != nil {
-					if lastResult.Usage == nil {
-						lastResult.Usage = &QoderUsage{}
-					}
-					lastResult.Usage.InputTokens += asstMsg.Message.Usage.InputTokens
-					lastResult.Usage.OutputTokens += asstMsg.Message.Usage.OutputTokens
-				}
-			}
-		case "result":
-			if baseMsg.Subtype == "success" {
-				var resultMsg QoderResultMessage
-				if err := json.Unmarshal([]byte(line), &resultMsg); err == nil {
-					for _, raw := range resultMsg.Message.Content {
-						var c struct {
-							Type string `json:"type"`
-							Text string `json:"text"`
-						}
-						if err := json.Unmarshal(raw, &c); err == nil && c.Type == "text" && c.Text != "" {
-							resultBuilder.WriteString(c.Text)
-							if lastResult != nil {
-								lastResult.Result = c.Text
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return output, nil, fmt.Errorf("failed to parse qoder stream JSON: %w", err)
-	}
-
-	return []byte(resultBuilder.String()), lastResult, nil
 }
 
 // ParseQoderJSONLRealtime parses Qoder JSONL output in real-time.

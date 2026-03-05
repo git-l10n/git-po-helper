@@ -116,7 +116,7 @@ func TestMergeConfigs(t *testing.T) {
 			UpdatePot: "base update pot",
 			UpdatePo:  "base update po",
 		},
-		Agents: map[string]Agent{
+		Agents: map[string]AgentEntry{
 			"claude": {
 				Cmd:  []string{"claude", "-p", "{{.prompt}}"},
 				Kind: AgentKindClaude,
@@ -133,7 +133,7 @@ func TestMergeConfigs(t *testing.T) {
 		Prompt: PromptConfig{
 			UpdatePot: "repo update pot",
 		},
-		Agents: map[string]Agent{
+		Agents: map[string]AgentEntry{
 			"claude": {
 				Cmd:  []string{"claude", "--new-flag", "{{.prompt}}"},
 				Kind: AgentKindClaude,
@@ -318,7 +318,7 @@ func TestGetSystemLocale(t *testing.T) {
 func TestApplyDefaults_ConfigAgentsOverrideDefaultTest(t *testing.T) {
 	// When config has agents, mergeConfigs(..., false) keeps config's agents (does not replace with default)
 	config := &AgentConfig{
-		Agents: map[string]Agent{
+		Agents: map[string]AgentEntry{
 			"claude": {
 				Cmd:  []string{"claude", "-p", "{{.prompt}}"},
 				Kind: AgentKindClaude,
@@ -341,7 +341,7 @@ func TestApplyDefaults_ConfigAgentsOverrideDefaultTest(t *testing.T) {
 	// When config has no agents, mergeConfigs(..., false) does not touch Agents (stays empty);
 	// LoadAgentConfig copies default's Agents after all merges when merged.Agents is empty.
 	config2 := &AgentConfig{
-		Agents: make(map[string]Agent),
+		Agents: make(map[string]AgentEntry),
 	}
 	merged2 := mergeConfigs(config2, getDefaultConfig(), false)
 
@@ -379,7 +379,7 @@ func TestMergeConfigs_NilOverlay(t *testing.T) {
 	base := &AgentConfig{
 		DefaultLangCode: "fr_FR",
 		Prompt:          PromptConfig{UpdatePot: "base pot"},
-		Agents: map[string]Agent{
+		Agents: map[string]AgentEntry{
 			"x": {Cmd: []string{"x"}, Kind: AgentKindEcho},
 		},
 	}
@@ -406,7 +406,7 @@ func TestMergeConfigs_DefaultMergeOverwritesNonAgents(t *testing.T) {
 	base := &AgentConfig{
 		DefaultLangCode: "fr_FR",
 		Prompt:          PromptConfig{UpdatePot: "base pot", UpdatePo: "base po"},
-		Agents: map[string]Agent{
+		Agents: map[string]AgentEntry{
 			"custom": {Cmd: []string{"custom", "{{.prompt}}"}, Kind: AgentKindEcho},
 		},
 	}

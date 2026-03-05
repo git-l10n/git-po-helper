@@ -80,21 +80,15 @@ func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string, agentTest bool
 	vars["prompt"] = resolvedPrompt
 
 	// Build agent command with placeholders replaced
-	agentCmd, err := BuildAgentCommand(selectedAgent, vars)
+	agentCmd, outputFormat, err := BuildAgentCommand(selectedAgent, vars)
 	if err != nil {
 		return result, fmt.Errorf("failed to build agent command: %w", err)
 	}
 
-	// Determine output format
-	outputFormat := selectedAgent.Output
-	if outputFormat == "" {
-		outputFormat = "default"
-	}
-	// Normalize output format (convert underscores to hyphens)
-	outputFormat = normalizeOutputFormat(outputFormat)
-
 	// Execute agent command
-	log.Infof("executing agent command (output=%s, streaming=%v): %s", outputFormat, outputFormat == "json", truncateCommandDisplay(strings.Join(agentCmd, " ")))
+	log.Infof("executing agent command (output=%s, streaming=%v): %s", outputFormat,
+		outputFormat == config.OutputJSON || outputFormat == config.OutputStreamJSON,
+		truncateCommandDisplay(strings.Join(agentCmd, " ")))
 	result.AgentExecuted = true
 
 	kind := selectedAgent.Kind
