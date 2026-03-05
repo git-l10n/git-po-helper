@@ -142,13 +142,20 @@ func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string, agentTest bool
 		log.Infof("agent command completed successfully")
 
 		if !isCodex && !isOpencode {
-			parsedStdout, parsedResult, err := ParseClaudeAgentOutput(stdout, outputFormat)
-			if err != nil {
-				log.Warnf("failed to parse agent output: %v, using raw output", err)
+			var parsedStdout []byte
+			var parseErr error
+			if kind == config.AgentKindQoder {
+				parsedStdout, streamResult, parseErr = ParseQoderAgentOutput(stdout, outputFormat)
+			} else {
+				var parsedResult *ClaudeJSONOutput
+				parsedStdout, parsedResult, parseErr = ParseClaudeAgentOutput(stdout, outputFormat)
+				streamResult = parsedResult
+			}
+			if parseErr != nil {
+				log.Warnf("failed to parse agent output: %v, using raw output", parseErr)
 				parsedStdout = stdout
 			} else {
 				stdout = parsedStdout
-				streamResult = parsedResult
 			}
 		}
 	}

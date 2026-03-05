@@ -293,6 +293,12 @@ func parseStreamByKind(kind string, reader io.Reader) (stdout []byte, streamResu
 			log.Warnf("failed to parse gemini JSONL: %v", e)
 		}
 		return parsed, res, e
+	case config.AgentKindQoder:
+		parsed, res, e := ParseQoderJSONLRealtime(reader)
+		if e != nil {
+			log.Warnf("failed to parse qoder JSONL: %v", e)
+		}
+		return parsed, res, e
 	default:
 		parsed, res, e := ParseClaudeStreamJSONRealtime(reader)
 		if e != nil {

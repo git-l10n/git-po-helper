@@ -134,7 +134,7 @@ func SelectAgent(cfg *config.AgentConfig, agentName string) (config.Agent, error
 		if agent.Kind == "" {
 			return config.Agent{}, fmt.Errorf(
 				"agent '%s' has unknown kind (cmd=%v)\n"+
-					"Hint: Add 'kind' field (claude, gemini, codex, opencode, echo, qwen) to agent in git-po-helper.yaml",
+					"Hint: Add 'kind' field (claude, gemini, codex, opencode, echo, qwen, qoder) to agent in git-po-helper.yaml",
 				agentName, agent.Cmd)
 		}
 	}
@@ -142,7 +142,7 @@ func SelectAgent(cfg *config.AgentConfig, agentName string) (config.Agent, error
 	// Validate agent.Kind is a known type
 	if !config.KnownAgentKinds[agent.Kind] {
 		return config.Agent{}, fmt.Errorf(
-			"agent '%s' has unknown kind '%s' (must be one of: claude, gemini, codex, opencode, echo, qwen)\n"+
+			"agent '%s' has unknown kind '%s' (must be one of: claude, gemini, codex, opencode, echo, qwen, qoder)\n"+
 				"Hint: Set 'kind' to a valid value in git-po-helper.yaml", agentName, agent.Kind)
 	}
 
@@ -169,6 +169,7 @@ func BuildAgentCommand(agent config.Agent, vars PlaceholderVars) ([]string, erro
 	isCodex := kind == config.AgentKindCodex
 	isOpencode := kind == config.AgentKindOpencode
 	isGemini := kind == config.AgentKindGemini || kind == config.AgentKindQwen
+	isQoder := kind == config.AgentKindQoder
 
 	// For claude command, add --output-format parameter if output format is specified
 	if isClaude {
@@ -284,6 +285,29 @@ func BuildAgentCommand(agent config.Agent, vars PlaceholderVars) ([]string, erro
 				cmd = append(cmd, "--output-format", "stream-json")
 			}
 			// For "default" format, no additional parameter is needed
+		}
+	}
+
+	// For qoder command, add --output-format stream-json parameter if output format is json
+	if isQoder {
+		hasOutputFormat := false
+		for i, arg := range cmd {
+			if arg == "--output-format" || arg == "-f" {
+				hasOutputFormat = true
+				if i+1 < len(cmd) {
+					_ = cmd[i+1]
+				}
+				break
+			}
+		}
+		if !hasOutputFormat {
+			outputFormat := normalizeOutputFormat(agent.Output)
+			if outputFormat == "" {
+				outputFormat = "default"
+			}
+			if outputFormat == "json" {
+				cmd = append(cmd, "--output-format", "stream-json")
+			}
 		}
 	}
 

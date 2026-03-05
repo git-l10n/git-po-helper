@@ -69,6 +69,7 @@ const (
 	AgentKindOpencode = "opencode"
 	AgentKindEcho     = "echo" // Test agent, no stream-json
 	AgentKindQwen     = "qwen" // Alias for gemini-compatible CLI
+	AgentKindQoder    = "qoder"
 )
 
 // KnownAgentKinds is the set of valid agent kinds for validation.
@@ -79,6 +80,7 @@ var KnownAgentKinds = map[string]bool{
 	AgentKindOpencode: true,
 	AgentKindEcho:     true,
 	AgentKindQwen:     true,
+	AgentKindQoder:    true,
 }
 
 // GitPoHelperConfigFileName is the name of the agent config file (user home and repository root).
@@ -181,6 +183,11 @@ func getDefaultConfig() *AgentConfig {
 			"gemini": {
 				Cmd:    []string{"gemini", "--yolo", "{{.prompt}}"},
 				Kind:   AgentKindGemini,
+				Output: "json",
+			},
+			"qoder": {
+				Cmd:    []string{"qodercli", "--yolo", "--output-format", "stream-json", "-p", "{{.prompt}}"},
+				Kind:   AgentKindQoder,
 				Output: "json",
 			},
 			"echo": {

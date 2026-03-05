@@ -218,8 +218,8 @@ func TestGetDefaultConfig(t *testing.T) {
 	}
 
 	// Check default agents
-	if len(config.Agents) != 5 {
-		t.Fatalf("expected 5 default agents, got %d", len(config.Agents))
+	if len(config.Agents) != 6 {
+		t.Fatalf("expected 6 default agents, got %d", len(config.Agents))
 	}
 	testAgent, ok := config.Agents["echo"]
 	if !ok {

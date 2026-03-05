@@ -86,12 +86,19 @@ func executeReviewAgent(selectedAgent config.Agent, vars PlaceholderVars, result
 		log.Infof("agent command completed successfully")
 
 		if !isCodex && !isOpencode {
-			parsedStdout, parsedResult, parseErr := ParseClaudeAgentOutput(stdout, outputFormat)
+			var parsedStdout []byte
+			var parseErr error
+			if kind == config.AgentKindQoder {
+				parsedStdout, streamResult, parseErr = ParseQoderAgentOutput(stdout, outputFormat)
+			} else {
+				var parsedResult *ClaudeJSONOutput
+				parsedStdout, parsedResult, parseErr = ParseClaudeAgentOutput(stdout, outputFormat)
+				streamResult = parsedResult
+			}
 			if parseErr != nil {
 				log.Warnf("failed to parse agent output: %v, using raw output", parseErr)
 			} else {
 				stdout = parsedStdout
-				streamResult = parsedResult
 			}
 		}
 	}
@@ -375,9 +382,17 @@ func RunAgentReviewUseAgentMd(cfg *config.AgentConfig, agentName string, target 
 			return result, err
 		}
 		if !isCodex && !isOpencode {
-			parsedStdout, parsedResult, _ := ParseClaudeAgentOutput(stdout, outputFormat)
+			var parsedStdout []byte
+			var streamRes AgentStreamResult
+			if kind == config.AgentKindQoder {
+				parsedStdout, streamRes, _ = ParseQoderAgentOutput(stdout, outputFormat)
+			} else {
+				var parsedResult *ClaudeJSONOutput
+				parsedStdout, parsedResult, _ = ParseClaudeAgentOutput(stdout, outputFormat)
+				streamRes = parsedResult
+			}
 			stdout = parsedStdout
-			applyAgentDiagnostics(result, parsedResult)
+			applyAgentDiagnostics(result, streamRes)
 		}
 	}
 
