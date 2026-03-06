@@ -348,19 +348,24 @@ func RunAgentAndParse(cmd []string, outputFormat, kind string) (
 	}
 	defer stdoutReader.Close()
 
-	if outputFormat == config.OutputJSON || outputFormat == config.OutputStreamJSON {
+	switch outputFormat {
+	case config.OutputJSON:
+		fallthrough
+	case config.OutputStreamJSON:
+		// Stream parsing for JSONL output
 		var rawBuf bytes.Buffer
 		teeReader := io.TeeReader(stdoutReader, &rawBuf)
 		stdout, streamResult, _ = parseStreamByKind(kind, teeReader)
 		originalStdout = rawBuf.Bytes()
-	} else {
-		rawStdout, readErr := io.ReadAll(stdoutReader)
-		if readErr != nil {
-			return nil, nil, nil, nil, fmt.Errorf("failed to read agent output: %w", readErr)
+	default:
+		// OutputText or unknown: stream read and print to stdout
+		var rawBuf bytes.Buffer
+		teeReader := io.TeeReader(stdoutReader, &rawBuf)
+		if _, err := io.Copy(os.Stdout, teeReader); err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("failed to read agent output: %w", err)
 		}
-		originalStdout = rawStdout
-
-		stdout, streamResult, _ = parseBatchOutput(rawStdout)
+		originalStdout = rawBuf.Bytes()
+		stdout = originalStdout
 	}
 
 	waitErr := cmdProcess.Wait()
