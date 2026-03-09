@@ -9,20 +9,20 @@ import (
 )
 
 // applyReviewJSON applies review suggestions from the review JSON result to PO entries,
-// then writes the result to the OutputPO file. It reads from InputPO, loads entities,
+// then writes the result to the OutputPO file. It reads from PendingPO, loads entities,
 // applies suggest_msgstr and suggest_msgstr_plural to matching entries (by msgid+msgid_plural),
 // and serializes to OutputPO.
 func applyReviewJSON(review *ReviewJSONResult, ps ReviewPathSet) error {
 	if review == nil {
 		return fmt.Errorf("review result is nil")
 	}
-	inputData, err := os.ReadFile(ps.InputPO)
+	inputData, err := os.ReadFile(ps.PendingPO)
 	if err != nil {
-		return fmt.Errorf("failed to read input PO %s: %w", ps.InputPO, err)
+		return fmt.Errorf("failed to read pending PO %s: %w", ps.PendingPO, err)
 	}
-	j, err := LoadFileToGettextJSON(inputData, ps.InputPO)
+	j, err := LoadFileToGettextJSON(inputData, ps.PendingPO)
 	if err != nil {
-		return fmt.Errorf("failed to load input PO %s: %w", ps.InputPO, err)
+		return fmt.Errorf("failed to load pending PO %s: %w", ps.PendingPO, err)
 	}
 	byMsgID := make(map[string]*ReviewIssue)
 	for i := range review.Issues {

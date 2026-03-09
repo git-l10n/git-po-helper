@@ -97,8 +97,8 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 		return result, err
 	}
 
-	if Exist(ps.InputPO) {
-		log.Warnf("review PO file already exists: %s", ps.InputPO)
+	if Exist(ps.PendingPO) {
+		log.Warnf("review PO file already exists: %s", ps.PendingPO)
 	}
 
 	poFile, err := GetPoFileAbsPath(cfg, target.NewFile)

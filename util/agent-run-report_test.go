@@ -148,8 +148,8 @@ msgstr "old"
 
 	tmpDir := t.TempDir()
 	ps := ReviewPathSetFromBase(filepath.Join(tmpDir, "review"))
-	if err := os.WriteFile(ps.InputPO, []byte(inputPO), 0644); err != nil {
-		t.Fatalf("write input PO: %v", err)
+	if err := os.WriteFile(ps.PendingPO, []byte(inputPO), 0644); err != nil {
+		t.Fatalf("write pending PO: %v", err)
 	}
 	if err := os.WriteFile(ps.ResultJSON, []byte(reviewJSON), 0644); err != nil {
 		t.Fatalf("write review JSON: %v", err)

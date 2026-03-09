@@ -5,7 +5,6 @@ import (
 	"math"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -79,16 +78,18 @@ func (r *ReviewJSONResult) IssueCount() int {
 
 var (
 	ReviewDefaultOutputFile = filepath.Join(PoDir, "review.json")
-	ReviewDefaultBatchFile  = filepath.Join(PoDir, "review-batch.po")
 	// ReviewDefaultBase is the default base for Task 4 review paths (po/review).
 	ReviewDefaultBase = filepath.Join(PoDir, "review")
 )
 
 // ReviewPathSet holds paths for Task 4 review workflow (AGENTS.md).
-// Naming: review-input.po, review-result.json, review-output.po,
-// review-input-<N>.json, review-result-<N>.json.
+// Naming: review-pending.po, review-result.json, review-output.po,
+// review-todo.json, review-done.json, review-batch.txt,
+// review-result-<N>.json.
 type ReviewPathSet struct {
-	InputPO    string // po/review-input.po
+	BaseDir    string // directory containing all review files (e.g. "po")
+	BaseName   string // base name prefix (e.g. "review")
+	PendingPO  string // po/review-pending.po
 	ResultJSON string // po/review-result.json
 	OutputPO   string // po/review-output.po
 }
@@ -106,24 +107,32 @@ func ReviewPathSetFromBase(base string) ReviewPathSet {
 		dir = PoDir
 	}
 	return ReviewPathSet{
-		InputPO:    filepath.Join(dir, name+"-input.po"),
+		BaseDir:    dir,
+		BaseName:   name,
+		PendingPO:  filepath.Join(dir, name+"-pending.po"),
 		ResultJSON: filepath.Join(dir, name+"-result.json"),
 		OutputPO:   filepath.Join(dir, name+"-output.po"),
 	}
 }
 
-// ReviewInputJSONPath returns po/review-input-<N>.json.
-func (p ReviewPathSet) ReviewInputJSONPath(n int) string {
-	dir := filepath.Dir(p.InputPO)
-	base := strings.TrimSuffix(filepath.Base(p.InputPO), ".po")
-	return filepath.Join(dir, base+"-"+strconv.Itoa(n)+".json")
+// ReviewTodoJSONPath returns po/review-todo.json (AGENTS.md step 4).
+func (p ReviewPathSet) ReviewTodoJSONPath() string {
+	return filepath.Join(p.BaseDir, p.BaseName+"-todo.json")
+}
+
+// ReviewDoneJSONPath returns po/review-done.json (AGENTS.md step 5).
+func (p ReviewPathSet) ReviewDoneJSONPath() string {
+	return filepath.Join(p.BaseDir, p.BaseName+"-done.json")
+}
+
+// ReviewBatchTxtPath returns po/review-batch.txt (AGENTS.md step 4).
+func (p ReviewPathSet) ReviewBatchTxtPath() string {
+	return filepath.Join(p.BaseDir, p.BaseName+"-batch.txt")
 }
 
 // ReviewResultJSONPath returns po/review-result-<N>.json.
 func (p ReviewPathSet) ReviewResultJSONPath(n int) string {
-	dir := filepath.Dir(p.ResultJSON)
-	base := strings.TrimSuffix(filepath.Base(p.ResultJSON), ".json")
-	return filepath.Join(dir, base+"-"+strconv.Itoa(n)+".json")
+	return filepath.Join(p.BaseDir, p.BaseName+"-result-"+strconv.Itoa(n)+".json")
 }
 
 // CalculateReviewScore calculates a 0-100 score from a ReviewJSONResult.

@@ -94,12 +94,14 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		iterStartTime := time.Now()
 
 		// Remove review output files before each run
-		_ = os.Remove(ps.InputPO)
+		_ = os.Remove(ps.PendingPO)
 		_ = os.Remove(ps.OutputPO)
 		_ = os.Remove(ps.ResultJSON)
+		_ = os.Remove(ps.ReviewBatchTxtPath())
+		_ = os.Remove(ps.ReviewTodoJSONPath())
+		_ = os.Remove(ps.ReviewDoneJSONPath())
 		for _, p := range []string{
-			filepath.Join(filepath.Dir(ps.InputPO), "review-input-*.json"),
-			filepath.Join(filepath.Dir(ps.InputPO), "review-result-*.json"),
+			filepath.Join(filepath.Dir(ps.PendingPO), "review-result-*.json"),
 		} {
 			matches, _ := filepath.Glob(p)
 			for _, m := range matches {
