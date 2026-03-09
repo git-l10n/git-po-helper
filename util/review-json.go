@@ -9,20 +9,20 @@ import (
 )
 
 // applyReviewJSON applies review suggestions from the review JSON result to PO entries,
-// then writes the result to the OutputPO file. It reads from PendingPO, loads entities,
+// then writes the result to the outputFile. It reads from inputFile, loads entities,
 // applies suggest_msgstr and suggest_msgstr_plural to matching entries (by msgid+msgid_plural),
-// and serializes to OutputPO.
-func applyReviewJSON(review *ReviewJSONResult, ps ReviewPathSet) error {
+// and serializes to outputFile.
+func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) error {
 	if review == nil {
 		return fmt.Errorf("review result is nil")
 	}
-	inputData, err := os.ReadFile(ps.PendingPO)
+	inputData, err := os.ReadFile(inputFile)
 	if err != nil {
-		return fmt.Errorf("failed to read pending PO %s: %w", ps.PendingPO, err)
+		return fmt.Errorf("failed to read pending PO %s: %w", inputFile, err)
 	}
-	j, err := LoadFileToGettextJSON(inputData, ps.PendingPO)
+	j, err := LoadFileToGettextJSON(inputData, inputFile)
 	if err != nil {
-		return fmt.Errorf("failed to load pending PO %s: %w", ps.PendingPO, err)
+		return fmt.Errorf("failed to load pending PO %s: %w", inputFile, err)
 	}
 	byMsgID := make(map[string]*ReviewIssue)
 	for i := range review.Issues {
@@ -57,15 +57,15 @@ func applyReviewJSON(review *ReviewJSONResult, ps ReviewPathSet) error {
 			fmt.Fprintf(os.Stderr, "review: msgid not applied (no matching entry in PO): %q\n", issue.MsgID)
 		}
 	}
-	f, err := os.Create(ps.OutputPO)
+	f, err := os.Create(outputFile)
 	if err != nil {
-		return fmt.Errorf("failed to create output PO %s: %w", ps.OutputPO, err)
+		return fmt.Errorf("failed to create output PO %s: %w", outputFile, err)
 	}
 	defer f.Close()
 	if err := WriteGettextJSONToPO(j, f, false, false); err != nil {
-		return fmt.Errorf("failed to write output PO %s: %w", ps.OutputPO, err)
+		return fmt.Errorf("failed to write output PO %s: %w", outputFile, err)
 	}
-	log.Infof("applied review suggestions to %s", ps.OutputPO)
+	log.Infof("applied review suggestions to %s", outputFile)
 	return nil
 }
 

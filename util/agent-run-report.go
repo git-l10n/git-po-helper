@@ -27,8 +27,8 @@ type ResolvedReviewPaths struct {
 }
 
 // resolveReviewPaths returns resolved paths for the given path.
-// Path may be: base (po/review), result JSON (po/review-result.json), pending PO
-// (po/review-pending.po), or legacy (po/review.json, po/review.po).
+// Path may be: base (po/review), result JSON (po/review-result.json), input PO
+// (po/review-input.po), or legacy (po/review.json, po/review.po).
 func resolveReviewPaths(path string) ResolvedReviewPaths {
 	dir := filepath.Dir(path)
 	baseName := filepath.Base(path)
@@ -55,7 +55,7 @@ func resolveReviewPaths(path string) ResolvedReviewPaths {
 		jsonFile = filepath.Join(dir, filepath.Base(base)+".json")
 	default:
 		ps := ReviewPathSetFromBase(path)
-		poForCount := ps.PendingPO
+		poForCount := ps.InputPO
 		if !Exist(poForCount) {
 			poForCount = ps.OutputPO
 		}
@@ -70,7 +70,7 @@ func resolveReviewPaths(path string) ResolvedReviewPaths {
 		jsonFile = ps.ResultJSON
 	}
 	if poFile == "" {
-		poFile = ps.PendingPO
+		poFile = ps.InputPO
 		if !Exist(poFile) {
 			poFile = ps.OutputPO
 		}
@@ -172,8 +172,8 @@ func parseReviewJSONWithGjson(data []byte, err error) *ReviewJSONResult {
 
 // ReportReviewFromJSON reads a review JSON file, optionally fills total_entries
 // from a PO file when the JSON has none, and returns the report data.
-// path may be: base (po/review), result JSON (po/review-result.json), or pending PO (po/review-pending.po).
-// For Task 4 naming, uses review-pending.po or review-output.po for total count.
+// path may be: base (po/review), result JSON (po/review-result.json), or input PO (po/review-input.po).
+// For Task 4 naming, uses review-input.po for total count.
 // Preprocesses LLM-generated JSON (BOM, markdown wrapping, extra text) before parsing.
 func ReportReviewFromJSON(path string) (string, *ReviewReportResult, error) {
 	resolved := resolveReviewPaths(path)
@@ -248,7 +248,7 @@ func loadReviewJSONFromFile(jsonFile string) (*ReviewJSONResult, error) {
 }
 
 // ReportReviewFromPathWithBatches reports from review-result-*.json files or a single review JSON.
-// Path is the base (e.g. "po/review"); uses review-pending.po/review-output.po for total count,
+// Path is the base (e.g. "po/review"); uses review-input.po for total count,
 // review-result.json for merged output, review-result-*.json for batch files.
 // If any files match "*-result-*.json", they are merged and saved to review-result.json.
 // If no batch files exist, falls back to ReportReviewFromJSON(resultJSON path).
@@ -258,7 +258,7 @@ func ReportReviewFromPathWithBatches(path string) (string, *ReviewReportResult, 
 	}
 	ps := ReviewPathSetFromBase(path)
 	jsonFile := ps.ResultJSON
-	// Use pending PO or output PO for total count (pending is source of truth)
+	// Use review-input.po for total count (source of truth for entry count)
 	poFile := ps.InputPO
 	if !Exist(poFile) {
 		poFile = ps.OutputPO
@@ -326,12 +326,12 @@ func ReportReviewFromPathWithBatches(path string) (string, *ReviewReportResult, 
 		}
 		merged.TotalEntries = stats.Total()
 	} else {
-		return "", nil, fmt.Errorf("file does not exist: %s (need review-pending.po or review-output.po for total count)", poFile)
+		return "", nil, fmt.Errorf("file does not exist: %s (need review-input.po for total count)", poFile)
 	}
 	if err := saveReviewJSON(merged, jsonFile); err != nil {
 		return "", nil, fmt.Errorf("failed to save aggregated review to %s: %w", jsonFile, err)
 	}
-	if err := applyReviewJSON(merged, ps); err != nil {
+	if err := applyReviewJSON(merged, ps.InputPO, ps.OutputPO); err != nil {
 		return "", nil, fmt.Errorf("failed to apply review to %s: %w", ps.OutputPO, err)
 	}
 	score, err := CalculateReviewScore(merged)

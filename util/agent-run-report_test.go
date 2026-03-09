@@ -159,7 +159,7 @@ msgstr "old"
 	if err != nil {
 		t.Fatalf("loadReviewJSONFromFile: %v", err)
 	}
-	if err := applyReviewJSON(review, ps); err != nil {
+	if err := applyReviewJSON(review, ps.InputPO, ps.OutputPO); err != nil {
 		t.Fatalf("applyReviewJSON: %v", err)
 	}
 
