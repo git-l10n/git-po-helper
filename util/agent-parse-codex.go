@@ -8,8 +8,32 @@ import (
 	"strings"
 	"time"
 
+	"github.com/git-l10n/git-po-helper/config"
 	log "github.com/sirupsen/logrus"
 )
+
+// codexAgent implements config.Agent for Codex CLI.
+type codexAgent struct {
+	cmd []string
+}
+
+// BuildCommand returns the full command with --json added if missing.
+func (a *codexAgent) BuildCommand(vars map[string]string) ([]string, error) {
+	cmd, err := replacePlaceholdersInCmd(a.cmd, vars)
+	if err != nil {
+		return nil, err
+	}
+	if !hasOutputFormatInCmd(cmd, "--json") {
+		cmd = append(cmd, "--json")
+	}
+	return cmd, nil
+}
+
+// GetOutputFormat returns stream-json (codex --json produces JSONL).
+// Default is stream-json since BuildCommand adds --json when missing.
+func (a *codexAgent) GetOutputFormat() string {
+	return config.OutputStreamJSON
+}
 
 // CodexUsage represents token usage information in Codex JSON output.
 type CodexUsage struct {

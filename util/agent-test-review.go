@@ -17,8 +17,9 @@ import (
 // CmdAgentTestReview implements the agent-test review command logic.
 // It runs the agent-run review operation multiple times and calculates an average score.
 // outputBase: base path for review output files (e.g. "po/review"); empty uses default.
-// useAgentMd: if true, use agent with po/AGENTS.md (--use-agent-md).
-func CmdAgentTestReview(agentName string, target *CompareTarget, runs int, skipConfirmation bool, outputBase string, useAgentMd bool, batchSize int) error {
+// useLocalOrchestration: if true, use local orchestration (--use-local-orchestration);
+// otherwise use agent with po/AGENTS.md (default).
+func CmdAgentTestReview(agentName string, target *CompareTarget, runs int, skipConfirmation bool, outputBase string, useLocalOrchestration bool, batchSize int) error {
 	// Require user confirmation before proceeding
 	if err := ConfirmAgentTestExecution(skipConfirmation); err != nil {
 		return err
@@ -50,7 +51,7 @@ func CmdAgentTestReview(agentName string, target *CompareTarget, runs int, skipC
 	startTime := time.Now()
 
 	// Run the test
-	results, aggregatedScore, err := RunAgentTestReview(cfg, agentName, target, runs, outputBase, useAgentMd, batchSize)
+	results, aggregatedScore, err := RunAgentTestReview(cfg, agentName, target, runs, outputBase, useLocalOrchestration, batchSize)
 	if err != nil {
 		log.Errorf("agent-test execution failed: %v", err)
 		return fmt.Errorf("agent-test failed: %w", err)
@@ -67,13 +68,13 @@ func CmdAgentTestReview(agentName string, target *CompareTarget, runs int, skipC
 }
 
 // RunAgentTestReview runs the agent-test review operation multiple times.
-// It reuses RunAgentReview (or RunAgentReviewUseAgentMd when useAgentMd) for each run,
+// It reuses RunAgentReview (or RunAgentReviewUseAgentMd when useLocalOrchestration is false) for each run,
 // aggregates JSON results (for same msgid takes lowest score), and saves one aggregated
 // JSON at the end. No per-run backup.
 // Returns scores for each run, aggregated score (from merged JSON), and error.
 // outputBase: base path for review output files (e.g. "po/review"); empty uses default.
-// useAgentMd: if true, use agent with po/AGENTS.md (--use-agent-md).
-func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, runs int, outputBase string, useAgentMd bool, batchSize int) ([]RunResult, int, error) {
+// useLocalOrchestration: if true, use local orchestration; otherwise use agent with po/AGENTS.md.
+func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, runs int, outputBase string, useLocalOrchestration bool, batchSize int) ([]RunResult, int, error) {
 	ps := ReviewPathSetFromBase(outputBase)
 	// Determine the agent to use
 	_, err := SelectAgent(cfg, agentName)
@@ -93,12 +94,14 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		iterStartTime := time.Now()
 
 		// Remove review output files before each run
-		_ = os.Remove(ps.InputPO)
+		_ = os.Remove(ps.PendingPO)
 		_ = os.Remove(ps.OutputPO)
 		_ = os.Remove(ps.ResultJSON)
+		_ = os.Remove(ps.ReviewBatchTxtPath())
+		_ = os.Remove(ps.ReviewTodoJSONPath())
+		_ = os.Remove(ps.ReviewDoneJSONPath())
 		for _, p := range []string{
-			filepath.Join(filepath.Dir(ps.InputPO), "review-input-*.json"),
-			filepath.Join(filepath.Dir(ps.InputPO), "review-result-*.json"),
+			filepath.Join(filepath.Dir(ps.PendingPO), "review-result-*.json"),
 		} {
 			matches, _ := filepath.Glob(p)
 			for _, m := range matches {
@@ -108,10 +111,10 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 
 		// Reuse RunAgentReview or RunAgentReviewUseAgentMd for each run
 		var agentResult *AgentRunResult
-		if useAgentMd {
-			agentResult, err = RunAgentReviewUseAgentMd(cfg, agentName, target, true, outputBase)
+		if useLocalOrchestration {
+			agentResult, err = RunAgentReviewLocalOrchestration(cfg, agentName, target, true, outputBase, batchSize)
 		} else {
-			agentResult, err = RunAgentReview(cfg, agentName, target, true, outputBase, batchSize)
+			agentResult, err = RunAgentReview(cfg, agentName, target, true, outputBase)
 		}
 
 		// Calculate execution time for this iteration

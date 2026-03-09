@@ -2,6 +2,8 @@ TEST_LIB_DIRECTORY=lib
 TEST_TARGET_DIRECTORY=..
 export TEST_TARGET_DIRECTORY
 
+GIT_TEST_OPTS = --verbose --debug
+
 # Import tree-wide shared Makefile behavior and libraries
 include $(TEST_LIB_DIRECTORY)/shared.mak
 

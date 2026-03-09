@@ -2,6 +2,8 @@
 package util
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -272,6 +274,112 @@ func GetPoFileRelPath(cfg *config.AgentConfig, poFile string) (string, error) {
 	return relPath, nil
 }
 
+// detectAgentOutputFormat inspects the first non-empty line and returns the detected
+// agent format (e.g. config.AgentKindClaude) or "" if output appears to be plain text.
+func detectAgentOutputFormat(raw []byte) string {
+	scanner := bufio.NewScanner(bytes.NewReader(raw))
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		if !strings.HasPrefix(line, "{") {
+			return ""
+		}
+		if strings.Contains(line, "claude_code_version") {
+			return config.AgentKindClaude
+		}
+		if strings.Contains(line, `"type":"step_start"`) || strings.Contains(line, `"type": "step_start"`) {
+			return config.AgentKindOpencode
+		}
+		if strings.Contains(line, "thread.started") {
+			return config.AgentKindCodex
+		}
+		if strings.Contains(line, `"provider":"qoder"`) || strings.Contains(line, `"provider": "qoder"`) {
+			return config.AgentKindQoder
+		}
+		if strings.Contains(line, `"type":"result"`) && strings.Contains(line, `"subtype":"success"`) {
+			return config.AgentKindQoder
+		}
+		if strings.Contains(line, `"type":"system"`) {
+			return config.AgentKindGemini
+		}
+		return ""
+
+	}
+	return ""
+}
+
+// parseBatchOutput parses buffered agent output. It auto-detects format from content
+// and uses the appropriate parser. Returns (content, streamResult, nil) on success.
+// If output is plain text (no JSONL detected), returns (raw, nil, nil).
+func parseBatchOutput(raw []byte) (content []byte, streamResult AgentStreamResult, err error) {
+	detected := detectAgentOutputFormat(raw)
+	if detected == "" {
+		return raw, nil, nil
+	}
+	content, streamResult, err = parseStreamByKind(detected, bytes.NewReader(raw))
+	if err != nil {
+		log.Warnf("failed to parse agent output as %s: %v, using raw output", detected, err)
+		return raw, nil, nil
+	}
+	return content, streamResult, nil
+}
+
+// RunAgentAndParse executes the agent command and parses output.
+// It always uses ExecuteAgentCommandStream internally.
+//
+// Returns:
+//   - stdout: Parsed or raw stdout content (for downstream use)
+//   - originalStdout: Raw stdout bytes before parsing (for result.AgentStdout)
+//   - stderr: Stderr bytes
+//   - streamResult: AgentStreamResult for diagnostics (NumTurns, Usage, etc.)
+//   - err: Execution or parse error
+func RunAgentAndParse(cmd []string, outputFormat, kind string) (
+	stdout, originalStdout, stderr []byte,
+	streamResult AgentStreamResult,
+	err error,
+) {
+	stdoutReader, stderrBuf, cmdProcess, execErr := ExecuteAgentCommandStream(cmd)
+	if execErr != nil {
+		return nil, nil, nil, nil, fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", execErr)
+	}
+	defer stdoutReader.Close()
+
+	switch outputFormat {
+	case config.OutputJSON:
+		fallthrough
+	case config.OutputStreamJSON:
+		// Stream parsing for JSONL output
+		var rawBuf bytes.Buffer
+		teeReader := io.TeeReader(stdoutReader, &rawBuf)
+		stdout, streamResult, _ = parseStreamByKind(kind, teeReader)
+		originalStdout = rawBuf.Bytes()
+	default:
+		// OutputText or unknown: stream read and print to stdout
+		var rawBuf bytes.Buffer
+		teeReader := io.TeeReader(stdoutReader, &rawBuf)
+		if _, err := io.Copy(os.Stdout, teeReader); err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("failed to read agent output: %w", err)
+		}
+		originalStdout = rawBuf.Bytes()
+		stdout = originalStdout
+	}
+
+	waitErr := cmdProcess.Wait()
+	stderr = stderrBuf.Bytes()
+	if waitErr != nil {
+		if len(stderr) > 0 {
+			log.Debugf("agent command stderr: %s", string(stderr))
+		}
+		return stdout, originalStdout, stderr, streamResult, fmt.Errorf("agent command failed: %w\nHint: Check that the agent command is correct and executable", waitErr)
+	}
+
+	return stdout, originalStdout, stderr, streamResult, nil
+}
+
 // parseStreamByKind parses agent stream output based on kind, returns stdout and unified result.
 func parseStreamByKind(kind string, reader io.Reader) (stdout []byte, streamResult AgentStreamResult, err error) {
 	switch kind {
@@ -291,6 +399,12 @@ func parseStreamByKind(kind string, reader io.Reader) (stdout []byte, streamResu
 		parsed, res, e := ParseGeminiJSONLRealtime(reader)
 		if e != nil {
 			log.Warnf("failed to parse gemini JSONL: %v", e)
+		}
+		return parsed, res, e
+	case config.AgentKindQoder:
+		parsed, res, e := ParseQoderJSONLRealtime(reader)
+		if e != nil {
+			log.Warnf("failed to parse qoder JSONL: %v", e)
 		}
 		return parsed, res, e
 	default:

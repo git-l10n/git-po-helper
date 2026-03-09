@@ -64,24 +64,27 @@ func ReplacePlaceholders(tmpl string, kv PlaceholderVars) (string, error) {
 	return buf.String(), nil
 }
 
-// normalizeOutputFormat normalizes output format by converting underscores to hyphens
-// and unifying stream-json/stream_json to json.
-// This allows both "stream_json" and "stream-json" to be treated as "json".
-func normalizeOutputFormat(format string) string {
-	normalized := strings.ReplaceAll(format, "_", "-")
-	// Unify stream-json to json (claude uses stream-json internally, but we simplify it to json)
-	if normalized == "stream-json" {
-		return "json"
-	}
-	return normalized
+// echoAgent implements config.Agent for echo (test agent, text output only).
+type echoAgent struct {
+	cmd []string
+}
+
+// BuildCommand returns the command with placeholders replaced (no format params).
+func (a *echoAgent) BuildCommand(vars map[string]string) ([]string, error) {
+	return replacePlaceholdersInCmd(a.cmd, vars)
+}
+
+// GetOutputFormat returns text (echo produces plain text).
+func (a *echoAgent) GetOutputFormat() string {
+	return config.OutputText
 }
 
 // SelectAgent selects an agent from the configuration based on the provided agent name.
 // If agentName is empty, it auto-selects an agent (only works if exactly one agent is configured).
-// Returns the selected agent and an error if selection fails.
+// Returns the selected agent entry and an error if selection fails.
 // Validates that agent.Kind is one of the known types (claude, gemini, codex, opencode, echo).
-func SelectAgent(cfg *config.AgentConfig, agentName string) (config.Agent, error) {
-	var agent config.Agent
+func SelectAgent(cfg *config.AgentConfig, agentName string) (config.AgentEntry, error) {
+	var entry config.AgentEntry
 
 	if agentName != "" {
 		// Use specified agent
@@ -93,15 +96,15 @@ func SelectAgent(cfg *config.AgentConfig, agentName string) (config.Agent, error
 				agentList = append(agentList, k)
 			}
 			log.Errorf("agent '%s' not found in configuration. Available agents: %v", agentName, agentList)
-			return config.Agent{}, fmt.Errorf("agent '%s' not found in configuration\nAvailable agents: %s\nHint: Check git-po-helper.yaml for configured agents", agentName, strings.Join(agentList, ", "))
+			return config.AgentEntry{}, fmt.Errorf("agent '%s' not found in configuration\nAvailable agents: %s\nHint: Check git-po-helper.yaml for configured agents", agentName, strings.Join(agentList, ", "))
 		}
-		agent = a
+		entry = a
 	} else {
 		// Auto-select agent
 		log.Debugf("auto-selecting agent from configuration")
 		if len(cfg.Agents) == 0 {
 			log.Error("no agents configured")
-			return config.Agent{}, fmt.Errorf("no agents configured\nHint: Add at least one agent to git-po-helper.yaml in the 'agents' section")
+			return config.AgentEntry{}, fmt.Errorf("no agents configured\nHint: Add at least one agent to git-po-helper.yaml in the 'agents' section")
 		}
 		if len(cfg.Agents) > 1 {
 			agentList := make([]string, 0, len(cfg.Agents))
@@ -109,185 +112,58 @@ func SelectAgent(cfg *config.AgentConfig, agentName string) (config.Agent, error
 				agentList = append(agentList, k)
 			}
 			log.Errorf("multiple agents configured (%s), --agent flag required", strings.Join(agentList, ", "))
-			return config.Agent{}, fmt.Errorf("multiple agents configured (%s), please specify --agent\nHint: Use --agent flag to select one of the available agents", strings.Join(agentList, ", "))
+			return config.AgentEntry{}, fmt.Errorf("multiple agents configured (%s), please specify --agent\nHint: Use --agent flag to select one of the available agents", strings.Join(agentList, ", "))
 		}
 		for k, v := range cfg.Agents {
-			agent, agentName = v, k
+			entry, agentName = v, k
 			break
 		}
 	}
 
-	// Set agent.Kind initial value when empty: try agentName then command name
-	if agent.Kind == "" {
+	// Set entry.Kind initial value when empty: try agentName then command name
+	if entry.Kind == "" {
 		// Try agentName (config key) converted to lowercase
 		if lower := strings.ToLower(agentName); config.KnownAgentKinds[lower] {
-			agent.Kind = lower
+			entry.Kind = lower
 		} else {
 			// Try first command argument (command name): use basename for paths
-			if len(agent.Cmd) > 0 {
-				base := strings.ToLower(filepath.Base(agent.Cmd[0]))
+			if len(entry.Cmd) > 0 {
+				base := strings.ToLower(filepath.Base(entry.Cmd[0]))
 				if config.KnownAgentKinds[base] {
-					agent.Kind = base
+					entry.Kind = base
 				}
 			}
 		}
-		if agent.Kind == "" {
-			return config.Agent{}, fmt.Errorf(
+		if entry.Kind == "" {
+			return config.AgentEntry{}, fmt.Errorf(
 				"agent '%s' has unknown kind (cmd=%v)\n"+
-					"Hint: Add 'kind' field (claude, gemini, codex, opencode, echo, qwen) to agent in git-po-helper.yaml",
-				agentName, agent.Cmd)
+					"Hint: Add 'kind' field (claude, gemini, codex, opencode, echo, qwen, qoder) to agent in git-po-helper.yaml",
+				agentName, entry.Cmd)
 		}
 	}
 
-	// Validate agent.Kind is a known type
-	if !config.KnownAgentKinds[agent.Kind] {
-		return config.Agent{}, fmt.Errorf(
-			"agent '%s' has unknown kind '%s' (must be one of: claude, gemini, codex, opencode, echo, qwen)\n"+
-				"Hint: Set 'kind' to a valid value in git-po-helper.yaml", agentName, agent.Kind)
+	// Validate entry.Kind is a known type
+	if !config.KnownAgentKinds[entry.Kind] {
+		return config.AgentEntry{}, fmt.Errorf(
+			"agent '%s' has unknown kind '%s' (must be one of: claude, gemini, codex, opencode, echo, qwen, qoder)\n"+
+				"Hint: Set 'kind' to a valid value in git-po-helper.yaml", agentName, entry.Kind)
 	}
 
-	return agent, nil
+	return entry, nil
 }
 
-// BuildAgentCommand builds an agent command by replacing placeholders in the agent's command template.
-// Uses Go text/template syntax (e.g. {{.prompt}}, {{.source}}, {{.commit}}).
-// For claude/codex/opencode/gemini commands, it adds stream-json parameters based on agent.Output.
-// Uses agent.Kind for type-safe detection (Kind must be validated by SelectAgent).
-func BuildAgentCommand(agent config.Agent, vars PlaceholderVars) ([]string, error) {
-	cmd := make([]string, len(agent.Cmd))
-	for i, arg := range agent.Cmd {
-		resolved, err := ReplacePlaceholders(arg, vars)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve command arg %q: %w", arg, err)
-		}
-		cmd[i] = resolved
+// BuildAgentCommand builds an agent command using the Agent interface.
+// Returns the full command (with format params) and the output format.
+func BuildAgentCommand(entry config.AgentEntry, vars PlaceholderVars) ([]string, string, error) {
+	agent, err := NewAgentFromConfig(entry)
+	if err != nil {
+		return nil, "", err
 	}
-
-	// Use agent.Kind for type detection (validated by SelectAgent)
-	kind := agent.Kind
-	isClaude := kind == config.AgentKindClaude
-	isCodex := kind == config.AgentKindCodex
-	isOpencode := kind == config.AgentKindOpencode
-	isGemini := kind == config.AgentKindGemini || kind == config.AgentKindQwen
-
-	// For claude command, add --output-format parameter if output format is specified
-	if isClaude {
-		// Check if --output-format parameter already exists in the command
-		hasOutputFormat := false
-		for i, arg := range cmd {
-			if arg == "--output-format" || arg == "-o" {
-				hasOutputFormat = true
-				// Skip the next argument (the format value)
-				if i+1 < len(cmd) {
-					_ = cmd[i+1]
-				}
-				break
-			}
-		}
-
-		// Only add --output-format if it doesn't already exist
-		if !hasOutputFormat {
-			outputFormat := normalizeOutputFormat(agent.Output)
-			if outputFormat == "" {
-				outputFormat = "default"
-			}
-
-			// Add --output-format parameter for json format (claude uses stream-json internally)
-			if outputFormat == "json" {
-				cmd = append(cmd, "--verbose", "--output-format", "stream-json")
-			}
-			// For "default" format, no additional parameter is needed
-		}
+	cmd, err := agent.BuildCommand(map[string]string(vars))
+	if err != nil {
+		return nil, "", err
 	}
-
-	// For codex command, add --json parameter if output format is json
-	if isCodex {
-		// Check if --json parameter already exists in the command
-		hasJSON := false
-		for _, arg := range cmd {
-			if arg == "--json" {
-				hasJSON = true
-				break
-			}
-		}
-
-		// Only add --json if it doesn't already exist
-		if !hasJSON {
-			outputFormat := normalizeOutputFormat(agent.Output)
-			if outputFormat == "" {
-				outputFormat = "default"
-			}
-
-			// Add --json parameter for json format (codex uses JSONL format)
-			if outputFormat == "json" {
-				cmd = append(cmd, "--json")
-			}
-			// For "default" format, no additional parameter is needed
-		}
-	}
-
-	// For opencode command, add --format json parameter if output format is json
-	if isOpencode {
-		// Check if --format parameter already exists in the command
-		hasFormat := false
-		for i, arg := range cmd {
-			if arg == "--format" {
-				hasFormat = true
-				// Skip the next argument (the format value)
-				if i+1 < len(cmd) {
-					_ = cmd[i+1]
-				}
-				break
-			}
-		}
-
-		// Only add --format if it doesn't already exist
-		if !hasFormat {
-			outputFormat := normalizeOutputFormat(agent.Output)
-			if outputFormat == "" {
-				outputFormat = "default"
-			}
-
-			// Add --format json parameter for json format (opencode uses JSONL format)
-			if outputFormat == "json" {
-				cmd = append(cmd, "--format", "json")
-			}
-			// For "default" format, no additional parameter is needed
-		}
-	}
-
-	// For gemini/qwen command, add --output-format stream-json parameter if output format is json
-	// (Applicable to Claude Code and Gemini-CLI)
-	if isGemini {
-		// Check if --output-format or -o parameter already exists in the command
-		hasOutputFormat := false
-		for i, arg := range cmd {
-			if arg == "--output-format" || arg == "-o" {
-				hasOutputFormat = true
-				// Skip the next argument (the format value)
-				if i+1 < len(cmd) {
-					_ = cmd[i+1]
-				}
-				break
-			}
-		}
-
-		// Only add --output-format if it doesn't already exist
-		if !hasOutputFormat {
-			outputFormat := normalizeOutputFormat(agent.Output)
-			if outputFormat == "" {
-				outputFormat = "default"
-			}
-
-			// Add --output-format stream-json parameter for json format (gemini uses stream-json)
-			if outputFormat == "json" {
-				cmd = append(cmd, "--output-format", "stream-json")
-			}
-			// For "default" format, no additional parameter is needed
-		}
-	}
-
-	return cmd, nil
+	return cmd, agent.GetOutputFormat(), nil
 }
 
 // GetPotFilePath returns the full path to the POT file in the repository.

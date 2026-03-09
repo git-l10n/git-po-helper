@@ -31,14 +31,12 @@ With two file arguments, compare worktree files (revisions not allowed).`,
 			if opts.UseAgentMd && opts.UseLocalOrchestration {
 				return NewErrorWithUsage("--use-agent-md and --use-local-orchestration are mutually exclusive")
 			}
-			// When neither specified, default to agent-md
-			useAgentMd := !opts.UseLocalOrchestration
 
 			target, err := util.ResolveRevisionsAndFiles(opts.Range, opts.Commit, opts.Since, args)
 			if err != nil {
 				return NewStandardErrorF("%v", err)
 			}
-			if err := util.CmdAgentTestReview(opts.Agent, target, opts.Runs, opts.DangerouslyRemovePoDir, opts.Output, useAgentMd, opts.BatchSize); err != nil {
+			if err := util.CmdAgentTestReview(opts.Agent, target, opts.Runs, opts.DangerouslyRemovePoDir, opts.Output, opts.UseLocalOrchestration, opts.BatchSize); err != nil {
 				return NewStandardErrorF("%v", err)
 			}
 			return nil

@@ -68,6 +68,9 @@ func CmdAgentRunParseLog(logFile string) error {
 	} else if strings.Contains(firstLine, "thread.started") {
 		// Codex format
 		_, _, err = ParseCodexJSONLRealtime(parseReader)
+	} else if strings.Contains(firstLine, `"provider":"qoder"`) || strings.Contains(firstLine, `"provider": "qoder"`) {
+		// Qoder format
+		_, _, err = ParseQoderJSONLRealtime(parseReader)
 	} else {
 		// Qwen/Gemini format (qwen_code_version or Gemini-style system init)
 		_, _, err = ParseGeminiJSONLRealtime(parseReader)

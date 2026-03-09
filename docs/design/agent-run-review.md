@@ -409,7 +409,7 @@ Extracts JSON object from agent output:
 **Existing Code Reuse**:
 - `util/agent-run.go`: `CalculateReviewScore()` - already implemented
 - `util/agent-run.go`: `ReviewIssue`, `ReviewJSONResult` - already defined
-- `util/agent.go`: `SelectAgent()`, `ExecuteAgentCommand()` - agent execution
+- `util/agent-run-common.go`: `SelectAgent()`, `RunAgentAndParse()` - agent execution
 - `repository/repository.go`: `WorkDir()` - for getting repository root
 - `util/const.go`: `PoDir` constant
 - `config/agent.go`: `LoadAgentConfig()` - configuration loading

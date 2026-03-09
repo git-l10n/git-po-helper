@@ -8,8 +8,49 @@ import (
 	"strings"
 	"time"
 
+	"github.com/git-l10n/git-po-helper/config"
 	log "github.com/sirupsen/logrus"
 )
+
+// geminiAgent implements config.Agent for Gemini/Qwen CLI.
+type geminiAgent struct {
+	cmd          []string
+	outputFormat *struct {
+		format   string
+		explicit bool
+	}
+}
+
+func (a *geminiAgent) getExplicitOutputFormat(flagNames ...string) (format string, found bool) {
+	defaultFormat := config.OutputStreamJSON
+	if a.outputFormat != nil {
+		return a.outputFormat.format, a.outputFormat.explicit
+	}
+	format, found = parseFormatFromCmd(a.cmd, defaultFormat, flagNames...)
+	a.outputFormat = &struct {
+		format   string
+		explicit bool
+	}{format, found}
+	return format, found
+}
+
+// BuildCommand returns the full command with format params added if missing.
+func (a *geminiAgent) BuildCommand(vars map[string]string) ([]string, error) {
+	cmd, err := replacePlaceholdersInCmd(a.cmd, vars)
+	if err != nil {
+		return nil, err
+	}
+	if format, explicit := a.getExplicitOutputFormat("--output-format", "-o"); !explicit {
+		cmd = append(cmd, "--output-format", format)
+	}
+	return cmd, nil
+}
+
+// GetOutputFormat parses format from cmd or returns stream-json.
+func (a *geminiAgent) GetOutputFormat() string {
+	format, _ := a.getExplicitOutputFormat("--output-format", "-o")
+	return format
+}
 
 // GeminiUsage represents usage information in Gemini-CLI messages.
 type GeminiUsage struct {

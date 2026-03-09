@@ -2,14 +2,57 @@ package util
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
 
+	"github.com/git-l10n/git-po-helper/config"
 	log "github.com/sirupsen/logrus"
 )
+
+// claudeAgent implements config.Agent for Claude CLI.
+type claudeAgent struct {
+	cmd []string
+	// Cached result from getExplicitOutputFormat; nil means not yet computed.
+	outputFormat *struct {
+		format   string
+		explicit bool
+	}
+}
+
+// getExplicitOutputFormat parses output format from config cmd.
+// Returns (format, true) if flag found, (defaultFormat, false) otherwise. Result is cached.
+func (a *claudeAgent) getExplicitOutputFormat(flagNames ...string) (format string, found bool) {
+	defaultFormat := config.OutputStreamJSON
+	if a.outputFormat != nil {
+		return a.outputFormat.format, a.outputFormat.explicit
+	}
+	format, found = parseFormatFromCmd(a.cmd, defaultFormat, flagNames...)
+	a.outputFormat = &struct {
+		format   string
+		explicit bool
+	}{format, found}
+	return format, found
+}
+
+// BuildCommand returns the full command with format params added if missing.
+func (a *claudeAgent) BuildCommand(vars map[string]string) ([]string, error) {
+	cmd, err := replacePlaceholdersInCmd(a.cmd, vars)
+	if err != nil {
+		return nil, err
+	}
+	if format, explicit := a.getExplicitOutputFormat("--output-format", "-o"); !explicit {
+		cmd = append(cmd, "--verbose", "--output-format", format)
+	}
+	return cmd, nil
+}
+
+// GetOutputFormat parses format from cmd or returns stream-json.
+func (a *claudeAgent) GetOutputFormat() string {
+	format, _ := a.getExplicitOutputFormat("--output-format", "-o")
+	return format
+}
 
 // ClaudeJSONOutput represents the JSON output format from Claude API.
 type ClaudeJSONOutput struct {
@@ -94,67 +137,6 @@ func (r *ClaudeJSONOutput) GetNumTurns() int {
 		return 0
 	}
 	return r.NumTurns
-}
-
-// ParseClaudeAgentOutput parses agent output based on the output format.
-// Returns the actual content (result text) and the parsed JSON result.
-// For claude, json format is treated as stream-json (JSONL format).
-func ParseClaudeAgentOutput(output []byte, outputFormat string) (content []byte, result *ClaudeJSONOutput, err error) {
-	// Normalize output format (convert underscores to hyphens and unify stream-json to json)
-	outputFormat = normalizeOutputFormat(outputFormat)
-
-	// Default format: return output as-is
-	if outputFormat == "" || outputFormat == "default" {
-		return output, nil, nil
-	}
-
-	// JSON format: parse as stream JSON (JSONL format, one JSON object per line)
-	if outputFormat == "json" {
-		return parseClaudeStreamJSON(output)
-	}
-
-	// Unknown format: return as-is
-	log.Warnf("unknown output format: %s, treating as default", outputFormat)
-	return output, nil, nil
-}
-
-// parseClaudeStreamJSON parses stream JSON format where each line is a JSON object.
-func parseClaudeStreamJSON(output []byte) (content []byte, result *ClaudeJSONOutput, err error) {
-	var resultBuilder strings.Builder
-	var lastResult *ClaudeJSONOutput
-
-	scanner := bufio.NewScanner(bytes.NewReader(output))
-	// Increase buffer size to handle long lines (1MB initial, 10MB max)
-	buf := make([]byte, 0, 1024*1024)
-	scanner.Buffer(buf, 10*1024*1024) // Max token size: 10MB
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-
-		var jsonOutput ClaudeJSONOutput
-		if err := json.Unmarshal([]byte(line), &jsonOutput); err != nil {
-			// If line is not valid JSON, treat it as plain text
-			resultBuilder.WriteString(line)
-			resultBuilder.WriteString("\n")
-			continue
-		}
-
-		// Accumulate result text
-		if jsonOutput.Result != "" {
-			resultBuilder.WriteString(jsonOutput.Result)
-		}
-
-		// Keep the latest JSON output (contains all fields including usage and duration_api_ms)
-		lastResult = &jsonOutput
-	}
-
-	if err := scanner.Err(); err != nil {
-		return output, nil, fmt.Errorf("failed to parse stream JSON: %w", err)
-	}
-
-	return []byte(resultBuilder.String()), lastResult, nil
 }
 
 // ParseClaudeStreamJSONRealtime parses stream JSON format in real-time, displaying messages as they arrive.

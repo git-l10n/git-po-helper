@@ -184,6 +184,28 @@ func PrintAgentDiagnostics(result interface{}) {
 			durationAPIMS = r.DurationAPIMS
 			hasInfo = true
 		}
+	case *QoderJSONOutput:
+		if r == nil {
+			return
+		}
+		if r.NumTurns > 0 {
+			numTurns = r.NumTurns
+			hasInfo = true
+		}
+		if r.Usage != nil {
+			if r.Usage.InputTokens > 0 {
+				inputTokens = r.Usage.InputTokens
+				hasInfo = true
+			}
+			if r.Usage.OutputTokens > 0 {
+				outputTokens = r.Usage.OutputTokens
+				hasInfo = true
+			}
+		}
+		if r.DurationAPIMS > 0 {
+			durationAPIMS = r.DurationAPIMS
+			hasInfo = true
+		}
 	default:
 		return
 	}
