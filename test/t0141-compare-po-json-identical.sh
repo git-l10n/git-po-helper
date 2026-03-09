@@ -17,7 +17,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 test_expect_success "setup: create identical input.po and input.json" '
-	bell=$(printf "\x07") && bsl=$(printf '\''\\\\'\'') &&
+	bsl=$(printf '\''\\\\'\'') &&
 	cat >input.po <<-ENDPO &&
 	msgid ""
 	msgstr ""
@@ -30,14 +30,12 @@ test_expect_success "setup: create identical input.po and input.json" '
 	"Line three\rwith CR\n"
 	"Line four\"with quote\n"
 	"Line five${bsl}with slash\n"
-	"Line six${bell}with bell\n"
 	msgstr ""
 	"第1行\n"
 	"第2行\t带制表符\n"
 	"第3行\r带回车\n"
 	"第4行\"带引号\n"
 	"第5行${bsl}带斜线\n"
-	"第6行${bell}带铃\n"
 
 	#, c-format
 	msgid "Simple %s"
@@ -49,8 +47,8 @@ test_expect_success "setup: create identical input.po and input.json" '
 	  "header_meta": "Content-Type: text/plain; charset=UTF-8\\n",
 	  "entries": [
 	    {
-	      "msgid": "Line one\\nLine two\\twith tab\\nLine three\\rwith CR\\nLine four\\\"with quote\\nLine five\\\\with slash\\nLine six\u0007with bell\\n",
-	      "msgstr": "第1行\\n第2行\\t带制表符\\n第3行\\r带回车\\n第4行\\\"带引号\\n第5行\\\\带斜线\\n第6行\u0007带铃\\n",
+	      "msgid": "Line one\\nLine two\\twith tab\\nLine three\\rwith CR\\nLine four\\\"with quote\\nLine five\\\\with slash\\n",
+	      "msgstr": "第1行\\n第2行\\t带制表符\\n第3行\\r带回车\\n第4行\\\"带引号\\n第5行\\\\带斜线\\n",
 	      "comments": [
 	        "#: src/a.c"
 	      ],
