@@ -164,6 +164,30 @@ func CleanPoDirectory(paths ...string) error {
 
 	log.Debugf("all paths processed")
 
+	// Clean untracked l10n intermediate files that are never tracked by git.
+	// Corresponds to AGENTS.md Task 3 Step 8 (po_cleanup): these files must be
+	// removed before each test run to avoid stale state from a previous run.
+	shouldCleanL10n := len(paths) == 0 || containsPath(paths, "po/")
+	if shouldCleanL10n {
+		patterns := []string{
+			"po/l10n-pending.po",
+			"po/l10n-todo.json",
+			"po/l10n-done.json",
+			"po/l10n-done.po",
+			"po/l10n-done.merged",
+		}
+		cleanArgs := append([]string{"clean", "-fx", "--"}, patterns...)
+		cleanCmd := exec.Command("git", cleanArgs...)
+		cleanCmd.Dir = workDir
+		if out, err := cleanCmd.CombinedOutput(); err != nil {
+			log.Debugf("git clean l10n intermediates (ignored): %s", string(out))
+		} else {
+			log.Debugf("l10n intermediate files cleaned")
+		}
+	} else {
+		log.Debugf("skipping l10n intermediate files cleanup (not in specified paths)")
+	}
+
 	// Clean untracked po/git.pot file that might not be in git repository
 	// Only clean po/git.pot if default path "po/" is being used or explicitly specified
 	shouldCleanPot := len(paths) == 0 || containsPath(paths, "po/") || containsPath(paths, "po/git.pot")
