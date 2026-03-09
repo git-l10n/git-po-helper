@@ -83,13 +83,14 @@ var (
 )
 
 // ReviewPathSet holds paths for Task 4 review workflow (AGENTS.md).
-// Naming: review-pending.po, review-result.json, review-output.po,
+// Naming: review-input.po, review-pending.po, review-result.json, review-output.po,
 // review-todo.json, review-done.json, review-batch.txt,
 // review-result-<N>.json.
 type ReviewPathSet struct {
 	BaseDir    string // directory containing all review files (e.g. "po")
 	BaseName   string // base name prefix (e.g. "review")
-	PendingPO  string // po/review-pending.po
+	InputPO    string // po/review-input.po (original extracted PO file, immutable)
+	PendingPO  string // po/review-pending.po (remaining entries to review)
 	ResultJSON string // po/review-result.json
 	OutputPO   string // po/review-output.po
 }
@@ -109,6 +110,7 @@ func ReviewPathSetFromBase(base string) ReviewPathSet {
 	return ReviewPathSet{
 		BaseDir:    dir,
 		BaseName:   name,
+		InputPO:    filepath.Join(dir, name+"-input.po"),
 		PendingPO:  filepath.Join(dir, name+"-pending.po"),
 		ResultJSON: filepath.Join(dir, name+"-result.json"),
 		OutputPO:   filepath.Join(dir, name+"-output.po"),

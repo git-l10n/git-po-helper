@@ -259,7 +259,7 @@ func ReportReviewFromPathWithBatches(path string) (string, *ReviewReportResult, 
 	ps := ReviewPathSetFromBase(path)
 	jsonFile := ps.ResultJSON
 	// Use pending PO or output PO for total count (pending is source of truth)
-	poFile := ps.PendingPO
+	poFile := ps.InputPO
 	if !Exist(poFile) {
 		poFile = ps.OutputPO
 	}

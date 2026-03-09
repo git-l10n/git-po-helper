@@ -4,6 +4,7 @@ package util
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,6 +14,24 @@ import (
 	"github.com/git-l10n/git-po-helper/config"
 	log "github.com/sirupsen/logrus"
 )
+
+// copyFile copies a file from src to dst.
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	return err
+}
 
 // countMsgidEntries counts the number of msgid entries in a PO file by counting lines that start with "msgid "
 func countMsgidEntries(filePath string) (int, error) {
@@ -65,12 +84,13 @@ func calcNumForBatch(entryCount, minBatchSize int) int {
 
 // cleanReviewIntermediateFiles removes stale intermediate files before a fresh review run.
 // Corresponds to AGENTS.md Task 4 step 2.
-// Does NOT remove review-pending.po (step 3 will overwrite it).
+// Does NOT remove review-input.po (source of truth for entry count and OUTPUT_PO template).
 func cleanReviewIntermediateFiles(ps ReviewPathSet) {
 	for _, f := range []string{
 		ps.ReviewBatchTxtPath(),
 		ps.ReviewTodoJSONPath(),
 		ps.ReviewDoneJSONPath(),
+		ps.PendingPO,
 		ps.ResultJSON,
 	} {
 		os.Remove(f)
@@ -88,11 +108,21 @@ func cleanReviewIntermediateFiles(ps ReviewPathSet) {
 // reviewOneBatch implements AGENTS.md Task 4 step 4:
 // reads batch number from review-batch.txt (init 0), increments, extracts first NUM entries
 // to review-todo.json, moves remainder back to review-pending.po.
+// If review-pending.po does not exist, copies from review-input.po first.
 // Returns (batchNum, entryCount, num, done) where done=true means no entries remain.
 func reviewOneBatch(ps ReviewPathSet, minBatchSize int) (batchNum, entryCount, num int, done bool, err error) {
+	inputPO := ps.InputPO
 	pendingPO := ps.PendingPO
 	todoJSON := ps.ReviewTodoJSONPath()
 	batchTxt := ps.ReviewBatchTxtPath()
+
+	// If pendingPO does not exist, copy from inputPO (AGENTS.md step 4)
+	if !Exist(pendingPO) {
+		if err := copyFile(inputPO, pendingPO); err != nil {
+			return 0, 0, 0, false, fmt.Errorf("failed to copy %s to %s: %w", inputPO, pendingPO, err)
+		}
+		log.Debugf("copied %s to %s", inputPO, pendingPO)
+	}
 
 	// Count remaining entries (exclude header)
 	total, err := countMsgidEntries(pendingPO)
@@ -162,6 +192,7 @@ func reviewOneBatch(ps ReviewPathSet, minBatchSize int) (batchNum, entryCount, n
 func renameReviewDone(ps ReviewPathSet) error {
 	doneJSON := ps.ReviewDoneJSONPath()
 	batchTxt := ps.ReviewBatchTxtPath()
+	todoJSON := ps.ReviewTodoJSONPath()
 
 	if !Exist(doneJSON) {
 		return nil
@@ -179,6 +210,10 @@ func renameReviewDone(ps ReviewPathSet) error {
 		return fmt.Errorf("failed to rename %s to %s: %w", doneJSON, resultPath, err)
 	}
 	log.Infof("renamed %s to %s", filepath.Base(doneJSON), filepath.Base(resultPath))
+	if Exist(todoJSON) {
+		os.Remove(todoJSON)
+		log.Infof("removed %s", filepath.Base(todoJSON))
+	}
 	return nil
 }
 
@@ -203,10 +238,17 @@ func parseAndAccumulateReviewJSON(stdout []byte, entryCount int) (*ReviewJSONRes
 // with local orchestration. Uses a single state-detection loop (like RunAgentTranslateLocalOrchestration):
 // each iteration checks file state and executes exactly one step, then continues.
 //
-// Step 1 (resume): review-result.json → step 8. review-done.json → step 6. review-todo.json → step 5.
-// Step 2: Clean up stale intermediate files (when review-pending.po absent).
-// Step 3: Extract entries to review-pending.po.
-// Step 4: Prepare one batch (review-todo.json) from review-pending.po.
+// Step 1 (resume): Check existing files to determine where to resume.
+//   - If review-result.json exists → step 8.
+//   - If review-input.po does not exist → step 2 (fresh start).
+//   - If review-input.po exists:
+//   - If review-done.json exists → step 6.
+//   - Else if review-todo.json exists → step 5.
+//   - Else → step 4.
+//
+// Step 2: Clean up stale intermediate files (when review-input.po absent).
+// Step 3: Extract entries to review-input.po.
+// Step 4: Prepare one batch (review-todo.json) from review-pending.po (copy from review-input.po if needed).
 // Step 5: Run agent on review-todo.json, write review-done.json.
 // Step 6: Rename review-done.json to review-result-<N>.json.
 // Step 7: Loop back (handled by continue).
@@ -232,7 +274,7 @@ func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string,
 	for {
 		// Resume-state detection (re-evaluated each iteration)
 		resultExists := Exist(ps.ResultJSON)
-		pendingExists := Exist(ps.PendingPO)
+		inputExists := Exist(ps.InputPO)
 		doneExists := Exist(ps.ReviewDoneJSONPath())
 		todoExists := Exist(ps.ReviewTodoJSONPath())
 
@@ -242,18 +284,20 @@ func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string,
 			return runMergeAndSummary(ps, outputBase, startTime, result)
 		}
 
-		if !pendingExists {
+		// Step 1: Check for existing review (resume support)
+		if !inputExists {
 			// Step 2: Clean up stale intermediate files.
 			log.Infof("starting fresh review; cleaning intermediate files")
 			cleanReviewIntermediateFiles(ps)
-			// Step 3: Extract entries to review-pending.po.
-			log.Infof("extracting review entries to %s", ps.PendingPO)
-			if err := PrepareReviewData(target.OldCommit, target.OldFile, target.NewCommit, target.NewFile, ps.PendingPO, false, false, false); err != nil {
+			// Step 3: Extract entries to review-input.po.
+			log.Infof("extracting review entries to %s", ps.InputPO)
+			if err := PrepareReviewData(target.OldCommit, target.OldFile, target.NewCommit, target.NewFile, ps.InputPO, false, false, false); err != nil {
 				return result, fmt.Errorf("failed to prepare review data: %w", err)
 			}
 			continue
 		}
 
+		// Step 1: review-input.po exists - check for resume conditions
 		// Step 6: review-done.json exists → rename to review-result-<N>.json.
 		if doneExists {
 			log.Infof("%s exists; renaming to result (step 6)", ps.ReviewDoneJSONPath())
@@ -266,9 +310,9 @@ func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string,
 		// Step 5: review-todo.json exists → run agent, write review-done.json.
 		if todoExists {
 			log.Infof("%s exists; running agent (step 5)", ps.ReviewTodoJSONPath())
-			// Use total entry count from review-pending.po for scoring.
+			// Use total entry count from review-input.po for scoring.
 			entryCount := 0
-			if total, err := countMsgidEntries(ps.PendingPO); err == nil && total > 0 {
+			if total, err := countMsgidEntries(ps.InputPO); err == nil && total > 0 {
 				entryCount = total - 1
 			}
 			if err := runReviewOneTodo(cfg, selectedAgent, ps, entryCount, result); err != nil {
@@ -285,6 +329,7 @@ func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string,
 		if done {
 			// review-pending.po is empty → proceed to step 8.
 			log.Infof("no more entries in %s; proceeding to merge", ps.PendingPO)
+			// Clean intermediate files but preserve review-input.po (step 8 requirement)
 			cleanReviewIntermediateFiles(ps)
 			continue
 		}
