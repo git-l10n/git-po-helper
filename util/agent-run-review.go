@@ -195,13 +195,13 @@ func CmdAgentRunReview(agentName string, target *CompareTarget, outputBase strin
 
 	// Display review report (same format as agent-run report)
 	if result.ReviewJSON != nil && result.ReviewJSONPath != "" {
-		critical, minor, major := CountReviewIssueScores(result.ReviewJSON)
+		critical, major, minor := CountReviewIssueScores(result.ReviewJSON)
 		reportResult := &ReviewReportResult{
 			Review:        result.ReviewJSON,
 			Score:         result.ReviewScore,
 			CriticalCount: critical,
-			MinorCount:    minor,
 			MajorCount:    major,
+			MinorCount:    minor,
 		}
 		PrintReviewReportResult(result.ReviewJSONPath, reportResult)
 	}

@@ -43,13 +43,26 @@ type AgentRunResult struct {
 	ExecutionTime time.Duration
 }
 
+// ReviewIssue score constants (0-3). Lower = more severe.
+// Used for JSON "score" field in ReviewIssue.
+const (
+	ReviewIssueScoreCritical = 0 // critical issue (most severe)
+	ReviewIssueScoreMajor    = 1 // major issue (serious)
+	ReviewIssueScoreMinor    = 2 // minor issue (small)
+	ReviewIssueScorePerfect  = 3 // no issue (perfect)
+	ReviewIssueScoreMax      = 3 // maximum valid score
+
+	// ReviewIssuePointsPerEntry is max points per entry for score calculation.
+	ReviewIssuePointsPerEntry = ReviewIssueScoreMax
+)
+
 // ReviewIssue represents a single issue in a review JSON result.
 type ReviewIssue struct {
 	MsgID               string   `json:"msgid"`                   // original msgid (singular)
 	MsgStr              string   `json:"msgstr"`                  // original translation (singular)
 	MsgIDPlural         string   `json:"msgid_plural,omitempty"`  // original msgid (plural)
 	MsgStrPlural        []string `json:"msgstr_plural,omitempty"` // original translation (plural)
-	Score               int      `json:"score"`                   // issue score (0-3)
+	Score               int      `json:"score"`                   // issue score (ReviewIssueScoreCritical..ReviewIssueScorePerfect)
 	Description         string   `json:"description"`             // issue description
 	SuggestMsgstr       string   `json:"suggest_msgstr"`          // corrected translation (singular)
 	SuggestMsgstrPlural []string `json:"suggest_msgstr_plural"`   // corrected translation (plural)
@@ -61,15 +74,15 @@ type ReviewJSONResult struct {
 	Issues       []ReviewIssue `json:"issues"`
 }
 
-// IssueCount returns the number of issues that count as problems (score < 3).
-// Issues with score 3 are not counted as problems.
+// IssueCount returns the number of issues that count as problems (score < ReviewIssueScorePerfect).
+// Issues with score ReviewIssueScorePerfect are not counted as problems.
 func (r *ReviewJSONResult) IssueCount() int {
 	if r == nil {
 		return 0
 	}
 	n := 0
 	for _, issue := range r.Issues {
-		if issue.Score < 3 {
+		if issue.Score < ReviewIssueScorePerfect {
 			n++
 		}
 	}
@@ -138,8 +151,8 @@ func (p ReviewPathSet) ReviewResultJSONPath(n int) string {
 }
 
 // CalculateReviewScore calculates a 0-100 score from a ReviewJSONResult.
-// The scoring model treats each entry as having a maximum of 3 points.
-// For each reported issue, the score is reduced by (3 - issue.Score).
+// The scoring model treats each entry as having a maximum of ReviewIssueScoreMax points.
+// For each reported issue, the score is reduced by (ReviewIssueScoreMax - issue.Score).
 // The final score is normalized to 0-100.
 func CalculateReviewScore(review *ReviewJSONResult) (int, error) {
 	// If total_entries is 0, we can't calculate a meaningful score
@@ -155,18 +168,18 @@ func CalculateReviewScore(review *ReviewJSONResult) (int, error) {
 		return 0, fmt.Errorf("invalid review result: total_entries must be greater than 0, got %d", review.TotalEntries)
 	}
 
-	totalPossible := review.TotalEntries * 3
+	totalPossible := review.TotalEntries * ReviewIssuePointsPerEntry
 	totalScore := totalPossible
 
 	log.Debugf("calculating review score: total_entries=%d, total_possible=%d, issues_count=%d",
 		review.TotalEntries, totalPossible, len(review.Issues))
 
 	for i, issue := range review.Issues {
-		if issue.Score < 0 || issue.Score > 3 {
-			log.Debugf("calculate score failed: issue[%d].score=%d (must be 0-3)", i, issue.Score)
-			return 0, fmt.Errorf("invalid issue score %d: must be between 0 and 3", issue.Score)
+		if issue.Score < ReviewIssueScoreCritical || issue.Score > ReviewIssueScoreMax {
+			log.Debugf("calculate score failed: issue[%d].score=%d (must be %d-%d)", i, issue.Score, ReviewIssueScoreCritical, ReviewIssueScoreMax)
+			return 0, fmt.Errorf("invalid issue score %d: must be between %d and %d", issue.Score, ReviewIssueScoreCritical, ReviewIssueScoreMax)
 		}
-		deduction := 3 - issue.Score
+		deduction := ReviewIssueScoreMax - issue.Score
 		totalScore -= deduction
 		log.Debugf("issue[%d]: score=%d, deduction=%d, remaining=%d", i, issue.Score, deduction, totalScore)
 	}

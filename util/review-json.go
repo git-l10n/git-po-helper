@@ -27,6 +27,9 @@ func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) err
 	byMsgID := make(map[string]*ReviewIssue)
 	for i := range review.Issues {
 		issue := &review.Issues[i]
+		if issue.Score >= ReviewIssueScorePerfect {
+			continue
+		}
 		byMsgID[issue.MsgID] = issue
 	}
 	applied := make(map[string]bool)
@@ -53,6 +56,9 @@ func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) err
 		}
 	}
 	for _, issue := range review.Issues {
+		if issue.Score >= ReviewIssueScorePerfect {
+			continue
+		}
 		if !applied[issue.MsgID] {
 			fmt.Fprintf(os.Stderr, "review: msgid not applied (no matching entry in PO): %q\n", issue.MsgID)
 		}
@@ -158,9 +164,9 @@ func ParseReviewJSON(jsonData []byte) (*ReviewJSONResult, error) {
 	// Validate each issue
 	for i, issue := range review.Issues {
 		// Validate score range
-		if issue.Score < 0 || issue.Score > 3 {
-			log.Debugf("validation failed: issue[%d].score=%d (must be 0-3)", i, issue.Score)
-			return nil, fmt.Errorf("invalid issue score %d at index %d: must be between 0 and 3", issue.Score, i)
+		if issue.Score < ReviewIssueScoreCritical || issue.Score > ReviewIssueScoreMax {
+			log.Debugf("validation failed: issue[%d].score=%d (must be %d-%d)", i, issue.Score, ReviewIssueScoreCritical, ReviewIssueScoreMax)
+			return nil, fmt.Errorf("invalid issue score %d at index %d: must be between %d and %d", issue.Score, i, ReviewIssueScoreCritical, ReviewIssueScoreMax)
 		}
 
 		// Validate required fields are not empty (msgid and msgstr can be empty, but should be present)

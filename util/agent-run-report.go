@@ -90,13 +90,13 @@ func resolveReviewPaths(path string) ResolvedReviewPaths {
 }
 
 // ReviewReportResult holds the result of reporting from a review JSON file.
-// Issue scores: 0 = critical, 1 = minor, 2 = major. Perfect = no issue.
+// Issue scores: ReviewIssueScoreCritical, ReviewIssueScoreMajor, ReviewIssueScoreMinor. Perfect = ReviewIssueScorePerfect.
 type ReviewReportResult struct {
 	Review        *ReviewJSONResult
 	Score         int
-	CriticalCount int // score 0
-	MinorCount    int // score 1
-	MajorCount    int // score 2
+	CriticalCount int // ReviewIssueScoreCritical
+	MajorCount    int // ReviewIssueScoreMajor
+	MinorCount    int // ReviewIssueScoreMinor
 }
 
 // PerfectCount returns the number of entries with no reported issue:
@@ -113,19 +113,19 @@ func (r *ReviewReportResult) PerfectCount() int {
 }
 
 // CountReviewIssueScores returns counts by issue score from a review.
-// Score 0 = critical, 1 = minor, 2 = major. Perfect count is derived: TotalEntries - (critical + minor + major).
-func CountReviewIssueScores(review *ReviewJSONResult) (critical, minor, major int) {
+// ReviewIssueScoreCritical, ReviewIssueScoreMajor, ReviewIssueScoreMinor. Perfect count is derived: TotalEntries - (critical + major + minor).
+func CountReviewIssueScores(review *ReviewJSONResult) (critical, major, minor int) {
 	for _, issue := range review.Issues {
 		switch issue.Score {
-		case 0:
+		case ReviewIssueScoreCritical:
 			critical++
-		case 1:
-			minor++
-		case 2:
+		case ReviewIssueScoreMajor:
 			major++
+		case ReviewIssueScoreMinor:
+			minor++
 		}
 	}
-	return critical, minor, major
+	return critical, major, minor
 }
 
 // parseReviewJSONWithGjson parses review JSON using gjson, which can tolerate
@@ -212,13 +212,13 @@ func ReportReviewFromJSON(path string) (string, *ReviewReportResult, error) {
 		return "", nil, fmt.Errorf("failed to calculate review score: %w", err)
 	}
 
-	critical, minor, major := CountReviewIssueScores(&review)
+	critical, major, minor := CountReviewIssueScores(&review)
 	return resolved.JSONFile, &ReviewReportResult{
 		Review:        &review,
 		Score:         score,
 		CriticalCount: critical,
-		MinorCount:    minor,
 		MajorCount:    major,
+		MinorCount:    minor,
 	}, nil
 }
 
@@ -338,13 +338,13 @@ func ReportReviewFromPathWithBatches(path string) (string, *ReviewReportResult, 
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to calculate review score: %w", err)
 	}
-	critical, minor, major := CountReviewIssueScores(merged)
+	critical, major, minor := CountReviewIssueScores(merged)
 	return jsonFile, &ReviewReportResult{
 		Review:        merged,
 		Score:         score,
 		CriticalCount: critical,
-		MinorCount:    minor,
 		MajorCount:    major,
+		MinorCount:    minor,
 	}, nil
 }
 
@@ -382,13 +382,13 @@ func reportReviewFromJSONWithPaths(jsonFile, poFile string) (string, *ReviewRepo
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to calculate review score: %w", err)
 	}
-	critical, minor, major := CountReviewIssueScores(&review)
+	critical, major, minor := CountReviewIssueScores(&review)
 	return jsonFile, &ReviewReportResult{
 		Review:        &review,
 		Score:         score,
 		CriticalCount: critical,
-		MinorCount:    minor,
 		MajorCount:    major,
+		MinorCount:    minor,
 	}, nil
 }
 
@@ -402,9 +402,9 @@ func PrintReviewReportResult(jsonFile string, result *ReviewReportResult) {
 	fmt.Printf("  %-22s %d\n", "Perfect (no issue):", result.PerfectCount())
 	fmt.Printf("  %-22s %d\n", "With issues:", result.Review.IssueCount())
 	fmt.Println()
-	fmt.Printf("  %-22s %d\n", "Critical (score 0):", result.CriticalCount)
-	fmt.Printf("  %-22s %d\n", "Major (score 1):", result.MajorCount)
-	fmt.Printf("  %-22s %d\n", "Minor (score 2):", result.MinorCount)
+	fmt.Printf("  %-22s %d\n", fmt.Sprintf("Critical (score %d):", ReviewIssueScoreCritical), result.CriticalCount)
+	fmt.Printf("  %-22s %d\n", fmt.Sprintf("Major (score %d):", ReviewIssueScoreMajor), result.MajorCount)
+	fmt.Printf("  %-22s %d\n", fmt.Sprintf("Minor (score %d):", ReviewIssueScoreMinor), result.MinorCount)
 	fmt.Println()
 	fmt.Printf("For full details, see the review JSON file: `%s`\n", jsonFile)
 }

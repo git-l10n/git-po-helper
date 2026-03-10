@@ -17,13 +17,13 @@ func TestCountReviewIssueScores(t *testing.T) {
 			{Score: 2}, {Score: 2}, {Score: 2},
 		},
 	}
-	critical, minor, major := CountReviewIssueScores(review)
-	if critical != 2 || minor != 1 || major != 3 {
-		t.Errorf("CountReviewIssueScores: critical=%d minor=%d major=%d; want 2,1,3",
-			critical, minor, major)
+	critical, major, minor := CountReviewIssueScores(review)
+	if critical != 2 || major != 1 || minor != 3 {
+		t.Errorf("CountReviewIssueScores: critical=%d major=%d minor=%d; want 2,1,3",
+			critical, major, minor)
 	}
 	// Perfect is derived: TotalEntries - (2+1+3) = 4
-	if got := review.TotalEntries - (critical + minor + major); got != 4 {
+	if got := review.TotalEntries - (critical + major + minor); got != 4 {
 		t.Errorf("derived perfect = TotalEntries - (critical+minor+major) = %d; want 4", got)
 	}
 }
@@ -148,8 +148,8 @@ msgstr "old"
 
 	tmpDir := t.TempDir()
 	ps := ReviewPathSetFromBase(filepath.Join(tmpDir, "review"))
-	if err := os.WriteFile(ps.PendingPO, []byte(inputPO), 0644); err != nil {
-		t.Fatalf("write pending PO: %v", err)
+	if err := os.WriteFile(ps.InputPO, []byte(inputPO), 0644); err != nil {
+		t.Fatalf("write input PO: %v", err)
 	}
 	if err := os.WriteFile(ps.ResultJSON, []byte(reviewJSON), 0644); err != nil {
 		t.Fatalf("write review JSON: %v", err)
