@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 
@@ -13,6 +14,9 @@ type msgSelectCommand struct {
 	cmd *cobra.Command
 	O   struct {
 		Range        string
+		Head         int
+		Tail         int
+		Since        int
 		NoHeader     bool
 		Output       string
 		JSON         bool
@@ -60,11 +64,19 @@ Omit --range to select all entries. Range applies to the filtered list.
   - N-: entries N through last (e.g. 50- for entries 50 to end)
   - Combined: 3,5,9-13 (extract entries 3, 5, 9, 10, 11, 12, 13)
 
+Shortcuts (mutually exclusive with --range and each other):
+  - --head N: first N entries (equivalent to --range "-N")
+  - --tail N: last N entries (equivalent to --range "<total-N+1>-<total>")
+  - --since N: entries from N to end (equivalent to --range "N-")
+
 Examples:
   git-po-helper msg-select --range "1-10" po/zh_CN.po
   git-po-helper msg-select --no-obsolete po/zh_CN.po
   git-po-helper msg-select --only-obsolete po/zh_CN.po
-  git-po-helper msg-select --translated --range "-5" -o batch.po po/zh_CN.po`,
+  git-po-helper msg-select --translated --range "-5" -o batch.po po/zh_CN.po
+  git-po-helper msg-select --head 10 po/zh_CN.po
+  git-po-helper msg-select --tail 5 -o last5.po po/zh_CN.po
+  git-po-helper msg-select --since 100 po/zh_CN.po`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return v.Execute(args)
 		},
@@ -75,11 +87,17 @@ Examples:
 
 	// General options
 	fs.StringVar(&v.O.Range, "range", "", "entry range to extract (e.g. 3,5,9-13); omit to select all")
+	fs.IntVar(&v.O.Head, "head", 0, "select first N entries (equivalent to --range \"-N\")")
+	fs.IntVar(&v.O.Tail, "tail", 0, "select last N entries (equivalent to --range \"<total-N+1>-<total>\")")
+	fs.IntVar(&v.O.Since, "since", 0, "select entries from N to end (equivalent to --range \"N-\")")
 	fs.BoolVar(&v.O.NoHeader, "no-header", false, "omit header entry from output")
 	fs.BoolVar(&v.O.JSON, "json", false, "output JSON instead of PO text")
 	fs.StringVarP(&v.O.Output, "output", "o", "",
 		"write output to file (use - for stdout); empty output overwrites file")
 	fs.SetAnnotation("range", "group", []string{"General options"})
+	fs.SetAnnotation("head", "group", []string{"General options"})
+	fs.SetAnnotation("tail", "group", []string{"General options"})
+	fs.SetAnnotation("since", "group", []string{"General options"})
 	fs.SetAnnotation("no-header", "group", []string{"General options"})
 	fs.SetAnnotation("json", "group", []string{"General options"})
 	fs.SetAnnotation("output", "group", []string{"General options"})
@@ -163,6 +181,10 @@ func (v msgSelectCommand) Execute(args []string) error {
 	if v.O.UnsetFuzzy && v.O.ClearFuzzy {
 		return NewErrorWithUsage("--unset-fuzzy and --clear-fuzzy are mutually exclusive")
 	}
+	rangeSpec, err := v.resolveRange()
+	if err != nil {
+		return err
+	}
 	// Load → Filter → Save: ReadFileToGettextJSON auto-detects PO vs JSON
 	peek, err := os.ReadFile(poFile)
 	if err != nil {
@@ -173,11 +195,41 @@ func (v msgSelectCommand) Execute(args []string) error {
 	}
 	trimmed := bytes.TrimLeft(peek, " \t\r\n")
 	inputWasPO := len(trimmed) == 0 || trimmed[0] != '{'
-	if err := util.MsgSelectFromFile(poFile, v.O.Range, w, v.O.JSON, v.O.NoHeader, inputWasPO,
+	if err := util.MsgSelectFromFile(poFile, rangeSpec, w, v.O.JSON, v.O.NoHeader, inputWasPO,
 		v.O.UnsetFuzzy, v.O.ClearFuzzy, filter); err != nil {
 		return NewStandardErrorF("%v", err)
 	}
 	return nil
+}
+
+func (v msgSelectCommand) resolveRange() (string, error) {
+	// --range, --head, --tail, --since are mutually exclusive
+	set := 0
+	if v.O.Range != "" {
+		set++
+	}
+	if v.O.Head > 0 {
+		set++
+	}
+	if v.O.Tail > 0 {
+		set++
+	}
+	if v.O.Since > 0 {
+		set++
+	}
+	if set > 1 {
+		return "", NewErrorWithUsage("--range, --head, --tail, and --since are mutually exclusive")
+	}
+	if v.O.Head > 0 {
+		return fmt.Sprintf("-%d", v.O.Head), nil
+	}
+	if v.O.Tail > 0 {
+		return fmt.Sprintf("~%d", v.O.Tail), nil
+	}
+	if v.O.Since > 0 {
+		return fmt.Sprintf("%d-", v.O.Since), nil
+	}
+	return v.O.Range, nil
 }
 
 func (v msgSelectCommand) buildFilter() (*util.EntryStateFilter, error) {

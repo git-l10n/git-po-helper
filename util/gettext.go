@@ -581,6 +581,7 @@ func BuildPoContent(header []string, entries []*GettextEntry) []byte {
 //   - N-M: entries N through M
 //   - -N: entries 1 through N (omit start)
 //   - N-: entries N through last (omit end)
+//   - ~N: last N entries (equivalent to "<total-N+1>-<total>")
 func ParseEntryRange(spec string, maxEntry int) ([]int, error) {
 	if spec == "" {
 		// Select all entries (1 through maxEntry)
@@ -593,6 +594,29 @@ func ParseEntryRange(spec string, maxEntry int) ([]int, error) {
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
 		if part == "" {
+			continue
+		}
+
+		// ~N: last N entries (from maxEntry-N+1 to maxEntry)
+		if strings.HasPrefix(part, "~") {
+			nStr := strings.TrimSpace(part[1:])
+			if nStr == "" {
+				return nil, fmt.Errorf("invalid range: %s", part)
+			}
+			n, err := strconv.Atoi(nStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid range: %s", part)
+			}
+			if n <= 0 {
+				continue
+			}
+			start := maxEntry - n + 1
+			if start < 1 {
+				start = 1
+			}
+			for i := start; i <= maxEntry; i++ {
+				seen[i] = true
+			}
 			continue
 		}
 

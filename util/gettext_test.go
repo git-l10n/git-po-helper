@@ -749,6 +749,12 @@ func TestParseEntryRange(t *testing.T) {
 		{"50-", 100, buildRange(50, 100), false}, // N-: from N to last
 		{"8-", 10, []int{8, 9, 10}, false},
 		{"-", 10, nil, true}, // Invalid: both empty
+		{"~3", 10, []int{8, 9, 10}, false},  // ~N: last N entries
+		{"~5", 10, []int{6, 7, 8, 9, 10}, false},
+		{"~10", 10, []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, false},
+		{"~15", 10, []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, false}, // N > maxEntry: all
+		{"~1", 10, []int{10}, false},
+		{"~0", 10, []int{}, false}, // N=0: none
 	}
 
 	for _, tt := range tests {
