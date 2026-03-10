@@ -12,17 +12,11 @@ import (
 // then writes the result to the outputFile. It reads from inputFile, loads entities,
 // applies suggest_msgstr and suggest_msgstr_plural to matching entries (by msgid+msgid_plural),
 // and serializes to outputFile.
-func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) error {
+// Returns (applied, err): applied is true if any suggestion was applied; err is non-nil on failure.
+func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) (bool, error) {
 	if review == nil {
-		return fmt.Errorf("review result is nil")
-	}
-	inputData, err := os.ReadFile(inputFile)
-	if err != nil {
-		return fmt.Errorf("failed to read pending PO %s: %w", inputFile, err)
-	}
-	j, err := LoadFileToGettextJSON(inputData, inputFile)
-	if err != nil {
-		return fmt.Errorf("failed to load pending PO %s: %w", inputFile, err)
+		log.Info("review result is nil, no suggestions to apply")
+		return false, nil
 	}
 	byMsgID := make(map[string]*ReviewIssue)
 	for i := range review.Issues {
@@ -32,9 +26,23 @@ func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) err
 		}
 		byMsgID[issue.MsgID] = issue
 	}
-	applied := make(map[string]bool)
-	for i := range j.Entries {
-		entry := &j.Entries[i]
+	if len(byMsgID) == 0 {
+		log.Info("no issues found in review, no suggestions to apply")
+		return false, nil
+	}
+
+	inputData, err := os.ReadFile(inputFile)
+	if err != nil {
+		return false, fmt.Errorf("failed to read pending PO %s: %w", inputFile, err)
+	}
+	inputJSON, err := LoadFileToGettextJSON(inputData, inputFile)
+	if err != nil {
+		return false, fmt.Errorf("failed to load pending PO %s: %w", inputFile, err)
+	}
+	applyMap := make(map[string]bool)
+	applyCount := 0
+	for i := range inputJSON.Entries {
+		entry := &inputJSON.Entries[i]
 		if entry.MsgID == "" {
 			continue
 		}
@@ -46,12 +54,20 @@ func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) err
 			if len(issue.SuggestMsgstrPlural) > 0 {
 				entry.MsgStrPlural = make([]string, len(issue.SuggestMsgstrPlural))
 				copy(entry.MsgStrPlural, issue.SuggestMsgstrPlural)
-				applied[entry.MsgID] = true
+				applyMap[entry.MsgID] = true
+				applyCount++
+			} else {
+				applyMap[entry.MsgID] = false
+				log.Warnf("apply review: no suggest_msgstr_plural provided for msgid_plural: %q, skipping", entry.MsgIDPlural)
 			}
 		} else {
 			if issue.SuggestMsgstr != "" {
 				entry.MsgStr = issue.SuggestMsgstr
-				applied[entry.MsgID] = true
+				applyMap[entry.MsgID] = true
+				applyCount++
+			} else {
+				applyMap[entry.MsgID] = false
+				log.Warnf("apply review: no suggest_msgstr provided for msgid: %q, skipping", entry.MsgID)
 			}
 		}
 	}
@@ -59,20 +75,23 @@ func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) err
 		if issue.Score >= ReviewIssueScorePerfect {
 			continue
 		}
-		if !applied[issue.MsgID] {
-			fmt.Fprintf(os.Stderr, "review: msgid not applied (no matching entry in PO): %q\n", issue.MsgID)
+		if _, ok := applyMap[issue.MsgID]; !ok {
+			log.Errorf("apply review: msgid not applied (no matching entry in PO): %q\n", issue.MsgID)
 		}
+	}
+	if applyCount == 0 {
+		log.Warnf("no suggestions applied, no output file created: %s", outputFile)
+		return false, nil
 	}
 	f, err := os.Create(outputFile)
 	if err != nil {
-		return fmt.Errorf("failed to create output PO %s: %w", outputFile, err)
+		return false, fmt.Errorf("failed to create output PO %s: %w", outputFile, err)
 	}
 	defer f.Close()
-	if err := WriteGettextJSONToPO(j, f, false, false); err != nil {
-		return fmt.Errorf("failed to write output PO %s: %w", outputFile, err)
+	if err := WriteGettextJSONToPO(inputJSON, f, false, false); err != nil {
+		return false, fmt.Errorf("failed to write output PO %s: %w", outputFile, err)
 	}
-	log.Infof("applied review suggestions to %s", outputFile)
-	return nil
+	return true, nil
 }
 
 // ExtractJSONFromOutput extracts a JSON object from agent output.

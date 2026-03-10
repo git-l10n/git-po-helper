@@ -21,11 +21,11 @@ Default path is ` + util.DefaultReviewBase + ` when omitted.`,
 			if len(args) > 0 {
 				path = args[0]
 			}
-			jsonFile, result, err := util.ReportReviewFromPathWithBatches(path)
+			result, err := util.ReportReviewFromPathWithBatches(path)
 			if err != nil {
 				return NewStandardErrorF("%v", err)
 			}
-			util.PrintReviewReportResult(jsonFile, result)
+			util.PrintReviewReportResult(result)
 			return nil
 		},
 	}

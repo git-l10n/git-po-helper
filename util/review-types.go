@@ -32,6 +32,8 @@ type AgentRunResult struct {
 	ReviewScore      int               `json:"review_score,omitempty"`
 	ReviewJSONPath   string            `json:"review_json_path,omitempty"`
 	ReviewedFilePath string            `json:"reviewed_file_path,omitempty"` // Final reviewed PO file path
+	ReportFilePath   string            `json:"report_file_path,omitempty"`   // Review JSON file path
+	AppliedFilePath  string            `json:"applied_file_path,omitempty"`  // Output PO file path (after apply)
 
 	// Agent output (for saving logs in agent-test)
 	AgentStdout []byte `json:"-"`

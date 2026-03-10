@@ -153,6 +153,7 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 	result.ReviewScore = reportResult.Score
 	result.Score = reportResult.Score
 	result.ReviewedFilePath = poFile
+	result.ReportFilePath = reportResult.ReportFile
 	result.ExecutionTime = time.Since(startTime)
 
 	log.Infof("review completed (score: %d/100, total entries: %d, issues: %d)",
@@ -196,14 +197,20 @@ func CmdAgentRunReview(agentName string, target *CompareTarget, outputBase strin
 	// Display review report (same format as agent-run report)
 	if result.ReviewJSON != nil && result.ReviewJSONPath != "" {
 		critical, major, minor := CountReviewIssueScores(result.ReviewJSON)
+		reportFile := result.ReportFilePath
+		if reportFile == "" {
+			reportFile = result.ReviewJSONPath
+		}
 		reportResult := &ReviewReportResult{
 			Review:        result.ReviewJSON,
 			Score:         result.ReviewScore,
 			CriticalCount: critical,
 			MajorCount:    major,
 			MinorCount:    minor,
+			ReportFile:    reportFile,
+			AppliedFile:   result.AppliedFilePath,
 		}
-		PrintReviewReportResult(result.ReviewJSONPath, reportResult)
+		PrintReviewReportResult(reportResult)
 	}
 
 	fmt.Printf("\nSummary:\n")

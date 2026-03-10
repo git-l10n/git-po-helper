@@ -97,6 +97,11 @@ type ReviewReportResult struct {
 	CriticalCount int // ReviewIssueScoreCritical
 	MajorCount    int // ReviewIssueScoreMajor
 	MinorCount    int // ReviewIssueScoreMinor
+
+	// ReportFile is the review JSON file path, if it exists.
+	ReportFile string
+	// AppliedFile is the output PO file path (after applying suggestions), if it exists.
+	AppliedFile string
 }
 
 // PerfectCount returns the number of entries with no reported issue:
@@ -213,12 +218,17 @@ func ReportReviewFromJSON(path string) (string, *ReviewReportResult, error) {
 	}
 
 	critical, major, minor := CountReviewIssueScores(&review)
+	reportFile := ""
+	if Exist(resolved.JSONFile) {
+		reportFile = resolved.JSONFile
+	}
 	return resolved.JSONFile, &ReviewReportResult{
 		Review:        &review,
 		Score:         score,
 		CriticalCount: critical,
 		MajorCount:    major,
 		MinorCount:    minor,
+		ReportFile:    reportFile,
 	}, nil
 }
 
@@ -252,7 +262,7 @@ func loadReviewJSONFromFile(jsonFile string) (*ReviewJSONResult, error) {
 // review-result.json for merged output, review-result-*.json for batch files.
 // If any files match "*-result-*.json", they are merged and saved to review-result.json.
 // If no batch files exist, falls back to ReportReviewFromJSON(resultJSON path).
-func ReportReviewFromPathWithBatches(path string) (string, *ReviewReportResult, error) {
+func ReportReviewFromPathWithBatches(path string) (*ReviewReportResult, error) {
 	if path == "" {
 		path = DefaultReviewBase
 	}
@@ -268,7 +278,7 @@ func ReportReviewFromPathWithBatches(path string) (string, *ReviewReportResult, 
 	pattern := filepath.Join(dir, base+"-*.json")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
-		return "", nil, fmt.Errorf("glob %s: %w", pattern, err)
+		return nil, fmt.Errorf("glob %s: %w", pattern, err)
 	}
 	// Filter to only *-result-<N>.json (exclude review-result.json itself)
 	var batchMatches []string
@@ -283,7 +293,7 @@ func ReportReviewFromPathWithBatches(path string) (string, *ReviewReportResult, 
 	log.Debugf("Call ReportReviewFromPathWithBatches(%s) with %d batch files",
 		path, len(batchMatches))
 	if len(batchMatches) == 0 {
-		return reportReviewFromJSONWithPaths(jsonFile, poFile)
+		return reportReviewFromJSONWithPaths(ps)
 	}
 
 	// Compare timestamps: if result JSON is newer than all batch files, read from it only.
@@ -300,7 +310,7 @@ func ReportReviewFromPathWithBatches(path string) (string, *ReviewReportResult, 
 			}
 		}
 		if jsonStat.ModTime().Unix() >= maxBatchModTime {
-			return reportReviewFromJSONWithPaths(jsonFile, poFile)
+			return reportReviewFromJSONWithPaths(ps)
 		}
 	}
 
@@ -309,7 +319,7 @@ func ReportReviewFromPathWithBatches(path string) (string, *ReviewReportResult, 
 	for _, f := range batchMatches {
 		r, err := loadReviewJSONFromFile(f)
 		if err != nil {
-			return "", nil, err
+			return nil, err
 		}
 		if r != nil {
 			batchReviews = append(batchReviews, r)
@@ -322,40 +332,52 @@ func ReportReviewFromPathWithBatches(path string) (string, *ReviewReportResult, 
 	if Exist(poFile) {
 		stats, err := CountReportStats(poFile)
 		if err != nil {
-			return "", nil, fmt.Errorf("failed to count entries in %s: %w", poFile, err)
+			return nil, fmt.Errorf("failed to count entries in %s: %w", poFile, err)
 		}
 		merged.TotalEntries = stats.Total()
 	} else {
-		return "", nil, fmt.Errorf("file does not exist: %s (need review-input.po for total count)", poFile)
+		return nil, fmt.Errorf("file does not exist: %s (need review-input.po for total count)", poFile)
 	}
 	if err := saveReviewJSON(merged, jsonFile); err != nil {
-		return "", nil, fmt.Errorf("failed to save aggregated review to %s: %w", jsonFile, err)
+		return nil, fmt.Errorf("failed to save aggregated review to %s: %w", jsonFile, err)
 	}
-	if err := applyReviewJSON(merged, ps.InputPO, ps.OutputPO); err != nil {
-		return "", nil, fmt.Errorf("failed to apply review to %s: %w", ps.OutputPO, err)
+	applied, err := applyReviewJSON(merged, ps.InputPO, ps.OutputPO)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply review to %s: %w", ps.OutputPO, err)
 	}
 	score, err := CalculateReviewScore(merged)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to calculate review score: %w", err)
+		return nil, fmt.Errorf("failed to calculate review score: %w", err)
 	}
 	critical, major, minor := CountReviewIssueScores(merged)
-	return jsonFile, &ReviewReportResult{
+	reportFile := ""
+	if Exist(jsonFile) {
+		reportFile = jsonFile
+	}
+	appliedFile := ""
+	if applied && Exist(ps.OutputPO) {
+		appliedFile = ps.OutputPO
+	}
+	return &ReviewReportResult{
 		Review:        merged,
 		Score:         score,
 		CriticalCount: critical,
 		MajorCount:    major,
 		MinorCount:    minor,
+		ReportFile:    reportFile,
+		AppliedFile:   appliedFile,
 	}, nil
 }
 
-// reportReviewFromJSONWithPaths reads jsonFile and fills total_entries from poFile.
-func reportReviewFromJSONWithPaths(jsonFile, poFile string) (string, *ReviewReportResult, error) {
+// reportReviewFromJSONWithPaths reads ps.ResultJSON and fills total_entries from ps.InputPO (or ps.OutputPO).
+func reportReviewFromJSONWithPaths(ps ReviewPathSet) (*ReviewReportResult, error) {
+	jsonFile := ps.ResultJSON
 	if !Exist(jsonFile) {
-		return "", nil, fmt.Errorf("file does not exist: %s", jsonFile)
+		return nil, fmt.Errorf("file does not exist: %s", jsonFile)
 	}
 	data, err := os.ReadFile(jsonFile)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to read review JSON %s: %w", jsonFile, err)
+		return nil, fmt.Errorf("failed to read review JSON %s: %w", jsonFile, err)
 	}
 	var review ReviewJSONResult
 	if err := json.Unmarshal(data, &review); err != nil {
@@ -364,37 +386,51 @@ func reportReviewFromJSONWithPaths(jsonFile, poFile string) (string, *ReviewRepo
 			if parsed := parseReviewJSONWithGjson(prepared, err2); parsed != nil {
 				review = *parsed
 			} else {
-				return "", nil, fmt.Errorf("failed to parse review JSON: %w", err)
+				return nil, fmt.Errorf("failed to parse review JSON: %w", err)
 			}
 		}
 	}
 	normalizeReviewIssuesToPoFormat(&review)
+	poFile := ps.InputPO
+	if !Exist(poFile) {
+		poFile = ps.OutputPO
+	}
 	if Exist(poFile) {
 		stats, err := CountReportStats(poFile)
 		if err != nil {
-			return "", nil, fmt.Errorf("failed to count entries in %s: %w", poFile, err)
+			return nil, fmt.Errorf("failed to count entries in %s: %w", poFile, err)
 		}
 		review.TotalEntries = stats.Total()
 	} else {
-		return "", nil, fmt.Errorf("file does not exist: %s (need for total_entries)", poFile)
+		return nil, fmt.Errorf("file does not exist: %s (need review-input.po for total_entries)", poFile)
 	}
 	score, err := CalculateReviewScore(&review)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to calculate review score: %w", err)
+		return nil, fmt.Errorf("failed to calculate review score: %w", err)
 	}
 	critical, major, minor := CountReviewIssueScores(&review)
-	return jsonFile, &ReviewReportResult{
+	reportFile := ""
+	if Exist(jsonFile) {
+		reportFile = jsonFile
+	}
+	appliedFile := ""
+	if Exist(ps.OutputPO) {
+		appliedFile = ps.OutputPO
+	}
+	return &ReviewReportResult{
 		Review:        &review,
 		Score:         score,
 		CriticalCount: critical,
 		MajorCount:    major,
 		MinorCount:    minor,
+		ReportFile:    reportFile,
+		AppliedFile:   appliedFile,
 	}, nil
 }
 
 // PrintReviewReportResult prints the same "## Review Statistics" report as agent-run report (step 9).
 // Used by RunAgentReview after merge and by cmd/agent-run-report.
-func PrintReviewReportResult(jsonFile string, result *ReviewReportResult) {
+func PrintReviewReportResult(result *ReviewReportResult) {
 	fmt.Println("## Review Statistics")
 	fmt.Println()
 	fmt.Printf("  %-22s %d/100\n", "Review score:", result.Score)
@@ -406,5 +442,12 @@ func PrintReviewReportResult(jsonFile string, result *ReviewReportResult) {
 	fmt.Printf("  %-22s %d\n", fmt.Sprintf("Major (score %d):", ReviewIssueScoreMajor), result.MajorCount)
 	fmt.Printf("  %-22s %d\n", fmt.Sprintf("Minor (score %d):", ReviewIssueScoreMinor), result.MinorCount)
 	fmt.Println()
-	fmt.Printf("For full details, see the review JSON file: `%s`\n", jsonFile)
+	if result.AppliedFile != "" {
+		fmt.Printf("  %-22s %s\n", "Applied PO:", result.AppliedFile)
+	}
+	if result.ReportFile != "" {
+		fmt.Printf("  %-22s %s\n", "Report JSON:", result.ReportFile)
+		fmt.Println()
+		fmt.Println("For full review details, see the report JSON file")
+	}
 }

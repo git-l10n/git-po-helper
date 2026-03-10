@@ -377,15 +377,17 @@ func runReviewOneTodo(cfg *config.AgentConfig, selectedAgent config.AgentEntry, 
 // runMergeAndSummary merges all review-result-*.json and returns the report.
 // Corresponds to AGENTS.md Task 4 step 8.
 func runMergeAndSummary(ps ReviewPathSet, outputBase string, startTime time.Time, result *AgentRunResult) (*AgentRunResult, error) {
-	jsonFile, reportResult, err := ReportReviewFromPathWithBatches(outputBase)
+	reportResult, err := ReportReviewFromPathWithBatches(outputBase)
 	if err != nil {
 		return result, err
 	}
 	result.ReviewJSON = reportResult.Review
-	result.ReviewJSONPath = jsonFile
+	result.ReviewJSONPath = reportResult.ReportFile
 	result.ReviewScore = reportResult.Score
 	result.Score = reportResult.Score
 	result.ReviewedFilePath = ps.PendingPO
+	result.ReportFilePath = reportResult.ReportFile
+	result.AppliedFilePath = reportResult.AppliedFile
 	result.ExecutionTime = time.Since(startTime)
 	log.Infof("review completed successfully (score: %d/100, total entries: %d, issues: %d)",
 		reportResult.Score, reportResult.Review.TotalEntries, len(reportResult.Review.Issues))
