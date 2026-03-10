@@ -67,6 +67,46 @@ func CmdAgentTestReview(agentName string, target *CompareTarget, runs int, skipC
 	return nil
 }
 
+// backupFileIfExists backs up path to path.<MM-DD-HH-MM-SS> if it exists and is a regular file.
+func backupFileIfExists(path string) {
+	if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
+		backupPath := path + "." + time.Now().Format("01-02-15-04-05")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			log.Debugf("failed to read %s for backup: %v", path, err)
+		} else if err := os.WriteFile(backupPath, data, 0644); err != nil {
+			log.Debugf("failed to write backup %s: %v", backupPath, err)
+		} else {
+			log.Debugf("backed up %s to %s", path, filepath.Base(backupPath))
+		}
+	}
+}
+
+// cleanReviewOutputFilesForTest removes all review output files before each test run
+// for a fresh start, including InputPO. Backs up core files (ResultJSON, OutputPO, InputPO) first.
+func cleanReviewOutputFilesForTest(ps ReviewPathSet) {
+	backupFileIfExists(ps.ResultJSON)
+	backupFileIfExists(ps.OutputPO)
+	backupFileIfExists(ps.InputPO)
+	for _, p := range []string{
+		ps.InputPO,
+		ps.PendingPO,
+		ps.OutputPO,
+		ps.ResultJSON,
+		ps.ReviewBatchTxtPath(),
+		ps.ReviewTodoJSONPath(),
+		ps.ReviewDoneJSONPath(),
+	} {
+		_ = os.Remove(p)
+	}
+	globPattern := filepath.Join(filepath.Dir(ps.InputPO), "review-result-*.json")
+	if matches, _ := filepath.Glob(globPattern); matches != nil {
+		for _, m := range matches {
+			_ = os.Remove(m)
+		}
+	}
+}
+
 // RunAgentTestReview runs the agent-test review operation multiple times.
 // It reuses RunAgentReview (or RunAgentReviewUseAgentMd when useLocalOrchestration is false) for each run,
 // aggregates JSON results (for same msgid takes lowest score), and saves one aggregated
@@ -93,22 +133,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		// Start timing for this iteration
 		iterStartTime := time.Now()
 
-		// Remove review output files before each run (for fresh start, remove InputPO too)
-		_ = os.Remove(ps.InputPO)
-		_ = os.Remove(ps.PendingPO)
-		_ = os.Remove(ps.OutputPO)
-		_ = os.Remove(ps.ResultJSON)
-		_ = os.Remove(ps.ReviewBatchTxtPath())
-		_ = os.Remove(ps.ReviewTodoJSONPath())
-		_ = os.Remove(ps.ReviewDoneJSONPath())
-		for _, p := range []string{
-			filepath.Join(filepath.Dir(ps.InputPO), "review-result-*.json"),
-		} {
-			matches, _ := filepath.Glob(p)
-			for _, m := range matches {
-				_ = os.Remove(m)
-			}
-		}
+		cleanReviewOutputFilesForTest(ps)
 
 		// Reuse RunAgentReview or RunAgentReviewUseAgentMd for each run
 		var agentResult *AgentRunResult

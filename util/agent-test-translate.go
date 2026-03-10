@@ -14,6 +14,27 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// cleanL10nIntermediateFiles removes untracked l10n intermediate files that are never
+// tracked by git. Corresponds to AGENTS.md Task 3 Step 8 (po_cleanup): these files must
+// be removed before each test run to avoid stale state from a previous run.
+func cleanL10nIntermediateFiles() {
+	workDir := repository.WorkDirOrCwd()
+	files := []string{
+		"po/l10n-pending.po",
+		"po/l10n-todo.json",
+		"po/l10n-done.json",
+		"po/l10n-done.po",
+		"po/l10n-done.merged",
+	}
+	for _, f := range files {
+		p := filepath.Join(workDir, f)
+		if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
+			log.Debugf("failed to remove %s: %v", f, err)
+		}
+	}
+	log.Debugf("l10n intermediate files cleaned")
+}
+
 // CmdAgentTestTranslate implements the agent-test translate command logic.
 // It runs the agent-run translate operation multiple times and calculates an average score.
 func CmdAgentTestTranslate(agentName, poFile string, runs int, skipConfirmation bool, useLocalOrchestration bool, batchSize int) error {
@@ -99,6 +120,7 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 			log.Warnf("run %d: failed to clean po/ directory: %v", runNum, err)
 			// Continue with the run even if cleanup fails, but log the warning
 		}
+		cleanL10nIntermediateFiles()
 
 		// Reuse RunAgentTranslate or RunAgentTranslateLocalOrchestration for each run
 		var agentResult *AgentRunResult

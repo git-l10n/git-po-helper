@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -100,17 +101,27 @@ func ConfirmAgentTestExecution(skipConfirmation bool) error {
 func CleanPoDirectory(paths ...string) error {
 	workDir := repository.WorkDirOrCwd()
 
-	// If no paths provided, use default "po/"
+	// If no paths provided, do not reset for security
 	targetPaths := paths
-	if len(targetPaths) == 0 {
-		targetPaths = []string{"po/"}
-	}
 
 	log.Debugf("cleaning paths using git restore (workDir: %s, paths: %v)", workDir, targetPaths)
 
 	// Process each path individually to avoid failures on non-existent paths
 	for _, path := range targetPaths {
 		log.Debugf("restoring path: %s", path)
+
+		// Backup .po files before restore to protect modified content
+		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
+			backupPath := path + "." + time.Now().Format("01-02-15-04-05")
+			data, err := os.ReadFile(path)
+			if err != nil {
+				log.Debugf("failed to read %s for backup: %v", path, err)
+			} else if err := os.WriteFile(backupPath, data, 0644); err != nil {
+				log.Debugf("failed to write backup %s: %v", backupPath, err)
+			} else {
+				log.Debugf("backed up %s to %s", path, filepath.Base(backupPath))
+			}
+		}
 
 		// Build git restore command for this path
 		args := []string{
@@ -163,30 +174,6 @@ func CleanPoDirectory(paths ...string) error {
 	}
 
 	log.Debugf("all paths processed")
-
-	// Clean untracked l10n intermediate files that are never tracked by git.
-	// Corresponds to AGENTS.md Task 3 Step 8 (po_cleanup): these files must be
-	// removed before each test run to avoid stale state from a previous run.
-	shouldCleanL10n := len(paths) == 0 || containsPath(paths, "po/")
-	if shouldCleanL10n {
-		patterns := []string{
-			"po/l10n-pending.po",
-			"po/l10n-todo.json",
-			"po/l10n-done.json",
-			"po/l10n-done.po",
-			"po/l10n-done.merged",
-		}
-		cleanArgs := append([]string{"clean", "-fx", "--"}, patterns...)
-		cleanCmd := exec.Command("git", cleanArgs...)
-		cleanCmd.Dir = workDir
-		if out, err := cleanCmd.CombinedOutput(); err != nil {
-			log.Debugf("git clean l10n intermediates (ignored): %s", string(out))
-		} else {
-			log.Debugf("l10n intermediate files cleaned")
-		}
-	} else {
-		log.Debugf("skipping l10n intermediate files cleanup (not in specified paths)")
-	}
 
 	// Clean untracked po/git.pot file that might not be in git repository
 	// Only clean po/git.pot if default path "po/" is being used or explicitly specified
