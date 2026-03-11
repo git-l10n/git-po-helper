@@ -12,9 +12,22 @@ import (
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/config"
+	"github.com/git-l10n/git-po-helper/flag"
 	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
+
+// LoadAgentConfigForCmd loads agent configuration from the standard location
+// (flag.AgentConfigFile()). On failure returns an error wrapped with a consistent
+// hint for missing or invalid git-po-helper.yaml.
+func LoadAgentConfigForCmd() (*config.AgentConfig, error) {
+	log.Debugf("loading agent configuration")
+	cfg, err := config.LoadAgentConfig(flag.AgentConfigFile())
+	if err != nil {
+		return nil, fmt.Errorf("failed to load agent configuration: %w\nHint: Ensure git-po-helper.yaml exists in repository root or user home directory", err)
+	}
+	return cfg, nil
+}
 
 // getRelativePath converts an absolute path to a path relative to the current directory.
 // If conversion fails, returns the original absolute path as fallback.

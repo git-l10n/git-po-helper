@@ -8,20 +8,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/flag"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
 // CmdAgentRunShowConfig displays the current agent configuration in YAML format.
 func CmdAgentRunShowConfig() error {
-	// Load configuration
-	log.Debugf("loading agent configuration")
-	cfg, err := config.LoadAgentConfig(flag.AgentConfigFile())
+	cfg, err := LoadAgentConfigForCmd()
 	if err != nil {
 		log.Errorf("failed to load agent configuration: %v", err)
-		return fmt.Errorf("failed to load agent configuration: %w", err)
+		return err
 	}
 
 	// Marshal configuration to YAML

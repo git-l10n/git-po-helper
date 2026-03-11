@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/flag"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,11 +17,9 @@ func CmdAgentTestUpdatePo(agentName, poFile string, runs int, skipConfirmation b
 		return err
 	}
 
-	// Load configuration
-	log.Debugf("loading agent configuration")
-	cfg, err := config.LoadAgentConfig(flag.AgentConfigFile())
+	cfg, err := LoadAgentConfigForCmd()
 	if err != nil {
-		return fmt.Errorf("failed to load agent configuration: %w\nHint: Ensure git-po-helper.yaml exists in repository root or user home directory", err)
+		return err
 	}
 
 	// Determine number of runs

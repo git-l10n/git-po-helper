@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/flag"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -113,11 +112,9 @@ func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string) (*AgentRunResu
 // CmdAgentRunUpdatePot implements the agent-run update-pot command logic.
 // It loads configuration and calls RunAgentUpdatePot, then handles errors appropriately.
 func CmdAgentRunUpdatePot(agentName string) error {
-	// Load configuration
-	log.Debugf("loading agent configuration")
-	cfg, err := config.LoadAgentConfig(flag.AgentConfigFile())
+	cfg, err := LoadAgentConfigForCmd()
 	if err != nil {
-		return fmt.Errorf("failed to load agent configuration: %w\nHint: Ensure git-po-helper.yaml exists in repository root or user home directory", err)
+		return err
 	}
 
 	startTime := time.Now()

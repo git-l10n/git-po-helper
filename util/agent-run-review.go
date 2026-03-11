@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/flag"
 	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
@@ -159,11 +158,9 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 // useLocalOrchestration: if true, use local orchestration (--use-local-orchestration);
 // otherwise use agent with po/AGENTS.md (default).
 func CmdAgentRunReview(agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) error {
-	// Load configuration
-	log.Debugf("loading agent configuration")
-	cfg, err := config.LoadAgentConfig(flag.AgentConfigFile())
+	cfg, err := LoadAgentConfigForCmd()
 	if err != nil {
-		return fmt.Errorf("failed to load agent configuration: %w\nHint: Ensure git-po-helper.yaml exists in repository root or user home directory", err)
+		return err
 	}
 
 	startTime := time.Now()
