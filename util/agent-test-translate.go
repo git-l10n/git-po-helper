@@ -108,6 +108,23 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 		}
 		cleanL10nIntermediateFiles()
 
+		// Pre-validation: count new/fuzzy before translation (same as CmdAgentRunTranslate).
+		// Without this, BeforeNewCount/BeforeFuzzyCount stay 0 and Score never becomes 100.
+		preResult, preErr := validateTranslatePreResult(poFile)
+		if preErr != nil {
+			// Nothing to translate or PO missing — record preResult and skip agent run
+			result := TestRunResult{
+				AgentRunResult: *preResult,
+				RunNumber:      runNum,
+				RunError:       preErr,
+			}
+			result.ExecutionTime = time.Since(iterStartTime)
+			results[i] = result
+			totalScore += result.Score
+			log.Debugf("run %d: pre-validation failed, skipping agent: %v", runNum, preErr)
+			continue
+		}
+
 		// Reuse RunAgentTranslate or RunAgentTranslateLocalOrchestration for each run
 		var agentResult *AgentRunResult
 		var runErr error
@@ -121,6 +138,15 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 			agentResult, runErr = RunAgentTranslate(cfg, agentName, poFile, true)
 		}
 		err = runErr
+
+		// Copy before counts from pre-validation onto agent result (local orchestration
+		// and direct translate do not set these; only CmdAgentRunTranslate did).
+		agentResult.BeforeNewCount = preResult.BeforeNewCount
+		agentResult.BeforeFuzzyCount = preResult.BeforeFuzzyCount
+
+		// Post-validation: after counts + Score 100/100 (same as CmdAgentRunTranslate).
+		// Ignore return error so agent-test collects all runs; failures are in result.
+		_ = validateTranslatePostResult(poFile, agentResult)
 
 		// Calculate execution time for this iteration
 		iterExecutionTime := time.Since(iterStartTime)
