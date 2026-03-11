@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/git-l10n/git-po-helper/config"
 	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
@@ -80,6 +81,24 @@ func ConfirmAgentTestExecution(skipConfirmation bool) error {
 	}
 
 	return nil
+}
+
+// ResolveAgentTestRuns returns the effective run count for agent-test commands.
+// If runs > 0, that value is used (from command line). Otherwise uses cfg.AgentTest.Runs
+// when set and positive, or defaults to 5. Logs the source at debug level.
+func ResolveAgentTestRuns(cfg *config.AgentConfig, runs int) int {
+	if runs != 0 {
+		log.Debugf("using runs from command line: %d", runs)
+		return runs
+	}
+	if cfg.AgentTest.Runs != nil && *cfg.AgentTest.Runs > 0 {
+		runs = *cfg.AgentTest.Runs
+		log.Debugf("using runs from configuration: %d", runs)
+		return runs
+	}
+	runs = 5
+	log.Debugf("using default number of runs: %d", runs)
+	return runs
 }
 
 // backupFileIfExists backs up path to path.<MM-DD-HH-MM-SS> if it exists and is a regular file.

@@ -30,18 +30,7 @@ func CmdAgentTestReview(agentName string, target *CompareTarget, runs int, skipC
 		return err
 	}
 
-	// Determine number of runs
-	if runs == 0 {
-		if cfg.AgentTest.Runs != nil && *cfg.AgentTest.Runs > 0 {
-			runs = *cfg.AgentTest.Runs
-			log.Debugf("using runs from configuration: %d", runs)
-		} else {
-			runs = 5 // Default
-			log.Debugf("using default number of runs: %d", runs)
-		}
-	} else {
-		log.Debugf("using runs from command line: %d", runs)
-	}
+	runs = ResolveAgentTestRuns(cfg, runs)
 
 	log.Infof("starting agent-test review with %d runs", runs)
 
