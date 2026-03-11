@@ -2,12 +2,11 @@
 package util
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
-	"io"
 	"os"
-	"strings"
 
+	"github.com/git-l10n/git-po-helper/config"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -40,38 +39,24 @@ func CmdAgentShowConfig() error {
 }
 
 // CmdAgentRunParseLog parses an agent JSONL log file and displays formatted output.
-// Auto-detects format: Claude (claude_code_version) vs Qwen/Gemini (qwen_code_version or Gemini-style).
+// Auto-detects format via detectAgentOutputFormat (same heuristics as streaming agent output)
+// and parses with parseStreamByKind. Unrecognized JSONL defaults to Gemini/Qwen parser
+// to match previous behavior.
 // Each line in the file should be a JSON object. Supports system, assistant (with text,
 // thinking, tool_use content types), user (tool_result), and result messages.
 func CmdAgentRunParseLog(logFile string) error {
-	f, err := os.Open(logFile)
+	raw, err := os.ReadFile(logFile)
 	if err != nil {
-		return fmt.Errorf("failed to open log file %s: %w", logFile, err)
+		return fmt.Errorf("failed to read log file %s: %w", logFile, err)
 	}
-	defer f.Close()
 
-	reader := bufio.NewReader(f)
-	firstLine, err := reader.ReadString('\n')
-	if err != nil && err != io.EOF {
-		return fmt.Errorf("failed to read log file: %w", err)
+	kind := detectAgentOutputFormat(raw)
+	if kind == "" {
+		// Plain text or unknown JSON shape: use Gemini parser as fallback (legacy behavior).
+		kind = config.AgentKindGemini
 	}
-	parseReader := io.MultiReader(strings.NewReader(firstLine), reader)
 
-	if strings.Contains(firstLine, "claude_code_version") {
-		_, _, err = ParseClaudeStreamJSONRealtime(parseReader)
-	} else if strings.Contains(firstLine, `"type":"step_start"`) || strings.Contains(firstLine, `"type": "step_start"`) {
-		// OpenCode format
-		_, _, err = ParseOpenCodeJSONLRealtime(parseReader)
-	} else if strings.Contains(firstLine, "thread.started") {
-		// Codex format
-		_, _, err = ParseCodexJSONLRealtime(parseReader)
-	} else if strings.Contains(firstLine, `"provider":"qoder"`) || strings.Contains(firstLine, `"provider": "qoder"`) {
-		// Qoder format
-		_, _, err = ParseQoderJSONLRealtime(parseReader)
-	} else {
-		// Qwen/Gemini format (qwen_code_version or Gemini-style system init)
-		_, _, err = ParseGeminiJSONLRealtime(parseReader)
-	}
+	_, _, err = parseStreamByKind(kind, bytes.NewReader(raw))
 	if err != nil {
 		return fmt.Errorf("failed to parse log file: %w", err)
 	}
