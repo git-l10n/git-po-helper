@@ -180,11 +180,11 @@ func parseReviewJSONWithGjson(data []byte, err error) *ReviewJSONResult {
 // path may be: base (po/review), result JSON (po/review-result.json), or input PO (po/review-input.po).
 // For Task 4 naming, uses review-input.po for total count.
 // Preprocesses LLM-generated JSON (BOM, markdown wrapping, extra text) before parsing.
-func ReportReviewFromJSON(path string) (string, *ReviewReportResult, error) {
+func ReportReviewFromJSON(path string) (*ReviewReportResult, error) {
 	resolved := resolveReviewPaths(path)
 	data, err := os.ReadFile(resolved.JSONFile)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to read review JSON %s: %w", resolved.JSONFile, err)
+		return nil, fmt.Errorf("failed to read review JSON %s: %w", resolved.JSONFile, err)
 	}
 
 	var review ReviewJSONResult
@@ -196,7 +196,7 @@ func ReportReviewFromJSON(path string) (string, *ReviewReportResult, error) {
 			if parsed := parseReviewJSONWithGjson(prepared, err2); parsed != nil {
 				review = *parsed
 			} else {
-				return "", nil, fmt.Errorf("failed to parse review JSON: %w (hint: LLM output may have invalid characters or structure; ensure the JSON is valid)", err)
+				return nil, fmt.Errorf("failed to parse review JSON: %w (hint: LLM output may have invalid characters or structure; ensure the JSON is valid)", err)
 			}
 		}
 	}
@@ -205,16 +205,16 @@ func ReportReviewFromJSON(path string) (string, *ReviewReportResult, error) {
 	if Exist(resolved.POFileForCount) {
 		stats, err := CountReportStats(resolved.POFileForCount)
 		if err != nil {
-			return "", nil, fmt.Errorf("failed to count entries in %s: %w", resolved.POFileForCount, err)
+			return nil, fmt.Errorf("failed to count entries in %s: %w", resolved.POFileForCount, err)
 		}
 		review.TotalEntries = stats.Total()
 	} else {
-		return "", nil, fmt.Errorf("file does not exist: %s", resolved.POFileForCount)
+		return nil, fmt.Errorf("file does not exist: %s", resolved.POFileForCount)
 	}
 
 	score, err := CalculateReviewScore(&review)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to calculate review score: %w", err)
+		return nil, fmt.Errorf("failed to calculate review score: %w", err)
 	}
 
 	critical, major, minor := CountReviewIssueScores(&review)
@@ -222,13 +222,18 @@ func ReportReviewFromJSON(path string) (string, *ReviewReportResult, error) {
 	if Exist(resolved.JSONFile) {
 		reportFile = resolved.JSONFile
 	}
-	return resolved.JSONFile, &ReviewReportResult{
+	outputFile := ""
+	if Exist(resolved.OutputPO) {
+		outputFile = resolved.OutputPO
+	}
+	return &ReviewReportResult{
 		Review:        &review,
 		Score:         score,
 		CriticalCount: critical,
 		MajorCount:    major,
 		MinorCount:    minor,
 		ReportFile:    reportFile,
+		AppliedFile:   outputFile,
 	}, nil
 }
 

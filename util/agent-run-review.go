@@ -143,7 +143,7 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 		return result, fmt.Errorf("review JSON not generated at %s\nHint: The agent must write the review result to this file", ps.ResultJSON)
 	}
 
-	_, reportResult, err := ReportReviewFromJSON(ps.ResultJSON)
+	reportResult, err := ReportReviewFromJSON(ps.ResultJSON)
 	if err != nil {
 		return result, fmt.Errorf("failed to read review JSON: %w", err)
 	}

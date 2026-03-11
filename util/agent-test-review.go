@@ -68,16 +68,19 @@ func CmdAgentTestReview(agentName string, target *CompareTarget, runs int, skipC
 }
 
 // backupFileIfExists backs up path to path.<MM-DD-HH-MM-SS> if it exists and is a regular file.
-func backupFileIfExists(path string) {
-	if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-		backupPath := path + "." + time.Now().Format("01-02-15-04-05")
-		data, err := os.ReadFile(path)
-		if err != nil {
-			log.Debugf("failed to read %s for backup: %v", path, err)
-		} else if err := os.WriteFile(backupPath, data, 0644); err != nil {
-			log.Debugf("failed to write backup %s: %v", backupPath, err)
-		} else {
-			log.Debugf("backed up %s to %s", path, filepath.Base(backupPath))
+func backupFileIfExists(paths ...string) {
+	timeSuffix := time.Now().Format("01-02-15-04-05")
+	for _, path := range paths {
+		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
+			backupPath := path + "." + timeSuffix
+			data, err := os.ReadFile(path)
+			if err != nil {
+				log.Debugf("failed to read %s for backup: %v", path, err)
+			} else if err := os.WriteFile(backupPath, data, 0644); err != nil {
+				log.Debugf("failed to write backup %s: %v", backupPath, err)
+			} else {
+				log.Debugf("backed up %s to %s", path, filepath.Base(backupPath))
+			}
 		}
 	}
 }
@@ -85,9 +88,7 @@ func backupFileIfExists(path string) {
 // cleanReviewOutputFilesForTest removes all review output files before each test run
 // for a fresh start, including InputPO. Backs up core files (ResultJSON, OutputPO, InputPO) first.
 func cleanReviewOutputFilesForTest(ps ReviewPathSet) {
-	backupFileIfExists(ps.ResultJSON)
-	backupFileIfExists(ps.OutputPO)
-	backupFileIfExists(ps.InputPO)
+	backupFileIfExists(ps.ResultJSON, ps.OutputPO, ps.InputPO)
 	for _, p := range []string{
 		ps.InputPO,
 		ps.PendingPO,
@@ -193,6 +194,14 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 	aggregatedScore := 0
 	aggregated := AggregateReviewJSON(reviewJSONs, false)
 	if aggregated != nil {
+		// Update TotalEntries from ps.InputPO (same as ReportReviewFromPathWithBatches)
+		if Exist(ps.InputPO) {
+			if stats, err := CountReportStats(ps.InputPO); err != nil {
+				log.Warnf("failed to count entries in %s: %v", ps.InputPO, err)
+			} else {
+				aggregated.TotalEntries = stats.Total()
+			}
+		}
 		var scoreErr error
 		aggregatedScore, scoreErr = CalculateReviewScore(aggregated)
 		if scoreErr != nil {
@@ -202,6 +211,12 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 				aggregatedScore, len(reviewJSONs), len(aggregated.Issues))
 			if err := saveReviewJSON(aggregated, ps.ResultJSON); err != nil {
 				log.Warnf("failed to save aggregated review JSON: %v", err)
+			}
+		}
+		// Apply aggregated review to generate ps.OutputPO (same as ReportReviewFromPathWithBatches)
+		if Exist(ps.InputPO) {
+			if _, err := applyReviewJSON(aggregated, ps.InputPO, ps.OutputPO); err != nil {
+				log.Warnf("failed to apply aggregated review to %s: %v", ps.OutputPO, err)
 			}
 		}
 	}

@@ -113,7 +113,7 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 		t.Errorf("expected score ~98, got %d", score)
 	}
 
-	_, result, err := ReportReviewFromJSON(jsonFile)
+	result, err := ReportReviewFromJSON(jsonFile)
 	if err != nil {
 		t.Fatalf("ReportReviewFromJSON failed: %v", err)
 	}
@@ -186,7 +186,7 @@ func TestReportReviewMarkdownWrappedJSON(t *testing.T) {
 	if err := os.WriteFile(poFile, []byte(minimalPoWithEntries(1)), 0644); err != nil {
 		t.Fatalf("write po failed: %v", err)
 	}
-	_, result, err := ReportReviewFromJSON(jsonFile)
+	result, err := ReportReviewFromJSON(jsonFile)
 	if err != nil {
 		t.Fatalf("ReportReviewFromJSON failed: %v", err)
 	}
