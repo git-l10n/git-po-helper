@@ -28,7 +28,7 @@ will be displayed.`,
 				return NewErrorWithUsage("show-config command needs no arguments")
 			}
 
-			if err := util.CmdAgentRunShowConfig(); err != nil {
+			if err := util.CmdAgentShowConfig(); err != nil {
 				return NewStandardErrorF("%v", err)
 			}
 			return nil

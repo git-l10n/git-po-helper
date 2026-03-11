@@ -12,8 +12,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// CmdAgentRunShowConfig displays the current agent configuration in YAML format.
-func CmdAgentRunShowConfig() error {
+// CmdAgentShowConfig displays the current agent configuration in YAML format.
+// Used by both agent-run and agent-test show-config commands.
+func CmdAgentShowConfig() error {
 	cfg, err := LoadAgentConfigForCmd()
 	if err != nil {
 		log.Errorf("failed to load agent configuration: %v", err)
