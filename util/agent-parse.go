@@ -20,11 +20,11 @@ type AgentStreamResult interface {
 }
 
 func truncateCommandDisplay(s string) string {
-	const headLen, tailLen = 128, 32
+	const headLen, tailLen = 256, 128
 	if len(s) <= headLen+tailLen {
 		return s
 	}
-	return s[:headLen] + "..." + s[len(s)-tailLen:]
+	return s[:headLen] + " [...] " + s[len(s)-tailLen:]
 }
 
 func truncateText(text string, maxBytes int, maxLines int) string {
