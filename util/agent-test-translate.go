@@ -165,12 +165,6 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 			// Error details are already in the result structure
 		}
 
-		// Save translation results to output directory (ignore errors)
-		if err := SaveTranslateResults(agentName, runNum, poFile, nil, nil); err != nil {
-			log.Warnf("run %d: failed to save translation results: %v", runNum, err)
-			// Continue even if saving results fails
-		}
-
 		results[i] = result
 		totalScore += result.Score
 		log.Debugf("run %d: completed with score %d/100", runNum, result.Score)
