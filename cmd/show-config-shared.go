@@ -5,8 +5,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newAgentTestShowConfigCmd() *cobra.Command {
-	cmd := &cobra.Command{
+// newShowConfigCmd returns a cobra.Command for showing agent configuration.
+// It is shared by both agent-run and agent-test.
+func newShowConfigCmd() *cobra.Command {
+	return &cobra.Command{
 		Use:   "show-config",
 		Short: "Show the current agent configuration in YAML format",
 		Long: `Display the complete agent configuration in YAML format.
@@ -32,6 +34,4 @@ will be displayed.`,
 			return nil
 		},
 	}
-
-	return cmd
 }
