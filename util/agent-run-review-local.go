@@ -2,7 +2,6 @@
 package util
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -31,28 +30,6 @@ func copyFile(src, dst string) error {
 
 	_, err = io.Copy(destFile, sourceFile)
 	return err
-}
-
-// countMsgidEntries counts the number of msgid entries in a PO file by counting lines that start with "msgid "
-func countMsgidEntries(filePath string) (int, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return 0, fmt.Errorf("failed to open file %s: %w", filePath, err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	count := 0
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, "msgid ") {
-			count++
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("error reading file %s: %w", filePath, err)
-	}
-	return count, nil
 }
 
 // calcBatchNum reads po/review-batch.txt, increments by 1, writes back, and returns the new batch number.
@@ -125,7 +102,7 @@ func reviewOneBatch(ps ReviewPathSet, minBatchSize int) (batchNum, entryCount, n
 	}
 
 	// Count remaining entries (exclude header)
-	total, err := countMsgidEntries(pendingPO)
+	total, err := CountMsgidEntries(pendingPO)
 	if err != nil {
 		return 0, 0, 0, false, fmt.Errorf("failed to count entries in %s: %w", pendingPO, err)
 	}
@@ -309,7 +286,7 @@ func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string,
 			log.Infof("%s exists; running agent (step 5)", ps.ReviewTodoJSONPath())
 			// Use total entry count from review-input.po for scoring.
 			entryCount := 0
-			if total, err := countMsgidEntries(ps.InputPO); err == nil && total > 0 {
+			if total, err := CountMsgidEntries(ps.InputPO); err == nil && total > 0 {
 				entryCount = total - 1
 			}
 			if err := runReviewOneTodo(cfg, selectedAgent, ps, entryCount, result); err != nil {

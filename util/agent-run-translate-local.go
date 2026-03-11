@@ -132,7 +132,7 @@ func generatePendingPO(poFile, pendingPO string, filter *EntryStateFilter) error
 }
 
 func countContentEntries(poFile string) (int, error) {
-	total, err := countMsgidEntriesInFile(poFile)
+	total, err := CountMsgidEntries(poFile)
 	if err != nil {
 		return 0, err
 	}
@@ -140,20 +140,6 @@ func countContentEntries(poFile string) (int, error) {
 		total-- // exclude header
 	}
 	return total, nil
-}
-
-func countMsgidEntriesInFile(path string) (int, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0, err
-	}
-	count := 0
-	for _, line := range strings.Split(string(data), "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), "msgid ") {
-			count++
-		}
-	}
-	return count, nil
 }
 
 // batchSizeFromFormula returns the number of entries to process in one batch.

@@ -33,6 +33,29 @@ func getRelativePath(absPath string) string {
 	return relPath
 }
 
+// CountMsgidEntries counts the number of msgid entries in a PO file by counting
+// lines that start with "msgid "
+func CountMsgidEntries(filePath string) (int, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to open file %s: %w", filePath, err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	count := 0
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "msgid ") {
+			count++
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, fmt.Errorf("error reading file %s: %w", filePath, err)
+	}
+	return count, nil
+}
+
 // validateEntryCount is the internal implementation for POT/PO entry count validation.
 // filePath is used in error messages. stage is "before update" or "after update".
 func validateEntryCount(filePath string, expectedCount *int, stage string) error {
