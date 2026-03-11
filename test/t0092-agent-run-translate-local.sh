@@ -65,11 +65,10 @@ test_expect_success "agent-run translate: mutual exclusivity of mode flags" '
 '
 
 test_expect_success "agent-run translate --use-local-orchestration: success" '
-	git -C workdir $HELPER agent-run translate \
+	test_must_fail git -C workdir $HELPER agent-run translate \
 		--use-local-orchestration --agent copy po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
-	grep "completed successfully" actual &&
-	grep "local orchestration" actual
+	grep "no new or fuzzy entries to translate" actual
 '
 
 test_expect_success "agent-run translate --use-local-orchestration: PO valid after run" '

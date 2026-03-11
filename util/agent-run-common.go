@@ -61,8 +61,8 @@ func ValidatePotEntryCount(potFile string, expectedCount *int, stage string) err
 		}
 	} else {
 		// Count entries in POT file
-		var stats *PoReportStats
-		stats, err = CountReportStats(potFile)
+		var stats *PoStats
+		stats, err = GetPoStats(potFile)
 		if err != nil {
 			return fmt.Errorf("failed to count entries %s in %s: %w", stage, potFile, err)
 		}
@@ -106,8 +106,8 @@ func ValidatePoEntryCount(poFile string, expectedCount *int, stage string) error
 		}
 	} else {
 		// Count entries in PO file
-		var stats *PoReportStats
-		stats, err = CountReportStats(poFile)
+		var stats *PoStats
+		stats, err = GetPoStats(poFile)
 		if err != nil {
 			return fmt.Errorf("failed to count entries %s in %s: %w", stage, poFile, err)
 		}

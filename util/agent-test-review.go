@@ -116,10 +116,10 @@ func cleanReviewOutputFilesForTest(ps ReviewPathSet) {
 // outputBase: base path for review output files (e.g. "po/review"); empty uses default.
 // useLocalOrchestration: if true, use local orchestration; otherwise use agent with po/AGENTS.md.
 func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, runs int, outputBase string, useLocalOrchestration bool, batchSize int) ([]TestRunResult, int, error) {
+	var err error
 	ps := GetReviewPathSet()
 	// Determine the agent to use
-	_, err := SelectAgent(cfg, agentName)
-	if err != nil {
+	if _, err = SelectAgent(cfg, agentName); err != nil {
 		return nil, 0, err
 	}
 
@@ -143,6 +143,16 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		} else {
 			agentResult, err = RunAgentReview(cfg, agentName, target, true)
 		}
+		if err != nil {
+			if agentResult == nil {
+				agentResult = &AgentRunResult{
+					AgentError: err,
+					Score:      0,
+				}
+			} else {
+				agentResult.AgentError = err
+			}
+		}
 
 		// Calculate execution time for this iteration
 		iterExecutionTime := time.Since(iterStartTime)
@@ -153,27 +163,23 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 			RunNumber:      runNum,
 		}
 		result.ExecutionTime = iterExecutionTime
+		results[i] = result
 
 		// Record per-run score and collect JSON for aggregation
-		if agentResult.ReviewReport.ReviewResult != nil {
+		if err != nil {
+			log.Errorf("loop %d: agent-run returned error: %v", runNum, err)
+		} else if agentResult.ReviewReport.ReviewResult != nil {
 			result.Score = agentResult.ReviewReport.Score
 			reviewJSONs = append(reviewJSONs, agentResult.ReviewReport.ReviewResult)
-			log.Debugf("run %d: review score from JSON: %d (total_entries=%d, issues=%d)",
-				runNum, agentResult.ReviewReport.Score, agentResult.ReviewReport.ReviewResult.TotalEntries, len(agentResult.ReviewReport.ReviewResult.Issues))
-		} else if agentResult.AgentError == nil {
-			log.Debugf("run %d: agent succeeded but no review JSON found, score=0", runNum)
-			result.Score = 0
+			log.Infof("loop %d: review score: %d (total_entries=%d, issues=%d)",
+				runNum,
+				result.Score,
+				result.ReviewReport.ReviewResult.TotalEntries,
+				len(result.ReviewReport.ReviewResult.Issues))
 		} else {
-			log.Debugf("run %d: agent execution failed, score=0", runNum)
+			log.Warnf("loop %d: no report returned", runNum)
 			result.Score = 0
 		}
-
-		if err != nil {
-			log.Debugf("run %d: agent-run returned error: %v", runNum, err)
-		}
-
-		results[i] = result
-		log.Debugf("run %d: completed with score %d", runNum, result.Score)
 	}
 
 	// Aggregate JSONs (for same msgid, take lowest score) and save
@@ -182,7 +188,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 	if aggregated != nil {
 		// Update TotalEntries from ps.InputPO (same as ReportReviewFromPathWithBatches)
 		if Exist(ps.InputPO) {
-			if stats, err := CountReportStats(ps.InputPO); err != nil {
+			if stats, err := GetPoStats(ps.InputPO); err != nil {
 				log.Warnf("failed to count entries in %s: %v", ps.InputPO, err)
 			} else {
 				aggregated.TotalEntries = stats.Total()

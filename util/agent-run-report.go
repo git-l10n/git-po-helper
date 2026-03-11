@@ -216,7 +216,7 @@ func GetReviewReport() (*ReviewReport, error) {
 		poFile = ps.OutputPO
 	}
 	if Exist(poFile) {
-		stats, err := CountReportStats(poFile)
+		stats, err := GetPoStats(poFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to count entries in %s: %w", poFile, err)
 		}

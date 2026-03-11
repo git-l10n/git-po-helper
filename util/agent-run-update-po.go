@@ -49,7 +49,7 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 		if !Exist(poFile) {
 			result.EntryCountBeforeUpdate = 0
 		} else {
-			if stats, err := CountReportStats(poFile); err == nil {
+			if stats, err := GetPoStats(poFile); err == nil {
 				result.EntryCountBeforeUpdate = stats.Total()
 			}
 		}
@@ -65,7 +65,7 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 		if !Exist(poFile) {
 			result.EntryCountBeforeUpdate = 0
 		} else {
-			if stats, err := CountReportStats(poFile); err == nil {
+			if stats, err := GetPoStats(poFile); err == nil {
 				result.EntryCountBeforeUpdate = stats.Total()
 			}
 		}
@@ -132,7 +132,7 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 
 		// Get after count for result
 		if Exist(poFile) {
-			if stats, err := CountReportStats(poFile); err == nil {
+			if stats, err := GetPoStats(poFile); err == nil {
 				result.EntryCountAfterUpdate = stats.Total()
 			}
 		}
@@ -148,7 +148,7 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 	} else {
 		// No post-validation configured, score based on agent exit code
 		if Exist(poFile) {
-			if stats, err := CountReportStats(poFile); err == nil {
+			if stats, err := GetPoStats(poFile); err == nil {
 				result.EntryCountAfterUpdate = stats.Total()
 			}
 		}

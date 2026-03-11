@@ -14,16 +14,11 @@ import (
 )
 
 // RunAgentTranslate executes a single agent-run translate operation.
-// It performs pre-validation (count new/fuzzy entries), executes the agent command,
-// performs post-validation (verify new=0 and fuzzy=0), and validates PO file syntax.
-// Returns a result structure with detailed information.
-// The agentTest parameter is provided for consistency, though this method
-// does not use AgentTest configuration.
+// When preResult is nil, performs pre-validation internally; otherwise uses preResult.
+// Executes the agent command. Post-validation is done by validateTranslatePostResult in CmdAgentRunTranslate.
 func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentTest bool) (*AgentRunResult, error) {
 	startTime := time.Now()
-	result := &AgentRunResult{
-		Score: 0,
-	}
+	result := &AgentRunResult{Score: 0}
 
 	// Determine agent to use
 	selectedAgent, err := SelectAgent(cfg, agentName)
@@ -41,34 +36,6 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 	}
 
 	log.Debugf("PO file path: %s", poFile)
-
-	// Check if PO file exists
-	if !Exist(poFile) {
-		return result, fmt.Errorf("PO file does not exist: %s\nHint: Ensure the PO file exists before running translate", poFile)
-	}
-
-	// Pre-validation: Count new and fuzzy entries before translation
-	log.Infof("performing pre-validation: counting new and fuzzy entries")
-
-	statsBefore, err := CountReportStats(poFile)
-	if err != nil {
-		return result, fmt.Errorf("failed to count PO stats: %w", err)
-	}
-	result.BeforeNewCount = statsBefore.Untranslated
-	result.BeforeFuzzyCount = statsBefore.Fuzzy
-	log.Infof("new (untranslated) entries before translation: %d", statsBefore.Untranslated)
-	log.Infof("fuzzy entries before translation: %d", statsBefore.Fuzzy)
-
-	// Check if there's anything to translate
-	if statsBefore.Untranslated == 0 && statsBefore.Fuzzy == 0 {
-		log.Infof("no new or fuzzy entries to translate, PO file is already complete")
-		result.PreValidationPass = true
-		result.PostValidationPass = true
-		result.Score = 100
-		return result, nil
-	}
-
-	result.PreValidationPass = true
 
 	// We can extract new entries and fuzzy entries from the PO file using
 	// "msgattrib --untranslated --only-fuzzy poFile", and saved to a
@@ -135,53 +102,83 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 		log.Debugf("agent command stderr: %s", string(stderr))
 	}
 
-	// Post-validation: Count new and fuzzy entries after translation
+	result.ExecutionTime = time.Since(startTime)
+	return result, nil
+}
+
+// validateTranslatePreResult performs pre-validation before translation:
+// counts new/fuzzy entries. Returns (result, needRun, err).
+// needRun is false when nothing to translate (file already complete).
+// Called from CmdAgentRunTranslate before RunAgentTranslate or RunAgentTranslateLocalOrchestration.
+func validateTranslatePreResult(poFile string) (*AgentRunResult, error) {
+	result := &AgentRunResult{Score: 0}
+	if !Exist(poFile) {
+		return result, fmt.Errorf("PO file does not exist: %s\nHint: Ensure the PO file exists before running translate", poFile)
+	}
+
+	log.Infof("performing pre-validation: counting new and fuzzy entries")
+	statsBefore, err := GetPoStats(poFile)
+	if err != nil {
+		return result, fmt.Errorf("failed to count PO stats: %w", err)
+	}
+	result.BeforeNewCount = statsBefore.Untranslated
+	result.BeforeFuzzyCount = statsBefore.Fuzzy
+	log.Infof("new (untranslated) entries before translation: %d", statsBefore.Untranslated)
+	log.Infof("fuzzy entries before translation: %d", statsBefore.Fuzzy)
+
+	if statsBefore.Untranslated == 0 && statsBefore.Fuzzy == 0 {
+		result.PreValidationPass = false
+		result.Score = 0
+		return result, fmt.Errorf("no new or fuzzy entries to translate, PO file is ready for use")
+	}
+	result.PreValidationPass = true
+	return result, nil
+}
+
+// validateTranslatePostResult performs post-validation after translation:
+// counts new/fuzzy entries, verifies both are 0, and validates PO syntax.
+// Called from CmdAgentRunTranslate after RunAgentTranslate or RunAgentTranslateLocalOrchestration.
+func validateTranslatePostResult(poFile string, result *AgentRunResult) error {
 	log.Infof("performing post-validation: counting new and fuzzy entries")
 
-	statsAfter, err := CountReportStats(poFile)
+	statsAfter, err := GetPoStats(poFile)
 	if err != nil {
-		return result, fmt.Errorf("failed to count PO stats after translation: %w", err)
+		return fmt.Errorf("failed to count PO stats after translation: %w", err)
 	}
 	result.AfterNewCount = statsAfter.Untranslated
 	result.AfterFuzzyCount = statsAfter.Fuzzy
 	log.Infof("new (untranslated) entries after translation: %d", statsAfter.Untranslated)
 	log.Infof("fuzzy entries after translation: %d", statsAfter.Fuzzy)
 
-	// Validate translation success: both new and fuzzy entries must be 0
 	if statsAfter.Untranslated != 0 || statsAfter.Fuzzy != 0 {
 		result.PostValidationError = fmt.Sprintf("translation incomplete: %d new entries and %d fuzzy entries remaining", statsAfter.Untranslated, statsAfter.Fuzzy)
 		result.Score = 0
-		return result, fmt.Errorf("post-validation failed: %s\nHint: The agent should translate all new entries and resolve all fuzzy entries", result.PostValidationError)
+		return fmt.Errorf("post-validation failed: %s\nHint: The agent should translate all new entries and resolve all fuzzy entries", result.PostValidationError)
 	}
 
 	result.PostValidationPass = true
 	result.Score = 100
 	log.Infof("post-validation passed: all entries translated")
 
-	// Validate PO file syntax (only if agent succeeded)
-	if result.AgentError == nil {
-		log.Infof("validating file syntax: %s", poFile)
-		if err := ValidatePoFile(poFile); err != nil {
-			log.Errorf("file syntax validation failed: %v", err)
-			result.SyntaxValidationError = err.Error()
-			// Don't fail the run for syntax errors in agent-run, but log it
-			// In agent-test, this might affect the score
-		} else {
-			result.SyntaxValidationPass = true
-			log.Infof("file syntax validation passed")
-		}
+	log.Infof("validating file syntax: %s", poFile)
+	if err := ValidatePoFile(poFile); err != nil {
+		log.Errorf("file syntax validation failed: %v", err)
+		result.SyntaxValidationError = err.Error()
+	} else {
+		result.SyntaxValidationPass = true
+		log.Infof("file syntax validation passed")
 	}
-
-	// Record execution time
-	result.ExecutionTime = time.Since(startTime)
-
-	return result, nil
+	return nil
 }
 
 // CmdAgentRunTranslate implements the agent-run translate command logic.
 // It loads configuration and calls RunAgentTranslate or RunAgentTranslateLocalOrchestration
 // based on useAgentMd/useLocalOrchestration flags, then handles errors appropriately.
 func CmdAgentRunTranslate(agentName, poFile string, useAgentMd, useLocalOrchestration bool, batchSize int) error {
+	var (
+		result *AgentRunResult
+		err    error
+	)
 	// Load configuration
 	log.Debugf("loading agent configuration")
 	cfg, err := config.LoadAgentConfig(flag.AgentConfigFile())
@@ -192,27 +189,34 @@ func CmdAgentRunTranslate(agentName, poFile string, useAgentMd, useLocalOrchestr
 
 	startTime := time.Now()
 
-	if useLocalOrchestration {
-		if batchSize <= 0 {
-			batchSize = 50
-		}
-		result, err := RunAgentTranslateLocalOrchestration(cfg, agentName, poFile, batchSize)
-		if err != nil {
-			log.Errorf("failed to run agent translate local orchestration: %v", err)
-			return err
-		}
-		if result.AgentError != nil {
-			return fmt.Errorf("agent execution failed: %w", result.AgentError)
-		}
-		elapsed := time.Since(startTime)
-		fmt.Printf("\nSummary:\n")
-		fmt.Printf("  Execution time: %s\n", elapsed.Round(time.Millisecond))
-		log.Infof("agent-run translate (local orchestration) completed successfully")
-		return nil
+	// Pre-validation: store PO stats before translation in preResult.
+	preResult, err := validateTranslatePreResult(poFile)
+	if err != nil {
+		return err
 	}
 
-	result, err := RunAgentTranslate(cfg, agentName, poFile, false)
+	if batchSize <= 0 {
+		batchSize = 50
+	}
+	if useLocalOrchestration {
+		result, err = RunAgentTranslateLocalOrchestration(cfg, agentName, poFile, batchSize)
+	} else {
+		result, err = RunAgentTranslate(cfg, agentName, poFile, false)
+	}
+	result.PreValidationPass = preResult.PreValidationPass
+	result.PreValidationError = preResult.PreValidationError
+	result.BeforeNewCount = preResult.BeforeNewCount
+	result.BeforeFuzzyCount = preResult.BeforeFuzzyCount
+	elapsed := time.Since(startTime)
+	result.ExecutionTime = elapsed
+	log.Infof("agent-run translate: execution time: %s", result.ExecutionTime.Round(time.Millisecond))
+
 	if err != nil {
+		return fmt.Errorf("agent execution failed: %w", err)
+	}
+
+	// Post-validation
+	if err := validateTranslatePostResult(poFile, result); err != nil {
 		return err
 	}
 
@@ -220,20 +224,12 @@ func CmdAgentRunTranslate(agentName, poFile string, useAgentMd, useLocalOrchestr
 	if !result.PreValidationPass {
 		return fmt.Errorf("pre-validation failed: %s", result.PreValidationError)
 	}
-	if result.AgentError != nil {
-		return fmt.Errorf("agent execution failed: %w", result.AgentError)
-	}
 	if !result.PostValidationPass {
 		return fmt.Errorf("post-validation failed: %s", result.PostValidationError)
 	}
 	if result.SyntaxValidationError != "" {
 		return fmt.Errorf("file validation failed: %s\nHint: Check the PO file syntax using 'msgfmt --check-format'", result.SyntaxValidationError)
 	}
-
-	elapsed := time.Since(startTime)
-	fmt.Printf("\nSummary:\n")
-	fmt.Printf("  Execution time: %s\n", elapsed.Round(time.Millisecond))
-
 	log.Infof("agent-run translate completed successfully")
 	return nil
 }
