@@ -148,16 +148,12 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 		return result, fmt.Errorf("failed to read review JSON: %w", err)
 	}
 
-	result.ReviewJSON = reportResult.Review
-	result.ReviewJSONPath = ps.ResultJSON
-	result.ReviewScore = reportResult.Score
+	result.ReviewReport = *reportResult
 	result.Score = reportResult.Score
-	result.ReviewedFilePath = poFile
-	result.ReportFilePath = reportResult.ReportFile
 	result.ExecutionTime = time.Since(startTime)
 
 	log.Infof("review completed (score: %d/100, total entries: %d, issues: %d)",
-		reportResult.Score, reportResult.Review.TotalEntries, len(reportResult.Review.Issues))
+		reportResult.Score, reportResult.ReviewResult.TotalEntries, len(reportResult.ReviewResult.Issues))
 
 	return result, nil
 }
@@ -194,27 +190,13 @@ func CmdAgentRunReview(agentName string, target *CompareTarget, useLocalOrchestr
 	elapsed := time.Since(startTime)
 
 	// Display review report (same format as agent-run report)
-	if result.ReviewJSON != nil && result.ReviewJSONPath != "" {
-		critical, major, minor := CountReviewIssueScores(result.ReviewJSON)
-		reportFile := result.ReportFilePath
-		if reportFile == "" {
-			reportFile = result.ReviewJSONPath
-		}
-		reportResult := &ReviewReportResult{
-			Review:        result.ReviewJSON,
-			Score:         result.ReviewScore,
-			CriticalCount: critical,
-			MajorCount:    major,
-			MinorCount:    minor,
-			ReportFile:    reportFile,
-			AppliedFile:   result.AppliedFilePath,
-		}
-		PrintReviewReportResult(reportResult)
+	if result.ReviewReport.ReviewResult != nil {
+		PrintReviewReportResult(&result.ReviewReport)
 	}
 
 	fmt.Printf("\nSummary:\n")
-	if result.ReviewJSONPath != "" {
-		fmt.Printf("  Review JSON: %s\n", getRelativePath(result.ReviewJSONPath))
+	if result.ReviewReport.ReportFile != "" {
+		fmt.Printf("  Review JSON: %s\n", getRelativePath(result.ReviewReport.ReportFile))
 	}
 	if result.NumTurns > 0 {
 		fmt.Printf("  Turns: %d\n", result.NumTurns)

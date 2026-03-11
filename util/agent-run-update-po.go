@@ -47,10 +47,10 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 
 		// Get before count for result
 		if !Exist(poFile) {
-			result.BeforeCount = 0
+			result.EntryCountBeforeUpdate = 0
 		} else {
 			if stats, err := CountReportStats(poFile); err == nil {
-				result.BeforeCount = stats.Total()
+				result.EntryCountBeforeUpdate = stats.Total()
 			}
 		}
 
@@ -63,10 +63,10 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 	} else {
 		// No pre-validation configured, count entries for display purposes
 		if !Exist(poFile) {
-			result.BeforeCount = 0
+			result.EntryCountBeforeUpdate = 0
 		} else {
 			if stats, err := CountReportStats(poFile); err == nil {
-				result.BeforeCount = stats.Total()
+				result.EntryCountBeforeUpdate = stats.Total()
 			}
 		}
 		result.PreValidationPass = true // Consider it passed if not configured
@@ -133,7 +133,7 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 		// Get after count for result
 		if Exist(poFile) {
 			if stats, err := CountReportStats(poFile); err == nil {
-				result.AfterCount = stats.Total()
+				result.EntryCountAfterUpdate = stats.Total()
 			}
 		}
 
@@ -149,7 +149,7 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 		// No post-validation configured, score based on agent exit code
 		if Exist(poFile) {
 			if stats, err := CountReportStats(poFile); err == nil {
-				result.AfterCount = stats.Total()
+				result.EntryCountAfterUpdate = stats.Total()
 			}
 		}
 		if result.AgentError == nil {

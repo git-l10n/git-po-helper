@@ -52,7 +52,7 @@ func CmdAgentTestUpdatePo(agentName, poFile string, runs int, skipConfirmation b
 
 	// Display results
 	log.Debugf("displaying test results (average score: %.2f)", averageScore)
-	displayTestResults(results, averageScore, runs, elapsed)
+	displayTestResults(results, averageScore, runs, elapsed, cfg.AgentTest.PoEntriesBeforeUpdate, cfg.AgentTest.PoEntriesAfterUpdate)
 
 	log.Infof("agent-test update-po completed successfully (average score: %.2f/100)", averageScore)
 	return nil
@@ -61,9 +61,9 @@ func CmdAgentTestUpdatePo(agentName, poFile string, runs int, skipConfirmation b
 // RunAgentTestUpdatePo runs the agent-test update-po operation multiple times.
 // It reuses RunAgentUpdatePo for each run and accumulates scores.
 // Returns scores for each run, average score, and error.
-func RunAgentTestUpdatePo(agentName, poFile string, runs int, cfg *config.AgentConfig) ([]RunResult, float64, error) {
+func RunAgentTestUpdatePo(agentName, poFile string, runs int, cfg *config.AgentConfig) ([]TestRunResult, float64, error) {
 	// Run the test multiple times
-	results := make([]RunResult, runs)
+	results := make([]TestRunResult, runs)
 	totalScore := 0
 	relPoFile, err := GetPoFileRelPath(cfg, poFile)
 	if err != nil {
@@ -89,24 +89,12 @@ func RunAgentTestUpdatePo(agentName, poFile string, runs int, cfg *config.AgentC
 		// Calculate execution time for this iteration
 		iterExecutionTime := time.Since(iterStartTime)
 
-		// Convert AgentRunResult to RunResult
-		// agentResult is never nil (always returns a result structure)
-		result := RunResult{
-			RunNumber:           runNum,
-			Score:               agentResult.Score,
-			PreValidationPass:   agentResult.PreValidationPass,
-			PostValidationPass:  agentResult.PostValidationPass,
-			AgentExecuted:       agentResult.AgentExecuted,
-			PreValidationError:  agentResult.PreValidationError,
-			PostValidationError: agentResult.PostValidationError,
-			AgentError:          agentResult.AgentError,
-			BeforeCount:         agentResult.BeforeCount,
-			AfterCount:          agentResult.AfterCount,
-			ExpectedBefore:      cfg.AgentTest.PoEntriesBeforeUpdate,
-			ExpectedAfter:       cfg.AgentTest.PoEntriesAfterUpdate,
-			NumTurns:            agentResult.NumTurns,
-			ExecutionTime:       iterExecutionTime,
+		// Convert AgentRunResult to TestRunResult (embedding avoids field duplication)
+		result := TestRunResult{
+			AgentRunResult: *agentResult,
+			RunNumber:      runNum,
 		}
+		result.ExecutionTime = iterExecutionTime
 
 		// If there was an error, log it but continue (for agent-test, we want to collect all results)
 		if err != nil {

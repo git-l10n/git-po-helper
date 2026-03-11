@@ -46,26 +46,12 @@ func formatDuration(d time.Duration) string {
 	return strings.Join(parts, "")
 }
 
-// RunResult holds the result of a single test run.
-type RunResult struct {
-	RunNumber           int
-	Score               int
-	PreValidationPass   bool
-	PostValidationPass  bool
-	AgentExecuted       bool
-	PreValidationError  string
-	PostValidationError string
-	AgentError          error
-	BeforeCount         int
-	AfterCount          int
-	BeforeNewCount      int // For translate: new (untranslated) entries before
-	AfterNewCount       int // For translate: new (untranslated) entries after
-	BeforeFuzzyCount    int // For translate: fuzzy entries before
-	AfterFuzzyCount     int // For translate: fuzzy entries after
-	ExpectedBefore      *int
-	ExpectedAfter       *int
-	NumTurns            int           // Number of turns in the conversation
-	ExecutionTime       time.Duration // Execution time for this run
+// TestRunResult holds the result of a single test run.
+// It embeds AgentRunResult so agent-run fields (PreValidationPass, Score, etc.)
+// are inherited; RunNumber is test-specific.
+type TestRunResult struct {
+	AgentRunResult
+	RunNumber int // Test run index (1-based)
 }
 
 // ConfirmAgentTestExecution displays a warning and requires user confirmation before proceeding.
@@ -241,7 +227,9 @@ func containsPath(paths []string, target string) bool {
 }
 
 // displayTestResults displays the test results in a readable format.
-func displayTestResults(results []RunResult, averageScore float64, totalRuns int, elapsed time.Duration) {
+// expectedBefore and expectedAfter are from config (PoEntriesBeforeUpdate/PoEntriesAfterUpdate
+// or PotEntriesBeforeUpdate/PotEntriesAfterUpdate); nil when validation is not configured.
+func displayTestResults(results []TestRunResult, averageScore float64, totalRuns int, elapsed time.Duration, expectedBefore, expectedAfter *int) {
 	fmt.Println()
 	fmt.Println("=" + strings.Repeat("=", 70))
 	fmt.Println("Agent Test Results")
@@ -266,10 +254,10 @@ func displayTestResults(results []RunResult, averageScore float64, totalRuns int
 		fmt.Printf("Run %d: %s (Score: %d/100)\n", result.RunNumber, status, result.Score)
 
 		// Show validation status
-		if result.ExpectedBefore != nil && *result.ExpectedBefore != 0 {
+		if expectedBefore != nil && *expectedBefore != 0 {
 			if result.PreValidationPass {
 				fmt.Printf("  Pre-validation:  PASS (expected: %d, actual: %d)\n",
-					*result.ExpectedBefore, result.BeforeCount)
+					*expectedBefore, result.EntryCountBeforeUpdate)
 			} else {
 				fmt.Printf("  Pre-validation:  FAIL - %s\n", result.PreValidationError)
 				preValidationFailures++
@@ -286,10 +274,10 @@ func displayTestResults(results []RunResult, averageScore float64, totalRuns int
 			fmt.Printf("  Agent execution: SKIPPED (pre-validation failed)\n")
 		}
 
-		if result.ExpectedAfter != nil && *result.ExpectedAfter != 0 {
+		if expectedAfter != nil && *expectedAfter != 0 {
 			if result.PostValidationPass {
 				fmt.Printf("  Post-validation: PASS (expected: %d, actual: %d)\n",
-					*result.ExpectedAfter, result.AfterCount)
+					*expectedAfter, result.EntryCountAfterUpdate)
 			} else {
 				fmt.Printf("  Post-validation: FAIL - %s\n", result.PostValidationError)
 				postValidationFailures++
@@ -297,7 +285,7 @@ func displayTestResults(results []RunResult, averageScore float64, totalRuns int
 		} else if result.AgentExecuted {
 			// Show entry counts even if validation is not configured
 			fmt.Printf("  Entry count:     %d (before) -> %d (after)\n",
-				result.BeforeCount, result.AfterCount)
+				result.EntryCountBeforeUpdate, result.EntryCountAfterUpdate)
 		}
 
 		fmt.Println()

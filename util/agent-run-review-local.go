@@ -379,15 +379,10 @@ func runMergeAndSummary(ps ReviewPathSet, startTime time.Time, result *AgentRunR
 	if err != nil {
 		return result, err
 	}
-	result.ReviewJSON = reportResult.Review
-	result.ReviewJSONPath = reportResult.ReportFile
-	result.ReviewScore = reportResult.Score
+	result.ReviewReport = *reportResult
 	result.Score = reportResult.Score
-	result.ReviewedFilePath = ps.PendingPO
-	result.ReportFilePath = reportResult.ReportFile
-	result.AppliedFilePath = reportResult.AppliedFile
 	result.ExecutionTime = time.Since(startTime)
 	log.Infof("review completed successfully (score: %d/100, total entries: %d, issues: %d)",
-		reportResult.Score, reportResult.Review.TotalEntries, len(reportResult.Review.Issues))
+		reportResult.Score, reportResult.ReviewResult.TotalEntries, len(reportResult.ReviewResult.Issues))
 	return result, nil
 }

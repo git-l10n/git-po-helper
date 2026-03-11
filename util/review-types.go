@@ -10,6 +10,46 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// ReviewReport holds the result of reporting from a review JSON file.
+// Issue scores: ReviewIssueScoreCritical, ReviewIssueScoreMajor, ReviewIssueScoreMinor. Perfect = ReviewIssueScorePerfect.
+type ReviewReport struct {
+	ReviewResult  *ReviewJSONResult
+	Score         int
+	CriticalCount int    // ReviewIssueScoreCritical
+	MajorCount    int    // ReviewIssueScoreMajor
+	MinorCount    int    // ReviewIssueScoreMinor
+	ReportFile    string // Review JSON file path, if it exists
+	AppliedFile   string // Output PO file path (after applying suggestions), if it exists
+}
+
+// PerfectCount returns the number of entries with no reported issue.
+func (r *ReviewReport) PerfectCount() int {
+	if r == nil || r.ReviewResult == nil {
+		return 0
+	}
+	n := r.ReviewResult.TotalEntries - (r.CriticalCount + r.MinorCount + r.MajorCount)
+	if n < 0 {
+		return 0
+	}
+	return n
+}
+
+// PoUpdateResult holds entry counts for update-po/update-pot operations.
+// Embedded in AgentRunResult; zero values when not from update-po/update-pot.
+type PoUpdateResult struct {
+	EntryCountBeforeUpdate int // PO/POT msgid count before agent update
+	EntryCountAfterUpdate  int // PO/POT msgid count after agent update
+}
+
+// TranslateResult holds new/fuzzy entry counts for translate operations.
+// Embedded in AgentRunResult; zero values when not from translate.
+type TranslateResult struct {
+	BeforeNewCount   int // New (untranslated) entries before
+	AfterNewCount    int // New (untranslated) entries after
+	BeforeFuzzyCount int // Fuzzy entries before
+	AfterFuzzyCount  int // Fuzzy entries after
+}
+
 // AgentRunResult holds the result of a single agent-run execution.
 type AgentRunResult struct {
 	PreValidationPass     bool
@@ -17,23 +57,16 @@ type AgentRunResult struct {
 	AgentExecuted         bool
 	PreValidationError    string
 	PostValidationError   string
-	BeforeCount           int
-	AfterCount            int
-	BeforeNewCount        int // For translate: new (untranslated) entries before
-	AfterNewCount         int // For translate: new (untranslated) entries after
-	BeforeFuzzyCount      int // For translate: fuzzy entries before
-	AfterFuzzyCount       int // For translate: fuzzy entries after
 	SyntaxValidationPass  bool
 	SyntaxValidationError string
 	Score                 int // 0-100, calculated based on validations
 
-	// Review-specific fields
-	ReviewJSON       *ReviewJSONResult `json:"review_json,omitempty"`
-	ReviewScore      int               `json:"review_score,omitempty"`
-	ReviewJSONPath   string            `json:"review_json_path,omitempty"`
-	ReviewedFilePath string            `json:"reviewed_file_path,omitempty"` // Final reviewed PO file path
-	ReportFilePath   string            `json:"report_file_path,omitempty"`   // Review JSON file path
-	AppliedFilePath  string            `json:"applied_file_path,omitempty"`  // Output PO file path (after apply)
+	// Update-po/update-pot: embedded when from update-po/update-pot
+	PoUpdateResult
+	// Translate: embedded when from translate
+	TranslateResult
+	// Review: embedded when from review; ReviewResult==nil when not from review
+	ReviewReport
 
 	// Agent output (for saving logs in agent-test)
 	AgentStdout []byte `json:"-"`

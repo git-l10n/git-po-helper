@@ -17,34 +17,6 @@ import (
 // Used by agent-run report when no path is given.
 var DefaultReviewBase = filepath.Join(PoDir, "review")
 
-// ReviewReportResult holds the result of reporting from a review JSON file.
-// Issue scores: ReviewIssueScoreCritical, ReviewIssueScoreMajor, ReviewIssueScoreMinor. Perfect = ReviewIssueScorePerfect.
-type ReviewReportResult struct {
-	Review        *ReviewJSONResult
-	Score         int
-	CriticalCount int // ReviewIssueScoreCritical
-	MajorCount    int // ReviewIssueScoreMajor
-	MinorCount    int // ReviewIssueScoreMinor
-
-	// ReportFile is the review JSON file path, if it exists.
-	ReportFile string
-	// AppliedFile is the output PO file path (after applying suggestions), if it exists.
-	AppliedFile string
-}
-
-// PerfectCount returns the number of entries with no reported issue:
-// review.TotalEntries - (CriticalCount + MinorCount + MajorCount).
-func (r *ReviewReportResult) PerfectCount() int {
-	if r.Review == nil {
-		return 0
-	}
-	n := r.Review.TotalEntries - (r.CriticalCount + r.MinorCount + r.MajorCount)
-	if n < 0 {
-		return 0
-	}
-	return n
-}
-
 // CountReviewIssueScores returns counts by issue score from a review.
 // ReviewIssueScoreCritical, ReviewIssueScoreMajor, ReviewIssueScoreMinor. Perfect count is derived: TotalEntries - (critical + major + minor).
 func CountReviewIssueScores(review *ReviewJSONResult) (critical, major, minor int) {
@@ -216,7 +188,7 @@ func ApplyReviewFromResultJSON(ps ReviewPathSet) (bool, error) {
 }
 
 // GetReviewReport reads ps.ResultJSON and fills total_entries from ps.InputPO (or ps.OutputPO).
-func GetReviewReport() (*ReviewReportResult, error) {
+func GetReviewReport() (*ReviewReport, error) {
 	ps := GetReviewPathSet()
 
 	if err := AggregateReviewBatches(ps); err != nil {
@@ -266,8 +238,8 @@ func GetReviewReport() (*ReviewReportResult, error) {
 	if Exist(ps.OutputPO) {
 		appliedFile = ps.OutputPO
 	}
-	return &ReviewReportResult{
-		Review:        review,
+	return &ReviewReport{
+		ReviewResult:        review,
 		Score:         score,
 		CriticalCount: critical,
 		MajorCount:    major,
@@ -279,13 +251,16 @@ func GetReviewReport() (*ReviewReportResult, error) {
 
 // PrintReviewReportResult prints the same "## Review Statistics" report as agent-run report (step 9).
 // Used by RunAgentReview after merge and by cmd/agent-run-report.
-func PrintReviewReportResult(result *ReviewReportResult) {
+func PrintReviewReportResult(result *ReviewReport) {
+	if result == nil || result.ReviewResult == nil {
+		return
+	}
 	fmt.Println("## Review Statistics")
 	fmt.Println()
 	fmt.Printf("  %-22s %d/100\n", "Review score:", result.Score)
-	fmt.Printf("  %-22s %d\n", "Total entries:", result.Review.TotalEntries)
+	fmt.Printf("  %-22s %d\n", "Total entries:", result.ReviewResult.TotalEntries)
 	fmt.Printf("  %-22s %d\n", "Perfect (no issue):", result.PerfectCount())
-	fmt.Printf("  %-22s %d\n", "With issues:", result.Review.IssueCount())
+	fmt.Printf("  %-22s %d\n", "With issues:", result.ReviewResult.IssueCount())
 	fmt.Println()
 	fmt.Printf("  %-22s %d\n", fmt.Sprintf("Critical (score %d):", ReviewIssueScoreCritical), result.CriticalCount)
 	fmt.Printf("  %-22s %d\n", fmt.Sprintf("Major (score %d):", ReviewIssueScoreMajor), result.MajorCount)

@@ -86,7 +86,7 @@ func CmdAgentTestTranslate(agentName, poFile string, runs int, skipConfirmation 
 // RunAgentTestTranslate runs the agent-test translate operation multiple times.
 // It reuses RunAgentTranslate or RunAgentTranslateLocalOrchestration for each run.
 // Returns scores for each run, average score, and error.
-func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.AgentConfig, useLocalOrchestration bool, batchSize int) ([]RunResult, float64, error) {
+func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.AgentConfig, useLocalOrchestration bool, batchSize int) ([]TestRunResult, float64, error) {
 	// Determine the agent to use (for saving results)
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {
@@ -107,7 +107,7 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 	}
 
 	// Run the test multiple times
-	results := make([]RunResult, runs)
+	results := make([]TestRunResult, runs)
 	totalScore := 0
 	for i := 0; i < runs; i++ {
 		runNum := i + 1
@@ -139,28 +139,12 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 		// Calculate execution time for this iteration
 		iterExecutionTime := time.Since(iterStartTime)
 
-		// Convert AgentRunResult to RunResult
-		// agentResult is never nil (always returns a result structure)
-		result := RunResult{
-			RunNumber:           runNum,
-			Score:               agentResult.Score,
-			PreValidationPass:   agentResult.PreValidationPass,
-			PostValidationPass:  agentResult.PostValidationPass,
-			AgentExecuted:       agentResult.AgentExecuted,
-			PreValidationError:  agentResult.PreValidationError,
-			PostValidationError: agentResult.PostValidationError,
-			AgentError:          agentResult.AgentError,
-			BeforeCount:         agentResult.BeforeCount,
-			AfterCount:          agentResult.AfterCount,
-			BeforeNewCount:      agentResult.BeforeNewCount,
-			AfterNewCount:       agentResult.AfterNewCount,
-			BeforeFuzzyCount:    agentResult.BeforeFuzzyCount,
-			AfterFuzzyCount:     agentResult.AfterFuzzyCount,
-			ExpectedBefore:      nil, // Not used for translate
-			ExpectedAfter:       nil, // Not used for translate
-			NumTurns:            agentResult.NumTurns,
-			ExecutionTime:       iterExecutionTime,
+		// Convert AgentRunResult to TestRunResult (embedding avoids field duplication)
+		result := TestRunResult{
+			AgentRunResult: *agentResult,
+			RunNumber:      runNum,
 		}
+		result.ExecutionTime = iterExecutionTime
 
 		// If there was an error, log it but continue (for agent-test, we want to collect all results)
 		if err != nil {
@@ -243,7 +227,7 @@ func SaveTranslateResults(agentName string, runNumber int, poFile string, stdout
 }
 
 // displayTranslateTestResults displays the translation test results in a readable format.
-func displayTranslateTestResults(results []RunResult, averageScore float64, totalRuns int, elapsed time.Duration) {
+func displayTranslateTestResults(results []TestRunResult, averageScore float64, totalRuns int, elapsed time.Duration) {
 	fmt.Println()
 	fmt.Println("=" + strings.Repeat("=", 70))
 	fmt.Println("Agent Test Results (Translate)")

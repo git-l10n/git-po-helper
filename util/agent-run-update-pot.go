@@ -42,10 +42,10 @@ func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string, agentTest bool
 
 		// Get before count for result
 		if !Exist(potFile) {
-			result.BeforeCount = 0
+			result.EntryCountBeforeUpdate = 0
 		} else {
 			if stats, err := CountReportStats(potFile); err == nil {
-				result.BeforeCount = stats.Total()
+				result.EntryCountBeforeUpdate = stats.Total()
 			}
 		}
 
@@ -58,10 +58,10 @@ func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string, agentTest bool
 	} else {
 		// No pre-validation configured, count entries for display purposes
 		if !Exist(potFile) {
-			result.BeforeCount = 0
+			result.EntryCountBeforeUpdate = 0
 		} else {
 			if stats, err := CountReportStats(potFile); err == nil {
-				result.BeforeCount = stats.Total()
+				result.EntryCountBeforeUpdate = stats.Total()
 			}
 		}
 		result.PreValidationPass = true // Consider it passed if not configured
@@ -122,7 +122,7 @@ func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string, agentTest bool
 		// Get after count for result
 		if Exist(potFile) {
 			if stats, err := CountReportStats(potFile); err == nil {
-				result.AfterCount = stats.Total()
+				result.EntryCountAfterUpdate = stats.Total()
 			}
 		}
 
@@ -138,7 +138,7 @@ func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string, agentTest bool
 		// No post-validation configured, score based on agent exit code
 		if Exist(potFile) {
 			if stats, err := CountReportStats(potFile); err == nil {
-				result.AfterCount = stats.Total()
+				result.EntryCountAfterUpdate = stats.Total()
 			}
 		}
 		if result.AgentError == nil {

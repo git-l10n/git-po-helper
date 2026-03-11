@@ -115,7 +115,7 @@ func cleanReviewOutputFilesForTest(ps ReviewPathSet) {
 // Returns scores for each run, aggregated score (from merged JSON), and error.
 // outputBase: base path for review output files (e.g. "po/review"); empty uses default.
 // useLocalOrchestration: if true, use local orchestration; otherwise use agent with po/AGENTS.md.
-func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, runs int, outputBase string, useLocalOrchestration bool, batchSize int) ([]RunResult, int, error) {
+func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, runs int, outputBase string, useLocalOrchestration bool, batchSize int) ([]TestRunResult, int, error) {
 	ps := GetReviewPathSet()
 	// Determine the agent to use
 	_, err := SelectAgent(cfg, agentName)
@@ -124,7 +124,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 	}
 
 	// Run the test multiple times
-	results := make([]RunResult, runs)
+	results := make([]TestRunResult, runs)
 	var reviewJSONs []*ReviewJSONResult
 
 	for i := 0; i < runs; i++ {
@@ -147,33 +147,19 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		// Calculate execution time for this iteration
 		iterExecutionTime := time.Since(iterStartTime)
 
-		// Convert AgentRunResult to RunResult
-		result := RunResult{
-			RunNumber:           runNum,
-			PreValidationPass:   agentResult.PreValidationPass,
-			PostValidationPass:  agentResult.PostValidationPass,
-			AgentExecuted:       agentResult.AgentExecuted,
-			PreValidationError:  agentResult.PreValidationError,
-			PostValidationError: agentResult.PostValidationError,
-			AgentError:          agentResult.AgentError,
-			BeforeCount:         agentResult.BeforeCount,
-			AfterCount:          agentResult.AfterCount,
-			BeforeNewCount:      agentResult.BeforeNewCount,
-			AfterNewCount:       agentResult.AfterNewCount,
-			BeforeFuzzyCount:    agentResult.BeforeFuzzyCount,
-			AfterFuzzyCount:     agentResult.AfterFuzzyCount,
-			ExpectedBefore:      nil,
-			ExpectedAfter:       nil,
-			NumTurns:            agentResult.NumTurns,
-			ExecutionTime:       iterExecutionTime,
+		// Convert AgentRunResult to TestRunResult (embedding avoids field duplication)
+		result := TestRunResult{
+			AgentRunResult: *agentResult,
+			RunNumber:      runNum,
 		}
+		result.ExecutionTime = iterExecutionTime
 
 		// Record per-run score and collect JSON for aggregation
-		if agentResult.ReviewJSON != nil {
-			result.Score = agentResult.ReviewScore
-			reviewJSONs = append(reviewJSONs, agentResult.ReviewJSON)
+		if agentResult.ReviewReport.ReviewResult != nil {
+			result.Score = agentResult.ReviewReport.Score
+			reviewJSONs = append(reviewJSONs, agentResult.ReviewReport.ReviewResult)
 			log.Debugf("run %d: review score from JSON: %d (total_entries=%d, issues=%d)",
-				runNum, agentResult.ReviewScore, agentResult.ReviewJSON.TotalEntries, len(agentResult.ReviewJSON.Issues))
+				runNum, agentResult.ReviewReport.Score, agentResult.ReviewReport.ReviewResult.TotalEntries, len(agentResult.ReviewReport.ReviewResult.Issues))
 		} else if agentResult.AgentError == nil {
 			log.Debugf("run %d: agent succeeded but no review JSON found, score=0", runNum)
 			result.Score = 0
@@ -307,7 +293,7 @@ func SaveReviewResults(agentName string, runNumber int, poFile string, jsonFile 
 // displayReviewTestResults displays the review test results in a readable format.
 // Output format matches other agent-test subcommands. Shows per-run scores and
 // aggregated score (from merged JSON, same msgid takes lowest score) in summary.
-func displayReviewTestResults(results []RunResult, aggregatedScore int, totalRuns int, elapsed time.Duration) {
+func displayReviewTestResults(results []TestRunResult, aggregatedScore int, totalRuns int, elapsed time.Duration) {
 	fmt.Println()
 	fmt.Println("=" + strings.Repeat("=", 70))
 	fmt.Println("Agent Test Results (Review)")
