@@ -251,7 +251,12 @@ func convertGettextJSONToPoFormat(j *GettextJSON) {
 
 // ParseGettextJSONBytes decodes gettext JSON from data.
 // Uses PrepareJSONForParse and gjson fallback for malformed LLM-generated JSON.
+// Empty or whitespace-only data yields an empty GettextJSON (no error) so msg-select
+// and msg-cat do not fail on empty JSON input files.
 func ParseGettextJSONBytes(data []byte) (*GettextJSON, error) {
+	if len(bytes.TrimSpace(data)) == 0 {
+		return &GettextJSON{Entries: []GettextEntry{}}, nil
+	}
 	var out GettextJSON
 	if err := json.Unmarshal(data, &out); err != nil {
 		prepared := PrepareJSONForParse(data, err)
@@ -413,9 +418,13 @@ func ClearFuzzyFromGettextJSON(j *GettextJSON) {
 // LoadFileToGettextJSON loads file data (PO, POT, or gettext JSON) into GettextJSON.
 // Format is detected by content (starts with '{' after trim). Used by ReadFileToGettextJSON,
 // stat, and compare. For JSON parse failure, returns FormatGettextJSONParseError.
+// Empty or whitespace-only file yields empty GettextJSON (msg-select/msg-cat safe).
 func LoadFileToGettextJSON(data []byte, path string) (*GettextJSON, error) {
 	trimmed := bytes.TrimLeft(data, " \t\r\n")
-	if len(trimmed) > 0 && trimmed[0] == '{' {
+	if len(trimmed) == 0 {
+		return &GettextJSON{Entries: []GettextEntry{}}, nil
+	}
+	if trimmed[0] == '{' {
 		return ParseGettextJSONBytesForCompare(data, path)
 	}
 	// PO/POT

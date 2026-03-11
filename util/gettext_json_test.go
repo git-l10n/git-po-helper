@@ -157,6 +157,38 @@ func TestBuildGettextJSON_EmptyEntries(t *testing.T) {
 	}
 }
 
+func TestParseGettextJSONBytes_EmptyInput(t *testing.T) {
+	for _, data := range [][]byte{nil, {}, []byte(""), []byte("   \n\t\r\n  ")} {
+		j, err := ParseGettextJSONBytes(data)
+		if err != nil {
+			t.Fatalf("ParseGettextJSONBytes(%q): %v", data, err)
+		}
+		if j == nil || j.Entries == nil || len(j.Entries) != 0 {
+			t.Errorf("expected empty entries, got %#v", j)
+		}
+	}
+}
+
+func TestReadFileToGettextJSON_EmptyFile(t *testing.T) {
+	dir := t.TempDir()
+	emptyPath := filepath.Join(dir, "empty.json")
+	if err := os.WriteFile(emptyPath, nil, 0644); err != nil {
+		t.Fatalf("write empty file: %v", err)
+	}
+	j, err := ReadFileToGettextJSON(emptyPath)
+	if err != nil {
+		t.Fatalf("ReadFileToGettextJSON(empty): %v", err)
+	}
+	if j == nil || len(j.Entries) != 0 {
+		t.Errorf("expected empty GettextJSON, got %#v", j)
+	}
+	// MsgSelectFromFile should not error (output empty per empty-selection behavior)
+	var buf bytes.Buffer
+	if err := MsgSelectFromFile(emptyPath, "1-", &buf, true, false, false, false, false, nil); err != nil {
+		t.Fatalf("MsgSelectFromFile on empty JSON: %v", err)
+	}
+}
+
 func TestMsgSelectFromFile_EmptySelection_JSONAndPO(t *testing.T) {
 	poContent := `msgid ""
 msgstr ""
