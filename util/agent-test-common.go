@@ -82,6 +82,24 @@ func ConfirmAgentTestExecution(skipConfirmation bool) error {
 	return nil
 }
 
+// backupFileIfExists backs up path to path.<MM-DD-HH-MM-SS> if it exists and is a regular file.
+func backupFileIfExists(paths ...string) {
+	timeSuffix := time.Now().Format("01-02-15-04-05")
+	for _, path := range paths {
+		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
+			backupPath := path + "." + timeSuffix
+			data, err := os.ReadFile(path)
+			if err != nil {
+				log.Debugf("failed to read %s for backup: %v", path, err)
+			} else if err := os.WriteFile(backupPath, data, 0644); err != nil {
+				log.Debugf("failed to write backup %s: %v", backupPath, err)
+			} else {
+				log.Debugf("backed up %s to %s", path, filepath.Base(backupPath))
+			}
+		}
+	}
+}
+
 // CleanPoDirectory restores the po/ directory to its state in HEAD using git restore.
 // This is useful for agent-test operations to ensure a clean state before each test run.
 // Returns an error if the git restore command fails.
@@ -98,17 +116,7 @@ func CleanPoDirectory(paths ...string) error {
 		log.Debugf("restoring path: %s", path)
 
 		// Backup .po files before restore to protect modified content
-		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-			backupPath := path + "." + time.Now().Format("01-02-15-04-05")
-			data, err := os.ReadFile(path)
-			if err != nil {
-				log.Debugf("failed to read %s for backup: %v", path, err)
-			} else if err := os.WriteFile(backupPath, data, 0644); err != nil {
-				log.Debugf("failed to write backup %s: %v", backupPath, err)
-			} else {
-				log.Debugf("backed up %s to %s", path, filepath.Base(backupPath))
-			}
-		}
+		backupFileIfExists(path)
 
 		// Build git restore command for this path
 		args := []string{

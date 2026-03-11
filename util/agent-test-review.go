@@ -67,24 +67,6 @@ func CmdAgentTestReview(agentName string, target *CompareTarget, runs int, skipC
 	return nil
 }
 
-// backupFileIfExists backs up path to path.<MM-DD-HH-MM-SS> if it exists and is a regular file.
-func backupFileIfExists(paths ...string) {
-	timeSuffix := time.Now().Format("01-02-15-04-05")
-	for _, path := range paths {
-		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-			backupPath := path + "." + timeSuffix
-			data, err := os.ReadFile(path)
-			if err != nil {
-				log.Debugf("failed to read %s for backup: %v", path, err)
-			} else if err := os.WriteFile(backupPath, data, 0644); err != nil {
-				log.Debugf("failed to write backup %s: %v", backupPath, err)
-			} else {
-				log.Debugf("backed up %s to %s", path, filepath.Base(backupPath))
-			}
-		}
-	}
-}
-
 // cleanReviewOutputFilesForTest removes all review output files before each test run
 // for a fresh start, including InputPO. Backs up core files (ResultJSON, OutputPO, InputPO) first.
 func cleanReviewOutputFilesForTest(ps ReviewPathSet) {
