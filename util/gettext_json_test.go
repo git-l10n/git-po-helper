@@ -151,13 +151,39 @@ func TestBuildGettextJSON_EmptyEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildGettextJSON: %v", err)
 	}
-	var decoded GettextJSON
-	if err := json.NewDecoder(&buf).Decode(&decoded); err != nil {
-		t.Fatalf("decode JSON: %v", err)
+	// Empty entries: no output (empty file semantics for msg-select/msg-cat)
+	if buf.Len() != 0 {
+		t.Errorf("expected empty buffer when entries nil, got %d bytes", buf.Len())
 	}
-	if decoded.HeaderComment != "# comment\n" || decoded.HeaderMeta != "meta\n" || len(decoded.Entries) != 0 {
-		t.Errorf("got header_comment=%q header_meta=%q entries len=%d",
-			decoded.HeaderComment, decoded.HeaderMeta, len(decoded.Entries))
+}
+
+func TestMsgSelectFromFile_EmptySelection_JSONAndPO(t *testing.T) {
+	poContent := `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "First"
+msgstr "一"
+`
+	dir := t.TempDir()
+	poPath := filepath.Join(dir, "in.po")
+	if err := os.WriteFile(poPath, []byte(poContent), 0644); err != nil {
+		t.Fatalf("write PO: %v", err)
+	}
+	// Range selects nothing
+	var bufJSON bytes.Buffer
+	if err := MsgSelectFromFile(poPath, "10-20", &bufJSON, true, false, true, false, false, nil); err != nil {
+		t.Fatalf("MsgSelectFromFile JSON: %v", err)
+	}
+	if bufJSON.Len() != 0 {
+		t.Errorf("JSON output should be empty when no entries selected, got %d bytes", bufJSON.Len())
+	}
+	var bufPO bytes.Buffer
+	if err := MsgSelectFromFile(poPath, "10-20", &bufPO, false, false, true, false, false, nil); err != nil {
+		t.Fatalf("MsgSelectFromFile PO: %v", err)
+	}
+	if bufPO.Len() != 0 {
+		t.Errorf("PO output should be empty when no entries selected, got %d bytes", bufPO.Len())
 	}
 }
 

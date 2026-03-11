@@ -164,6 +164,11 @@ func (v msgCatCommand) Execute(args []string) error {
 		util.ClearFuzzyFromGettextJSON(merged)
 	}
 
+	// No entries after merge/filter: write nothing (empty output file)
+	if len(merged.Entries) == 0 {
+		return nil
+	}
+
 	if v.O.JSON {
 		out := merged
 		if v.O.NoHeader {

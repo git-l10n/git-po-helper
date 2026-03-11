@@ -1005,14 +1005,8 @@ msgstr "二"
 	if err != nil {
 		t.Fatalf("WriteGettextJSONFromPOFile failed: %v", err)
 	}
-	var decoded GettextJSON
-	if err := json.NewDecoder(&buf).Decode(&decoded); err != nil {
-		t.Fatalf("decode JSON: %v", err)
-	}
-	if len(decoded.Entries) != 0 {
-		t.Errorf("expected 0 entries, got %d", len(decoded.Entries))
-	}
-	if decoded.HeaderMeta != "Content-Type: text/plain; charset=UTF-8\\n" {
-		t.Errorf("HeaderMeta: got %q", decoded.HeaderMeta)
+	// Empty range: no output (empty file semantics for msg-select)
+	if buf.Len() != 0 {
+		t.Errorf("expected empty buffer when range selects nothing, got %d bytes", buf.Len())
 	}
 }

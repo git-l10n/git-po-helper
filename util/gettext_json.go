@@ -124,7 +124,11 @@ func GettextEntriesWithRawLines(entries []GettextEntry) []*GettextEntry {
 
 // BuildGettextJSON builds the JSON object from header comment, header meta, and selected entries,
 // and writes it to w. Entries should already be range-selected (e.g. from MsgSelect flow).
+// When entries is empty, writes nothing (empty output file).
 func BuildGettextJSON(headerComment, headerMeta string, entries []*GettextEntry, w io.Writer) error {
+	if len(entries) == 0 {
+		return nil
+	}
 	entriesForJSON := make([]GettextEntry, 0, len(entries))
 	for _, e := range entries {
 		ent := *e
@@ -463,7 +467,8 @@ func ReadFileToGettextJSON(path string) (*GettextJSON, error) {
 // 1. Load: reads PO or JSON file into GettextJSON (format auto-detected).
 // 2. Filter: applies EntryStateFilter and range spec to the loaded data.
 // 3. Save: writes filtered result as JSON (useJSON) or PO (noHeader for PO output).
-// If filter is nil, DefaultFilter() is used. When no content entries match, PO output is empty; JSON output has entries: [].
+// If filter is nil, DefaultFilter() is used. When no content entries match, nothing is
+// written (empty file for both JSON and PO output).
 // inputWasPO: when true, PO output matches MsgSelect format (trailing newline after last entry); when false, matches WriteGettextJSONToPO format.
 // unsetFuzzy: remove fuzzy marker from entries, keep translations. clearFuzzy: remove fuzzy marker and clear msgstr for fuzzy entries.
 func MsgSelectFromFile(path, rangeSpec string, w io.Writer, useJSON, noHeader, inputWasPO bool, unsetFuzzy, clearFuzzy bool, filter *EntryStateFilter) error {
@@ -501,11 +506,11 @@ func MsgSelectFromFile(path, rangeSpec string, w io.Writer, useJSON, noHeader, i
 		ClearFuzzyFromGettextJSON(out)
 	}
 	// Step 3: Save in requested format
+	if len(selected) == 0 {
+		return nil // No content entries: write nothing (empty output file)
+	}
 	if useJSON {
 		return WriteGettextJSONToJSON(out, w)
-	}
-	if len(selected) == 0 {
-		return nil // PO output empty when no content entries
 	}
 	return WriteGettextJSONToPO(out, w, noHeader, inputWasPO)
 }
@@ -541,6 +546,9 @@ func SelectGettextJSONFromFile(jsonFile, rangeSpec string, w io.Writer, useJSON 
 		HeaderComment: j.HeaderComment,
 		HeaderMeta:    j.HeaderMeta,
 		Entries:       selected,
+	}
+	if len(selected) == 0 {
+		return nil // No content entries: write nothing (empty output file)
 	}
 	if useJSON {
 		enc := json.NewEncoder(w)
