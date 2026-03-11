@@ -14,12 +14,11 @@ import (
 )
 
 // RunAgentUpdatePo executes a single agent-run update-po operation.
-// It performs pre-validation, executes the agent command, performs post-validation,
-// and validates PO file syntax. Returns a result structure with detailed information.
-// The agentTest parameter controls whether AgentTest configuration should be used.
-// When agentTest is false (for agent-run), AgentTest configuration is ignored.
-func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTest bool) (*AgentRunResult, error) {
-	startTime := time.Now()
+// It executes the agent command and validates PO file syntax.
+// Returns a result structure with detailed information.
+// Pre-validation and post-validation (entry count checks) are performed by
+// agent-test code when running agent-test update-po.
+func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string) (*AgentRunResult, error) {
 	result := &AgentRunResult{
 		Score: 0,
 	}
@@ -40,32 +39,12 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 
 	log.Debugf("PO file path: %s", poFile)
 
-	// Pre-validation: Check entry count before update (only for agent-test)
-	if agentTest && cfg.AgentTest.PoEntriesBeforeUpdate != nil && *cfg.AgentTest.PoEntriesBeforeUpdate != 0 {
-		log.Infof("performing pre-validation: checking PO entry count before update (expected: %d)", *cfg.AgentTest.PoEntriesBeforeUpdate)
-
-		// Get before count for result
-		if !Exist(poFile) {
-			result.EntryCountBeforeUpdate = 0
-		} else {
-			if stats, err := GetPoStats(poFile); err == nil {
-				result.EntryCountBeforeUpdate = stats.Total()
-			}
-		}
-
-		if err := ValidatePoEntryCount(poFile, cfg.AgentTest.PoEntriesBeforeUpdate, "before update"); err != nil {
-			result.PreValidationError = fmt.Errorf("pre-validation failed: %w\nHint: Ensure %s exists and has the expected number of entries", err, poFile)
-			return result, result.PreValidationError
-		}
-		log.Infof("pre-validation passed")
+	// Count entries before update (for display in agent-test results)
+	if !Exist(poFile) {
+		result.EntryCountBeforeUpdate = 0
 	} else {
-		// No pre-validation configured, count entries for display purposes
-		if !Exist(poFile) {
-			result.EntryCountBeforeUpdate = 0
-		} else {
-			if stats, err := GetPoStats(poFile); err == nil {
-				result.EntryCountBeforeUpdate = stats.Total()
-			}
+		if stats, err := GetPoStats(poFile); err == nil {
+			result.EntryCountBeforeUpdate = stats.Total()
 		}
 	}
 
@@ -122,33 +101,13 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 		log.Debugf("agent command stderr: %s", string(stderr))
 	}
 
-	// Post-validation: Check entry count after update (only for agent-test)
-	if agentTest && cfg.AgentTest.PoEntriesAfterUpdate != nil && *cfg.AgentTest.PoEntriesAfterUpdate != 0 {
-		log.Infof("performing post-validation: checking PO entry count after update (expected: %d)", *cfg.AgentTest.PoEntriesAfterUpdate)
-
-		// Get after count for result
-		if Exist(poFile) {
-			if stats, err := GetPoStats(poFile); err == nil {
-				result.EntryCountAfterUpdate = stats.Total()
-			}
+	// Count entries after update and set score (we only reach here when agent succeeded)
+	if Exist(poFile) {
+		if stats, err := GetPoStats(poFile); err == nil {
+			result.EntryCountAfterUpdate = stats.Total()
 		}
-
-		if err := ValidatePoEntryCount(poFile, cfg.AgentTest.PoEntriesAfterUpdate, "after update"); err != nil {
-			result.PostValidationError = fmt.Errorf("post-validation failed: %w\nHint: The agent may not have updated the PO file correctly", err)
-			result.Score = 0
-			return result, result.PostValidationError
-		}
-		result.Score = 100
-		log.Infof("post-validation passed")
-	} else {
-		// No post-validation configured, score based on agent exit code (we only reach here when agent succeeded)
-		if Exist(poFile) {
-			if stats, err := GetPoStats(poFile); err == nil {
-				result.EntryCountAfterUpdate = stats.Total()
-			}
-		}
-		result.Score = 100
 	}
+	result.Score = 100
 
 	// Validate PO file syntax (we only reach here when agent succeeded)
 	log.Infof("validating file syntax: %s", poFile)
@@ -158,9 +117,6 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 	} else {
 		log.Infof("file syntax validation passed")
 	}
-
-	// Record execution time
-	result.ExecutionTime = time.Since(startTime)
 
 	return result, nil
 }
@@ -177,7 +133,9 @@ func CmdAgentRunUpdatePo(agentName, poFile string) error {
 
 	startTime := time.Now()
 
-	result, err := RunAgentUpdatePo(cfg, agentName, poFile, false)
+	result, err := RunAgentUpdatePo(cfg, agentName, poFile)
+	result.ExecutionTime = time.Since(startTime)
+	log.Infof("agent-run update-po: execution time: %s", result.ExecutionTime.Round(time.Millisecond))
 	if err != nil {
 		return err
 	}
@@ -192,10 +150,6 @@ func CmdAgentRunUpdatePo(agentName, poFile string) error {
 	if result.SyntaxValidationError != nil {
 		return fmt.Errorf("file validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", result.SyntaxValidationError)
 	}
-
-	elapsed := time.Since(startTime)
-	fmt.Printf("\nSummary:\n")
-	fmt.Printf("  Execution time: %s\n", elapsed.Round(time.Millisecond))
 
 	log.Infof("agent-run update-po completed successfully")
 	return nil

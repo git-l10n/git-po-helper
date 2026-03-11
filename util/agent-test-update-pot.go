@@ -60,8 +60,12 @@ func CmdAgentTestUpdatePot(agentName string, runs int, skipConfirmation bool) er
 
 // RunAgentTestUpdatePot runs the agent-test update-pot operation multiple times.
 // It reuses RunAgentUpdatePot for each run and accumulates scores.
+// Pre-validation and post-validation (entry count checks) are performed here
+// when configured in cfg.AgentTest.
 // Returns scores for each run, average score, and error.
 func RunAgentTestUpdatePot(agentName string, runs int, cfg *config.AgentConfig) ([]TestRunResult, float64, error) {
+	potFile := GetPotFilePath()
+
 	// Run the test multiple times
 	results := make([]TestRunResult, runs)
 	totalScore := 0
@@ -79,8 +83,44 @@ func RunAgentTestUpdatePot(agentName string, runs int, cfg *config.AgentConfig) 
 			// Continue with the run even if cleanup fails, but log the warning
 		}
 
-		// Reuse RunAgentUpdatePot for each run
-		agentResult, err := RunAgentUpdatePot(cfg, agentName, true)
+		// Pre-validation: check entry count before update (when configured)
+		var agentResult *AgentRunResult
+		var err error
+		if cfg.AgentTest.PotEntriesBeforeUpdate != nil && *cfg.AgentTest.PotEntriesBeforeUpdate != 0 {
+			log.Infof("performing pre-validation: checking entry count before update (expected: %d)", *cfg.AgentTest.PotEntriesBeforeUpdate)
+			agentResult = &AgentRunResult{Score: 0}
+			if !Exist(potFile) {
+				agentResult.EntryCountBeforeUpdate = 0
+			} else if stats, e := GetPoStats(potFile); e == nil {
+				agentResult.EntryCountBeforeUpdate = stats.Total()
+			}
+			if err = ValidatePotEntryCount(potFile, cfg.AgentTest.PotEntriesBeforeUpdate, "before update"); err != nil {
+				agentResult.PreValidationError = fmt.Errorf("pre-validation failed: %w\nHint: Ensure po/git.pot exists and has the expected number of entries", err)
+				agentResult.Score = 0
+				// Skip agent run when pre-validation fails
+			} else {
+				log.Infof("pre-validation passed")
+				agentResult, err = RunAgentUpdatePot(cfg, agentName)
+			}
+		} else {
+			agentResult, err = RunAgentUpdatePot(cfg, agentName)
+		}
+
+		// Post-validation: check entry count after update (when configured)
+		if err == nil && agentResult != nil && cfg.AgentTest.PotEntriesAfterUpdate != nil && *cfg.AgentTest.PotEntriesAfterUpdate != 0 {
+			log.Infof("performing post-validation: checking entry count after update (expected: %d)", *cfg.AgentTest.PotEntriesAfterUpdate)
+			if Exist(potFile) {
+				if stats, e := GetPoStats(potFile); e == nil {
+					agentResult.EntryCountAfterUpdate = stats.Total()
+				}
+			}
+			if postErr := ValidatePotEntryCount(potFile, cfg.AgentTest.PotEntriesAfterUpdate, "after update"); postErr != nil {
+				agentResult.PostValidationError = fmt.Errorf("post-validation failed: %w\nHint: The agent may not have updated the POT file correctly", postErr)
+				agentResult.Score = 0
+			} else {
+				log.Infof("post-validation passed")
+			}
+		}
 
 		// Calculate execution time for this iteration
 		iterExecutionTime := time.Since(iterStartTime)
