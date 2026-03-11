@@ -97,7 +97,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 
 	for i := 0; i < runs; i++ {
 		runNum := i + 1
-		log.Infof("run %d/%d", runNum, runs)
+		log.Infof("## loop %d/%d", runNum, runs)
 
 		// Start timing for this iteration
 		iterStartTime := time.Now()
@@ -175,7 +175,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		}
 	}
 
-	log.Infof("all runs completed. Aggregated score: %d/100", aggregatedScore)
+	log.Infof("all loops completed. Aggregated score: %d/100", aggregatedScore)
 	return results, aggregatedScore, nil
 }
 

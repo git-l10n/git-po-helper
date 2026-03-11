@@ -97,7 +97,7 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 	totalScore := 0
 	for i := 0; i < runs; i++ {
 		runNum := i + 1
-		log.Infof("run %d/%d", runNum, runs)
+		log.Infof("## loop %d/%d", runNum, runs)
 
 		// Start timing for this iteration
 		iterStartTime := time.Now()
@@ -121,22 +121,12 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 			result.ExecutionTime = time.Since(iterStartTime)
 			results[i] = result
 			totalScore += result.Score
-			log.Debugf("run %d: pre-validation failed, skipping agent: %v", runNum, preErr)
+			log.Errorf("run %d: pre-validation failed, skipping agent: %v", runNum, preErr)
 			continue
 		}
 
-		// Reuse RunAgentTranslate or RunAgentTranslateLocalOrchestration for each run
-		var agentResult *AgentRunResult
-		var runErr error
-		if useLocalOrchestration {
-			bs := batchSize
-			if bs <= 0 {
-				bs = 50
-			}
-			agentResult, runErr = RunAgentTranslateLocalOrchestration(cfg, agentName, poFile, bs)
-		} else {
-			agentResult, runErr = RunAgentTranslate(cfg, agentName, poFile, true)
-		}
+		// RunAgentTranslate dispatches to local or prompt orchestration and prints stats to stderr
+		agentResult, runErr := RunAgentTranslate(cfg, agentName, poFile, true, useLocalOrchestration, batchSize)
 		err = runErr
 
 		// Copy before counts from pre-validation onto agent result (local orchestration
@@ -161,18 +151,18 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 
 		// If there was an error, log it but continue (for agent-test, we want to collect all results)
 		if err != nil {
-			log.Debugf("run %d: agent-run returned error: %v", runNum, err)
+			log.Errorf("run %d: agent-run returned error: %v", runNum, err)
 			// Error details are already in the result structure
 		}
 
 		results[i] = result
 		totalScore += result.Score
-		log.Debugf("run %d: completed with score %d/100", runNum, result.Score)
+		log.Infof("loop %d: completed with score %d/100", runNum, result.Score)
 	}
 
 	// Calculate average score
 	averageScore := float64(totalScore) / float64(runs)
-	log.Infof("all runs completed. Total score: %d/%d, Average: %.2f/100", totalScore, runs*100, averageScore)
+	log.Infof("all loops completed. Total score: %d/%d, Average: %.2f/100", totalScore, runs*100, averageScore)
 
 	return results, averageScore, nil
 }

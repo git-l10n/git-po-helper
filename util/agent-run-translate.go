@@ -3,6 +3,7 @@ package util
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -12,14 +13,71 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// RunAgentTranslate executes a single agent-run translate operation.
-// When preResult is nil, performs pre-validation internally; otherwise uses preResult.
-// Executes the agent command. Post-validation is done by validateTranslatePostResult in CmdAgentRunTranslate.
-func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentTest bool) (*AgentRunResult, error) {
+// RunAgentTranslate runs translate using either local batch orchestration or
+// prompt orchestration (full/extracted PO to agent). It prints translation
+// statistics to stderr before and after the run. Dispatches to
+// RunAgentTranslateLocalOrchestration or RunAgentTranslatePromptOrchestration.
+func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentTest, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
+	var agentErr error
+
+	result := &AgentRunResult{Score: 0}
+
+	poFile, err := GetPoFileAbsPath(cfg, poFile)
+	if err != nil {
+		return result, err
+	}
+	log.Debugf("PO file path: %s", poFile)
+
+	var translateStatsSummary string
+	if stats, err := GetPoStats(poFile); err != nil {
+		log.Debugf("GetPoStats before agent: %v", err)
+	} else {
+		translateStatsSummary = fmt.Sprintf("Translation statistics: before: %d translated, %d untranslated, %d fuzzy.",
+			stats.Translated, stats.Untranslated, stats.Fuzzy)
+	}
+
+	result, agentErr = runAgentTranslateDispatch(cfg, agentName, poFile, useLocalOrchestration, batchSize)
+
+	// After stats: print once whether dispatch succeeded or failed (PO may be partially updated).
+	if stats, errStats := GetPoStats(poFile); errStats != nil {
+		log.Errorf("GetPoStats after agent: %v", errStats)
+		if translateStatsSummary != "" {
+			fmt.Fprintln(os.Stderr, translateStatsSummary)
+		}
+	} else {
+		afterSummary := fmt.Sprintf("Translation statistics: after: %d translated, %d untranslated, %d fuzzy.",
+			stats.Translated, stats.Untranslated, stats.Fuzzy)
+		if translateStatsSummary != "" {
+			fmt.Fprintf(os.Stderr, "%s\n", translateStatsSummary)
+		}
+		fmt.Fprintf(os.Stderr, "%s\n", afterSummary)
+	}
+
+	if agentErr != nil {
+		return result, agentErr
+	}
+	return result, nil
+}
+
+// runAgentTranslateDispatch runs either local orchestration or prompt orchestration.
+func runAgentTranslateDispatch(cfg *config.AgentConfig, agentName, poFile string, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
+	if useLocalOrchestration {
+		if batchSize <= 0 {
+			batchSize = 50
+		}
+		return RunAgentTranslateLocalOrchestration(cfg, agentName, poFile, batchSize)
+	}
+	return RunAgentTranslatePromptOrchestration(cfg, agentName, poFile)
+}
+
+// RunAgentTranslatePromptOrchestration executes translate by building a prompt
+// with the full/extracted PO as source and running the agent once (or as the
+// agent handles it). Post-validation is done by validateTranslatePostResult
+// in CmdAgentRunTranslate.
+func RunAgentTranslatePromptOrchestration(cfg *config.AgentConfig, agentName, poFile string) (*AgentRunResult, error) {
 	startTime := time.Now()
 	result := &AgentRunResult{Score: 0}
 
-	// Determine agent to use
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {
 		return result, err
@@ -27,7 +85,6 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 
 	log.Debugf("using agent: %s (%s)", agentName, selectedAgent.Kind)
 
-	// Determine PO file path
 	poFile, err = GetPoFileAbsPath(cfg, poFile)
 	if err != nil {
 		return result, err
@@ -51,7 +108,6 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 		return result, err
 	}
 
-	// Build agent command with placeholders replaced
 	workDir := repository.WorkDirOrCwd()
 	sourcePath := poFile
 	if rel, err := filepath.Rel(workDir, poFile); err == nil && rel != "" && rel != "." {
@@ -64,13 +120,11 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 	}
 	vars["prompt"] = resolvedPrompt
 
-	// Build agent command with placeholders replaced
 	agentCmd, outputFormat, err := BuildAgentCommand(selectedAgent, vars)
 	if err != nil {
 		return result, fmt.Errorf("failed to build agent command: %w", err)
 	}
 
-	// Execute agent command
 	log.Infof("executing agent command (output=%s, streaming=%v): %s", outputFormat,
 		outputFormat == config.OutputJSON || outputFormat == config.OutputStreamJSON,
 		truncateCommandDisplay(strings.Join(agentCmd, " ")))
@@ -91,7 +145,6 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 
 	applyAgentDiagnostics(result, streamResult)
 
-	// Log output if verbose
 	if len(stdout) > 0 {
 		log.Debugf("agent command stdout: %s", string(stdout))
 	}
@@ -106,7 +159,7 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 // validateTranslatePreResult performs pre-validation before translation:
 // counts new/fuzzy entries. Returns (result, needRun, err).
 // needRun is false when nothing to translate (file already complete).
-// Called from CmdAgentRunTranslate before RunAgentTranslate or RunAgentTranslateLocalOrchestration.
+// Called from CmdAgentRunTranslate before RunAgentTranslate.
 func validateTranslatePreResult(poFile string) (*AgentRunResult, error) {
 	result := &AgentRunResult{Score: 0}
 	if !Exist(poFile) {
@@ -133,7 +186,7 @@ func validateTranslatePreResult(poFile string) (*AgentRunResult, error) {
 
 // validateTranslatePostResult performs post-validation after translation:
 // counts new/fuzzy entries, verifies both are 0, and validates PO syntax.
-// Called from CmdAgentRunTranslate after RunAgentTranslate or RunAgentTranslateLocalOrchestration.
+// Called from CmdAgentRunTranslate after RunAgentTranslate.
 func validateTranslatePostResult(poFile string, result *AgentRunResult) error {
 	log.Infof("performing post-validation: counting new and fuzzy entries")
 
@@ -166,8 +219,8 @@ func validateTranslatePostResult(poFile string, result *AgentRunResult) error {
 }
 
 // CmdAgentRunTranslate implements the agent-run translate command logic.
-// It loads configuration and calls RunAgentTranslate or RunAgentTranslateLocalOrchestration
-// based on useAgentMd/useLocalOrchestration flags, then handles errors appropriately.
+// It loads configuration and calls RunAgentTranslate (which dispatches to
+// local or prompt orchestration), then handles errors appropriately.
 func CmdAgentRunTranslate(agentName, poFile string, useAgentMd, useLocalOrchestration bool, batchSize int) error {
 	var (
 		result *AgentRunResult
@@ -181,7 +234,6 @@ func CmdAgentRunTranslate(agentName, poFile string, useAgentMd, useLocalOrchestr
 
 	startTime := time.Now()
 
-	// Pre-validation: store PO stats before translation in preResult.
 	preResult, err := validateTranslatePreResult(poFile)
 	if err != nil {
 		return err
@@ -190,11 +242,7 @@ func CmdAgentRunTranslate(agentName, poFile string, useAgentMd, useLocalOrchestr
 	if batchSize <= 0 {
 		batchSize = 50
 	}
-	if useLocalOrchestration {
-		result, err = RunAgentTranslateLocalOrchestration(cfg, agentName, poFile, batchSize)
-	} else {
-		result, err = RunAgentTranslate(cfg, agentName, poFile, false)
-	}
+	result, err = RunAgentTranslate(cfg, agentName, poFile, false, useLocalOrchestration, batchSize)
 	result.PreValidationError = preResult.PreValidationError
 	result.BeforeNewCount = preResult.BeforeNewCount
 	result.BeforeFuzzyCount = preResult.BeforeFuzzyCount
@@ -206,12 +254,10 @@ func CmdAgentRunTranslate(agentName, poFile string, useAgentMd, useLocalOrchestr
 		return fmt.Errorf("agent execution failed: %w", err)
 	}
 
-	// Post-validation
 	if err := validateTranslatePostResult(poFile, result); err != nil {
 		return err
 	}
 
-	// For agent-run, we require all validations to pass
 	if result.PreValidationError != nil {
 		return fmt.Errorf("pre-validation failed: %w", result.PreValidationError)
 	}
