@@ -100,7 +100,7 @@ msgstr "你好"
 	}
 
 	runGit("add", "po/")
-	runGit("commit", "-m", "initial")
+	runGit("commit", "--no-verify", "-m", "initial")
 
 	// Second commit for HEAD~..HEAD tests
 	modifiedContent := poContent + "\nmsgid \"World\"\nmsgstr \"世界\"\n"
@@ -108,7 +108,7 @@ msgstr "你好"
 		t.Fatalf("failed to modify zh_CN.po: %v", err)
 	}
 	runGit("add", "po/zh_CN.po")
-	runGit("commit", "-m", "add World")
+	runGit("commit", "--no-verify", "-m", "add World")
 
 	// Modify zh_CN.po for HEAD vs worktree tests
 	modifiedContent = modifiedContent + "\nmsgid \"Foo\"\nmsgstr \"富\"\n"
@@ -252,7 +252,7 @@ msgstr "你好"
 		}
 	}
 	runGit("add", "po/")
-	runGit("commit", "-m", "v1")
+	runGit("commit", "--no-verify", "-m", "v1")
 
 	// Commit 2: zh_CN adds World, Foo; zh_TW unchanged
 	v2 := poHeader + `msgid "Hello"
@@ -268,7 +268,7 @@ msgstr "酒吧"
 		t.Fatalf("failed to write zh_CN.po v2: %v", err)
 	}
 	runGit("add", "po/zh_CN.po")
-	runGit("commit", "-m", "v2")
+	runGit("commit", "--no-verify", "-m", "v2")
 
 	// Worktree: zh_CN has Foo removed, Bar added, World msgstr modified
 	v3 := poHeader + `msgid "Hello"

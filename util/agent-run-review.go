@@ -85,8 +85,8 @@ func buildReviewUseAgentMdPrompt(target *CompareTarget) string {
 // RunAgentReview executes review using agent with po/AGENTS.md (default mode).
 // No programmatic extraction or batching; the agent does everything and writes review.json.
 // Before execution: deletes review.po and review.json. After: expects review.json to exist.
-func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, agentTest bool, outputBase string) (*AgentRunResult, error) {
-	ps := ReviewPathSetFromBase(outputBase)
+func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, agentTest bool) (*AgentRunResult, error) {
+	ps := GetReviewPathSet()
 	workDir := repository.WorkDirOrCwd()
 	startTime := time.Now()
 	result := &AgentRunResult{Score: 0}
@@ -143,7 +143,7 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 		return result, fmt.Errorf("review JSON not generated at %s\nHint: The agent must write the review result to this file", ps.ResultJSON)
 	}
 
-	reportResult, err := ReportReviewFromJSON(ps.ResultJSON)
+	reportResult, err := GetReviewReport()
 	if err != nil {
 		return result, fmt.Errorf("failed to read review JSON: %w", err)
 	}
@@ -164,10 +164,9 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 
 // CmdAgentRunReview implements the agent-run review command logic.
 // It loads configuration and calls RunAgentReview or RunAgentReviewUseAgentMd.
-// outputBase: base path for review output files (e.g. "po/review"); empty uses default.
 // useLocalOrchestration: if true, use local orchestration (--use-local-orchestration);
 // otherwise use agent with po/AGENTS.md (default).
-func CmdAgentRunReview(agentName string, target *CompareTarget, outputBase string, useLocalOrchestration bool, batchSize int) error {
+func CmdAgentRunReview(agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) error {
 	// Load configuration
 	log.Debugf("loading agent configuration")
 	cfg, err := config.LoadAgentConfig(flag.AgentConfigFile())
@@ -179,9 +178,9 @@ func CmdAgentRunReview(agentName string, target *CompareTarget, outputBase strin
 
 	var result *AgentRunResult
 	if useLocalOrchestration {
-		result, err = RunAgentReviewLocalOrchestration(cfg, agentName, target, false, outputBase, batchSize)
+		result, err = RunAgentReviewLocalOrchestration(cfg, agentName, target, false, batchSize)
 	} else {
-		result, err = RunAgentReview(cfg, agentName, target, false, outputBase)
+		result, err = RunAgentReview(cfg, agentName, target, false)
 	}
 	if err != nil {
 		return err

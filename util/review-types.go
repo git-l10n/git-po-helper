@@ -110,12 +110,9 @@ type ReviewPathSet struct {
 	OutputPO   string // po/review-output.po
 }
 
-// ReviewPathSetFromBase returns paths for the given base (e.g. "po/review").
-// If base is empty, uses ReviewDefaultBase.
-func ReviewPathSetFromBase(base string) ReviewPathSet {
-	if base == "" {
-		base = ReviewDefaultBase
-	}
+// GetReviewPathSet returns paths using ReviewDefaultBase (po/review).
+func GetReviewPathSet() ReviewPathSet {
+	base := ReviewDefaultBase
 	dir := filepath.Dir(base)
 	name := filepath.Base(base)
 	if name == "" || name == "." {

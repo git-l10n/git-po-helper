@@ -116,7 +116,7 @@ func cleanReviewOutputFilesForTest(ps ReviewPathSet) {
 // outputBase: base path for review output files (e.g. "po/review"); empty uses default.
 // useLocalOrchestration: if true, use local orchestration; otherwise use agent with po/AGENTS.md.
 func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, runs int, outputBase string, useLocalOrchestration bool, batchSize int) ([]RunResult, int, error) {
-	ps := ReviewPathSetFromBase(outputBase)
+	ps := GetReviewPathSet()
 	// Determine the agent to use
 	_, err := SelectAgent(cfg, agentName)
 	if err != nil {
@@ -139,9 +139,9 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		// Reuse RunAgentReview or RunAgentReviewUseAgentMd for each run
 		var agentResult *AgentRunResult
 		if useLocalOrchestration {
-			agentResult, err = RunAgentReviewLocalOrchestration(cfg, agentName, target, true, outputBase, batchSize)
+			agentResult, err = RunAgentReviewLocalOrchestration(cfg, agentName, target, true, batchSize)
 		} else {
-			agentResult, err = RunAgentReview(cfg, agentName, target, true, outputBase)
+			agentResult, err = RunAgentReview(cfg, agentName, target, true)
 		}
 
 		// Calculate execution time for this iteration
@@ -192,7 +192,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 
 	// Aggregate JSONs (for same msgid, take lowest score) and save
 	aggregatedScore := 0
-	aggregated := AggregateReviewJSON(reviewJSONs, false)
+	aggregated := aggregateReviewJSONResult(reviewJSONs, false)
 	if aggregated != nil {
 		// Update TotalEntries from ps.InputPO (same as ReportReviewFromPathWithBatches)
 		if Exist(ps.InputPO) {
@@ -213,9 +213,9 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 				log.Warnf("failed to save aggregated review JSON: %v", err)
 			}
 		}
-		// Apply aggregated review to generate ps.OutputPO (same as ReportReviewFromPathWithBatches)
+		// Apply aggregated review to generate ps.OutputPO
 		if Exist(ps.InputPO) {
-			if _, err := applyReviewJSON(aggregated, ps.InputPO, ps.OutputPO); err != nil {
+			if _, err := ApplyReviewFromResultJSON(ps); err != nil {
 				log.Warnf("failed to apply aggregated review to %s: %v", ps.OutputPO, err)
 			}
 		}

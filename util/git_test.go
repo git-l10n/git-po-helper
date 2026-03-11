@@ -88,7 +88,7 @@ msgstr "你好"
 	}
 
 	runGit("add", "po/")
-	runGit("commit", "-m", "initial")
+	runGit("commit", "--no-verify", "-m", "initial")
 
 	// Modify only zh_CN.po
 	modifiedContent := poContent + "\nmsgid \"World\"\nmsgstr \"世界\"\n"
@@ -126,7 +126,7 @@ msgstr ""
 			t.Fatalf("failed to write git.pot: %v", err)
 		}
 		runGit("add", "po/git.pot")
-		runGit("commit", "-m", "add pot")
+		runGit("commit", "--no-verify", "-m", "add pot")
 
 		// Modify pot file
 		if err := os.WriteFile(filepath.Join(poDir, "git.pot"), []byte(potContent+"\nmsgid \"extra\"\nmsgstr \"\"\n"), 0644); err != nil {

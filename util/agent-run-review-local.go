@@ -253,10 +253,8 @@ func parseAndAccumulateReviewJSON(stdout []byte, entryCount int) (*ReviewJSONRes
 // Step 6: Rename review-done.json to review-result-<N>.json.
 // Step 7: Loop back (handled by continue).
 // Step 8: Merge all review-result-*.json and display report.
-//
-// outputBase: base path for review output files (e.g. "po/review"); empty uses default.
-func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string, target *CompareTarget, agentTest bool, outputBase string, batchSize int) (*AgentRunResult, error) {
-	ps := ReviewPathSetFromBase(outputBase)
+func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string, target *CompareTarget, agentTest bool, batchSize int) (*AgentRunResult, error) {
+	ps := GetReviewPathSet()
 	startTime := time.Now()
 	result := &AgentRunResult{Score: 0}
 
@@ -281,7 +279,7 @@ func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string,
 		// Step 1 / Step 8: review-result.json exists → merge and summary.
 		if resultExists {
 			log.Infof("%s exists; running merge and summary", ps.ResultJSON)
-			return runMergeAndSummary(ps, outputBase, startTime, result)
+			return runMergeAndSummary(ps, startTime, result)
 		}
 
 		// Step 1: Check for existing review (resume support)
@@ -376,8 +374,8 @@ func runReviewOneTodo(cfg *config.AgentConfig, selectedAgent config.AgentEntry, 
 
 // runMergeAndSummary merges all review-result-*.json and returns the report.
 // Corresponds to AGENTS.md Task 4 step 8.
-func runMergeAndSummary(ps ReviewPathSet, outputBase string, startTime time.Time, result *AgentRunResult) (*AgentRunResult, error) {
-	reportResult, err := ReportReviewFromPathWithBatches(outputBase)
+func runMergeAndSummary(ps ReviewPathSet, startTime time.Time, result *AgentRunResult) (*AgentRunResult, error) {
+	reportResult, err := GetReviewReport()
 	if err != nil {
 		return result, err
 	}

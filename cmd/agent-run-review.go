@@ -40,7 +40,7 @@ With two file arguments, compare worktree files (revisions not allowed).`,
 			if err != nil {
 				return NewStandardErrorF("%v", err)
 			}
-			if err := util.CmdAgentRunReview(opts.Agent, target, opts.Output, opts.UseLocalOrchestration, opts.BatchSize); err != nil {
+			if err := util.CmdAgentRunReview(opts.Agent, target, opts.UseLocalOrchestration, opts.BatchSize); err != nil {
 				return NewStandardErrorF("%v", err)
 			}
 			return nil

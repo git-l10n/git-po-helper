@@ -203,11 +203,11 @@ func ParseReviewJSON(jsonData []byte) (*ReviewJSONResult, error) {
 	return &review, nil
 }
 
-// AggregateReviewJSON merges multiple review JSON results. For each msgid that
+// aggregateReviewJSONResult merges multiple review JSON results. For each msgid that
 // appears in multiple runs, the issue with the lowest score (most severe) is kept.
 // total_entries is taken from the first non-empty review. Returns nil if no valid input.
 // If warnDup is true, logs an error when duplicate msgid issues are found.
-func AggregateReviewJSON(reviews []*ReviewJSONResult, warnDup bool) *ReviewJSONResult {
+func aggregateReviewJSONResult(reviews []*ReviewJSONResult, warnDup bool) *ReviewJSONResult {
 	if len(reviews) == 0 {
 		return nil
 	}
@@ -218,8 +218,12 @@ func AggregateReviewJSON(reviews []*ReviewJSONResult, warnDup bool) *ReviewJSONR
 		if r == nil {
 			continue
 		}
-		if r.TotalEntries > 0 && totalEntries == 0 {
-			totalEntries = r.TotalEntries
+		if r.TotalEntries > 0 {
+			if totalEntries == 0 {
+				totalEntries = r.TotalEntries
+			} else if totalEntries != r.TotalEntries {
+				log.Warnf("aggregateReviewJSONResult: inconsistent total_entries: %d != %d", totalEntries, r.TotalEntries)
+			}
 		}
 		for i := range r.Issues {
 			issue := &r.Issues[i]

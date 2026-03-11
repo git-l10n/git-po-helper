@@ -3,7 +3,6 @@ package util
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -94,13 +93,23 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
-	jsonFile := filepath.Join(tmpDir, "review.json")
-	poFile := filepath.Join(tmpDir, "review.po")
-	if err := os.WriteFile(jsonFile, data, 0644); err != nil {
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	defer os.Chdir(origWd)
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir %s: %v", tmpDir, err)
+	}
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatalf("MkdirAll po: %v", err)
+	}
+	ps := GetReviewPathSet()
+	if err := os.WriteFile(ps.ResultJSON, data, 0644); err != nil {
 		t.Fatalf("write failed: %v", err)
 	}
-	// ReportReviewFromJSON requires the .po to exist; it sets TotalEntries from PO stats.
-	if err := os.WriteFile(poFile, []byte(minimalPoWithEntries(2)), 0644); err != nil {
+	// GetReviewReport requires the .po to exist; it sets TotalEntries from PO stats.
+	if err := os.WriteFile(ps.InputPO, []byte(minimalPoWithEntries(2)), 0644); err != nil {
 		t.Fatalf("write po failed: %v", err)
 	}
 
@@ -113,9 +122,9 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 		t.Errorf("expected score ~98, got %d", score)
 	}
 
-	result, err := ReportReviewFromJSON(jsonFile)
+	result, err := GetReviewReport()
 	if err != nil {
-		t.Fatalf("ReportReviewFromJSON failed: %v", err)
+		t.Fatalf("GetReviewReport failed: %v", err)
 	}
 	// TotalEntries is taken from the PO file (2 entries), not from JSON
 	if result.Review.TotalEntries != 2 {
@@ -147,7 +156,18 @@ msgstr "old"
 	reviewJSON := `{"total_entries": 1, "issues": [{"msgid": "line1\nline2", "score": 0, "description": "fix", "suggest_msgstr": "new1\nnew2"}]}`
 
 	tmpDir := t.TempDir()
-	ps := ReviewPathSetFromBase(filepath.Join(tmpDir, "review"))
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	defer os.Chdir(origWd)
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir %s: %v", tmpDir, err)
+	}
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatalf("MkdirAll po: %v", err)
+	}
+	ps := GetReviewPathSet()
 	if err := os.WriteFile(ps.InputPO, []byte(inputPO), 0644); err != nil {
 		t.Fatalf("write input PO: %v", err)
 	}
@@ -178,17 +198,27 @@ func TestReportReviewMarkdownWrappedJSON(t *testing.T) {
 	// JSON wrapped in markdown (common LLM output) - tests preprocessing
 	validInMarkdown := "```json\n" + `{"total_entries": 5, "issues": [{"msgid": "x", "score": 2, "description": "d", "suggest_msgstr": "s"}]}` + "\n```"
 	tmpDir := t.TempDir()
-	jsonFile := filepath.Join(tmpDir, "review.json")
-	poFile := filepath.Join(tmpDir, "review.po")
-	if err := os.WriteFile(jsonFile, []byte(validInMarkdown), 0644); err != nil {
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	defer os.Chdir(origWd)
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir %s: %v", tmpDir, err)
+	}
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatalf("MkdirAll po: %v", err)
+	}
+	ps := GetReviewPathSet()
+	if err := os.WriteFile(ps.ResultJSON, []byte(validInMarkdown), 0644); err != nil {
 		t.Fatalf("write failed: %v", err)
 	}
-	if err := os.WriteFile(poFile, []byte(minimalPoWithEntries(1)), 0644); err != nil {
+	if err := os.WriteFile(ps.InputPO, []byte(minimalPoWithEntries(1)), 0644); err != nil {
 		t.Fatalf("write po failed: %v", err)
 	}
-	result, err := ReportReviewFromJSON(jsonFile)
+	result, err := GetReviewReport()
 	if err != nil {
-		t.Fatalf("ReportReviewFromJSON failed: %v", err)
+		t.Fatalf("GetReviewReport failed: %v", err)
 	}
 	// TotalEntries comes from the PO file (1 entry)
 	if result.Review.TotalEntries != 1 {
