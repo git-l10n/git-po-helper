@@ -89,6 +89,7 @@ func RunAgentTestUpdatePot(agentName string, runs int, cfg *config.AgentConfig) 
 		result := TestRunResult{
 			AgentRunResult: *agentResult,
 			RunNumber:      runNum,
+			RunError:       err,
 		}
 		result.ExecutionTime = iterExecutionTime
 

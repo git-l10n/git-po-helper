@@ -27,7 +27,6 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 	// Determine agent to use
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {
-		result.AgentError = err
 		return result, err
 	}
 
@@ -55,10 +54,9 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 		}
 
 		if err := ValidatePoEntryCount(poFile, cfg.AgentTest.PoEntriesBeforeUpdate, "before update"); err != nil {
-			result.PreValidationError = err.Error()
-			return result, fmt.Errorf("pre-validation failed: %w\nHint: Ensure %s exists and has the expected number of entries", err, poFile)
+			result.PreValidationError = fmt.Errorf("pre-validation failed: %w\nHint: Ensure %s exists and has the expected number of entries", err, poFile)
+			return result, result.PreValidationError
 		}
-		result.PreValidationPass = true
 		log.Infof("pre-validation passed")
 	} else {
 		// No pre-validation configured, count entries for display purposes
@@ -69,7 +67,6 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 				result.EntryCountBeforeUpdate = stats.Total()
 			}
 		}
-		result.PreValidationPass = true // Consider it passed if not configured
 	}
 
 	// Get prompt for update-po from configuration
@@ -111,7 +108,6 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 		if len(stdout) > 0 {
 			log.Debugf("agent command stdout: %s", string(stdout))
 		}
-		result.AgentError = err
 		return result, err
 	}
 	log.Infof("agent command completed successfully")
@@ -138,40 +134,29 @@ func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string, agentTe
 		}
 
 		if err := ValidatePoEntryCount(poFile, cfg.AgentTest.PoEntriesAfterUpdate, "after update"); err != nil {
-			result.PostValidationError = err.Error()
+			result.PostValidationError = fmt.Errorf("post-validation failed: %w\nHint: The agent may not have updated the PO file correctly", err)
 			result.Score = 0
-			return result, fmt.Errorf("post-validation failed: %w\nHint: The agent may not have updated the PO file correctly", err)
+			return result, result.PostValidationError
 		}
-		result.PostValidationPass = true
 		result.Score = 100
 		log.Infof("post-validation passed")
 	} else {
-		// No post-validation configured, score based on agent exit code
+		// No post-validation configured, score based on agent exit code (we only reach here when agent succeeded)
 		if Exist(poFile) {
 			if stats, err := GetPoStats(poFile); err == nil {
 				result.EntryCountAfterUpdate = stats.Total()
 			}
 		}
-		if result.AgentError == nil {
-			result.Score = 100
-			result.PostValidationPass = true // Consider it passed if agent succeeded
-		} else {
-			result.Score = 0
-		}
+		result.Score = 100
 	}
 
-	// Validate PO file syntax (only if agent succeeded)
-	if result.AgentError == nil {
-		log.Infof("validating file syntax: %s", poFile)
-		if err := ValidatePoFile(poFile); err != nil {
-			log.Errorf("file syntax validation failed: %v", err)
-			result.SyntaxValidationError = err.Error()
-			// Don't fail the run for syntax errors in agent-run, but log it
-			// In agent-test, this might affect the score
-		} else {
-			result.SyntaxValidationPass = true
-			log.Infof("file syntax validation passed")
-		}
+	// Validate PO file syntax (we only reach here when agent succeeded)
+	log.Infof("validating file syntax: %s", poFile)
+	if err := ValidatePoFile(poFile); err != nil {
+		log.Errorf("file syntax validation failed: %v", err)
+		result.SyntaxValidationError = err
+	} else {
+		log.Infof("file syntax validation passed")
 	}
 
 	// Record execution time
@@ -198,17 +183,14 @@ func CmdAgentRunUpdatePo(agentName, poFile string) error {
 	}
 
 	// For agent-run, we require all validations to pass
-	if !result.PreValidationPass {
-		return fmt.Errorf("pre-validation failed: %s", result.PreValidationError)
+	if result.PreValidationError != nil {
+		return fmt.Errorf("pre-validation failed: %w", result.PreValidationError)
 	}
-	if result.AgentError != nil {
-		return fmt.Errorf("agent execution failed: %w", result.AgentError)
+	if result.PostValidationError != nil {
+		return fmt.Errorf("post-validation failed: %w", result.PostValidationError)
 	}
-	if !result.PostValidationPass {
-		return fmt.Errorf("post-validation failed: %s", result.PostValidationError)
-	}
-	if result.SyntaxValidationError != "" {
-		return fmt.Errorf("file validation failed: %s\nHint: Check the PO file syntax using 'msgfmt --check-format'", result.SyntaxValidationError)
+	if result.SyntaxValidationError != nil {
+		return fmt.Errorf("file validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", result.SyntaxValidationError)
 	}
 
 	elapsed := time.Since(startTime)

@@ -47,11 +47,12 @@ func formatDuration(d time.Duration) string {
 }
 
 // TestRunResult holds the result of a single test run.
-// It embeds AgentRunResult so agent-run fields (PreValidationPass, Score, etc.)
+// It embeds AgentRunResult so agent-run fields (Score, etc.)
 // are inherited; RunNumber is test-specific.
 type TestRunResult struct {
 	AgentRunResult
-	RunNumber int // Test run index (1-based)
+	RunNumber int   // Test run index (1-based)
+	RunError  error // Error from agent run, for display when run fails
 }
 
 // ConfirmAgentTestExecution displays a warning and requires user confirmation before proceeding.
@@ -255,7 +256,7 @@ func displayTestResults(results []TestRunResult, averageScore float64, totalRuns
 
 		// Show validation status
 		if expectedBefore != nil && *expectedBefore != 0 {
-			if result.PreValidationPass {
+			if result.PreValidationError == nil {
 				fmt.Printf("  Pre-validation:  PASS (expected: %d, actual: %d)\n",
 					*expectedBefore, result.EntryCountBeforeUpdate)
 			} else {
@@ -265,17 +266,17 @@ func displayTestResults(results []TestRunResult, averageScore float64, totalRuns
 		}
 
 		if result.AgentExecuted {
-			if result.AgentError == nil {
+			if result.RunError == nil {
 				fmt.Printf("  Agent execution: PASS\n")
 			} else {
-				fmt.Printf("  Agent execution: FAIL - %v\n", result.AgentError)
+				fmt.Printf("  Agent execution: FAIL - %v\n", result.RunError)
 			}
 		} else {
 			fmt.Printf("  Agent execution: SKIPPED (pre-validation failed)\n")
 		}
 
 		if expectedAfter != nil && *expectedAfter != 0 {
-			if result.PostValidationPass {
+			if result.PostValidationError == nil {
 				fmt.Printf("  Post-validation: PASS (expected: %d, actual: %d)\n",
 					*expectedAfter, result.EntryCountAfterUpdate)
 			} else {

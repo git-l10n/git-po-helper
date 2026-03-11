@@ -52,13 +52,10 @@ type TranslateResult struct {
 
 // AgentRunResult holds the result of a single agent-run execution.
 type AgentRunResult struct {
-	PreValidationPass     bool
-	PostValidationPass    bool
 	AgentExecuted         bool
-	PreValidationError    string
-	PostValidationError   string
-	SyntaxValidationPass  bool
-	SyntaxValidationError string
+	PreValidationError    error // nil = success
+	PostValidationError   error // nil = success
+	SyntaxValidationError error // nil = success
 	Score                 int // 0-100, calculated based on validations
 
 	// Update-po/update-pot: embedded when from update-po/update-pot
@@ -73,7 +70,6 @@ type AgentRunResult struct {
 	AgentStderr []byte `json:"-"`
 
 	// Agent diagnostics
-	AgentError    error
 	NumTurns      int // Number of turns in the conversation
 	ExecutionTime time.Duration
 }

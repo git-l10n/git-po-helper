@@ -143,6 +143,7 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 		result := TestRunResult{
 			AgentRunResult: *agentResult,
 			RunNumber:      runNum,
+			RunError:       err,
 		}
 		result.ExecutionTime = iterExecutionTime
 
@@ -256,13 +257,13 @@ func displayTranslateTestResults(results []TestRunResult, averageScore float64, 
 			fmt.Printf("  Fuzzy entries:   %d (before) -> %d (after)\n",
 				result.BeforeFuzzyCount, result.AfterFuzzyCount)
 
-			if result.AgentError == nil {
+			if result.RunError == nil {
 				fmt.Printf("  Agent execution: PASS\n")
 			} else {
-				fmt.Printf("  Agent execution: FAIL - %v\n", result.AgentError)
+				fmt.Printf("  Agent execution: FAIL - %v\n", result.RunError)
 			}
 
-			if result.PostValidationPass {
+			if result.PostValidationError == nil {
 				fmt.Printf("  Validation:      PASS (all entries translated)\n")
 			} else {
 				fmt.Printf("  Validation:      FAIL - %s\n", result.PostValidationError)

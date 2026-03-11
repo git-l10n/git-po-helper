@@ -23,7 +23,6 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 	// Determine agent to use
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {
-		result.AgentError = err
 		return result, err
 	}
 
@@ -87,7 +86,6 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 		if len(stdout) > 0 {
 			log.Debugf("agent command stdout: %s", string(stdout))
 		}
-		result.AgentError = err
 		return result, err
 	}
 	log.Infof("agent command completed successfully")
@@ -127,11 +125,10 @@ func validateTranslatePreResult(poFile string) (*AgentRunResult, error) {
 	log.Infof("fuzzy entries before translation: %d", statsBefore.Fuzzy)
 
 	if statsBefore.Untranslated == 0 && statsBefore.Fuzzy == 0 {
-		result.PreValidationPass = false
 		result.Score = 0
-		return result, fmt.Errorf("no new or fuzzy entries to translate, PO file is ready for use")
+		result.PreValidationError = fmt.Errorf("no new or fuzzy entries to translate, PO file is ready for use")
+		return result, result.PreValidationError
 	}
-	result.PreValidationPass = true
 	return result, nil
 }
 
@@ -151,21 +148,19 @@ func validateTranslatePostResult(poFile string, result *AgentRunResult) error {
 	log.Infof("fuzzy entries after translation: %d", statsAfter.Fuzzy)
 
 	if statsAfter.Untranslated != 0 || statsAfter.Fuzzy != 0 {
-		result.PostValidationError = fmt.Sprintf("translation incomplete: %d new entries and %d fuzzy entries remaining", statsAfter.Untranslated, statsAfter.Fuzzy)
+		result.PostValidationError = fmt.Errorf("translation incomplete: %d new entries and %d fuzzy entries remaining", statsAfter.Untranslated, statsAfter.Fuzzy)
 		result.Score = 0
-		return fmt.Errorf("post-validation failed: %s\nHint: The agent should translate all new entries and resolve all fuzzy entries", result.PostValidationError)
+		return fmt.Errorf("post-validation failed: %w\nHint: The agent should translate all new entries and resolve all fuzzy entries", result.PostValidationError)
 	}
 
-	result.PostValidationPass = true
 	result.Score = 100
 	log.Infof("post-validation passed: all entries translated")
 
 	log.Infof("validating file syntax: %s", poFile)
 	if err := ValidatePoFile(poFile); err != nil {
 		log.Errorf("file syntax validation failed: %v", err)
-		result.SyntaxValidationError = err.Error()
+		result.SyntaxValidationError = err
 	} else {
-		result.SyntaxValidationPass = true
 		log.Infof("file syntax validation passed")
 	}
 	return nil
@@ -203,7 +198,6 @@ func CmdAgentRunTranslate(agentName, poFile string, useAgentMd, useLocalOrchestr
 	} else {
 		result, err = RunAgentTranslate(cfg, agentName, poFile, false)
 	}
-	result.PreValidationPass = preResult.PreValidationPass
 	result.PreValidationError = preResult.PreValidationError
 	result.BeforeNewCount = preResult.BeforeNewCount
 	result.BeforeFuzzyCount = preResult.BeforeFuzzyCount
@@ -221,14 +215,14 @@ func CmdAgentRunTranslate(agentName, poFile string, useAgentMd, useLocalOrchestr
 	}
 
 	// For agent-run, we require all validations to pass
-	if !result.PreValidationPass {
-		return fmt.Errorf("pre-validation failed: %s", result.PreValidationError)
+	if result.PreValidationError != nil {
+		return fmt.Errorf("pre-validation failed: %w", result.PreValidationError)
 	}
-	if !result.PostValidationPass {
-		return fmt.Errorf("post-validation failed: %s", result.PostValidationError)
+	if result.PostValidationError != nil {
+		return fmt.Errorf("post-validation failed: %w", result.PostValidationError)
 	}
-	if result.SyntaxValidationError != "" {
-		return fmt.Errorf("file validation failed: %s\nHint: Check the PO file syntax using 'msgfmt --check-format'", result.SyntaxValidationError)
+	if result.SyntaxValidationError != nil {
+		return fmt.Errorf("file validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", result.SyntaxValidationError)
 	}
 	log.Infof("agent-run translate completed successfully")
 	return nil

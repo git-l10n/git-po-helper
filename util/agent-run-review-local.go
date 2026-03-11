@@ -260,7 +260,6 @@ func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string,
 
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {
-		result.AgentError = err
 		return result, err
 	}
 	log.Debugf("using agent: %s (%s)", agentName, selectedAgent.Kind)

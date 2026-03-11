@@ -16,7 +16,7 @@ import (
 // executeReviewAgent executes the agent command for reviewing the given file.
 // vars contains placeholder values (e.g. "prompt", "source" for the file to review).
 // Returns stdout (for JSON extraction), stderr, originalStdout (raw before parsing), streamResult.
-// Updates result with AgentExecuted, AgentError, AgentStdout, AgentStderr.
+// Updates result with AgentExecuted, AgentStdout, AgentStderr.
 func executeReviewAgent(selectedAgent config.AgentEntry, vars PlaceholderVars, result *AgentRunResult) (stdout, stderr, originalStdout []byte, streamResult AgentStreamResult, err error) {
 	agentCmd, outputFormat, err := BuildAgentCommand(selectedAgent, vars)
 	if err != nil {
@@ -37,7 +37,6 @@ func executeReviewAgent(selectedAgent config.AgentEntry, vars PlaceholderVars, r
 		if len(stdout) > 0 {
 			log.Debugf("agent command stdout: %s", string(stdout))
 		}
-		result.AgentError = execErr
 		return nil, stderr, originalStdout, streamResult, execErr
 	}
 	log.Infof("agent command completed successfully")
@@ -93,7 +92,6 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {
-		result.AgentError = err
 		return result, err
 	}
 
@@ -106,7 +104,6 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 		return result, err
 	}
 	if !Exist(poFile) {
-		result.AgentError = fmt.Errorf("PO file does not exist: %s", poFile)
 		return result, fmt.Errorf("PO file does not exist: %s\nHint: Ensure the PO file exists before running review", poFile)
 	}
 
@@ -126,7 +123,6 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 	kind := selectedAgent.Kind
 	stdout, _, stderr, streamResult, err := RunAgentAndParse(agentCmd, outputFormat, kind)
 	if err != nil {
-		result.AgentError = err
 		return result, err
 	}
 	applyAgentDiagnostics(result, streamResult)
@@ -180,11 +176,6 @@ func CmdAgentRunReview(agentName string, target *CompareTarget, useLocalOrchestr
 	}
 	if err != nil {
 		return err
-	}
-
-	// For agent-run, we require agent execution to succeed (no error set)
-	if result.AgentError != nil {
-		return fmt.Errorf("agent execution failed: %w", result.AgentError)
 	}
 
 	elapsed := time.Since(startTime)

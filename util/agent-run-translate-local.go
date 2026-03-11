@@ -38,7 +38,6 @@ func RunAgentTranslateLocalOrchestration(cfg *config.AgentConfig, agentName, poF
 
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {
-		result.AgentError = err
 		return result, err
 	}
 
@@ -254,7 +253,6 @@ func translateOneBatch(cfg *config.AgentConfig, selectedAgent config.AgentEntry,
 		if len(stderr) > 0 {
 			log.Debugf("agent stderr: %s", string(stderr))
 		}
-		result.AgentError = execErr
 		return fmt.Errorf("agent failed: %w", execErr)
 	}
 	applyAgentDiagnostics(result, streamResult)
@@ -415,7 +413,6 @@ func fixPoWithAgent(cfg *config.AgentConfig, selectedAgent config.AgentEntry, po
 		if len(stderr) > 0 {
 			log.Debugf("agent stderr: %s", string(stderr))
 		}
-		result.AgentError = execErr
 		return fmt.Errorf("agent fix failed: %w", execErr)
 	}
 	applyAgentDiagnostics(result, streamResult)

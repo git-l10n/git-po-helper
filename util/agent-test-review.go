@@ -143,15 +143,8 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		} else {
 			agentResult, err = RunAgentReview(cfg, agentName, target, true)
 		}
-		if err != nil {
-			if agentResult == nil {
-				agentResult = &AgentRunResult{
-					AgentError: err,
-					Score:      0,
-				}
-			} else {
-				agentResult.AgentError = err
-			}
+		if err != nil && agentResult == nil {
+			agentResult = &AgentRunResult{Score: 0}
 		}
 
 		// Calculate execution time for this iteration
@@ -161,6 +154,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		result := TestRunResult{
 			AgentRunResult: *agentResult,
 			RunNumber:      runNum,
+			RunError:       err,
 		}
 		result.ExecutionTime = iterExecutionTime
 		results[i] = result
@@ -322,10 +316,10 @@ func displayReviewTestResults(results []TestRunResult, aggregatedScore int, tota
 		fmt.Printf("Run %d: %s (Score: %d/100)\n", result.RunNumber, status, result.Score)
 
 		if result.AgentExecuted {
-			if result.AgentError == nil {
+			if result.RunError == nil {
 				fmt.Printf("  Agent execution: PASS\n")
 			} else {
-				fmt.Printf("  Agent execution: FAIL - %v\n", result.AgentError)
+				fmt.Printf("  Agent execution: FAIL - %v\n", result.RunError)
 			}
 
 			if result.Score > 0 {

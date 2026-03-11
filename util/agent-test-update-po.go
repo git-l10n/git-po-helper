@@ -93,6 +93,7 @@ func RunAgentTestUpdatePo(agentName, poFile string, runs int, cfg *config.AgentC
 		result := TestRunResult{
 			AgentRunResult: *agentResult,
 			RunNumber:      runNum,
+			RunError:       err,
 		}
 		result.ExecutionTime = iterExecutionTime
 
