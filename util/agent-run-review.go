@@ -3,6 +3,7 @@ package util
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -80,10 +81,101 @@ func buildReviewUseAgentMdPrompt(target *CompareTarget) string {
 	return taskDesc + " according to @po/AGENTS.md."
 }
 
-// RunAgentReview executes review using agent with po/AGENTS.md (default mode).
+// RunAgentReview dispatches to local batch orchestration or prompt orchestration
+// (agent with po/AGENTS.md). Same pattern as RunAgentTranslate.
+// After a successful dispatch, verifies review-pending.po is empty or absent;
+// otherwise the review did not finish all entries.
+func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
+	result, agentErr := runAgentReviewDispatch(cfg, agentName, target, useLocalOrchestration, batchSize)
+	if result == nil {
+		result = &AgentRunResult{Score: 0}
+	}
+	if result.ReviewReport.ReviewResult != nil {
+		result.Score = result.ReviewReport.Score
+	}
+
+	// setReviewPostValidation records post-validation failure and clears score.
+	setReviewPostValidation := func(err error) {
+		if err == nil {
+			return
+		}
+		if result.PostValidationError == nil {
+			result.PostValidationError = err
+		}
+		result.Score = 0
+		log.Errorf("%v", err)
+	}
+
+	// Post-validation: verify review-pending.po is empty or absent;
+	ps := GetReviewPathSet()
+	pendingCount := 0
+	if Exist(ps.PendingPO) {
+		info, statErr := os.Stat(ps.PendingPO)
+		if statErr != nil {
+			setReviewPostValidation(fmt.Errorf("cannot stat pending review PO %s: %w", ps.PendingPO, statErr))
+		} else if info.Size() == 0 {
+			pendingCount = 0
+		} else {
+			stats, statsErr := GetPoStats(ps.PendingPO)
+			if statsErr != nil {
+				setReviewPostValidation(fmt.Errorf("cannot get PO stats for %s: %w", ps.PendingPO, statsErr))
+			} else {
+				pendingCount = stats.Total()
+			}
+		}
+	}
+
+	totalCount := 0
+	if Exist(ps.InputPO) {
+		stats, statsErr := GetPoStats(ps.InputPO)
+		if statsErr != nil {
+			setReviewPostValidation(fmt.Errorf("cannot get PO stats for %s: %w", ps.InputPO, statsErr))
+		} else {
+			totalCount = stats.Total()
+		}
+	}
+
+	if pendingCount != 0 {
+		reviewedCount := totalCount - pendingCount
+		if reviewedCount < 0 {
+			reviewedCount = 0
+		}
+		setReviewPostValidation(fmt.Errorf(
+			"review incomplete: %d entries still in %s (total in %s: %d, reviewed: %d, not reviewed: %d)",
+			pendingCount, ps.PendingPO, ps.InputPO, totalCount, reviewedCount, pendingCount))
+	}
+
+	// Pending file absent or empty — success only when no post-validation error recorded
+	if result.PostValidationError == nil && (!Exist(ps.PendingPO) || pendingCount == 0) {
+		if totalCount > 0 {
+			log.Infof("review completed successfully: all %d entries reviewed (none remaining in pending)", totalCount)
+		} else if useLocalOrchestration {
+			// Local orchestration expects input/pending pipeline; zero total means nothing to review
+			setReviewPostValidation(fmt.Errorf(
+				"no entries reviewed: input PO %s missing or empty, or pending absent or empty", ps.InputPO))
+		} else {
+			log.Infof("no pending entries (input PO %s may be absent in prompt-only flow)", ps.InputPO)
+		}
+	}
+
+	return result, agentErr
+}
+
+// runAgentReviewDispatch runs either local orchestration or prompt orchestration.
+func runAgentReviewDispatch(cfg *config.AgentConfig, agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
+	if useLocalOrchestration {
+		if batchSize <= 0 {
+			batchSize = 50
+		}
+		return RunAgentReviewLocalOrchestration(cfg, agentName, target, batchSize)
+	}
+	return RunAgentReviewPromptOrchestration(cfg, agentName, target)
+}
+
+// RunAgentReviewPromptOrchestration executes review using agent with po/AGENTS.md (default mode).
 // No programmatic extraction or batching; the agent does everything and writes review.json.
 // Before execution: deletes review.po and review.json. After: expects review.json to exist.
-func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, agentTest bool) (*AgentRunResult, error) {
+func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string, target *CompareTarget) (*AgentRunResult, error) {
 	ps := GetReviewPathSet()
 	workDir := repository.WorkDirOrCwd()
 	startTime := time.Now()
@@ -154,7 +246,7 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 }
 
 // CmdAgentRunReview implements the agent-run review command logic.
-// It loads configuration and calls RunAgentReview or RunAgentReviewUseAgentMd.
+// It loads configuration and calls RunAgentReview (dispatches to local or prompt orchestration).
 // useLocalOrchestration: if true, use local orchestration (--use-local-orchestration);
 // otherwise use agent with po/AGENTS.md (default).
 func CmdAgentRunReview(agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) error {
@@ -165,22 +257,18 @@ func CmdAgentRunReview(agentName string, target *CompareTarget, useLocalOrchestr
 
 	startTime := time.Now()
 
-	var result *AgentRunResult
-	if useLocalOrchestration {
-		result, err = RunAgentReviewLocalOrchestration(cfg, agentName, target, false, batchSize)
-	} else {
-		result, err = RunAgentReview(cfg, agentName, target, false)
+	if batchSize <= 0 {
+		batchSize = 50
 	}
+	result, err := RunAgentReview(cfg, agentName, target, useLocalOrchestration, batchSize)
 	if err != nil {
 		return err
 	}
 
 	elapsed := time.Since(startTime)
 
-	// Display review report (same format as agent-run report)
-	if result.ReviewReport.ReviewResult != nil {
-		PrintReviewReportResult(&result.ReviewReport)
-	}
+	// Display review report and execution/validation (same format as agent-run report)
+	PrintReviewReportResult(result, nil)
 
 	fmt.Printf("\nSummary:\n")
 	if result.ReviewReport.ReportFile != "" {

@@ -210,9 +210,10 @@ func translateOneBatch(cfg *config.AgentConfig, selectedAgent config.AgentEntry,
 	if err != nil {
 		return fmt.Errorf("failed to build agent command: %w", err)
 	}
+	// Align with RunAgentTranslate prompt path: mark executed before RunAgentAndParse.
+	result.AgentExecuted = true
 	log.Infof("translating: %s -> %s (output=%s, streaming=%v)", sourceRel, destRel, outputFormat,
 		outputFormat == config.OutputJSON || outputFormat == config.OutputStreamJSON)
-	result.AgentExecuted = true
 
 	_, _, stderr, streamResult, execErr := RunAgentAndParse(agentCmd, outputFormat, selectedAgent.Kind)
 	if execErr != nil {

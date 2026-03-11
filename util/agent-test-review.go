@@ -77,7 +77,7 @@ func cleanReviewOutputFilesForTest(ps ReviewPathSet) {
 }
 
 // RunAgentTestReview runs the agent-test review operation multiple times.
-// It reuses RunAgentReview (or RunAgentReviewUseAgentMd when useLocalOrchestration is false) for each run,
+// It calls RunAgentReview for each run (dispatches to local or prompt orchestration),
 // aggregates JSON results (for same msgid takes lowest score), and saves one aggregated
 // JSON at the end. No per-run backup.
 // Returns scores for each run, aggregated score (from merged JSON), and error.
@@ -104,14 +104,9 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 
 		cleanReviewOutputFilesForTest(ps)
 
-		// Reuse RunAgentReview or RunAgentReviewUseAgentMd for each run
-		var agentResult *AgentRunResult
-		if useLocalOrchestration {
-			agentResult, err = RunAgentReviewLocalOrchestration(cfg, agentName, target, true, batchSize)
-		} else {
-			agentResult, err = RunAgentReview(cfg, agentName, target, true)
-		}
-		if err != nil && agentResult == nil {
+		// RunAgentReview dispatches to local or prompt orchestration
+		agentResult, agentErr := RunAgentReview(cfg, agentName, target, useLocalOrchestration, batchSize)
+		if agentErr != nil && agentResult == nil {
 			agentResult = &AgentRunResult{Score: 0}
 		}
 
@@ -122,16 +117,18 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		result := TestRunResult{
 			AgentRunResult: *agentResult,
 			RunNumber:      runNum,
-			RunError:       err,
+			RunError:       agentErr,
 		}
 		result.ExecutionTime = iterExecutionTime
 		results[i] = result
 
 		// Record per-run score and collect JSON for aggregation
-		if err != nil {
+		if agentErr != nil {
 			log.Errorf("loop %d: agent-run returned error: %v", runNum, err)
+		} else if agentResult.PostValidationError != nil {
+			// Pending PO still has entries; score must stay 0 (set in RunAgentReview)
+			result.Score = 0
 		} else if agentResult.ReviewReport.ReviewResult != nil {
-			result.Score = agentResult.ReviewReport.Score
 			reviewJSONs = append(reviewJSONs, agentResult.ReviewReport.ReviewResult)
 			log.Infof("loop %d: review score: %d (total_entries=%d, issues=%d)",
 				runNum,
@@ -281,23 +278,11 @@ func displayReviewTestResults(results []TestRunResult, aggregatedScore int, tota
 			failureCount++
 		}
 
-		fmt.Printf("Run %d: %s (Score: %d/100)\n", result.RunNumber, status, result.Score)
+		fmt.Printf("## loop %d: %s (Score: %d/100)\n", result.RunNumber, status, result.ReviewReport.Score)
 
-		if result.AgentExecuted {
-			if result.RunError == nil {
-				fmt.Printf("  Agent execution: PASS\n")
-			} else {
-				fmt.Printf("  Agent execution: FAIL - %v\n", result.RunError)
-			}
-
-			if result.Score > 0 {
-				fmt.Printf("  Review status:   PASS (valid JSON with score %d/100)\n", result.Score)
-			} else {
-				fmt.Printf("  Review status:   FAIL (no valid JSON or agent failed)\n")
-			}
-		} else {
-			fmt.Printf("  Agent execution: SKIPPED\n")
-		}
+		// Reuse PrintReviewReportResult (stats block prints only when ReviewResult != nil)
+		ar := result.AgentRunResult
+		PrintReviewReportResult(&ar, result.RunError)
 
 		fmt.Println()
 	}

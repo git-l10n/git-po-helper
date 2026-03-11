@@ -17,6 +17,10 @@ import (
 // Used by agent-run report when no path is given.
 var DefaultReviewBase = filepath.Join(PoDir, "review")
 
+// ReviewStatLabelWidth is the column width for left-aligned review statistic labels
+// (PrintReviewReportResult, agent-test review display). Change this to adjust alignment.
+var ReviewStatLabelWidth = 22
+
 // CountReviewIssueScores returns counts by issue score from a review.
 // ReviewIssueScoreCritical, ReviewIssueScoreMajor, ReviewIssueScoreMinor. Perfect count is derived: TotalEntries - (critical + major + minor).
 func CountReviewIssueScores(review *ReviewJSONResult) (critical, major, minor int) {
@@ -239,7 +243,7 @@ func GetReviewReport() (*ReviewReport, error) {
 		appliedFile = ps.OutputPO
 	}
 	return &ReviewReport{
-		ReviewResult:        review,
+		ReviewResult:  review,
 		Score:         score,
 		CriticalCount: critical,
 		MajorCount:    major,
@@ -249,29 +253,78 @@ func GetReviewReport() (*ReviewReport, error) {
 	}, nil
 }
 
-// PrintReviewReportResult prints the same "## Review Statistics" report as agent-run report (step 9).
-// Used by RunAgentReview after merge and by cmd/agent-run-report.
-func PrintReviewReportResult(result *ReviewReport) {
-	if result == nil || result.ReviewResult == nil {
+// WrapReviewReportForPrint builds an AgentRunResult with only ReviewReport fields set,
+// for callers that have *ReviewReport (e.g. cmd agent-run report).
+func WrapReviewReportForPrint(r *ReviewReport) *AgentRunResult {
+	if r == nil {
+		return nil
+	}
+	ar := &AgentRunResult{AgentExecuted: true}
+	ar.ReviewResult = r.ReviewResult
+	ar.Score = r.Score
+	ar.CriticalCount = r.CriticalCount
+	ar.MajorCount = r.MajorCount
+	ar.MinorCount = r.MinorCount
+	ar.ReportFile = r.ReportFile
+	ar.AppliedFile = r.AppliedFile
+	return ar
+}
+
+// PrintReviewReportResult prints "## Review Statistics" when ReviewResult is present,
+// then agent execution / validation lines (PreValidationError, PostValidationError, runErr).
+// ar is typically RunAgentReview's return value; runErr is result.RunError for agent-test.
+// cmd/agent-run-report uses WrapReviewReportForPrint when only *ReviewReport is available.
+func PrintReviewReportResult(ar *AgentRunResult, runErr error) {
+	if ar == nil {
 		return
 	}
-	fmt.Println("## Review Statistics")
-	fmt.Println()
-	fmt.Printf("  %-22s %d/100\n", "Review score:", result.Score)
-	fmt.Printf("  %-22s %d\n", "Total entries:", result.ReviewResult.TotalEntries)
-	fmt.Printf("  %-22s %d\n", "Perfect (no issue):", result.PerfectCount())
-	fmt.Printf("  %-22s %d\n", "With issues:", result.ReviewResult.IssueCount())
-	fmt.Println()
-	fmt.Printf("  %-22s %d\n", fmt.Sprintf("Critical (score %d):", ReviewIssueScoreCritical), result.CriticalCount)
-	fmt.Printf("  %-22s %d\n", fmt.Sprintf("Major (score %d):", ReviewIssueScoreMajor), result.MajorCount)
-	fmt.Printf("  %-22s %d\n", fmt.Sprintf("Minor (score %d):", ReviewIssueScoreMinor), result.MinorCount)
-	fmt.Println()
-	if result.AppliedFile != "" {
-		fmt.Printf("  %-22s %s\n", "Applied PO:", result.AppliedFile)
-	}
-	if result.ReportFile != "" {
-		fmt.Printf("  %-22s %s\n", "Report JSON:", result.ReportFile)
+	w := ReviewStatLabelWidth
+
+	// "## Review Statistics" block whenever review JSON was loaded
+	if ar.ReviewResult != nil {
+		fmt.Println("## Review Statistics")
 		fmt.Println()
-		fmt.Println("For full review details, see the report JSON file")
+		fmt.Printf("  %-*s %d/100\n", w, "Review score:", ar.Score)
+		fmt.Printf("  %-*s %d\n", w, "Total entries:", ar.ReviewResult.TotalEntries)
+		fmt.Printf("  %-*s %d\n", w, "Perfect (no issue):", ar.PerfectCount())
+		fmt.Printf("  %-*s %d\n", w, "With issues:", ar.ReviewResult.IssueCount())
+		fmt.Println()
+		fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Critical (score %d):", ReviewIssueScoreCritical), ar.CriticalCount)
+		fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Major (score %d):", ReviewIssueScoreMajor), ar.MajorCount)
+		fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Minor (score %d):", ReviewIssueScoreMinor), ar.MinorCount)
+		fmt.Println()
+		if ar.AppliedFile != "" {
+			fmt.Printf("  %-*s %s\n", w, "Applied PO:", ar.AppliedFile)
+		}
+		if ar.ReportFile != "" {
+			fmt.Printf("  %-*s %s\n", w, "Report JSON:", ar.ReportFile)
+			fmt.Println()
+			fmt.Println("For full review details, see the report JSON file")
+		}
+	}
+
+	// Execution / validation (aligned with agent-test-review display)
+	if ar.AgentExecuted {
+		if runErr == nil {
+			fmt.Printf("  %-*s %s\n", w, "Agent execution:", "PASS")
+		} else {
+			fmt.Printf("  %-*s FAIL - %v\n", w, "Agent execution:", runErr)
+		}
+		if ar.PostValidationError == nil {
+			if ar.Score > 0 && ar.ReviewResult != nil {
+				fmt.Printf("  %-*s PASS (%d/100)\n", w, "Validation:", ar.Score)
+			} else {
+				fmt.Printf("  %-*s FAIL (no valid JSON or score 0)\n", w, "Validation:")
+			}
+		} else {
+			fmt.Printf("  %-*s FAIL - %s\n", w, "Post-validation:", ar.PostValidationError)
+		}
+	} else {
+		if ar.PreValidationError != nil {
+			fmt.Printf("  %-*s SKIPPED (pre-validation failed)\n", w, "Agent execution:")
+			fmt.Printf("  %-*s %s\n", w, "Pre-validation:", ar.PreValidationError)
+		} else {
+			fmt.Printf("  %-*s SKIPPED\n", w, "Agent execution:")
+		}
 	}
 }

@@ -217,7 +217,7 @@ func parseAndAccumulateReviewJSON(stdout []byte, entryCount int) (*ReviewJSONRes
 // Step 6: Rename review-done.json to review-result-<N>.json.
 // Step 7: Loop back (handled by continue).
 // Step 8: Merge all review-result-*.json and display report.
-func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string, target *CompareTarget, agentTest bool, batchSize int) (*AgentRunResult, error) {
+func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string, target *CompareTarget, batchSize int) (*AgentRunResult, error) {
 	ps := GetReviewPathSet()
 	startTime := time.Now()
 	result := &AgentRunResult{Score: 0}
@@ -303,6 +303,9 @@ func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string,
 // Corresponds to AGENTS.md Task 4 step 5.
 // entryCount is the total entries for scoring (passed to TotalEntries).
 func runReviewOneTodo(cfg *config.AgentConfig, selectedAgent config.AgentEntry, ps ReviewPathSet, entryCount int, result *AgentRunResult) error {
+	// Align with RunAgentReviewPromptOrchestration: mark agent run before invoking (executeReviewAgent also sets this).
+	result.AgentExecuted = true
+
 	prompt, err := GetRawPrompt(cfg, "review")
 	if err != nil {
 		return err
@@ -345,6 +348,8 @@ func runMergeAndSummary(ps ReviewPathSet, startTime time.Time, result *AgentRunR
 	result.ReviewReport = *reportResult
 	result.Score = reportResult.Score
 	result.ExecutionTime = time.Since(startTime)
+	// Local orchestration merge path completes the review workflow (agent ran in prior batches or resume).
+	result.AgentExecuted = true
 	log.Infof("review completed successfully (score: %d/100, total entries: %d, issues: %d)",
 		reportResult.Score, reportResult.ReviewResult.TotalEntries, len(reportResult.ReviewResult.Issues))
 	return result, nil
