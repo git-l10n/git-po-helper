@@ -142,26 +142,6 @@ func countContentEntries(poFile string) (int, error) {
 	return total, nil
 }
 
-// batchSizeFromFormula returns the number of entries to process in one batch.
-// Aligns with AGENTS.md Task 3 Step 2 (l10n_one_batch) formula:
-//
-//	entryCount <= minBatchSize          → process all
-//	entryCount > minBatchSize*8         → minBatchSize * 2
-//	entryCount > minBatchSize*4         → minBatchSize + minBatchSize/2
-//	otherwise                           → minBatchSize
-func batchSizeFromFormula(entryCount, minBatchSize int) int {
-	if entryCount <= minBatchSize {
-		return entryCount
-	}
-	if entryCount > minBatchSize*8 {
-		return minBatchSize * 2
-	}
-	if entryCount > minBatchSize*4 {
-		return minBatchSize + minBatchSize/2
-	}
-	return minBatchSize
-}
-
 // generateOneBatchJSON slices the first batch from pendingPO and writes it as l10n-todo.json.
 // Corresponds to AGENTS.md Task 3 Step 2 (l10n_one_batch, git-po-helper path).
 func generateOneBatchJSON(pendingPO, todoJSON string, minBatchSize int) error {
@@ -173,7 +153,7 @@ func generateOneBatchJSON(pendingPO, todoJSON string, minBatchSize int) error {
 		return nil
 	}
 
-	num := batchSizeFromFormula(entryCount, minBatchSize)
+	num := CalcBatchSize(entryCount, minBatchSize)
 	var rangeSpec string
 	if num >= entryCount {
 		rangeSpec = "1-"

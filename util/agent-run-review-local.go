@@ -46,19 +46,6 @@ func calcBatchNum(batchTxtPath string) (int, error) {
 	return batch, nil
 }
 
-// calcNumForBatch returns the batch size (NUM) for the given entryCount and minBatchSize,
-// following the AGENTS.md step 4 formula exactly.
-func calcNumForBatch(entryCount, minBatchSize int) int {
-	if entryCount > minBatchSize*8 {
-		return minBatchSize * 2
-	} else if entryCount > minBatchSize*4 {
-		return minBatchSize + minBatchSize/2
-	} else if entryCount > minBatchSize {
-		return minBatchSize
-	}
-	return entryCount
-}
-
 // cleanReviewIntermediateFiles removes stale intermediate files before a fresh review run.
 // Corresponds to AGENTS.md Task 4 step 2.
 // Does NOT remove review-input.po (source of truth for entry count and OUTPUT_PO template).
@@ -114,7 +101,7 @@ func reviewOneBatch(ps ReviewPathSet, minBatchSize int) (batchNum, entryCount, n
 		return 0, 0, 0, true, nil
 	}
 
-	num = calcNumForBatch(entryCount, minBatchSize)
+	num = CalcBatchSize(entryCount, minBatchSize)
 
 	batchNum, err = calcBatchNum(batchTxt)
 	if err != nil {

@@ -56,6 +56,21 @@ func CountMsgidEntries(filePath string) (int, error) {
 	return count, nil
 }
 
+// CalcBatchSize returns the batch size for the given entryCount and minBatchSize,
+// following the AGENTS.md formula exactly.
+func CalcBatchSize(entryCount, minBatchSize int) int {
+	if entryCount > minBatchSize*8 {
+		return minBatchSize * 2
+	}
+	if entryCount > minBatchSize*4 {
+		return minBatchSize + minBatchSize/2
+	}
+	if entryCount > minBatchSize {
+		return minBatchSize
+	}
+	return entryCount
+}
+
 // validateEntryCount is the internal implementation for POT/PO entry count validation.
 // filePath is used in error messages. stage is "before update" or "after update".
 func validateEntryCount(filePath string, expectedCount *int, stage string) error {
