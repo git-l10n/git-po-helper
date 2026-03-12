@@ -258,13 +258,13 @@ msgstr ""
 				if entries[0].MsgID != "Hello" {
 					t.Errorf("expected first entry MsgID 'Hello', got '%s'", entries[0].MsgID)
 				}
-				if entries[0].MsgStr != "你好" {
+				if entries[0].MsgStrSingle() != "你好" {
 					t.Errorf("expected first entry MsgStr '你好', got '%s'", entries[0].MsgStr)
 				}
 				if entries[1].MsgID != "World" {
 					t.Errorf("expected second entry MsgID 'World', got '%s'", entries[1].MsgID)
 				}
-				if entries[1].MsgStr != "世界" {
+				if entries[1].MsgStrSingle() != "世界" {
 					t.Errorf("expected second entry MsgStr '世界', got '%s'", entries[1].MsgStr)
 				}
 			},
@@ -300,7 +300,7 @@ msgstr "单行"
 					t.Errorf("expected first entry MsgID '%s', got '%s'", expectedMsgID, entries[0].MsgID)
 				}
 				expectedMsgStr := "第一行第二行"
-				if entries[0].MsgStr != expectedMsgStr {
+				if entries[0].MsgStrSingle() != expectedMsgStr {
 					t.Errorf("expected first entry MsgStr '%s', got '%s'", expectedMsgStr, entries[0].MsgStr)
 				}
 				if entries[1].MsgID != "Single line" {
@@ -340,14 +340,14 @@ msgstr[1] "文件"
 				if entries[0].MsgIDPlural != "Many items" {
 					t.Errorf("expected first entry MsgIDPlural 'Many items', got '%s'", entries[0].MsgIDPlural)
 				}
-				if len(entries[0].MsgStrPlural) != 2 {
-					t.Fatalf("expected 2 plural forms, got %d", len(entries[0].MsgStrPlural))
+				if len(entries[0].MsgStr) != 2 {
+					t.Fatalf("expected 2 plural forms, got %d", len(entries[0].MsgStr))
 				}
-				if entries[0].MsgStrPlural[0] != "一个项目" {
-					t.Errorf("expected first plural form '一个项目', got '%s'", entries[0].MsgStrPlural[0])
+				if entries[0].MsgStr[0] != "一个项目" {
+					t.Errorf("expected first plural form '一个项目', got '%s'", entries[0].MsgStr[0])
 				}
-				if entries[0].MsgStrPlural[1] != "多个项目" {
-					t.Errorf("expected second plural form '多个项目', got '%s'", entries[0].MsgStrPlural[1])
+				if entries[0].MsgStr[1] != "多个项目" {
+					t.Errorf("expected second plural form '多个项目', got '%s'", entries[0].MsgStr[1])
 				}
 			},
 		},
@@ -394,14 +394,14 @@ msgstr[1] ""
 				if entries[0].MsgIDPlural != "Many items" {
 					t.Errorf("expected first entry MsgIDPlural 'Many items', got '%s'", entries[0].MsgIDPlural)
 				}
-				if len(entries[0].MsgStrPlural) != 2 {
-					t.Fatalf("expected 2 plural forms, got %d", len(entries[0].MsgStrPlural))
+				if len(entries[0].MsgStr) != 2 {
+					t.Fatalf("expected 2 plural forms, got %d", len(entries[0].MsgStr))
 				}
-				if entries[0].MsgStrPlural[0] != "一个项目" {
-					t.Errorf("expected first plural form '一个项目', got '%s'", entries[0].MsgStrPlural[0])
+				if entries[0].MsgStr[0] != "一个项目" {
+					t.Errorf("expected first plural form '一个项目', got '%s'", entries[0].MsgStr[0])
 				}
-				if entries[0].MsgStrPlural[1] != "多个项目" {
-					t.Errorf("expected second plural form '多个项目', got '%s'", entries[0].MsgStrPlural[1])
+				if entries[0].MsgStr[1] != "多个项目" {
+					t.Errorf("expected second plural form '多个项目', got '%s'", entries[0].MsgStr[1])
 				}
 			},
 		},
@@ -433,7 +433,7 @@ msgstr "简单字符串"
 				if entries[0].MsgID != "String with comments" {
 					t.Errorf("expected first entry MsgID 'String with comments', got '%s'", entries[0].MsgID)
 				}
-				if entries[0].MsgStr != "带注释的字符串" {
+				if entries[0].MsgStrSingle() != "带注释的字符串" {
 					t.Errorf("expected first entry MsgStr '带注释的字符串', got '%s'", entries[0].MsgStr)
 				}
 				expectedComments := []string{
@@ -500,10 +500,10 @@ msgstr "已翻译"
 				if entries[0].MsgID != "Untranslated" {
 					t.Errorf("expected first entry MsgID 'Untranslated', got '%s'", entries[0].MsgID)
 				}
-				if entries[0].MsgStr != "" {
+				if entries[0].MsgStrSingle() != "" {
 					t.Errorf("expected first entry MsgStr to be empty, got '%s'", entries[0].MsgStr)
 				}
-				if entries[1].MsgStr != "已翻译" {
+				if entries[1].MsgStrSingle() != "已翻译" {
 					t.Errorf("expected second entry MsgStr '已翻译', got '%s'", entries[1].MsgStr)
 				}
 			},
@@ -979,7 +979,7 @@ msgstr "第二个"
 	if len(decoded.Entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(decoded.Entries))
 	}
-	if decoded.Entries[0].MsgID != "First" || decoded.Entries[0].MsgStr != "第一个" {
+	if decoded.Entries[0].MsgID != "First" || decoded.Entries[0].MsgStrSingle() != "第一个" {
 		t.Errorf("entry: msgid=%q msgstr=%q", decoded.Entries[0].MsgID, decoded.Entries[0].MsgStr)
 	}
 }

@@ -2,6 +2,7 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -10,18 +11,64 @@ import (
 )
 
 // GettextEntry represents a single PO/JSON entry. Used for parsing, comparison, and output.
-// MsgID/MsgStr/MsgIDPlural/MsgStrPlural use PO string format (escape sequences like \n, \t
-// stored as literal backslash+char, not decoded). RawLines preserves exact PO format for round-trip.
+// MsgID, MsgStr (forms), MsgIDPlural use PO string format (escape sequences like \n, \t
+// stored as literal backslash+char, not decoded). MsgStr holds one element for singular
+// msgstr, multiple for msgstr[0], msgstr[1], ... RawLines preserves exact PO format for round-trip.
 type GettextEntry struct {
 	MsgID         string   `json:"msgid"`
-	MsgStr        string   `json:"msgstr"`
+	MsgStr        []string `json:"msgstr,omitempty"` // Always a JSON array; one element = singular, multiple = msgstr[0..]
 	MsgIDPlural   string   `json:"msgid_plural,omitempty"`
-	MsgStrPlural  []string `json:"msgstr_plural,omitempty"`
 	Comments      []string `json:"comments,omitempty"`
 	Fuzzy         bool     `json:"fuzzy"`
 	Obsolete      bool     `json:"obsolete,omitempty"`       // True for #~ obsolete entries
 	MsgIDPrevious string   `json:"msgid_previous,omitempty"` // For #~| format (gettext 0.19.8+)
 	RawLines      []string `json:"-"`                        // Original PO lines for round-trip; empty when built from JSON
+}
+
+// MsgStrSingle returns the first translation form, or "" if none (singular msgstr or msgstr[0]).
+func (e *GettextEntry) MsgStrSingle() string {
+	if e == nil || len(e.MsgStr) == 0 {
+		return ""
+	}
+	return e.MsgStr[0]
+}
+
+// UnmarshalJSON accepts msgstr as either a JSON string (singular) or a JSON array
+// of strings (singular or plural forms), normalizing to MsgStr []string.
+func (e *GettextEntry) UnmarshalJSON(data []byte) error {
+	var aux struct {
+		MsgID         string          `json:"msgid"`
+		MsgStrRaw     json.RawMessage `json:"msgstr"`
+		MsgIDPlural   string          `json:"msgid_plural,omitempty"`
+		Comments      []string        `json:"comments,omitempty"`
+		Fuzzy         bool            `json:"fuzzy"`
+		Obsolete      bool            `json:"obsolete,omitempty"`
+		MsgIDPrevious string          `json:"msgid_previous,omitempty"`
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	e.MsgID = aux.MsgID
+	e.MsgIDPlural = aux.MsgIDPlural
+	e.Comments = aux.Comments
+	e.Fuzzy = aux.Fuzzy
+	e.Obsolete = aux.Obsolete
+	e.MsgIDPrevious = aux.MsgIDPrevious
+	e.MsgStr = nil
+	if len(aux.MsgStrRaw) == 0 || string(aux.MsgStrRaw) == "null" {
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(aux.MsgStrRaw, &s); err == nil {
+		e.MsgStr = []string{s}
+		return nil
+	}
+	var arr []string
+	if err := json.Unmarshal(aux.MsgStrRaw, &arr); err == nil {
+		e.MsgStr = arr
+		return nil
+	}
+	return fmt.Errorf("gettext entry msgstr: want string or array of strings")
 }
 
 // commentHasFuzzyFlag returns true if the line is a flag comment (e.g. "#, fuzzy" or "#, fuzzy, c-format")
@@ -246,13 +293,14 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 				value = strDeQuote(value)
 				if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
 					currentEntry.MsgID = poParsedToPoFormat(msgidValue.String())
-					currentEntry.MsgStr = poParsedToPoFormat(msgstrValue.String())
 					if msgidPluralValue.Len() > 0 {
 						currentEntry.MsgIDPlural = poParsedToPoFormat(msgidPluralValue.String())
-						currentEntry.MsgStrPlural = make([]string, len(msgstrPluralValues))
+						currentEntry.MsgStr = make([]string, len(msgstrPluralValues))
 						for i, b := range msgstrPluralValues {
-							currentEntry.MsgStrPlural[i] = poParsedToPoFormat(b.String())
+							currentEntry.MsgStr[i] = poParsedToPoFormat(b.String())
 						}
+					} else {
+						currentEntry.MsgStr = []string{poParsedToPoFormat(msgstrValue.String())}
 					}
 					currentEntry.RawLines = entryLines
 					currentEntry.Fuzzy = entryHasFuzzyFlag(currentEntry.Comments)
@@ -374,13 +422,14 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			// Save previous entry if we have one and it has content
 			if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
 				currentEntry.MsgID = poParsedToPoFormat(msgidValue.String())
-				currentEntry.MsgStr = poParsedToPoFormat(msgstrValue.String())
 				if msgidPluralValue.Len() > 0 {
 					currentEntry.MsgIDPlural = poParsedToPoFormat(msgidPluralValue.String())
-					currentEntry.MsgStrPlural = make([]string, len(msgstrPluralValues))
+					currentEntry.MsgStr = make([]string, len(msgstrPluralValues))
 					for i, b := range msgstrPluralValues {
-						currentEntry.MsgStrPlural[i] = poParsedToPoFormat(b.String())
+						currentEntry.MsgStr[i] = poParsedToPoFormat(b.String())
 					}
+				} else {
+					currentEntry.MsgStr = []string{poParsedToPoFormat(msgstrValue.String())}
 				}
 				currentEntry.RawLines = entryLines
 				currentEntry.Fuzzy = entryHasFuzzyFlag(currentEntry.Comments)
@@ -474,13 +523,14 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			// or if we have a complete entry with msgstr
 			if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
 				currentEntry.MsgID = poParsedToPoFormat(msgidValue.String())
-				currentEntry.MsgStr = poParsedToPoFormat(msgstrValue.String())
 				if msgidPluralValue.Len() > 0 {
 					currentEntry.MsgIDPlural = poParsedToPoFormat(msgidPluralValue.String())
-					currentEntry.MsgStrPlural = make([]string, len(msgstrPluralValues))
+					currentEntry.MsgStr = make([]string, len(msgstrPluralValues))
 					for i, b := range msgstrPluralValues {
-						currentEntry.MsgStrPlural[i] = poParsedToPoFormat(b.String())
+						currentEntry.MsgStr[i] = poParsedToPoFormat(b.String())
 					}
+				} else {
+					currentEntry.MsgStr = []string{poParsedToPoFormat(msgstrValue.String())}
 				}
 				currentEntry.RawLines = entryLines
 				currentEntry.Fuzzy = entryHasFuzzyFlag(currentEntry.Comments)
@@ -513,13 +563,14 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 	// Handle last entry
 	if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
 		currentEntry.MsgID = poParsedToPoFormat(msgidValue.String())
-		currentEntry.MsgStr = poParsedToPoFormat(msgstrValue.String())
 		if msgidPluralValue.Len() > 0 {
 			currentEntry.MsgIDPlural = poParsedToPoFormat(msgidPluralValue.String())
-			currentEntry.MsgStrPlural = make([]string, len(msgstrPluralValues))
+			currentEntry.MsgStr = make([]string, len(msgstrPluralValues))
 			for i, b := range msgstrPluralValues {
-				currentEntry.MsgStrPlural[i] = poParsedToPoFormat(b.String())
+				currentEntry.MsgStr[i] = poParsedToPoFormat(b.String())
 			}
+		} else {
+			currentEntry.MsgStr = []string{poParsedToPoFormat(msgstrValue.String())}
 		}
 		currentEntry.RawLines = entryLines
 		currentEntry.Fuzzy = entryHasFuzzyFlag(currentEntry.Comments)

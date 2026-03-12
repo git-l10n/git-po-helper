@@ -18,7 +18,7 @@ create_translate_copy_agent() {
 #!/usr/bin/env python3
 import json, sys, os
 # Usage: translate-copy-agent <source> <dest>
-# Reads JSON from source, sets msgstr=msgid for empty msgstr, writes to dest
+# Reads JSON from source, sets msgstr=[msgid] when msgstr empty, writes to dest
 if len(sys.argv) < 3:
     sys.stderr.write("Usage: translate-copy-agent <source> <dest>\n")
     sys.exit(1)
@@ -26,12 +26,14 @@ src, dst = sys.argv[1], sys.argv[2]
 with open(src) as f:
     data = json.load(f)
 for e in data.get("entries", []):
+    # msgstr is always a string array; empty or missing -> fill with msgid as single form
     if not e.get("msgstr") and e.get("msgid"):
-        e["msgstr"] = e["msgid"]
-    if e.get("msgid_plural") and e.get("msgstr_plural"):
-        for i in range(len(e["msgstr_plural"])):
-            if not e["msgstr_plural"][i]:
-                e["msgstr_plural"][i] = e["msgid_plural"]
+        e["msgstr"] = [e["msgid"]]
+    elif isinstance(e.get("msgstr"), list) and e.get("msgid_plural"):
+        # plural: pad empty forms with msgid_plural
+        for i in range(len(e["msgstr"])):
+            if not e["msgstr"][i]:
+                e["msgstr"][i] = e["msgid_plural"]
 with open(dst, "w") as f:
     json.dump(data, f, ensure_ascii=False, indent=2)
 PYEOF

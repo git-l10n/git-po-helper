@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -105,17 +106,16 @@ func TestBuildGettextJSON_RoundTrip(t *testing.T) {
 	entries := []*GettextEntry{
 		{
 			MsgID:    "Hello",
-			MsgStr:   "你好",
+			MsgStr:   []string{"你好"},
 			Comments: []string{"#. Comment\n", "#: src/file.c:10\n"},
 			Fuzzy:    false,
 		},
 		{
-			MsgID:        "One file",
-			MsgStr:       "",
-			MsgIDPlural:  "%d files",
-			MsgStrPlural: []string{"一个文件", "%d 个文件"},
-			Comments:     []string{"#, c-format\n"},
-			Fuzzy:        false,
+			MsgID:       "One file",
+			MsgIDPlural: "%d files",
+			MsgStr:      []string{"一个文件", "%d 个文件"},
+			Comments:    []string{"#, c-format\n"},
+			Fuzzy:       false,
 		},
 	}
 	var buf bytes.Buffer
@@ -134,14 +134,14 @@ func TestBuildGettextJSON_RoundTrip(t *testing.T) {
 		t.Fatalf("expected 2 entries, got %d", len(decoded.Entries))
 	}
 	e0 := decoded.Entries[0]
-	if e0.MsgID != "Hello" || e0.MsgStr != "你好" || e0.Fuzzy != false {
-		t.Errorf("entry 0: msgid=%q msgstr=%q fuzzy=%v", e0.MsgID, e0.MsgStr, e0.Fuzzy)
+	if e0.MsgID != "Hello" || e0.MsgStrSingle() != "你好" || e0.Fuzzy != false {
+		t.Errorf("entry 0: msgid=%q msgstr=%q fuzzy=%v", e0.MsgID, e0.MsgStrSingle(), e0.Fuzzy)
 	}
 	e1 := decoded.Entries[1]
-	if e1.MsgID != "One file" || e1.MsgStr != "" || e1.MsgIDPlural != "%d files" ||
-		len(e1.MsgStrPlural) != 2 || e1.MsgStrPlural[0] != "一个文件" || e1.MsgStrPlural[1] != "%d 个文件" {
-		t.Errorf("entry 1: msgid=%q msgstr=%q msgid_plural=%q msgstr_plural=%v",
-			e1.MsgID, e1.MsgStr, e1.MsgIDPlural, e1.MsgStrPlural)
+	if e1.MsgID != "One file" || e1.MsgIDPlural != "%d files" ||
+		len(e1.MsgStr) != 2 || e1.MsgStr[0] != "一个文件" || e1.MsgStr[1] != "%d 个文件" {
+		t.Errorf("entry 1: msgid=%q msgstr=%v msgid_plural=%q",
+			e1.MsgID, e1.MsgStr, e1.MsgIDPlural)
 	}
 }
 
@@ -166,6 +166,40 @@ func TestParseGettextJSONBytes_EmptyInput(t *testing.T) {
 		if j == nil || j.Entries == nil || len(j.Entries) != 0 {
 			t.Errorf("expected empty entries, got %#v", j)
 		}
+	}
+}
+
+// TestParseGettextJSONBytes_MsgstrStringCompat verifies msgstr may be a JSON string
+// (legacy/LLM) and is normalized to MsgStr []string with one element.
+func TestParseGettextJSONBytes_MsgstrStringCompat(t *testing.T) {
+	jsonStr := `{
+  "header_comment": "",
+  "header_meta": "",
+  "entries": [
+    {"msgid": "Hello", "msgstr": "你好", "fuzzy": false},
+    {"msgid": "One file", "msgid_plural": "%d files", "msgstr": ["一个文件", "%d 个文件"], "fuzzy": false}
+  ]
+}`
+	j, err := ParseGettextJSONBytes([]byte(jsonStr))
+	if err != nil {
+		t.Fatalf("ParseGettextJSONBytes: %v", err)
+	}
+	if len(j.Entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(j.Entries))
+	}
+	if len(j.Entries[0].MsgStr) != 1 || j.Entries[0].MsgStr[0] != "你好" {
+		t.Errorf("string msgstr: want MsgStr [你好], got %#v", j.Entries[0].MsgStr)
+	}
+	if len(j.Entries[1].MsgStr) != 2 || j.Entries[1].MsgStr[0] != "一个文件" {
+		t.Errorf("array msgstr: want 2 forms, got %#v", j.Entries[1].MsgStr)
+	}
+	// ParseGettextJSON (reader) should also accept string msgstr
+	j2, err := ParseGettextJSON(strings.NewReader(jsonStr))
+	if err != nil {
+		t.Fatalf("ParseGettextJSON: %v", err)
+	}
+	if len(j2.Entries) != 2 || len(j2.Entries[0].MsgStr) != 1 || j2.Entries[0].MsgStrSingle() != "你好" {
+		t.Errorf("ParseGettextJSON string msgstr: got %#v", j2.Entries[0].MsgStr)
 	}
 }
 
@@ -223,7 +257,7 @@ func TestPoUnescape_InMsgidMsgstr(t *testing.T) {
 	entries := []*GettextEntry{
 		{
 			MsgID:  "Line one\nLine two\twith tab",
-			MsgStr: "第一行\n第二行\t带制表符",
+			MsgStr: []string{"第一行\n第二行\t带制表符"},
 			Fuzzy:  false,
 		},
 	}
@@ -242,8 +276,8 @@ func TestPoUnescape_InMsgidMsgstr(t *testing.T) {
 	if e.MsgID != wantMsgid {
 		t.Errorf("msgid: got %q, want %q", e.MsgID, wantMsgid)
 	}
-	if e.MsgStr != wantMsgstr {
-		t.Errorf("msgstr: got %q, want %q", e.MsgStr, wantMsgstr)
+	if e.MsgStrSingle() != wantMsgstr {
+		t.Errorf("msgstr: got %q, want %q", e.MsgStrSingle(), wantMsgstr)
 	}
 }
 
@@ -299,7 +333,7 @@ msgstr "你好"
 	if err := json.NewDecoder(&buf).Decode(&decoded); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if decoded.Entries[0].MsgID != "Hello" || decoded.Entries[0].MsgStr != "你好" {
+	if decoded.Entries[0].MsgID != "Hello" || decoded.Entries[0].MsgStrSingle() != "你好" {
 		t.Errorf("entry: %+v", decoded.Entries[0])
 	}
 	if len(decoded.Entries[0].Comments) != 2 {
@@ -318,7 +352,7 @@ func TestWriteGettextJSONToPO_Example2RoundTrip(t *testing.T) {
   "entries": [
     {
       "msgid": "Line one\nLine two\twith tab, padding for line 2.",
-      "msgstr": "第一行\n第二行\t带制表符, 第二行的填充。",
+      "msgstr": ["第一行\n第二行\t带制表符, 第二行的填充。"],
       "comments": ["#, c-format\n"],
       "fuzzy": false
     }
@@ -346,8 +380,8 @@ func TestWriteGettextJSONToPO_Example2RoundTrip(t *testing.T) {
 	if e.MsgID != wantMsgid {
 		t.Errorf("msgid round-trip: got %q", e.MsgID)
 	}
-	if e.MsgStr != wantMsgstr {
-		t.Errorf("msgstr round-trip: got %q", e.MsgStr)
+	if e.MsgStrSingle() != wantMsgstr {
+		t.Errorf("msgstr round-trip: got %q", e.MsgStrSingle())
 	}
 	headerComment, headerMeta, _ := SplitHeader(header)
 	var jsonBuf bytes.Buffer
@@ -359,8 +393,8 @@ func TestWriteGettextJSONToPO_Example2RoundTrip(t *testing.T) {
 		t.Fatalf("decode: %v", err)
 	}
 	// Both j and j2 have PO format; entries from ParsePoEntries are in PO format
-	if j2.Entries[0].MsgID != j.Entries[0].MsgID || j2.Entries[0].MsgStr != j.Entries[0].MsgStr {
-		t.Errorf("round-trip JSON: msgid %q vs %q, msgstr %q vs %q",
+	if j2.Entries[0].MsgID != j.Entries[0].MsgID || !reflect.DeepEqual(j2.Entries[0].MsgStr, j.Entries[0].MsgStr) {
+		t.Errorf("round-trip JSON: msgid %q vs %q, msgstr %v vs %v",
 			j2.Entries[0].MsgID, j.Entries[0].MsgID, j2.Entries[0].MsgStr, j.Entries[0].MsgStr)
 	}
 }
@@ -372,9 +406,8 @@ func TestWriteGettextJSONToPO_Example3PluralRoundTrip(t *testing.T) {
   "entries": [
     {
       "msgid": "One file",
-      "msgstr": "",
       "msgid_plural": "%d files",
-      "msgstr_plural": ["一个文件", "%d 个文件"],
+      "msgstr": ["一个文件", "%d 个文件"],
       "comments": ["#, c-format\n"],
       "fuzzy": false
     }
@@ -396,10 +429,10 @@ func TestWriteGettextJSONToPO_Example3PluralRoundTrip(t *testing.T) {
 		t.Fatalf("expected 1 entry, got %d", len(entries))
 	}
 	e := entries[0]
-	if e.MsgID != "One file" || e.MsgStr != "" || e.MsgIDPlural != "%d files" ||
-		len(e.MsgStrPlural) != 2 || e.MsgStrPlural[0] != "一个文件" || e.MsgStrPlural[1] != "%d 个文件" {
-		t.Errorf("plural entry: msgid=%q msgstr=%q msgid_plural=%q msgstr_plural=%v",
-			e.MsgID, e.MsgStr, e.MsgIDPlural, e.MsgStrPlural)
+	if e.MsgID != "One file" || e.MsgIDPlural != "%d files" ||
+		len(e.MsgStr) != 2 || e.MsgStr[0] != "一个文件" || e.MsgStr[1] != "%d 个文件" {
+		t.Errorf("plural entry: msgid=%q msgstr=%v msgid_plural=%q",
+			e.MsgID, e.MsgStr, e.MsgIDPlural)
 	}
 }
 
@@ -409,7 +442,7 @@ func TestWriteGettextJSONToPO_SpecialChars(t *testing.T) {
 		HeaderMeta:    "",
 		Entries: []GettextEntry{{
 			MsgID:  "Quote \" and backslash \\ and tab\t and newline\n",
-			MsgStr: "相同",
+			MsgStr: []string{"相同"},
 			Fuzzy:  false,
 		}},
 	}
@@ -439,7 +472,7 @@ func TestEscapeChars_JSONInputWithNewlineTab(t *testing.T) {
   "entries": [
     {
       "msgid": "A\\nB\\tC\\rD",
-      "msgstr": "甲\\n乙\\t丙\\r丁",
+      "msgstr": ["甲\\n乙\\t丙\\r丁"],
       "fuzzy": false
     }
   ]
@@ -454,7 +487,7 @@ func TestEscapeChars_JSONInputWithNewlineTab(t *testing.T) {
 	if j.Entries[0].MsgID != wantMsgid {
 		t.Errorf("MsgID after parse: got %q, want %q", j.Entries[0].MsgID, wantMsgid)
 	}
-	if j.Entries[0].MsgStr != wantMsgstr {
+	if j.Entries[0].MsgStrSingle() != wantMsgstr {
 		t.Errorf("MsgStr after parse: got %q, want %q", j.Entries[0].MsgStr, wantMsgstr)
 	}
 	var poBuf bytes.Buffer
@@ -465,7 +498,7 @@ func TestEscapeChars_JSONInputWithNewlineTab(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
-	if entries[0].MsgID != wantMsgid || entries[0].MsgStr != wantMsgstr {
+	if entries[0].MsgID != wantMsgid || entries[0].MsgStrSingle() != wantMsgstr {
 		t.Errorf("after PO round-trip: msgid=%q msgstr=%q", entries[0].MsgID, entries[0].MsgStr)
 	}
 }
@@ -494,7 +527,7 @@ msgstr ""
 	if entries[0].MsgID != wantMsgid {
 		t.Errorf("MsgID: got %q, want %q", entries[0].MsgID, wantMsgid)
 	}
-	if entries[0].MsgStr != wantMsgstr {
+	if entries[0].MsgStrSingle() != wantMsgstr {
 		t.Errorf("MsgStr: got %q, want %q", entries[0].MsgStr, wantMsgstr)
 	}
 	headerComment, headerMeta, _ := SplitHeader(header)
@@ -506,7 +539,7 @@ msgstr ""
 	if err != nil {
 		t.Fatalf("ParseGettextJSONBytes: %v", err)
 	}
-	if j.Entries[0].MsgID != wantMsgid || j.Entries[0].MsgStr != wantMsgstr {
+	if j.Entries[0].MsgID != wantMsgid || j.Entries[0].MsgStrSingle() != wantMsgstr {
 		t.Errorf("after JSON: msgid=%q msgstr=%q", j.Entries[0].MsgID, j.Entries[0].MsgStr)
 	}
 	var poBuf bytes.Buffer
@@ -517,7 +550,7 @@ msgstr ""
 	if err != nil {
 		t.Fatalf("ParsePoEntries (second): %v", err)
 	}
-	if entries2[0].MsgID != wantMsgid || entries2[0].MsgStr != wantMsgstr {
+	if entries2[0].MsgID != wantMsgid || entries2[0].MsgStrSingle() != wantMsgstr {
 		t.Errorf("after full round-trip: msgid=%q msgstr=%q", entries2[0].MsgID, entries2[0].MsgStr)
 	}
 }
@@ -529,7 +562,7 @@ func TestEscapeChars_HeaderMetaWithNewlines(t *testing.T) {
   "header_comment": "",
   "header_meta": "Project-Id-Version: git\nContent-Type: text/plain; charset=UTF-8\nPlural-Forms: nplurals=2; plural=(n != 1);\n",
   "entries": [
-    {"msgid": "Hello", "msgstr": "你好", "fuzzy": false}
+    {"msgid": "Hello", "msgstr": ["你好"], "fuzzy": false}
   ]
 }`
 	j, err := ParseGettextJSONBytes([]byte(jsonStr))
@@ -582,7 +615,7 @@ func TestJSONEscape_PythonCompatible(t *testing.T) {
 	}
 
 	// Verify gettext JSON round-trip with this string
-	jsonStr := `{"header_comment":"","header_meta":"","entries":[{"msgid":"1 \n 2 \r 3 \" 4 \t 5 \u0007 6 \\","msgstr":"same","fuzzy":false}]}`
+	jsonStr := `{"header_comment":"","header_meta":"","entries":[{"msgid":"1 \n 2 \r 3 \" 4 \t 5 \u0007 6 \\","msgstr":["same"],"fuzzy":false}]}`
 	j, err := ParseGettextJSONBytes([]byte(jsonStr))
 	if err != nil {
 		t.Fatalf("ParseGettextJSONBytes: %v", err)
@@ -655,8 +688,8 @@ msgstr ""
 	if len(j2.Entries) != len(j1.Entries) {
 		t.Fatalf("entries count: %d vs %d", len(j2.Entries), len(j1.Entries))
 	}
-	if j2.Entries[0].MsgID != j1.Entries[0].MsgID || j2.Entries[0].MsgStr != j1.Entries[0].MsgStr {
-		t.Errorf("round-trip: msgid %q vs %q, msgstr %q vs %q",
+	if j2.Entries[0].MsgID != j1.Entries[0].MsgID || !reflect.DeepEqual(j2.Entries[0].MsgStr, j1.Entries[0].MsgStr) {
+		t.Errorf("round-trip: msgid %q vs %q, msgstr %v vs %v",
 			j2.Entries[0].MsgID, j1.Entries[0].MsgID, j2.Entries[0].MsgStr, j1.Entries[0].MsgStr)
 	}
 }
@@ -697,7 +730,7 @@ msgstr[1] "%d 个文件"
 	}
 	e := entries2[0]
 	if e.MsgID != "One file" || e.MsgIDPlural != "%d files" ||
-		len(e.MsgStrPlural) != 2 || e.MsgStrPlural[0] != "一个文件" || e.MsgStrPlural[1] != "%d 个文件" {
+		len(e.MsgStr) != 2 || e.MsgStr[0] != "一个文件" || e.MsgStr[1] != "%d 个文件" {
 		t.Errorf("plural round-trip: %+v", e)
 	}
 }
@@ -820,7 +853,7 @@ func TestSelectGettextJSONFromFile_JSONInputToPO(t *testing.T) {
   "entries": [
     {
       "msgid": "Line one",
-      "msgstr": "第一行",
+      "msgstr": ["第一行"],
       "comments": ["#, c-format\n"],
       "fuzzy": false
     }
@@ -843,13 +876,13 @@ func TestSelectGettextJSONFromFile_JSONInputToPO(t *testing.T) {
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(entries))
 	}
-	if entries[0].MsgID != "Line one" || entries[0].MsgStr != "第一行" {
+	if entries[0].MsgID != "Line one" || entries[0].MsgStrSingle() != "第一行" {
 		t.Errorf("entry: msgid=%q msgstr=%q", entries[0].MsgID, entries[0].MsgStr)
 	}
 }
 
 func TestSelectGettextJSONFromFile_JSONInputToJSON(t *testing.T) {
-	jsonContent := `{"header_comment":"","header_meta":"meta\n","entries":[{"msgid":"A","msgstr":"甲","fuzzy":false},{"msgid":"B","msgstr":"乙","fuzzy":false}]}`
+	jsonContent := `{"header_comment":"","header_meta":"meta\n","entries":[{"msgid":"A","msgstr":["甲"],"fuzzy":false},{"msgid":"B","msgstr":["乙"],"fuzzy":false}]}`
 	tmpDir := t.TempDir()
 	jsonFile := filepath.Join(tmpDir, "input.json")
 	if err := os.WriteFile(jsonFile, []byte(jsonContent), 0644); err != nil {
@@ -870,7 +903,7 @@ func TestSelectGettextJSONFromFile_JSONInputToJSON(t *testing.T) {
 }
 
 func TestSelectGettextJSONFromFile_Range(t *testing.T) {
-	jsonContent := `{"header_comment":"","header_meta":"","entries":[{"msgid":"One","msgstr":"一","fuzzy":false},{"msgid":"Two","msgstr":"二","fuzzy":false}]}`
+	jsonContent := `{"header_comment":"","header_meta":"","entries":[{"msgid":"One","msgstr":["一"],"fuzzy":false},{"msgid":"Two","msgstr":["二"],"fuzzy":false}]}`
 	tmpDir := t.TempDir()
 	jsonFile := filepath.Join(tmpDir, "input.json")
 	if err := os.WriteFile(jsonFile, []byte(jsonContent), 0644); err != nil {
@@ -910,16 +943,16 @@ func TestMergeGettextJSON(t *testing.T) {
 		HeaderComment: "# first",
 		HeaderMeta:    "H: A\n",
 		Entries: []GettextEntry{
-			{MsgID: "one", MsgStr: "uno"},
-			{MsgID: "two", MsgStr: "due"},
+			{MsgID: "one", MsgStr: []string{"uno"}},
+			{MsgID: "two", MsgStr: []string{"due"}},
 		},
 	}
 	b := &GettextJSON{
 		HeaderComment: "# second",
 		HeaderMeta:    "H: B\n",
 		Entries: []GettextEntry{
-			{MsgID: "two", MsgStr: "ZWEI"},
-			{MsgID: "three", MsgStr: "tre"},
+			{MsgID: "two", MsgStr: []string{"ZWEI"}},
+			{MsgID: "three", MsgStr: []string{"tre"}},
 		},
 	}
 	merged := MergeGettextJSON([]*GettextJSON{a, b})
@@ -929,13 +962,13 @@ func TestMergeGettextJSON(t *testing.T) {
 	if len(merged.Entries) != 3 {
 		t.Fatalf("expected 3 entries, got %d", len(merged.Entries))
 	}
-	if merged.Entries[0].MsgID != "one" || merged.Entries[0].MsgStr != "uno" {
+	if merged.Entries[0].MsgID != "one" || merged.Entries[0].MsgStrSingle() != "uno" {
 		t.Errorf("entry 0: got %q / %q", merged.Entries[0].MsgID, merged.Entries[0].MsgStr)
 	}
-	if merged.Entries[1].MsgID != "two" || merged.Entries[1].MsgStr != "due" {
+	if merged.Entries[1].MsgID != "two" || merged.Entries[1].MsgStrSingle() != "due" {
 		t.Errorf("entry 1 (first occurrence): got %q / %q", merged.Entries[1].MsgID, merged.Entries[1].MsgStr)
 	}
-	if merged.Entries[2].MsgID != "three" || merged.Entries[2].MsgStr != "tre" {
+	if merged.Entries[2].MsgID != "three" || merged.Entries[2].MsgStrSingle() != "tre" {
 		t.Errorf("entry 2: got %q / %q", merged.Entries[2].MsgID, merged.Entries[2].MsgStr)
 	}
 	// Empty and nil
@@ -1009,13 +1042,13 @@ msgstr "简单 %s"
   "entries": [
     {
       "msgid": "Line one\\nLine two\\twith tab",
-      "msgstr": "第一行\\n第二行\\t带制表符",
+      "msgstr": ["第一行\\n第二行\\t带制表符"],
       "comments": ["#: src/a.c"],
       "fuzzy": false
     },
     {
       "msgid": "Simple %s",
-      "msgstr": "简单 %s",
+      "msgstr": ["简单 %s"],
       "comments": ["#, c-format"],
       "fuzzy": false
     }
@@ -1137,11 +1170,11 @@ msgstr "Ciao"
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hello" || j.Entries[0].MsgStr != "Ciao" {
+	if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hello" || j.Entries[0].MsgStrSingle() != "Ciao" {
 		t.Errorf("PO: got %v", j.Entries)
 	}
 	jsonPath := filepath.Join(dir, "x.json")
-	jsonContent := `{"header_comment":"","header_meta":"","entries":[{"msgid":"Hi","msgstr":"Salut"}]}`
+	jsonContent := `{"header_comment":"","header_meta":"","entries":[{"msgid":"Hi","msgstr":["Salut"]}]}`
 	if err := os.WriteFile(jsonPath, []byte(jsonContent), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -1149,7 +1182,7 @@ msgstr "Ciao"
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(j2.Entries) != 1 || j2.Entries[0].MsgID != "Hi" || j2.Entries[0].MsgStr != "Salut" {
+	if len(j2.Entries) != 1 || j2.Entries[0].MsgID != "Hi" || j2.Entries[0].MsgStrSingle() != "Salut" {
 		t.Errorf("JSON: got %v", j2.Entries)
 	}
 	_, err = ReadFileToGettextJSON(filepath.Join(dir, "nonexistent"))
@@ -1162,7 +1195,7 @@ func TestWriteGettextJSONToJSON(t *testing.T) {
 	j := &GettextJSON{
 		HeaderComment: "#",
 		HeaderMeta:    "H\n",
-		Entries:       []GettextEntry{{MsgID: "x", MsgStr: "y"}},
+		Entries:       []GettextEntry{{MsgID: "x", MsgStr: []string{"y"}}},
 	}
 	var buf bytes.Buffer
 	if err := WriteGettextJSONToJSON(j, &buf); err != nil {
@@ -1260,7 +1293,7 @@ msgstr ""
 }
 
 func TestParseGettextJSONBytes_RepairMalformedLLMOutput(t *testing.T) {
-	validJSON := `{"header_comment":"","header_meta":"","entries":[{"msgid":"Hello","msgstr":"你好","fuzzy":false}]}`
+	validJSON := `{"header_comment":"","header_meta":"","entries":[{"msgid":"Hello","msgstr":["你好"],"fuzzy":false}]}`
 
 	t.Run("BOM prefix", func(t *testing.T) {
 		bom := []byte{0xEF, 0xBB, 0xBF}
@@ -1269,7 +1302,7 @@ func TestParseGettextJSONBytes_RepairMalformedLLMOutput(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ParseGettextJSONBytes with BOM: %v", err)
 		}
-		if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hello" || j.Entries[0].MsgStr != "你好" {
+		if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hello" || j.Entries[0].MsgStrSingle() != "你好" {
 			t.Errorf("got %+v", j)
 		}
 	})
@@ -1292,6 +1325,18 @@ func TestParseGettextJSONBytes_RepairMalformedLLMOutput(t *testing.T) {
 			t.Fatalf("ParseGettextJSONBytes with extra text: %v", err)
 		}
 		if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hello" {
+			t.Errorf("got %+v", j)
+		}
+	})
+
+	t.Run("ParseGettextJSON reader uses same repair as bytes", func(t *testing.T) {
+		bom := []byte{0xEF, 0xBB, 0xBF}
+		data := append(bom, []byte(validJSON)...)
+		j, err := ParseGettextJSON(bytes.NewReader(data))
+		if err != nil {
+			t.Fatalf("ParseGettextJSON with BOM: %v", err)
+		}
+		if len(j.Entries) != 1 || j.Entries[0].MsgStrSingle() != "你好" {
 			t.Errorf("got %+v", j)
 		}
 	})

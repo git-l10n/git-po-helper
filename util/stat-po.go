@@ -37,19 +37,14 @@ func getPoStatsFromGettextJSON(j *GettextJSON) *PoStats {
 		}
 		hasTranslation := false
 		msgstrValue := ""
-		if len(e.MsgStrPlural) > 0 {
-			for _, s := range e.MsgStrPlural {
-				if s != "" {
-					hasTranslation = true
-					break
-				}
+		for _, s := range e.MsgStr {
+			if s != "" {
+				hasTranslation = true
+				break
 			}
-			if len(e.MsgStrPlural) > 0 {
-				msgstrValue = e.MsgStrPlural[0]
-			}
-		} else {
-			hasTranslation = e.MsgStr != ""
-			msgstrValue = e.MsgStr
+		}
+		if len(e.MsgStr) > 0 {
+			msgstrValue = e.MsgStr[0]
 		}
 		if e.Fuzzy {
 			stats.Fuzzy++

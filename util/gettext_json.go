@@ -189,7 +189,6 @@ func parseGettextJSONWithGjson(data []byte, err error) *GettextJSON {
 	for _, r := range entriesResult.Array() {
 		ent := GettextEntry{
 			MsgID:         r.Get("msgid").String(),
-			MsgStr:        r.Get("msgstr").String(),
 			Fuzzy:         r.Get("fuzzy").Bool(),
 			Obsolete:      r.Get("obsolete").Bool(),
 			MsgIDPrevious: r.Get("msgid_previous").String(),
@@ -198,10 +197,16 @@ func parseGettextJSONWithGjson(data []byte, err error) *GettextJSON {
 		if r.Get("msgid_plural").Exists() {
 			ent.MsgIDPlural = r.Get("msgid_plural").String()
 		}
-		if arr := r.Get("msgstr_plural").Array(); len(arr) > 0 {
-			ent.MsgStrPlural = make([]string, len(arr))
-			for i, v := range arr {
-				ent.MsgStrPlural[i] = v.String()
+		if r.Get("msgstr").Exists() {
+			if r.Get("msgstr").IsArray() {
+				arr := r.Get("msgstr").Array()
+				ent.MsgStr = make([]string, len(arr))
+				for i, v := range arr {
+					ent.MsgStr[i] = v.String()
+				}
+			} else {
+				// LLM may emit singular msgstr as string; normalize to one-element slice
+				ent.MsgStr = []string{r.Get("msgstr").String()}
 			}
 		}
 		if arr := r.Get("comments").Array(); len(arr) > 0 {
@@ -220,14 +225,15 @@ func parseGettextJSONWithGjson(data []byte, err error) *GettextJSON {
 }
 
 // ParseGettextJSON decodes gettext JSON from r into GettextJSON.
-// Converts JSON-decoded strings to PO format for GettextEntry consistency.
+// The reader is read in full, then parsed via ParseGettextJSONBytes so that
+// the same repair path applies (PrepareJSONForParse, gjson fallback) as for
+// file/bytes input. Converts JSON-decoded strings to PO format afterward.
 func ParseGettextJSON(r io.Reader) (*GettextJSON, error) {
-	var out GettextJSON
-	if err := json.NewDecoder(r).Decode(&out); err != nil {
-		return nil, fmt.Errorf("decode gettext JSON: %w", err)
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("read gettext JSON: %w", err)
 	}
-	convertGettextJSONToPoFormat(&out)
-	return &out, nil
+	return ParseGettextJSONBytes(data)
 }
 
 // convertGettextJSONToPoFormat converts JSON-decoded strings (newline, tab) to PO format.
@@ -240,11 +246,10 @@ func convertGettextJSONToPoFormat(j *GettextJSON) {
 	for i := range j.Entries {
 		e := &j.Entries[i]
 		e.MsgID = jsonDecodedToPoFormat(e.MsgID)
-		e.MsgStr = jsonDecodedToPoFormat(e.MsgStr)
 		e.MsgIDPlural = jsonDecodedToPoFormat(e.MsgIDPlural)
 		e.MsgIDPrevious = jsonDecodedToPoFormat(e.MsgIDPrevious)
-		for k := range e.MsgStrPlural {
-			e.MsgStrPlural[k] = jsonDecodedToPoFormat(e.MsgStrPlural[k])
+		for k := range e.MsgStr {
+			e.MsgStr[k] = jsonDecodedToPoFormat(e.MsgStr[k])
 		}
 	}
 }
@@ -304,7 +309,7 @@ The file may have:
 - Incorrect gettext schema
 
 Expected schema:
-  {"header_comment":"","header_meta":"","entries":[{"msgid":"...","msgstr":"...","fuzzy":false,...}]}
+  {"header_comment":"","header_meta":"","entries":[{"msgid":"...","msgstr":["..."],"fuzzy":false,...}]}
 
 Content snippet (first %d bytes):
 ---
@@ -358,7 +363,7 @@ func MergeGettextJSON(sources []*GettextJSON) *GettextJSON {
 
 // ClearFuzzyTagFromGettextJSON clears only the fuzzy marker from all entries.
 // Sets entry.Fuzzy = false and strips "fuzzy" from #, flag lines in Comments.
-// Translation content (msgstr, msgstr_plural) is preserved.
+// Translation content (msgstr array) is preserved.
 func ClearFuzzyTagFromGettextJSON(j *GettextJSON) {
 	if j == nil {
 		return
@@ -382,7 +387,7 @@ func ClearFuzzyTagFromGettextJSON(j *GettextJSON) {
 }
 
 // ClearFuzzyFromGettextJSON clears the fuzzy marker and empties translation
-// (msgstr, msgstr_plural) for entries that were fuzzy. msgid and msgid_plural
+// msgstr for entries that were fuzzy. msgid and msgid_plural
 // are preserved. Non-fuzzy entries are unchanged.
 func ClearFuzzyFromGettextJSON(j *GettextJSON) {
 	if j == nil {
@@ -405,11 +410,8 @@ func ClearFuzzyFromGettextJSON(j *GettextJSON) {
 		}
 		j.Entries[i].Comments = newComments
 		if wasFuzzy {
-			j.Entries[i].MsgStr = ""
-			if len(j.Entries[i].MsgStrPlural) > 0 {
-				for k := range j.Entries[i].MsgStrPlural {
-					j.Entries[i].MsgStrPlural[k] = ""
-				}
+			for k := range j.Entries[i].MsgStr {
+				j.Entries[i].MsgStr[k] = ""
 			}
 		}
 	}
@@ -688,14 +690,18 @@ func WriteGettextJSONToPO(j *GettextJSON, w io.Writer, noHeader, addTrailingNewl
 				return err
 			}
 		}
-		if len(entry.MsgStrPlural) > 0 {
-			for i, s := range entry.MsgStrPlural {
+		if len(entry.MsgStr) > 1 || (entry.MsgIDPlural != "" && len(entry.MsgStr) > 0) {
+			for i, s := range entry.MsgStr {
 				if err := writePoStringWithPrefix(w, prefix, "msgstr["+strconv.Itoa(i)+"]", s); err != nil {
 					return err
 				}
 			}
+		} else if len(entry.MsgStr) == 1 {
+			if err := writePoStringWithPrefix(w, prefix, "msgstr", entry.MsgStr[0]); err != nil {
+				return err
+			}
 		} else {
-			if err := writePoStringWithPrefix(w, prefix, "msgstr", entry.MsgStr); err != nil {
+			if err := writePoStringWithPrefix(w, prefix, "msgstr", ""); err != nil {
 				return err
 			}
 		}
@@ -759,14 +765,18 @@ func writeGettextEntryToPO(w io.Writer, entry GettextEntry) error {
 			return err
 		}
 	}
-	if len(entry.MsgStrPlural) > 0 {
-		for i, s := range entry.MsgStrPlural {
+	if len(entry.MsgStr) > 1 || (entry.MsgIDPlural != "" && len(entry.MsgStr) > 0) {
+		for i, s := range entry.MsgStr {
 			if err := writePoStringWithPrefix(w, prefix, "msgstr["+strconv.Itoa(i)+"]", s); err != nil {
 				return err
 			}
 		}
+	} else if len(entry.MsgStr) == 1 {
+		if err := writePoStringWithPrefix(w, prefix, "msgstr", entry.MsgStr[0]); err != nil {
+			return err
+		}
 	} else {
-		if err := writePoStringWithPrefix(w, prefix, "msgstr", entry.MsgStr); err != nil {
+		if err := writePoStringWithPrefix(w, prefix, "msgstr", ""); err != nil {
 			return err
 		}
 	}

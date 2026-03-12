@@ -52,8 +52,8 @@ func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) (bo
 		}
 		if entry.MsgIDPlural != "" {
 			if len(issue.SuggestMsgstrPlural) > 0 {
-				entry.MsgStrPlural = make([]string, len(issue.SuggestMsgstrPlural))
-				copy(entry.MsgStrPlural, issue.SuggestMsgstrPlural)
+				entry.MsgStr = make([]string, len(issue.SuggestMsgstrPlural))
+				copy(entry.MsgStr, issue.SuggestMsgstrPlural)
 				applyMap[entry.MsgID] = true
 				applyCount++
 			} else {
@@ -62,7 +62,7 @@ func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) (bo
 			}
 		} else {
 			if issue.SuggestMsgstr != "" {
-				entry.MsgStr = issue.SuggestMsgstr
+				entry.MsgStr = []string{issue.SuggestMsgstr}
 				applyMap[entry.MsgID] = true
 				applyCount++
 			} else {

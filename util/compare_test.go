@@ -423,26 +423,26 @@ func TestGettextEntriesEqual(t *testing.T) {
 	}{
 		{
 			name: "identical",
-			e1:   &GettextEntry{MsgID: "a", MsgStr: "x"},
-			e2:   &GettextEntry{MsgID: "a", MsgStr: "x"},
+			e1:   &GettextEntry{MsgID: "a", MsgStr: []string{"x"}},
+			e2:   &GettextEntry{MsgID: "a", MsgStr: []string{"x"}},
 			want: true,
 		},
 		{
 			name: "different msgstr",
-			e1:   &GettextEntry{MsgID: "a", MsgStr: "x"},
-			e2:   &GettextEntry{MsgID: "a", MsgStr: "y"},
+			e1:   &GettextEntry{MsgID: "a", MsgStr: []string{"x"}},
+			e2:   &GettextEntry{MsgID: "a", MsgStr: []string{"y"}},
 			want: false,
 		},
 		{
 			name: "different msgid",
-			e1:   &GettextEntry{MsgID: "a", MsgStr: "x"},
-			e2:   &GettextEntry{MsgID: "b", MsgStr: "x"},
+			e1:   &GettextEntry{MsgID: "a", MsgStr: []string{"x"}},
+			e2:   &GettextEntry{MsgID: "b", MsgStr: []string{"x"}},
 			want: false,
 		},
 		{
 			name: "different Fuzzy",
-			e1:   &GettextEntry{MsgID: "a", MsgStr: "x", Fuzzy: false},
-			e2:   &GettextEntry{MsgID: "a", MsgStr: "x", Fuzzy: true},
+			e1:   &GettextEntry{MsgID: "a", MsgStr: []string{"x"}, Fuzzy: false},
+			e2:   &GettextEntry{MsgID: "a", MsgStr: []string{"x"}, Fuzzy: true},
 			want: false,
 		},
 	}
