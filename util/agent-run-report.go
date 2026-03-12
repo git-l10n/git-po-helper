@@ -303,7 +303,7 @@ func PrintReviewReportResult(ar *AgentRunResult, runErr error, ctx *AgentRunCont
 
 	// "## Review Statistics" block whenever review JSON was loaded
 	if ar.ReviewResult != nil {
-		fmt.Println("## Review Statistics")
+		fmt.Println("🔍 Review Report")
 		fmt.Println()
 		fmt.Printf("  %-*s %d/100\n", w, "Review score:", ar.Score)
 		fmt.Printf("  %-*s %d\n", w, "Total entries:", ar.ReviewResult.TotalEntries)
@@ -321,29 +321,7 @@ func PrintReviewReportResult(ar *AgentRunResult, runErr error, ctx *AgentRunCont
 			fmt.Printf("  %-*s %s\n", w, "Report JSON:", ar.ReportFile)
 			fmt.Println()
 			fmt.Println("For full review details, see the report JSON file")
-		}
-	}
-
-	// Execution / validation (aligned with agent-test-review display)
-	if ar.AgentExecuted {
-		if runErr == nil {
-			fmt.Printf("  %-*s %s\n", w, "Agent execution:", "PASS")
-		} else {
-			fmt.Printf("  %-*s FAIL - %v\n", w, "Agent execution:", runErr)
-		}
-		if ctx != nil && ctx.PostValidationError() != nil {
-			fmt.Printf("  %-*s FAIL - %s\n", w, "Post-validation:", ctx.PostValidationError())
-		} else if ar.Score > 0 && ar.ReviewResult != nil {
-			fmt.Printf("  %-*s PASS (%d/100)\n", w, "Validation:", ar.Score)
-		} else {
-			fmt.Printf("  %-*s FAIL (no valid JSON or score 0)\n", w, "Validation:")
-		}
-	} else {
-		if ctx != nil && ctx.PreValidationError() != nil {
-			fmt.Printf("  %-*s SKIPPED (pre-validation failed)\n", w, "Agent execution:")
-			fmt.Printf("  %-*s %s\n", w, "Pre-validation:", ctx.PreValidationError())
-		} else {
-			fmt.Printf("  %-*s SKIPPED\n", w, "Agent execution:")
+			fmt.Println()
 		}
 	}
 }

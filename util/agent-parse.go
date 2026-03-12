@@ -189,7 +189,7 @@ func PrintAgentDiagnosticsFromResult(result *AgentRunResult) {
 	}
 	w := ReviewStatLabelWidth
 	fmt.Println()
-	fmt.Println("## 📊 Agent Diagnostics")
+	fmt.Println("📊 Agent Diagnostics")
 	fmt.Println()
 	if result.NumTurns > 0 {
 		fmt.Printf("  %-*s %d\n", w, "Num turns:", result.NumTurns)

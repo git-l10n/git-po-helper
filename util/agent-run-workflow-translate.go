@@ -133,7 +133,7 @@ func (w *workflowTranslate) Report(ctx *AgentRunContext) {
 	pre, post := ctx.PreCheckResult, ctx.PostCheckResult
 	// Print report when we have any pre/post context or errors to show.
 	fmt.Println()
-	fmt.Println("## Translation Report")
+	fmt.Println("🔍 Translation Report")
 	fmt.Println()
 	if pre != nil {
 		beforeTranslated := pre.AllEntries - pre.UntranslatePoEntries - pre.FuzzyPoEntries
