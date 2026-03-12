@@ -45,101 +45,10 @@ func CmdAgentTestUpdatePot(agentName string, runs int, skipConfirmation bool) er
 }
 
 // RunAgentTestUpdatePot runs the agent-test update-pot operation multiple times.
-// It reuses RunAgentUpdatePot for each run and accumulates scores.
-// Pre-validation and post-validation (entry count checks) are performed here
-// when configured in cfg.AgentTest.
-// Returns scores for each run, average score, and error.
+// Each loop: Cleanup → PreCheck → agent-test pre validation → AgentRun → PostCheck →
+// agent-test post validation → Report; then aggregate scores.
 func RunAgentTestUpdatePot(agentName string, runs int, cfg *config.AgentConfig) ([]TestRunResult, float64, error) {
-	potFile := GetPotFilePath()
-
-	// Run the test multiple times
-	results := make([]TestRunResult, runs)
-	totalScore := 0
-
-	for i := 0; i < runs; i++ {
-		runNum := i + 1
-		log.Infof("run %d/%d", runNum, runs)
-
-		// Start timing for this iteration
-		iterStartTime := time.Now()
-
-		// Clean po/ directory before each run to ensure a clean state
-		if err := CleanPoDirectory("po/git.pot"); err != nil {
-			log.Warnf("run %d: failed to clean po/ directory: %v", runNum, err)
-			// Continue with the run even if cleanup fails, but log the warning
-		}
-
-		// Pre-validation: check entry count before update (when configured)
-		var agentResult *AgentRunResult
-		var runCtx *AgentRunContext
-		var err error
-		if cfg.AgentTest.PotEntriesBeforeUpdate != nil && *cfg.AgentTest.PotEntriesBeforeUpdate != 0 {
-			log.Infof("performing pre-validation: checking entry count before update (expected: %d)", *cfg.AgentTest.PotEntriesBeforeUpdate)
-			agentResult = &AgentRunResult{Score: 0}
-			runCtx = &AgentRunContext{Result: agentResult}
-			runCtx.PreCheckResult = &PreCheckResult{}
-			if !Exist(potFile) {
-				runCtx.PreCheckResult.AllEntries = 0
-			} else if stats, e := GetPoStats(potFile); e == nil {
-				runCtx.PreCheckResult.AllEntries = stats.Total()
-			}
-			if err = ValidatePotEntryCount(potFile, cfg.AgentTest.PotEntriesBeforeUpdate, "before update"); err != nil {
-				runCtx.PreCheckResult.Error = fmt.Errorf("pre-validation failed: %w\nHint: Ensure po/git.pot exists and has the expected number of entries", err)
-				agentResult.Score = 0
-				// Skip agent run when pre-validation fails
-			} else {
-				log.Infof("pre-validation passed")
-				agentResult, runCtx, err = RunAgentUpdatePot(cfg, agentName)
-			}
-		} else {
-			agentResult, runCtx, err = RunAgentUpdatePot(cfg, agentName)
-		}
-
-		// Post-validation: check entry count after update (when configured)
-		if err == nil && agentResult != nil && runCtx != nil && cfg.AgentTest.PotEntriesAfterUpdate != nil && *cfg.AgentTest.PotEntriesAfterUpdate != 0 {
-			log.Infof("performing post-validation: checking entry count after update (expected: %d)", *cfg.AgentTest.PotEntriesAfterUpdate)
-			if runCtx.PostCheckResult == nil {
-				runCtx.PostCheckResult = &PostCheckResult{}
-			}
-			if Exist(potFile) {
-				if stats, e := GetPoStats(potFile); e == nil {
-					runCtx.PostCheckResult.AllEntries = stats.Total()
-				}
-			}
-			if postErr := ValidatePotEntryCount(potFile, cfg.AgentTest.PotEntriesAfterUpdate, "after update"); postErr != nil {
-				runCtx.PostCheckResult.Error = fmt.Errorf("post-validation failed: %w\nHint: The agent may not have updated the POT file correctly", postErr)
-				agentResult.Score = 0
-			} else {
-				log.Infof("post-validation passed")
-			}
-		}
-
-		// Calculate execution time for this iteration
-		iterExecutionTime := time.Since(iterStartTime)
-
-		// Convert AgentRunResult to TestRunResult (embedding avoids field duplication)
-		result := TestRunResult{
-			AgentRunResult: *agentResult,
-			RunNumber:      runNum,
-			RunError:       err,
-			Ctx:            runCtx,
-		}
-		result.ExecutionTime = iterExecutionTime
-
-		// If there was an error, log it but continue (for agent-test, we want to collect all results)
-		if err != nil {
-			log.Debugf("run %d: agent-run returned error: %v", runNum, err)
-			// Error details are already in the result structure
-		}
-
-		results[i] = result
-		totalScore += result.Score
-		log.Debugf("run %d: completed with score %d/100", runNum, result.Score)
-	}
-
-	// Calculate average score
-	averageScore := float64(totalScore) / float64(runs)
-	log.Infof("all runs completed. Total score: %d/%d, Average: %.2f/100", totalScore, runs*100, averageScore)
-
-	return results, averageScore, nil
+	return RunAgentTestWorkflowLoops(func() AgentRunWorkflow {
+		return NewWorkflowUpdatePot(agentName)
+	}, agentTestHooksUpdatePot{}, cfg, runs)
 }

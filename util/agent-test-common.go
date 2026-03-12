@@ -50,11 +50,13 @@ func formatDuration(d time.Duration) string {
 // It embeds AgentRunResult so agent-run fields (Score, etc.)
 // are inherited; RunNumber is test-specific.
 // Ctx holds PreCheckResult/PostCheckResult for display.
+// Workflow is the workflow instance for this run; used to call Report(ctx) again after all loops.
 type TestRunResult struct {
 	AgentRunResult
-	RunNumber int   // Test run index (1-based)
-	RunError  error // Error from agent run, for display when run fails
-	Ctx       *AgentRunContext
+	RunNumber int              // Test run index (1-based)
+	RunError  error            // Error from agent run, for display when run fails
+	Ctx       *AgentRunContext // Context after PreCheck/AgentRun/PostCheck; pass to Workflow.Report
+	Workflow  AgentRunWorkflow // Workflow used for this run; nil if not from agent-test loop runner
 }
 
 // ConfirmAgentTestExecution displays a warning and requires user confirmation before proceeding.

@@ -94,42 +94,27 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 	results := make([]TestRunResult, runs)
 	var reviewJSONs []*ReviewJSONResult
 
-	for i := 0; i < runs; i++ {
+	loopResults, _, err := RunAgentTestWorkflowLoops(func() AgentRunWorkflow {
+		return NewWorkflowReview(agentName, target, useLocalOrchestration, batchSize)
+	}, agentTestHooksReview{}, cfg, runs)
+	if err != nil {
+		return nil, 0, err
+	}
+	for i := range loopResults {
+		results[i] = loopResults[i]
 		runNum := i + 1
-		log.Infof("## loop %d/%d", runNum, runs)
-
-		// Start timing for this iteration
-		iterStartTime := time.Now()
-
-		cleanReviewOutputFilesForTest(ps)
-
-		// RunAgentReview dispatches to local or prompt orchestration
-		agentResult, runCtx, agentErr := RunAgentReview(cfg, agentName, target, useLocalOrchestration, batchSize)
-		if agentErr != nil && agentResult == nil {
-			agentResult = &AgentRunResult{Score: 0}
-		}
-
-		// Calculate execution time for this iteration
-		iterExecutionTime := time.Since(iterStartTime)
-
-		// Convert AgentRunResult to TestRunResult (embedding avoids field duplication)
-		result := TestRunResult{
-			AgentRunResult: *agentResult,
-			RunNumber:      runNum,
-			RunError:       agentErr,
-			Ctx:            runCtx,
-		}
-		result.ExecutionTime = iterExecutionTime
-		results[i] = result
+		result := &results[i]
+		agentErr := result.RunError
+		runCtx := result.Ctx
 
 		// Record per-run score and collect JSON for aggregation
 		if agentErr != nil {
-			log.Errorf("loop %d: agent-run returned error: %v", runNum, err)
+			log.Errorf("loop %d: agent-run returned error: %v", runNum, agentErr)
 		} else if runCtx != nil && runCtx.PostValidationError() != nil {
 			// Pending PO still has entries; score must stay 0 (set in RunAgentReview)
 			result.Score = 0
-		} else if agentResult.ReviewReport.ReviewResult != nil {
-			reviewJSONs = append(reviewJSONs, agentResult.ReviewReport.ReviewResult)
+		} else if result.ReviewReport.ReviewResult != nil {
+			reviewJSONs = append(reviewJSONs, result.ReviewReport.ReviewResult)
 			log.Infof("loop %d: review score: %d (total_entries=%d, issues=%d)",
 				runNum,
 				result.Score,
