@@ -437,8 +437,8 @@ func applyAgentDiagnostics(result *AgentRunResult, streamResult AgentStreamResul
 	if streamResult == nil {
 		return
 	}
-	PrintAgentDiagnostics(streamResult)
 	if n := streamResult.GetNumTurns(); n > 0 {
 		result.NumTurns = n
 	}
+	PrintAgentDiagnostics(streamResult)
 }

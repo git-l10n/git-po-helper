@@ -8,7 +8,6 @@ import (
 	"text/template"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -168,8 +167,7 @@ func BuildAgentCommand(entry config.AgentEntry, vars PlaceholderVars) ([]string,
 
 // GetPotFilePath returns the full path to the POT file in the repository.
 func GetPotFilePath() string {
-	workDir := repository.WorkDirOrCwd()
-	return filepath.Join(workDir, PoDir, GitPot)
+	return filepath.Join(PoDir, GitPot)
 }
 
 // GetRawPrompt returns the prompt for the specified action from configuration, or an error if not configured.

@@ -81,14 +81,11 @@ func buildReviewUseAgentMdPrompt(target *CompareTarget) string {
 	return taskDesc + " according to @po/AGENTS.md."
 }
 
-// RunAgentReview dispatches to local batch orchestration or prompt orchestration
-// (agent with po/AGENTS.md). Same pattern as RunAgentTranslate.
-// After a successful dispatch, verifies review-pending.po is empty or absent;
-// otherwise the review did not finish all entries.
-func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
-	result, agentErr := runAgentReviewDispatch(cfg, agentName, target, useLocalOrchestration, batchSize)
+// reviewAgentRunPostCheck verifies review-pending.po is empty or absent after dispatch.
+// Mutates result (PostValidationError, Score). useLocalOrchestration affects zero-total handling.
+func reviewAgentRunPostCheck(result *AgentRunResult, useLocalOrchestration bool) {
 	if result == nil {
-		result = &AgentRunResult{Score: 0}
+		return
 	}
 	if result.ReviewReport.ReviewResult != nil {
 		result.Score = result.ReviewReport.Score
@@ -157,7 +154,18 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 			log.Infof("no pending entries (input PO %s may be absent in prompt-only flow)", ps.InputPO)
 		}
 	}
+}
 
+// RunAgentReview dispatches to local batch orchestration or prompt orchestration
+// (agent with po/AGENTS.md). Same pattern as RunAgentTranslate.
+// After a successful dispatch, verifies review-pending.po is empty or absent;
+// otherwise the review did not finish all entries.
+func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
+	result, agentErr := runAgentReviewDispatch(cfg, agentName, target, useLocalOrchestration, batchSize)
+	if result == nil {
+		result = &AgentRunResult{Score: 0}
+	}
+	reviewAgentRunPostCheck(result, useLocalOrchestration)
 	return result, agentErr
 }
 
@@ -245,40 +253,7 @@ func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string
 	return result, nil
 }
 
-// CmdAgentRunReview implements the agent-run review command logic.
-// It loads configuration and calls RunAgentReview (dispatches to local or prompt orchestration).
-// useLocalOrchestration: if true, use local orchestration (--use-local-orchestration);
-// otherwise use agent with po/AGENTS.md (default).
+// CmdAgentRunReview implements the agent-run review command logic via AgentRunWorkflow.
 func CmdAgentRunReview(agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) error {
-	cfg, err := LoadAgentConfigForCmd()
-	if err != nil {
-		return err
-	}
-
-	startTime := time.Now()
-
-	if batchSize <= 0 {
-		batchSize = 50
-	}
-	result, err := RunAgentReview(cfg, agentName, target, useLocalOrchestration, batchSize)
-	if err != nil {
-		return err
-	}
-
-	elapsed := time.Since(startTime)
-
-	// Display review report and execution/validation (same format as agent-run report)
-	PrintReviewReportResult(result, nil)
-
-	fmt.Printf("\nSummary:\n")
-	if result.ReviewReport.ReportFile != "" {
-		fmt.Printf("  Review JSON: %s\n", getRelativePath(result.ReviewReport.ReportFile))
-	}
-	if result.NumTurns > 0 {
-		fmt.Printf("  Turns: %d\n", result.NumTurns)
-	}
-	fmt.Printf("  Execution time: %s\n", elapsed.Round(time.Millisecond))
-
-	log.Infof("agent-run review completed successfully")
-	return nil
+	return RunAgentRunWorkflow(NewWorkflowReview(agentName, target, useLocalOrchestration, batchSize))
 }
