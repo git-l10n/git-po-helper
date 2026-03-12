@@ -105,8 +105,9 @@ type AgentRunWorkflow interface {
 	AgentRun(ctx *AgentRunContext) (agentRunErr error)
 	// PostCheck runs after the agent; may set PostCheckResult.Error.
 	PostCheck(ctx *AgentRunContext) error
-	// Report prints command-specific output and returns a terminal error for the CLI.
-	Report(ctx *AgentRunContext, agentRunErr error) error
+	// Report prints command-specific output only; terminal status comes from ctx.Result.Error
+	// and ctx pre/post validation (returned by RunAgentRunWorkflow after Report).
+	Report(ctx *AgentRunContext)
 }
 
 // RunAgentRunWorkflow loads config, runs PreCheck → AgentRun → PostCheck → Report,
@@ -124,14 +125,20 @@ func RunAgentRunWorkflow(wf AgentRunWorkflow) error {
 	if err := wf.PreCheck(ctx); err != nil {
 		return err
 	}
-	agentErr := wf.AgentRun(ctx)
+	ctx.Result.Error = wf.AgentRun(ctx)
 	ctx.Result.ExecutionTime = time.Since(start)
 	// Print agent diagnostics from ctx.Result before workflow Report (fields filled by applyAgentDiagnostics during AgentRun).
 	PrintAgentDiagnosticsFromResult(ctx.Result)
-	postErr := wf.PostCheck(ctx)
 	// Report runs even when agent or post-check failed (e.g. translate prints after-stats then returns error).
-	if reportErr := wf.Report(ctx, agentErr); reportErr != nil {
-		return reportErr
+	_ = wf.PostCheck(ctx)
+	wf.Report(ctx)
+	if ctx.Result.Error != nil {
+		return ctx.Result.Error
+	} else if ctx.PreValidationError() != nil {
+		return ctx.PreValidationError()
+	} else if ctx.PostValidationError() != nil {
+		return ctx.PostValidationError()
+	} else {
+		return nil
 	}
-	return postErr
 }

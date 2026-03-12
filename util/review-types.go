@@ -60,7 +60,8 @@ type PostCheckResult struct {
 // Pre/post check data lives in AgentRunContext; use ctx for validation.
 type AgentRunResult struct {
 	AgentExecuted bool
-	Score         int // 0-100, from PostCheckResult or ReviewReport
+	Error         error // AgentRun failure; nil when agent process succeeded
+	Score         int   // 0-100, from PostCheckResult or ReviewReport
 
 	// Review: embedded when from review; ReviewResult==nil when not from review
 	ReviewReport

@@ -60,11 +60,8 @@ func (w *workflowReview) PostCheck(ctx *AgentRunContext) error {
 	return nil
 }
 
-func (w *workflowReview) Report(ctx *AgentRunContext, agentRunErr error) error {
-	if agentRunErr != nil {
-		return agentRunErr
-	}
-	PrintReviewReportResult(ctx.Result, nil, ctx)
+func (w *workflowReview) Report(ctx *AgentRunContext) {
+	PrintReviewReportResult(ctx.Result, ctx.Result.Error, ctx)
 	fmt.Printf("\nSummary:\n")
 	if ctx.Result.ReviewReport.ReportFile != "" {
 		fmt.Printf("  Review JSON: %s\n", getRelativePath(ctx.Result.ReviewReport.ReportFile))
@@ -74,5 +71,4 @@ func (w *workflowReview) Report(ctx *AgentRunContext, agentRunErr error) error {
 	}
 	fmt.Printf("  Execution time: %s\n", ctx.Result.ExecutionTime.Round(time.Millisecond))
 	log.Infof("agent-run review completed successfully")
-	return nil
 }

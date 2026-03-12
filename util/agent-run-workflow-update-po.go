@@ -78,18 +78,14 @@ func (w *workflowUpdatePo) PostCheck(ctx *AgentRunContext) error {
 	return nil
 }
 
-func (w *workflowUpdatePo) Report(ctx *AgentRunContext, agentRunErr error) error {
-	if agentRunErr != nil {
-		return agentRunErr
+func (w *workflowUpdatePo) Report(ctx *AgentRunContext) {
+	if ctx.Result != nil && ctx.Result.Error != nil {
+		return
 	}
-	if ctx.PreValidationError() != nil {
-		return fmt.Errorf("pre-validation failed: %w", ctx.PreValidationError())
-	}
-	if ctx.PostValidationError() != nil {
-		return fmt.Errorf("post-validation failed: %w", ctx.PostValidationError())
+	if ctx.PreValidationError() != nil || ctx.PostValidationError() != nil {
+		return
 	}
 	log.Infof("agent-run update-po completed successfully")
-	return nil
 }
 
 // agentRunUpdatePoExecute runs the agent for update-po.

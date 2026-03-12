@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/git-l10n/git-po-helper/config"
 	log "github.com/sirupsen/logrus"
@@ -125,33 +124,46 @@ func (w *workflowTranslate) PostCheck(ctx *AgentRunContext) error {
 	return nil
 }
 
-func (w *workflowTranslate) Report(ctx *AgentRunContext, agentRunErr error) error {
-	// Print before/after from PreCheckResult/PostCheckResult (AllEntries = Total = translated+untranslated+fuzzy).
-	if pre := ctx.PreCheckResult; pre != nil && pre.Error == nil {
+func (w *workflowTranslate) Report(ctx *AgentRunContext) {
+	if ctx == nil {
+		return
+	}
+
+	labelWidth := ReviewStatLabelWidth
+	pre, post := ctx.PreCheckResult, ctx.PostCheckResult
+	// Print report when we have any pre/post context or errors to show.
+	fmt.Println()
+	fmt.Println("## Translation Report")
+	fmt.Println()
+	if pre != nil {
 		beforeTranslated := pre.AllEntries - pre.UntranslatePoEntries - pre.FuzzyPoEntries
 		if beforeTranslated < 0 {
 			beforeTranslated = 0
 		}
-		fmt.Fprintf(os.Stderr, "Translation statistics: before: %d translated, %d untranslated, %d fuzzy.\n",
-			beforeTranslated, pre.UntranslatePoEntries, pre.FuzzyPoEntries)
+		fmt.Printf("  %-*s %d\n", labelWidth, "Before translated:", beforeTranslated)
+		fmt.Printf("  %-*s %d\n", labelWidth, "Before untranslated:", pre.UntranslatePoEntries)
+		fmt.Printf("  %-*s %d\n", labelWidth, "Before fuzzy:", pre.FuzzyPoEntries)
+		if pre.Error != nil {
+			fmt.Printf("  %-*s %s\n", labelWidth, "Pre-validation:", pre.Error.Error())
+		}
 	}
-	if post := ctx.PostCheckResult; post != nil {
+	if post != nil {
+		fmt.Println()
 		afterTranslated := post.AllEntries - post.UntranslatePoEntries - post.FuzzyPoEntries
 		if afterTranslated < 0 {
 			afterTranslated = 0
 		}
-		fmt.Fprintf(os.Stderr, "Translation statistics: after: %d translated, %d untranslated, %d fuzzy.\n",
-			afterTranslated, post.UntranslatePoEntries, post.FuzzyPoEntries)
+		fmt.Printf("  %-*s %d\n", labelWidth, "After translated:", afterTranslated)
+		fmt.Printf("  %-*s %d\n", labelWidth, "After untranslated:", post.UntranslatePoEntries)
+		fmt.Printf("  %-*s %d\n", labelWidth, "After fuzzy:", post.FuzzyPoEntries)
+		if post.Error != nil {
+			fmt.Printf("  %-*s %s\n", labelWidth, "Post-validation:", post.Error.Error())
+		}
 	}
-	if agentRunErr != nil {
-		return fmt.Errorf("agent execution failed: %w", agentRunErr)
+	if ctx.Result.Error != nil {
+		fmt.Println()
+		fmt.Printf("  %-*s %s\n", labelWidth, "Agent execution:", ctx.Result.Error)
 	}
-	if ctx.PreValidationError() != nil {
-		return fmt.Errorf("pre-validation failed: %w", ctx.PreValidationError())
-	}
-	if ctx.PostValidationError() != nil {
-		return fmt.Errorf("post-validation failed: %w", ctx.PostValidationError())
-	}
-	log.Infof("agent-run translate completed successfully")
-	return nil
+	fmt.Println()
+	flushStdout()
 }
