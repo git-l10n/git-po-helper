@@ -80,87 +80,6 @@ func buildReviewUseAgentMdPrompt(target *CompareTarget) string {
 	return taskDesc + " according to @po/AGENTS.md."
 }
 
-// reviewAgentRunPostCheck verifies review-pending.po is empty or absent after dispatch.
-// Writes to ctx.PostCheckResult and ctx.Result.Score.
-func reviewAgentRunPostCheck(ctx *AgentRunContext) {
-	if ctx == nil || ctx.Result == nil {
-		return
-	}
-	result := ctx.Result
-	if result.ReviewReport.ReviewResult != nil {
-		result.Score = result.ReviewReport.Score
-	}
-	if ctx.PostCheckResult == nil {
-		ctx.PostCheckResult = &PostCheckResult{}
-	}
-	ctx.PostCheckResult.Score = result.Score
-
-	// setReviewPostValidation records post-validation failure and clears score.
-	setReviewPostValidation := func(err error) {
-		if err == nil {
-			return
-		}
-		if ctx.PostCheckResult.Error == nil {
-			ctx.PostCheckResult.Error = err
-		}
-		ctx.PostCheckResult.Score = 0
-		result.Score = 0
-		log.Errorf("%v", err)
-	}
-
-	// Post-validation: verify review-pending.po is empty or absent;
-	ps := GetReviewPathSet()
-	pendingCount := 0
-	if Exist(ps.PendingPO) {
-		info, statErr := os.Stat(ps.PendingPO)
-		if statErr != nil {
-			setReviewPostValidation(fmt.Errorf("cannot stat pending review PO %s: %w", ps.PendingPO, statErr))
-		} else if info.Size() == 0 {
-			pendingCount = 0
-		} else {
-			stats, statsErr := GetPoStats(ps.PendingPO)
-			if statsErr != nil {
-				setReviewPostValidation(fmt.Errorf("cannot get PO stats for %s: %w", ps.PendingPO, statsErr))
-			} else {
-				pendingCount = stats.Total()
-			}
-		}
-	}
-
-	totalCount := 0
-	if Exist(ps.InputPO) {
-		stats, statsErr := GetPoStats(ps.InputPO)
-		if statsErr != nil {
-			setReviewPostValidation(fmt.Errorf("cannot get PO stats for %s: %w", ps.InputPO, statsErr))
-		} else {
-			totalCount = stats.Total()
-		}
-	}
-
-	if pendingCount != 0 {
-		reviewedCount := totalCount - pendingCount
-		if reviewedCount < 0 {
-			reviewedCount = 0
-		}
-		setReviewPostValidation(fmt.Errorf(
-			"review incomplete: %d entries still in %s (total in %s: %d, reviewed: %d, not reviewed: %d)",
-			pendingCount, ps.PendingPO, ps.InputPO, totalCount, reviewedCount, pendingCount))
-	}
-
-	// Pending file absent or empty — success only when no post-validation error recorded
-	if ctx.PostCheckResult.Error == nil && (!Exist(ps.PendingPO) || pendingCount == 0) {
-		if totalCount > 0 {
-			log.Infof("review completed successfully: all %d entries reviewed (none remaining in pending)", totalCount)
-		} else if ctx.UseLocalOrchestration {
-			// Local orchestration expects input/pending pipeline; zero total means nothing to review
-			setReviewPostValidation(fmt.Errorf(
-				"no entries reviewed: input PO %s missing or empty, or pending absent or empty", ps.InputPO))
-		} else {
-			log.Infof("no pending entries (input PO %s may be absent in prompt-only flow)", ps.InputPO)
-		}
-	}
-}
-
 // RunAgentReview dispatches to local batch orchestration or prompt orchestration
 // (agent with po/AGENTS.md). Same pattern as RunAgentTranslate.
 // After a successful dispatch, verifies review-pending.po is empty or absent;
@@ -172,7 +91,7 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 		result = &AgentRunResult{Score: 0}
 	}
 	ctx := &AgentRunContext{Result: result, UseLocalOrchestration: useLocalOrchestration}
-	reviewAgentRunPostCheck(ctx)
+	NewWorkflowReview(agentName, target, useLocalOrchestration, batchSize).PostCheck(ctx)
 	return result, ctx, agentErr
 }
 

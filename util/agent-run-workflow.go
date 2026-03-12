@@ -125,7 +125,11 @@ func RunAgentRunWorkflow(wf AgentRunWorkflow) error {
 	if err := wf.PreCheck(ctx); err != nil {
 		return err
 	}
-	ctx.Result.Error = wf.AgentRun(ctx)
+	err = wf.AgentRun(ctx)
+	if ctx.Result == nil {
+		ctx.Result = &AgentRunResult{Score: 0}
+	}
+	ctx.Result.Error = err
 	ctx.Result.ExecutionTime = time.Since(start)
 	// Print agent diagnostics from ctx.Result before workflow Report (fields filled by applyAgentDiagnostics during AgentRun).
 	PrintAgentDiagnosticsFromResult(ctx.Result)

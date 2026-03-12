@@ -28,23 +28,6 @@ func LoadAgentConfigForCmd() (*config.AgentConfig, error) {
 	return cfg, nil
 }
 
-// getRelativePath converts an absolute path to a path relative to the current directory.
-// If conversion fails, returns the original absolute path as fallback.
-func getRelativePath(absPath string) string {
-	if absPath == "" {
-		return ""
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return absPath // fallback to absolute path
-	}
-	relPath, err := filepath.Rel(cwd, absPath)
-	if err != nil {
-		return absPath // fallback to absolute path
-	}
-	return relPath
-}
-
 // CountMsgidEntries counts the number of msgid entries in a PO file by counting
 // lines that start with "msgid "
 func CountMsgidEntries(filePath string) (int, error) {
