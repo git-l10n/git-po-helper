@@ -36,7 +36,7 @@ func (w *workflowUpdatePo) PreCheck(ctx *AgentRunContext) error {
 	if err != nil {
 		return err
 	}
-	rel, err := GetPoFileRelPath(ctx.Cfg, ctx.PoFile)
+	rel, err := GuessPoFilePath(ctx.Cfg, ctx.PoFile)
 	if err != nil {
 		return err
 	}
@@ -47,6 +47,8 @@ func (w *workflowUpdatePo) PreCheck(ctx *AgentRunContext) error {
 		ctx.PreCheckResult.AllEntries = 0
 	} else if stats, err := GetPoStats(ctx.PoFile); err == nil {
 		ctx.PreCheckResult.AllEntries = stats.Total()
+		ctx.PreCheckResult.UntranslatePoEntries = stats.Untranslated
+		ctx.PreCheckResult.FuzzyPoEntries = stats.Fuzzy
 	}
 	return nil
 }
@@ -60,13 +62,15 @@ func (w *workflowUpdatePo) PostCheck(ctx *AgentRunContext) error {
 	if Exist(ctx.PoFile) {
 		if stats, err := GetPoStats(ctx.PoFile); err == nil {
 			ctx.PostCheckResult.AllEntries = stats.Total()
+			ctx.PostCheckResult.UntranslatePoEntries = stats.Untranslated
+			ctx.PostCheckResult.FuzzyPoEntries = stats.Fuzzy
 		}
 	}
 	ctx.Result.Score = 100
 	log.Infof("validating file syntax: %s", ctx.PoFile)
 	if err := ValidatePoFile(ctx.PoFile); err != nil {
 		log.Errorf("file syntax validation failed: %v", err)
-		ctx.PostCheckResult.SyntaxValidationError = err
+		ctx.PostCheckResult.Error = fmt.Errorf("file syntax validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", err)
 		ctx.Result.Score = 0
 	} else {
 		log.Infof("file syntax validation passed")
@@ -83,9 +87,6 @@ func (w *workflowUpdatePo) Report(ctx *AgentRunContext, agentRunErr error) error
 	}
 	if ctx.PostValidationError() != nil {
 		return fmt.Errorf("post-validation failed: %w", ctx.PostValidationError())
-	}
-	if ctx.SyntaxValidationError() != nil {
-		return fmt.Errorf("file validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", ctx.SyntaxValidationError())
 	}
 	log.Infof("agent-run update-po completed successfully")
 	return nil

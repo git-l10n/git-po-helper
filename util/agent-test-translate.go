@@ -78,7 +78,7 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 	_ = selectedAgent // Avoid unused variable warning
 
 	// Resolve to relative path (cwd at repo root)
-	poFile, err = GetPoFileRelPath(cfg, poFile)
+	poFile, err = GuessPoFilePath(cfg, poFile)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -103,9 +103,30 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 		}
 		cleanL10nIntermediateFiles()
 
-		// Pre-validation: count new/fuzzy before translation (same as CmdAgentRunTranslate).
+		// Pre-validation: count new/fuzzy before translation (same as workflow translate PreCheck).
 		// Without this, BeforeNewCount/BeforeFuzzyCount stay 0 and Score never becomes 100.
-		pre, preErr := validateTranslatePreResult(poFile)
+		pre := &PreCheckResult{}
+		var preErr error
+		if !Exist(poFile) {
+			preErr = fmt.Errorf("PO file does not exist: %s\nHint: Ensure the PO file exists before running translate", poFile)
+		} else {
+			log.Infof("performing pre-validation: counting new and fuzzy entries")
+			var statsBefore *PoStats
+			statsBefore, preErr = GetPoStats(poFile)
+			if preErr == nil {
+				pre.AllEntries = statsBefore.Total()
+				pre.UntranslatePoEntries = statsBefore.Untranslated
+				pre.FuzzyPoEntries = statsBefore.Fuzzy
+				log.Infof("new (untranslated) entries before translation: %d", statsBefore.Untranslated)
+				log.Infof("fuzzy entries before translation: %d", statsBefore.Fuzzy)
+				if statsBefore.Untranslated == 0 && statsBefore.Fuzzy == 0 {
+					pre.Error = fmt.Errorf("no new or fuzzy entries to translate, PO file is ready for use")
+					preErr = pre.Error
+				}
+			} else {
+				preErr = fmt.Errorf("failed to count PO stats: %w", preErr)
+			}
+		}
 		if preErr != nil {
 			// Nothing to translate or PO missing — record pre and skip agent run
 			runCtx := &AgentRunContext{Result: &AgentRunResult{Score: 0}, PreCheckResult: pre}
@@ -126,9 +147,31 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 		agentResult, runErr := RunAgentTranslate(cfg, agentName, poFile, true, useLocalOrchestration, batchSize)
 		err = runErr
 
-		// Build ctx with pre-check; validateTranslatePostResult fills PostCheckResult.
+		// Build ctx with pre-check; post-check same as workflow translate PostCheck.
 		runCtx := &AgentRunContext{Result: agentResult, PreCheckResult: pre}
-		_ = validateTranslatePostResult(poFile, runCtx)
+		if runCtx.PostCheckResult == nil {
+			runCtx.PostCheckResult = &PostCheckResult{}
+		}
+		log.Infof("performing post-validation: counting new and fuzzy entries")
+		if statsAfter, statErr := GetPoStats(poFile); statErr != nil {
+			log.Errorf("failed to count PO stats after translation: %v", statErr)
+		} else {
+			runCtx.PostCheckResult.AllEntries = statsAfter.Total()
+			runCtx.PostCheckResult.UntranslatePoEntries = statsAfter.Untranslated
+			runCtx.PostCheckResult.FuzzyPoEntries = statsAfter.Fuzzy
+			if statsAfter.Untranslated != 0 || statsAfter.Fuzzy != 0 {
+				runCtx.PostCheckResult.Error = fmt.Errorf("translation incomplete: %d new entries and %d fuzzy entries remaining", statsAfter.Untranslated, statsAfter.Fuzzy)
+				runCtx.PostCheckResult.Score = 0
+				runCtx.Result.Score = 0
+			} else {
+				runCtx.PostCheckResult.Score = 100
+				runCtx.Result.Score = 100
+			}
+			if err := ValidatePoFile(poFile); err != nil {
+				runCtx.PostCheckResult.Error = fmt.Errorf("file syntax validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", err)
+				runCtx.Result.Score = 0
+			}
+		}
 
 		// Calculate execution time for this iteration
 		iterExecutionTime := time.Since(iterStartTime)

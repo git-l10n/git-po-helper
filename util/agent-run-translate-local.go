@@ -40,7 +40,7 @@ func RunAgentTranslateLocalOrchestration(cfg *config.AgentConfig, agentName, poF
 		return result, err
 	}
 
-	rel, err := GetPoFileRelPath(cfg, poFile)
+	rel, err := GuessPoFilePath(cfg, poFile)
 	if err != nil {
 		return result, err
 	}

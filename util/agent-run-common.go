@@ -264,12 +264,12 @@ func GetPoFileAbsPath(cfg *config.AgentConfig, poFile string) (string, error) {
 	return poFile, nil
 }
 
-// GetPoFileRelPath determines the relative path of a PO file in "po/XX.po" format.
+// GuessPoFilePath determines the relative path of a PO file in "po/XX.po" format.
 // If poFile is empty, it uses default_lang_code to construct PoDir/lang.po (relative).
 // If poFile is absolute, it converts via filepath.Rel to repository root.
 // If poFile is already relative, it normalizes with filepath.Clean and ToSlash.
 // Does not join with workDir—callers run with cwd at repo root so relative paths suffice.
-func GetPoFileRelPath(cfg *config.AgentConfig, poFile string) (string, error) {
+func GuessPoFilePath(cfg *config.AgentConfig, poFile string) (string, error) {
 	workDir, err := os.Getwd()
 	if err != nil {
 		workDir = "."
@@ -433,13 +433,7 @@ func parseStreamByKind(kind string, reader io.Reader) (stdout []byte, streamResu
 	}
 }
 
-// applyAgentDiagnostics prints diagnostics and extracts NumTurns from streamResult.
+// applyAgentDiagnostics copies diagnostics from streamResult into result (no print; print in RunAgentRunWorkflow before Report, or call PrintAgentDiagnosticsFromResult for non-workflow paths).
 func applyAgentDiagnostics(result *AgentRunResult, streamResult AgentStreamResult) {
-	if streamResult == nil {
-		return
-	}
-	if n := streamResult.GetNumTurns(); n > 0 {
-		result.NumTurns = n
-	}
-	PrintAgentDiagnostics(streamResult)
+	GetAgentDiagnostics(result, streamResult)
 }

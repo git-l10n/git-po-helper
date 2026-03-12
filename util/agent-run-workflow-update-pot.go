@@ -63,7 +63,12 @@ func (w *workflowUpdatePot) PostCheck(ctx *AgentRunContext) error {
 	log.Infof("validating file syntax: %s", ctx.potFile)
 	if err := ValidatePoFile(ctx.potFile); err != nil {
 		log.Errorf("file syntax validation failed: %v", err)
-		ctx.PostCheckResult.SyntaxValidationError = err
+		ext := filepath.Ext(ctx.potFile)
+		if ext == ".pot" {
+			ctx.PostCheckResult.Error = fmt.Errorf("file syntax validation failed: %w\nHint: Check the POT file syntax using 'msgcat --use-first <file> -o /dev/null'", err)
+		} else {
+			ctx.PostCheckResult.Error = fmt.Errorf("file syntax validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", err)
+		}
 		ctx.PostCheckResult.Score = 0
 		ctx.Result.Score = 0
 	} else {
@@ -81,13 +86,6 @@ func (w *workflowUpdatePot) Report(ctx *AgentRunContext, agentRunErr error) erro
 	}
 	if ctx.PostValidationError() != nil {
 		return fmt.Errorf("post-validation failed: %w", ctx.PostValidationError())
-	}
-	if ctx.SyntaxValidationError() != nil {
-		ext := filepath.Ext(ctx.potFile)
-		if ext == ".pot" {
-			return fmt.Errorf("file validation failed: %w\nHint: Check the POT file syntax using 'msgcat --use-first <file> -o /dev/null'", ctx.SyntaxValidationError())
-		}
-		return fmt.Errorf("file validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", ctx.SyntaxValidationError())
 	}
 	log.Infof("agent-run update-pot completed successfully")
 	return nil

@@ -48,13 +48,12 @@ type PreCheckResult struct {
 // PostCheckResult holds post-check outcome for all agent-run commands.
 // Each command sets only the fields it uses; others remain zero.
 type PostCheckResult struct {
-	Error                 error // Post-validation error; nil = success
-	SyntaxValidationError error // File syntax validation error; nil = success
-	Score                 int   // 0-100, calculated from validations
-	AllEntries            int   // Update-pot/po: PO/POT msgid count after agent update
-	UntranslatePoEntries  int   // Translate: new (untranslated) entries after
-	FuzzyPoEntries        int   // Translate: fuzzy entries after
-	ReviewPendingEntries  int   // Review: remaining entries in review-pending.po
+	Error                error // Post-validation error (incl. syntax validation); nil = success
+	Score                int   // 0-100, calculated from validations
+	AllEntries           int   // Update-pot/po: PO/POT msgid count after agent update
+	UntranslatePoEntries int   // Translate: new (untranslated) entries after
+	FuzzyPoEntries       int   // Translate: fuzzy entries after
+	ReviewPendingEntries int   // Review: remaining entries in review-pending.po
 }
 
 // AgentRunResult holds the result of a single agent-run execution.
@@ -70,9 +69,12 @@ type AgentRunResult struct {
 	AgentStdout []byte `json:"-"`
 	AgentStderr []byte `json:"-"`
 
-	// Agent diagnostics
-	NumTurns      int // Number of turns in the conversation
-	ExecutionTime time.Duration
+	// Agent diagnostics (filled by GetAgentDiagnostics from stream parse result; printed by PrintAgentDiagnosticsFromResult)
+	NumTurns           int // Number of turns in the conversation
+	AgentInputTokens   int // Usage input tokens when reported by agent JSON
+	AgentOutputTokens  int // Usage output tokens when reported by agent JSON
+	AgentDurationAPIMS int // API duration in milliseconds when reported by agent JSON
+	ExecutionTime      time.Duration
 }
 
 // ReviewIssue score constants (0-3). Lower = more severe.

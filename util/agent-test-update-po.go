@@ -51,7 +51,7 @@ func CmdAgentTestUpdatePo(agentName, poFile string, runs int, skipConfirmation b
 // Returns scores for each run, average score, and error.
 func RunAgentTestUpdatePo(agentName, poFile string, runs int, cfg *config.AgentConfig) ([]TestRunResult, float64, error) {
 	// Resolve PO file to relative path once (cwd at repo root)
-	relPoFile, err := GetPoFileRelPath(cfg, poFile)
+	relPoFile, err := GuessPoFilePath(cfg, poFile)
 	if err != nil {
 		log.Warnf("failed to get relative path of poFile: %v", err)
 	}

@@ -14,7 +14,6 @@ type workflowTranslate struct {
 	poFile                string
 	useLocalOrchestration bool
 	batchSize             int
-	translateStatsBefore  string // full "before" line printed in Report
 }
 
 // NewWorkflowTranslate returns a workflow for translate.
@@ -44,21 +43,33 @@ func (w *workflowTranslate) InitContext(cfg *config.AgentConfig) *AgentRunContex
 }
 
 func (w *workflowTranslate) PreCheck(ctx *AgentRunContext) error {
-	rel, err := GetPoFileRelPath(ctx.Cfg, ctx.PoFile)
+	poFile, err := GuessPoFilePath(ctx.Cfg, ctx.PoFile)
 	if err != nil {
 		return err
 	}
-	ctx.PoFile = rel
-	pre, err := validateTranslatePreResult(ctx.PoFile)
+	ctx.PoFile = poFile
+
+	ctx.PreCheckResult = &PreCheckResult{}
+	if !Exist(ctx.PoFile) {
+		ctx.PreCheckResult.Error = fmt.Errorf("pre-validation: PO file does not exist: %s\nHint: Ensure the PO file exists before running translate", ctx.PoFile)
+		return ctx.PreCheckResult.Error
+	}
+
+	log.Infof("performing pre-validation: counting new and fuzzy entries")
+	statsBefore, err := GetPoStats(ctx.PoFile)
 	if err != nil {
-		ctx.PreCheckResult = pre
-		return err
+		ctx.PreCheckResult.Error = fmt.Errorf("pre-validation: failed to count PO stats: %w", err)
+		return ctx.PreCheckResult.Error
 	}
-	ctx.PreCheckResult = pre
-	if stats, err := GetPoStats(ctx.PoFile); err == nil {
-		w.translateStatsBefore = fmt.Sprintf("Translation statistics: before: %d translated, %d untranslated, %d fuzzy.",
-			stats.Translated, stats.Untranslated, stats.Fuzzy)
+	ctx.PreCheckResult.AllEntries = statsBefore.Total()
+	ctx.PreCheckResult.UntranslatePoEntries = statsBefore.Untranslated
+	ctx.PreCheckResult.FuzzyPoEntries = statsBefore.Fuzzy
+
+	if statsBefore.Untranslated == 0 && statsBefore.Fuzzy == 0 {
+		ctx.PreCheckResult.Error = fmt.Errorf("pre-validation: no new or fuzzy entries to translate, PO file is ready for use")
+		return ctx.PreCheckResult.Error
 	}
+
 	return nil
 }
 
@@ -74,23 +85,63 @@ func (w *workflowTranslate) AgentRun(ctx *AgentRunContext) error {
 }
 
 func (w *workflowTranslate) PostCheck(ctx *AgentRunContext) error {
-	return validateTranslatePostResult(ctx.PoFile, ctx)
+	poFile := ctx.PoFile
+	if ctx.PostCheckResult == nil {
+		ctx.PostCheckResult = &PostCheckResult{}
+	}
+	log.Infof("performing post-validation: counting new and fuzzy entries")
+
+	statsAfter, err := GetPoStats(poFile)
+	if err != nil {
+		ctx.PostCheckResult.Error = fmt.Errorf("failed to count PO stats after translation: %w", err)
+		return ctx.PostCheckResult.Error
+	}
+	ctx.PostCheckResult.AllEntries = statsAfter.Total()
+	ctx.PostCheckResult.UntranslatePoEntries = statsAfter.Untranslated
+	ctx.PostCheckResult.FuzzyPoEntries = statsAfter.Fuzzy
+	log.Infof("new (untranslated) entries after translation: %d", statsAfter.Untranslated)
+	log.Infof("fuzzy entries after translation: %d", statsAfter.Fuzzy)
+
+	if statsAfter.Untranslated != 0 || statsAfter.Fuzzy != 0 {
+		ctx.PostCheckResult.Score = 0
+		ctx.Result.Score = 0
+		ctx.PostCheckResult.Error = fmt.Errorf("post-validation: translation incomplete: %d new entries and %d fuzzy entries remaining", statsAfter.Untranslated, statsAfter.Fuzzy)
+		return ctx.PostCheckResult.Error
+	}
+
+	ctx.PostCheckResult.Score = 100
+	ctx.Result.Score = 100
+	log.Infof("post-validation passed: all entries translated")
+
+	log.Infof("validating file syntax: %s", poFile)
+	if err := ValidatePoFile(poFile); err != nil {
+		ctx.PostCheckResult.Score = 0
+		ctx.Result.Score = 0
+		ctx.PostCheckResult.Error = fmt.Errorf("post-validation: file syntax validation failed: %v", err)
+		return ctx.PostCheckResult.Error
+	} else {
+		log.Infof("post-validation: file syntax validation passed")
+	}
+	return nil
 }
 
 func (w *workflowTranslate) Report(ctx *AgentRunContext, agentRunErr error) error {
-	// Print before/after stats (same behavior as RunAgentTranslate after dispatch)
-	if stats, errStats := GetPoStats(ctx.PoFile); errStats != nil {
-		log.Errorf("GetPoStats after agent: %v", errStats)
-		if w.translateStatsBefore != "" {
-			fmt.Fprintln(os.Stderr, w.translateStatsBefore)
+	// Print before/after from PreCheckResult/PostCheckResult (AllEntries = Total = translated+untranslated+fuzzy).
+	if pre := ctx.PreCheckResult; pre != nil && pre.Error == nil {
+		beforeTranslated := pre.AllEntries - pre.UntranslatePoEntries - pre.FuzzyPoEntries
+		if beforeTranslated < 0 {
+			beforeTranslated = 0
 		}
-	} else {
-		afterSummary := fmt.Sprintf("Translation statistics: after: %d translated, %d untranslated, %d fuzzy.",
-			stats.Translated, stats.Untranslated, stats.Fuzzy)
-		if w.translateStatsBefore != "" {
-			fmt.Fprintf(os.Stderr, "%s\n", w.translateStatsBefore)
+		fmt.Fprintf(os.Stderr, "Translation statistics: before: %d translated, %d untranslated, %d fuzzy.\n",
+			beforeTranslated, pre.UntranslatePoEntries, pre.FuzzyPoEntries)
+	}
+	if post := ctx.PostCheckResult; post != nil {
+		afterTranslated := post.AllEntries - post.UntranslatePoEntries - post.FuzzyPoEntries
+		if afterTranslated < 0 {
+			afterTranslated = 0
 		}
-		fmt.Fprintf(os.Stderr, "%s\n", afterSummary)
+		fmt.Fprintf(os.Stderr, "Translation statistics: after: %d translated, %d untranslated, %d fuzzy.\n",
+			afterTranslated, post.UntranslatePoEntries, post.FuzzyPoEntries)
 	}
 	if agentRunErr != nil {
 		return fmt.Errorf("agent execution failed: %w", agentRunErr)
@@ -100,9 +151,6 @@ func (w *workflowTranslate) Report(ctx *AgentRunContext, agentRunErr error) erro
 	}
 	if ctx.PostValidationError() != nil {
 		return fmt.Errorf("post-validation failed: %w", ctx.PostValidationError())
-	}
-	if ctx.SyntaxValidationError() != nil {
-		return fmt.Errorf("file validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", ctx.SyntaxValidationError())
 	}
 	log.Infof("agent-run translate completed successfully")
 	return nil

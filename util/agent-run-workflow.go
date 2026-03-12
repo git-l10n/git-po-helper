@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
-	log "github.com/sirupsen/logrus"
 )
 
 // AgentRunContext holds shared state for one agent-run execution through
@@ -40,14 +39,6 @@ func (ctx *AgentRunContext) PreValidationError() error {
 func (ctx *AgentRunContext) PostValidationError() error {
 	if ctx != nil && ctx.PostCheckResult != nil {
 		return ctx.PostCheckResult.Error
-	}
-	return nil
-}
-
-// SyntaxValidationError returns the syntax validation error from ctx.
-func (ctx *AgentRunContext) SyntaxValidationError() error {
-	if ctx != nil && ctx.PostCheckResult != nil {
-		return ctx.PostCheckResult.SyntaxValidationError
 	}
 	return nil
 }
@@ -112,7 +103,7 @@ type AgentRunWorkflow interface {
 	PreCheck(ctx *AgentRunContext) error
 	// AgentRun executes the agent; agentRunErr is non-nil if the process failed.
 	AgentRun(ctx *AgentRunContext) (agentRunErr error)
-	// PostCheck runs after the agent; may set PostValidationError / SyntaxValidationError.
+	// PostCheck runs after the agent; may set PostCheckResult.Error.
 	PostCheck(ctx *AgentRunContext) error
 	// Report prints command-specific output and returns a terminal error for the CLI.
 	Report(ctx *AgentRunContext, agentRunErr error) error
@@ -135,7 +126,8 @@ func RunAgentRunWorkflow(wf AgentRunWorkflow) error {
 	}
 	agentErr := wf.AgentRun(ctx)
 	ctx.Result.ExecutionTime = time.Since(start)
-	log.Infof("agent-run %s: execution time: %s", wf.Name(), ctx.Result.ExecutionTime.Round(time.Millisecond))
+	// Print agent diagnostics from ctx.Result before workflow Report (fields filled by applyAgentDiagnostics during AgentRun).
+	PrintAgentDiagnosticsFromResult(ctx.Result)
 	postErr := wf.PostCheck(ctx)
 	// Report runs even when agent or post-check failed (e.g. translate prints after-stats then returns error).
 	if reportErr := wf.Report(ctx, agentErr); reportErr != nil {
