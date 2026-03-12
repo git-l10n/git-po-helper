@@ -415,8 +415,3 @@ func parseStreamByKind(kind string, reader io.Reader) (stdout []byte, streamResu
 		return parsed, res, e
 	}
 }
-
-// applyAgentDiagnostics copies diagnostics from streamResult into result (no print; print in RunAgentRunWorkflow before Report, or call PrintAgentDiagnosticsFromResult for non-workflow paths).
-func applyAgentDiagnostics(result *AgentRunResult, streamResult AgentStreamResult) {
-	GetAgentDiagnostics(result, streamResult)
-}

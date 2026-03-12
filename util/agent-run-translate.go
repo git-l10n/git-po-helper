@@ -120,7 +120,7 @@ func RunAgentTranslatePromptOrchestration(cfg *config.AgentConfig, agentName, po
 	}
 	log.Infof("agent command completed successfully")
 
-	applyAgentDiagnostics(result, streamResult)
+	GetAgentDiagnostics(result, streamResult)
 
 	if len(stdout) > 0 {
 		log.Debugf("agent command stdout: %s", string(stdout))

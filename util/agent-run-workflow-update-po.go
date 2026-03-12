@@ -24,10 +24,12 @@ func (w *workflowUpdatePo) Name() string { return "update-po" }
 
 func (w *workflowUpdatePo) InitContext(cfg *config.AgentConfig) *AgentRunContext {
 	return &AgentRunContext{
-		Cfg:       cfg,
-		AgentName: w.agentName,
-		PoFile:    w.poFile,
-		Result:    &AgentRunResult{Score: 0},
+		Cfg:             cfg,
+		AgentName:       w.agentName,
+		PoFile:          w.poFile,
+		Result:          &AgentRunResult{Score: 0},
+		PreCheckResult:  &PreCheckResult{},
+		PostCheckResult: &PostCheckResult{},
 	}
 }
 
@@ -64,13 +66,22 @@ func (w *workflowUpdatePo) PostCheck(ctx *AgentRunContext) error {
 			ctx.PostCheckResult.AllEntries = stats.Total()
 			ctx.PostCheckResult.UntranslatePoEntries = stats.Untranslated
 			ctx.PostCheckResult.FuzzyPoEntries = stats.Fuzzy
+		} else {
+			ctx.PostCheckResult.Error = fmt.Errorf("failed to get PO stats: %w", err)
+			ctx.PostCheckResult.Score = 0
+			return ctx.PostCheckResult.Error
 		}
+	} else {
+		ctx.PostCheckResult.Error = fmt.Errorf("PO file does not exist: %s", ctx.PoFile)
+		ctx.PostCheckResult.Score = 0
+		return ctx.PostCheckResult.Error
 	}
 	ctx.Result.Score = 100
 	log.Infof("validating file syntax: %s", ctx.PoFile)
 	if err := ValidatePoFile(ctx.PoFile); err != nil {
 		log.Errorf("file syntax validation failed: %v", err)
 		ctx.PostCheckResult.Error = fmt.Errorf("file syntax validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", err)
+		ctx.PostCheckResult.Score = 0
 		ctx.Result.Score = 0
 	} else {
 		log.Infof("file syntax validation passed")
@@ -79,13 +90,37 @@ func (w *workflowUpdatePo) PostCheck(ctx *AgentRunContext) error {
 }
 
 func (w *workflowUpdatePo) Report(ctx *AgentRunContext) {
-	if ctx.Result != nil && ctx.Result.Error != nil {
+	if ctx == nil {
 		return
 	}
-	if ctx.PreValidationError() != nil || ctx.PostValidationError() != nil {
-		return
+
+	labelWidth := ReviewStatLabelWidth
+	pre, post := ctx.PreCheckResult, ctx.PostCheckResult
+	fmt.Println()
+	fmt.Println("🔍 Update PO Report")
+	fmt.Println()
+	fmt.Printf("  %-*s %d\n", labelWidth, "Before AllEntries:", pre.AllEntries)
+	fmt.Printf("  %-*s %d\n", labelWidth, "Before untranslated:", pre.UntranslatePoEntries)
+	fmt.Printf("  %-*s %d\n", labelWidth, "Before fuzzy:", pre.FuzzyPoEntries)
+	fmt.Println()
+	fmt.Printf("  %-*s %d\n", labelWidth, "After AllEntries:", post.AllEntries)
+	fmt.Printf("  %-*s %d\n", labelWidth, "After untranslated:", post.UntranslatePoEntries)
+	fmt.Printf("  %-*s %d\n", labelWidth, "After fuzzy:", post.FuzzyPoEntries)
+	// Match update-pot tail: agent error after metrics when run failed
+	if pre.Error != nil || post.Error != nil || ctx.Result.Error != nil {
+		fmt.Println()
 	}
-	log.Infof("agent-run update-po completed successfully")
+	if ctx.Result.Error != nil {
+		fmt.Printf("  %-*s %s\n", labelWidth, "Agent execution:", ctx.Result.Error)
+	}
+	if pre.Error != nil {
+		fmt.Printf("  %-*s %s\n", labelWidth, "Pre-validation:", pre.Error.Error())
+	}
+	if post.Error != nil {
+		fmt.Printf("  %-*s %s\n", labelWidth, "Post-validation:", post.Error.Error())
+	}
+	fmt.Println()
+	flushStdout()
 }
 
 // agentRunUpdatePoExecute runs the agent for update-po.
@@ -125,7 +160,7 @@ func agentRunUpdatePoExecute(ctx *AgentRunContext) error {
 		return err
 	}
 	log.Infof("agent command completed successfully")
-	applyAgentDiagnostics(ctx.Result, streamResult)
+	GetAgentDiagnostics(ctx.Result, streamResult)
 	if len(stdout) > 0 {
 		log.Debugf("agent command stdout: %s", string(stdout))
 	}

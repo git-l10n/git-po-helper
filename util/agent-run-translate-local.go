@@ -225,7 +225,7 @@ func translateOneBatch(cfg *config.AgentConfig, selectedAgent config.AgentEntry,
 		}
 		return fmt.Errorf("agent failed: %w", execErr)
 	}
-	applyAgentDiagnostics(result, streamResult)
+	GetAgentDiagnostics(result, streamResult)
 
 	if !Exist(doneJSON) {
 		return fmt.Errorf("agent did not create output file %s\nHint: The agent must write the translated JSON to {{.dest}}", destRel)
@@ -388,7 +388,7 @@ func fixPoWithAgent(cfg *config.AgentConfig, selectedAgent config.AgentEntry, po
 		}
 		return fmt.Errorf("agent fix failed: %w", execErr)
 	}
-	applyAgentDiagnostics(result, streamResult)
+	GetAgentDiagnostics(result, streamResult)
 	log.Infof("agent completed fix, re-validating with msgfmt")
 	return nil
 }

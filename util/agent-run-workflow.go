@@ -131,7 +131,7 @@ func RunAgentRunWorkflow(wf AgentRunWorkflow) error {
 	}
 	ctx.Result.Error = err
 	ctx.Result.ExecutionTime = time.Since(start)
-	// Print agent diagnostics from ctx.Result before workflow Report (fields filled by applyAgentDiagnostics during AgentRun).
+	// Print agent diagnostics from ctx.Result before workflow Report (fields filled by GetAgentDiagnostics during AgentRun).
 	PrintAgentDiagnosticsFromResult(ctx.Result)
 	// Report runs even when agent or post-check failed (e.g. translate prints after-stats then returns error).
 	_ = wf.PostCheck(ctx)

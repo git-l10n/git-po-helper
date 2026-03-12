@@ -38,6 +38,8 @@ func (w *workflowTranslate) InitContext(cfg *config.AgentConfig) *AgentRunContex
 		UseLocalOrchestration: w.useLocalOrchestration,
 		BatchSize:             w.batchSize,
 		Result:                &AgentRunResult{Score: 0},
+		PreCheckResult:        &PreCheckResult{},
+		PostCheckResult:       &PostCheckResult{},
 	}
 }
 

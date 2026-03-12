@@ -40,7 +40,7 @@ func executeReviewAgent(selectedAgent config.AgentEntry, vars PlaceholderVars, r
 	}
 	log.Infof("agent command completed successfully")
 
-	applyAgentDiagnostics(result, streamResult)
+	GetAgentDiagnostics(result, streamResult)
 	result.AgentStdout = originalStdout
 	if len(stderr) > 0 {
 		result.AgentStderr = stderr
@@ -153,7 +153,7 @@ func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string
 	if err != nil {
 		return result, err
 	}
-	applyAgentDiagnostics(result, streamResult)
+	GetAgentDiagnostics(result, streamResult)
 	log.Infof("agent command completed successfully")
 
 	if len(stdout) > 0 {
