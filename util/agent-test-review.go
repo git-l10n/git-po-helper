@@ -105,7 +105,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		cleanReviewOutputFilesForTest(ps)
 
 		// RunAgentReview dispatches to local or prompt orchestration
-		agentResult, agentErr := RunAgentReview(cfg, agentName, target, useLocalOrchestration, batchSize)
+		agentResult, runCtx, agentErr := RunAgentReview(cfg, agentName, target, useLocalOrchestration, batchSize)
 		if agentErr != nil && agentResult == nil {
 			agentResult = &AgentRunResult{Score: 0}
 		}
@@ -118,6 +118,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 			AgentRunResult: *agentResult,
 			RunNumber:      runNum,
 			RunError:       agentErr,
+			Ctx:            runCtx,
 		}
 		result.ExecutionTime = iterExecutionTime
 		results[i] = result
@@ -125,7 +126,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 		// Record per-run score and collect JSON for aggregation
 		if agentErr != nil {
 			log.Errorf("loop %d: agent-run returned error: %v", runNum, err)
-		} else if agentResult.PostValidationError != nil {
+		} else if runCtx != nil && runCtx.PostValidationError() != nil {
 			// Pending PO still has entries; score must stay 0 (set in RunAgentReview)
 			result.Score = 0
 		} else if agentResult.ReviewReport.ReviewResult != nil {
@@ -282,7 +283,7 @@ func displayReviewTestResults(results []TestRunResult, aggregatedScore int, tota
 
 		// Reuse PrintReviewReportResult (stats block prints only when ReviewResult != nil)
 		ar := result.AgentRunResult
-		PrintReviewReportResult(&ar, result.RunError)
+		PrintReviewReportResult(&ar, result.RunError, result.Ctx)
 
 		fmt.Println()
 	}

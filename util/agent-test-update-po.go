@@ -79,37 +79,43 @@ func RunAgentTestUpdatePo(agentName, poFile string, runs int, cfg *config.AgentC
 
 		// Pre-validation: check entry count before update (when configured)
 		var agentResult *AgentRunResult
+		var runCtx *AgentRunContext
 		var runErr error
 		if cfg.AgentTest.PoEntriesBeforeUpdate != nil && *cfg.AgentTest.PoEntriesBeforeUpdate != 0 {
 			log.Infof("performing pre-validation: checking PO entry count before update (expected: %d)", *cfg.AgentTest.PoEntriesBeforeUpdate)
 			agentResult = &AgentRunResult{Score: 0}
+			runCtx = &AgentRunContext{Result: agentResult}
+			runCtx.PreCheckResult = &PreCheckResult{}
 			if !Exist(poFileAbs) {
-				agentResult.EntryCountBeforeUpdate = 0
+				runCtx.PreCheckResult.AllEntries = 0
 			} else if stats, e := GetPoStats(poFileAbs); e == nil {
-				agentResult.EntryCountBeforeUpdate = stats.Total()
+				runCtx.PreCheckResult.AllEntries = stats.Total()
 			}
 			if runErr = ValidatePoEntryCount(poFileAbs, cfg.AgentTest.PoEntriesBeforeUpdate, "before update"); runErr != nil {
-				agentResult.PreValidationError = fmt.Errorf("pre-validation failed: %w\nHint: Ensure %s exists and has the expected number of entries", runErr, poFileAbs)
+				runCtx.PreCheckResult.Error = fmt.Errorf("pre-validation failed: %w\nHint: Ensure %s exists and has the expected number of entries", runErr, poFileAbs)
 				agentResult.Score = 0
 				// Skip agent run when pre-validation fails
 			} else {
 				log.Infof("pre-validation passed")
-				agentResult, runErr = RunAgentUpdatePo(cfg, agentName, poFile)
+				agentResult, runCtx, runErr = RunAgentUpdatePo(cfg, agentName, poFile)
 			}
 		} else {
-			agentResult, runErr = RunAgentUpdatePo(cfg, agentName, poFile)
+			agentResult, runCtx, runErr = RunAgentUpdatePo(cfg, agentName, poFile)
 		}
 
 		// Post-validation: check entry count after update (when configured)
-		if runErr == nil && agentResult != nil && cfg.AgentTest.PoEntriesAfterUpdate != nil && *cfg.AgentTest.PoEntriesAfterUpdate != 0 {
+		if runErr == nil && agentResult != nil && runCtx != nil && cfg.AgentTest.PoEntriesAfterUpdate != nil && *cfg.AgentTest.PoEntriesAfterUpdate != 0 {
 			log.Infof("performing post-validation: checking PO entry count after update (expected: %d)", *cfg.AgentTest.PoEntriesAfterUpdate)
+			if runCtx.PostCheckResult == nil {
+				runCtx.PostCheckResult = &PostCheckResult{}
+			}
 			if Exist(poFileAbs) {
 				if stats, e := GetPoStats(poFileAbs); e == nil {
-					agentResult.EntryCountAfterUpdate = stats.Total()
+					runCtx.PostCheckResult.AllEntries = stats.Total()
 				}
 			}
 			if postErr := ValidatePoEntryCount(poFileAbs, cfg.AgentTest.PoEntriesAfterUpdate, "after update"); postErr != nil {
-				agentResult.PostValidationError = fmt.Errorf("post-validation failed: %w\nHint: The agent may not have updated the PO file correctly", postErr)
+				runCtx.PostCheckResult.Error = fmt.Errorf("post-validation failed: %w\nHint: The agent may not have updated the PO file correctly", postErr)
 				agentResult.Score = 0
 			} else {
 				log.Infof("post-validation passed")
@@ -124,6 +130,7 @@ func RunAgentTestUpdatePo(agentName, poFile string, runs int, cfg *config.AgentC
 			AgentRunResult: *agentResult,
 			RunNumber:      runNum,
 			RunError:       runErr,
+			Ctx:            runCtx,
 		}
 		result.ExecutionTime = iterExecutionTime
 

@@ -8,17 +8,18 @@ import (
 // RunAgentUpdatePot executes a single agent-run update-pot operation.
 // It uses the same PreCheck → AgentRun → PostCheck pipeline as the workflow
 // (agent-test calls this; agent-run Cmd uses RunAgentRunWorkflow).
-func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string) (*AgentRunResult, error) {
+// Returns (result, ctx, error); ctx holds PreCheckResult/PostCheckResult for display.
+func RunAgentUpdatePot(cfg *config.AgentConfig, agentName string) (*AgentRunResult, *AgentRunContext, error) {
 	wf := &workflowUpdatePot{agentName: agentName}
 	ctx := wf.InitContext(cfg)
 	if err := wf.PreCheck(ctx); err != nil {
-		return ctx.Result, err
+		return ctx.Result, ctx, err
 	}
 	if err := wf.AgentRun(ctx); err != nil {
-		return ctx.Result, err
+		return ctx.Result, ctx, err
 	}
 	_ = wf.PostCheck(ctx)
-	return ctx.Result, nil
+	return ctx.Result, ctx, nil
 }
 
 // CmdAgentRunUpdatePot implements the agent-run update-pot command logic via AgentRunWorkflow.

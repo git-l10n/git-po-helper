@@ -294,8 +294,8 @@ func WrapReviewReportForPrint(r *ReviewReport) *AgentRunResult {
 // PrintReviewReportResult prints "## Review Statistics" when ReviewResult is present,
 // then agent execution / validation lines (PreValidationError, PostValidationError, runErr).
 // ar is typically RunAgentReview's return value; runErr is result.RunError for agent-test.
-// cmd/agent-run-report uses WrapReviewReportForPrint when only *ReviewReport is available.
-func PrintReviewReportResult(ar *AgentRunResult, runErr error) {
+// ctx holds PreCheckResult/PostCheckResult; nil when only *ReviewReport is available (e.g. cmd agent-run report).
+func PrintReviewReportResult(ar *AgentRunResult, runErr error, ctx *AgentRunContext) {
 	if ar == nil {
 		return
 	}
@@ -331,19 +331,17 @@ func PrintReviewReportResult(ar *AgentRunResult, runErr error) {
 		} else {
 			fmt.Printf("  %-*s FAIL - %v\n", w, "Agent execution:", runErr)
 		}
-		if ar.PostValidationError == nil {
-			if ar.Score > 0 && ar.ReviewResult != nil {
-				fmt.Printf("  %-*s PASS (%d/100)\n", w, "Validation:", ar.Score)
-			} else {
-				fmt.Printf("  %-*s FAIL (no valid JSON or score 0)\n", w, "Validation:")
-			}
+		if ctx != nil && ctx.PostValidationError() != nil {
+			fmt.Printf("  %-*s FAIL - %s\n", w, "Post-validation:", ctx.PostValidationError())
+		} else if ar.Score > 0 && ar.ReviewResult != nil {
+			fmt.Printf("  %-*s PASS (%d/100)\n", w, "Validation:", ar.Score)
 		} else {
-			fmt.Printf("  %-*s FAIL - %s\n", w, "Post-validation:", ar.PostValidationError)
+			fmt.Printf("  %-*s FAIL (no valid JSON or score 0)\n", w, "Validation:")
 		}
 	} else {
-		if ar.PreValidationError != nil {
+		if ctx != nil && ctx.PreValidationError() != nil {
 			fmt.Printf("  %-*s SKIPPED (pre-validation failed)\n", w, "Agent execution:")
-			fmt.Printf("  %-*s %s\n", w, "Pre-validation:", ar.PreValidationError)
+			fmt.Printf("  %-*s %s\n", w, "Pre-validation:", ctx.PreValidationError())
 		} else {
 			fmt.Printf("  %-*s SKIPPED\n", w, "Agent execution:")
 		}

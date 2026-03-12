@@ -7,17 +7,18 @@ import (
 
 // RunAgentUpdatePo executes a single agent-run update-po operation.
 // It uses the same PreCheck → AgentRun → PostCheck pipeline as the workflow.
-func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string) (*AgentRunResult, error) {
+// Returns (result, ctx, error); ctx holds PreCheckResult/PostCheckResult for display.
+func RunAgentUpdatePo(cfg *config.AgentConfig, agentName, poFile string) (*AgentRunResult, *AgentRunContext, error) {
 	wf := &workflowUpdatePo{agentName: agentName, poFile: poFile}
 	ctx := wf.InitContext(cfg)
 	if err := wf.PreCheck(ctx); err != nil {
-		return ctx.Result, err
+		return ctx.Result, ctx, err
 	}
 	if err := wf.AgentRun(ctx); err != nil {
-		return ctx.Result, err
+		return ctx.Result, ctx, err
 	}
 	_ = wf.PostCheck(ctx)
-	return ctx.Result, nil
+	return ctx.Result, ctx, nil
 }
 
 // CmdAgentRunUpdatePo implements the agent-run update-po command logic via AgentRunWorkflow.

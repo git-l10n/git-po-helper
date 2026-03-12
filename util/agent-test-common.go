@@ -50,10 +50,12 @@ func formatDuration(d time.Duration) string {
 // TestRunResult holds the result of a single test run.
 // It embeds AgentRunResult so agent-run fields (Score, etc.)
 // are inherited; RunNumber is test-specific.
+// Ctx holds PreCheckResult/PostCheckResult for display.
 type TestRunResult struct {
 	AgentRunResult
 	RunNumber int   // Test run index (1-based)
 	RunError  error // Error from agent run, for display when run fails
+	Ctx       *AgentRunContext
 }
 
 // ConfirmAgentTestExecution displays a warning and requires user confirmation before proceeding.
@@ -282,12 +284,12 @@ func displayTestResults(results []TestRunResult, averageScore float64, totalRuns
 		fmt.Printf("Run %d: %s (Score: %d/100)\n", result.RunNumber, status, result.Score)
 
 		// Show validation status
-		if expectedBefore != nil && *expectedBefore != 0 {
-			if result.PreValidationError == nil {
+		if expectedBefore != nil && *expectedBefore != 0 && result.Ctx != nil {
+			if result.Ctx.PreValidationError() == nil {
 				fmt.Printf("  Pre-validation:  PASS (expected: %d, actual: %d)\n",
-					*expectedBefore, result.EntryCountBeforeUpdate)
+					*expectedBefore, result.Ctx.EntryCountBeforeUpdate())
 			} else {
-				fmt.Printf("  Pre-validation:  FAIL - %s\n", result.PreValidationError)
+				fmt.Printf("  Pre-validation:  FAIL - %s\n", result.Ctx.PreValidationError())
 				preValidationFailures++
 			}
 		}
@@ -302,18 +304,18 @@ func displayTestResults(results []TestRunResult, averageScore float64, totalRuns
 			fmt.Printf("  Agent execution: SKIPPED (pre-validation failed)\n")
 		}
 
-		if expectedAfter != nil && *expectedAfter != 0 {
-			if result.PostValidationError == nil {
+		if expectedAfter != nil && *expectedAfter != 0 && result.Ctx != nil {
+			if result.Ctx.PostValidationError() == nil {
 				fmt.Printf("  Post-validation: PASS (expected: %d, actual: %d)\n",
-					*expectedAfter, result.EntryCountAfterUpdate)
+					*expectedAfter, result.Ctx.EntryCountAfterUpdate())
 			} else {
-				fmt.Printf("  Post-validation: FAIL - %s\n", result.PostValidationError)
+				fmt.Printf("  Post-validation: FAIL - %s\n", result.Ctx.PostValidationError())
 				postValidationFailures++
 			}
-		} else if result.AgentExecuted {
+		} else if result.AgentExecuted && result.Ctx != nil {
 			// Show entry counts even if validation is not configured
 			fmt.Printf("  Entry count:     %d (before) -> %d (after)\n",
-				result.EntryCountBeforeUpdate, result.EntryCountAfterUpdate)
+				result.Ctx.EntryCountBeforeUpdate(), result.Ctx.EntryCountAfterUpdate())
 		}
 
 		fmt.Println()

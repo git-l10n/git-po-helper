@@ -56,7 +56,7 @@ func (w *workflowReview) AgentRun(ctx *AgentRunContext) error {
 }
 
 func (w *workflowReview) PostCheck(ctx *AgentRunContext) error {
-	reviewAgentRunPostCheck(ctx.Result, ctx.UseLocalOrchestration)
+	reviewAgentRunPostCheck(ctx)
 	return nil
 }
 
@@ -64,7 +64,7 @@ func (w *workflowReview) Report(ctx *AgentRunContext, agentRunErr error) error {
 	if agentRunErr != nil {
 		return agentRunErr
 	}
-	PrintReviewReportResult(ctx.Result, nil)
+	PrintReviewReportResult(ctx.Result, nil, ctx)
 	fmt.Printf("\nSummary:\n")
 	if ctx.Result.ReviewReport.ReportFile != "" {
 		fmt.Printf("  Review JSON: %s\n", getRelativePath(ctx.Result.ReviewReport.ReportFile))

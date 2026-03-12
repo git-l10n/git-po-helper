@@ -82,23 +82,29 @@ func buildReviewUseAgentMdPrompt(target *CompareTarget) string {
 }
 
 // reviewAgentRunPostCheck verifies review-pending.po is empty or absent after dispatch.
-// Mutates result (PostValidationError, Score). useLocalOrchestration affects zero-total handling.
-func reviewAgentRunPostCheck(result *AgentRunResult, useLocalOrchestration bool) {
-	if result == nil {
+// Writes to ctx.PostCheckResult and ctx.Result.Score.
+func reviewAgentRunPostCheck(ctx *AgentRunContext) {
+	if ctx == nil || ctx.Result == nil {
 		return
 	}
+	result := ctx.Result
 	if result.ReviewReport.ReviewResult != nil {
 		result.Score = result.ReviewReport.Score
 	}
+	if ctx.PostCheckResult == nil {
+		ctx.PostCheckResult = &PostCheckResult{}
+	}
+	ctx.PostCheckResult.Score = result.Score
 
 	// setReviewPostValidation records post-validation failure and clears score.
 	setReviewPostValidation := func(err error) {
 		if err == nil {
 			return
 		}
-		if result.PostValidationError == nil {
-			result.PostValidationError = err
+		if ctx.PostCheckResult.Error == nil {
+			ctx.PostCheckResult.Error = err
 		}
+		ctx.PostCheckResult.Score = 0
 		result.Score = 0
 		log.Errorf("%v", err)
 	}
@@ -143,10 +149,10 @@ func reviewAgentRunPostCheck(result *AgentRunResult, useLocalOrchestration bool)
 	}
 
 	// Pending file absent or empty — success only when no post-validation error recorded
-	if result.PostValidationError == nil && (!Exist(ps.PendingPO) || pendingCount == 0) {
+	if ctx.PostCheckResult.Error == nil && (!Exist(ps.PendingPO) || pendingCount == 0) {
 		if totalCount > 0 {
 			log.Infof("review completed successfully: all %d entries reviewed (none remaining in pending)", totalCount)
-		} else if useLocalOrchestration {
+		} else if ctx.UseLocalOrchestration {
 			// Local orchestration expects input/pending pipeline; zero total means nothing to review
 			setReviewPostValidation(fmt.Errorf(
 				"no entries reviewed: input PO %s missing or empty, or pending absent or empty", ps.InputPO))
@@ -160,13 +166,15 @@ func reviewAgentRunPostCheck(result *AgentRunResult, useLocalOrchestration bool)
 // (agent with po/AGENTS.md). Same pattern as RunAgentTranslate.
 // After a successful dispatch, verifies review-pending.po is empty or absent;
 // otherwise the review did not finish all entries.
-func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
+// Returns (result, ctx, error); ctx holds PreCheckResult/PostCheckResult for display.
+func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) (*AgentRunResult, *AgentRunContext, error) {
 	result, agentErr := runAgentReviewDispatch(cfg, agentName, target, useLocalOrchestration, batchSize)
 	if result == nil {
 		result = &AgentRunResult{Score: 0}
 	}
-	reviewAgentRunPostCheck(result, useLocalOrchestration)
-	return result, agentErr
+	ctx := &AgentRunContext{Result: result, UseLocalOrchestration: useLocalOrchestration}
+	reviewAgentRunPostCheck(ctx)
+	return result, ctx, agentErr
 }
 
 // runAgentReviewDispatch runs either local orchestration or prompt orchestration.

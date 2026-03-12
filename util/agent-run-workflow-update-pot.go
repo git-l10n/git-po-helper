@@ -36,10 +36,11 @@ func (w *workflowUpdatePot) PreCheck(ctx *AgentRunContext) error {
 	}
 	ctx.potFile = GetPotFilePath()
 	log.Debugf("POT file path: %s", ctx.potFile)
+	ctx.PreCheckResult = &PreCheckResult{}
 	if !Exist(ctx.potFile) {
-		ctx.Result.EntryCountBeforeUpdate = 0
+		ctx.PreCheckResult.AllEntries = 0
 	} else if stats, err := GetPoStats(ctx.potFile); err == nil {
-		ctx.Result.EntryCountBeforeUpdate = stats.Total()
+		ctx.PreCheckResult.AllEntries = stats.Total()
 	}
 	return nil
 }
@@ -49,18 +50,21 @@ func (w *workflowUpdatePot) AgentRun(ctx *AgentRunContext) error {
 }
 
 func (w *workflowUpdatePot) PostCheck(ctx *AgentRunContext) error {
+	ctx.PostCheckResult = &PostCheckResult{}
 	if Exist(ctx.potFile) {
 		if stats, err := GetPoStats(ctx.potFile); err == nil {
-			ctx.Result.EntryCountAfterUpdate = stats.Total()
+			ctx.PostCheckResult.AllEntries = stats.Total()
 		}
 	}
-	if ctx.Result.EntryCountAfterUpdate > 0 {
-		ctx.Result.Score = 100
+	if ctx.PostCheckResult.AllEntries > 0 {
+		ctx.PostCheckResult.Score = 100
 	}
+	ctx.Result.Score = ctx.PostCheckResult.Score
 	log.Infof("validating file syntax: %s", ctx.potFile)
 	if err := ValidatePoFile(ctx.potFile); err != nil {
 		log.Errorf("file syntax validation failed: %v", err)
-		ctx.Result.SyntaxValidationError = err
+		ctx.PostCheckResult.SyntaxValidationError = err
+		ctx.PostCheckResult.Score = 0
 		ctx.Result.Score = 0
 	} else {
 		log.Infof("file syntax validation passed")
@@ -72,18 +76,18 @@ func (w *workflowUpdatePot) Report(ctx *AgentRunContext, agentRunErr error) erro
 	if agentRunErr != nil {
 		return agentRunErr
 	}
-	if ctx.Result.PreValidationError != nil {
-		return fmt.Errorf("pre-validation failed: %w", ctx.Result.PreValidationError)
+	if ctx.PreValidationError() != nil {
+		return fmt.Errorf("pre-validation failed: %w", ctx.PreValidationError())
 	}
-	if ctx.Result.PostValidationError != nil {
-		return fmt.Errorf("post-validation failed: %w", ctx.Result.PostValidationError)
+	if ctx.PostValidationError() != nil {
+		return fmt.Errorf("post-validation failed: %w", ctx.PostValidationError())
 	}
-	if ctx.Result.SyntaxValidationError != nil {
+	if ctx.SyntaxValidationError() != nil {
 		ext := filepath.Ext(ctx.potFile)
 		if ext == ".pot" {
-			return fmt.Errorf("file validation failed: %w\nHint: Check the POT file syntax using 'msgcat --use-first <file> -o /dev/null'", ctx.Result.SyntaxValidationError)
+			return fmt.Errorf("file validation failed: %w\nHint: Check the POT file syntax using 'msgcat --use-first <file> -o /dev/null'", ctx.SyntaxValidationError())
 		}
-		return fmt.Errorf("file validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", ctx.Result.SyntaxValidationError)
+		return fmt.Errorf("file validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", ctx.SyntaxValidationError())
 	}
 	log.Infof("agent-run update-pot completed successfully")
 	return nil

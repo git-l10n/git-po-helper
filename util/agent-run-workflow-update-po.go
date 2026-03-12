@@ -43,10 +43,11 @@ func (w *workflowUpdatePo) PreCheck(ctx *AgentRunContext) error {
 	}
 	ctx.poFileAbs = poFile
 	log.Debugf("PO file path: %s", ctx.poFileAbs)
+	ctx.PreCheckResult = &PreCheckResult{}
 	if !Exist(ctx.poFileAbs) {
-		ctx.Result.EntryCountBeforeUpdate = 0
+		ctx.PreCheckResult.AllEntries = 0
 	} else if stats, err := GetPoStats(ctx.poFileAbs); err == nil {
-		ctx.Result.EntryCountBeforeUpdate = stats.Total()
+		ctx.PreCheckResult.AllEntries = stats.Total()
 	}
 	return nil
 }
@@ -56,16 +57,18 @@ func (w *workflowUpdatePo) AgentRun(ctx *AgentRunContext) error {
 }
 
 func (w *workflowUpdatePo) PostCheck(ctx *AgentRunContext) error {
+	ctx.PostCheckResult = &PostCheckResult{Score: 100}
 	if Exist(ctx.poFileAbs) {
 		if stats, err := GetPoStats(ctx.poFileAbs); err == nil {
-			ctx.Result.EntryCountAfterUpdate = stats.Total()
+			ctx.PostCheckResult.AllEntries = stats.Total()
 		}
 	}
 	ctx.Result.Score = 100
 	log.Infof("validating file syntax: %s", ctx.poFileAbs)
 	if err := ValidatePoFile(ctx.poFileAbs); err != nil {
 		log.Errorf("file syntax validation failed: %v", err)
-		ctx.Result.SyntaxValidationError = err
+		ctx.PostCheckResult.SyntaxValidationError = err
+		ctx.Result.Score = 0
 	} else {
 		log.Infof("file syntax validation passed")
 	}
@@ -76,14 +79,14 @@ func (w *workflowUpdatePo) Report(ctx *AgentRunContext, agentRunErr error) error
 	if agentRunErr != nil {
 		return agentRunErr
 	}
-	if ctx.Result.PreValidationError != nil {
-		return fmt.Errorf("pre-validation failed: %w", ctx.Result.PreValidationError)
+	if ctx.PreValidationError() != nil {
+		return fmt.Errorf("pre-validation failed: %w", ctx.PreValidationError())
 	}
-	if ctx.Result.PostValidationError != nil {
-		return fmt.Errorf("post-validation failed: %w", ctx.Result.PostValidationError)
+	if ctx.PostValidationError() != nil {
+		return fmt.Errorf("post-validation failed: %w", ctx.PostValidationError())
 	}
-	if ctx.Result.SyntaxValidationError != nil {
-		return fmt.Errorf("file validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", ctx.Result.SyntaxValidationError)
+	if ctx.SyntaxValidationError() != nil {
+		return fmt.Errorf("file validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", ctx.SyntaxValidationError())
 	}
 	log.Infof("agent-run update-po completed successfully")
 	return nil

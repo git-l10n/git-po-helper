@@ -20,9 +20,88 @@ type AgentRunContext struct {
 	UseLocalOrchestration bool
 	BatchSize             int
 
+	// Pre/post check results; workflows write here; synced to Result before Report.
+	PreCheckResult  *PreCheckResult
+	PostCheckResult *PostCheckResult
+
 	// Set by workflows during execution
 	poFileAbs string // absolute PO path when applicable
 	potFile   string // update-pot
+
+	// Translate workflow only: PreCheck snapshot for AgentRun.
+	translatePreCheck *PreCheckResult // validateTranslatePreResult output
+}
+
+// PreValidationError returns the pre-check error from ctx; nil when ctx or PreCheckResult is nil.
+func (ctx *AgentRunContext) PreValidationError() error {
+	if ctx != nil && ctx.PreCheckResult != nil {
+		return ctx.PreCheckResult.Error
+	}
+	return nil
+}
+
+// PostValidationError returns the post-check error from ctx; nil when ctx or PostCheckResult is nil.
+func (ctx *AgentRunContext) PostValidationError() error {
+	if ctx != nil && ctx.PostCheckResult != nil {
+		return ctx.PostCheckResult.Error
+	}
+	return nil
+}
+
+// SyntaxValidationError returns the syntax validation error from ctx.
+func (ctx *AgentRunContext) SyntaxValidationError() error {
+	if ctx != nil && ctx.PostCheckResult != nil {
+		return ctx.PostCheckResult.SyntaxValidationError
+	}
+	return nil
+}
+
+// EntryCountBeforeUpdate returns PO/POT entry count before update from ctx.
+func (ctx *AgentRunContext) EntryCountBeforeUpdate() int {
+	if ctx != nil && ctx.PreCheckResult != nil {
+		return ctx.PreCheckResult.AllEntries
+	}
+	return 0
+}
+
+// EntryCountAfterUpdate returns PO/POT entry count after update from ctx.
+func (ctx *AgentRunContext) EntryCountAfterUpdate() int {
+	if ctx != nil && ctx.PostCheckResult != nil {
+		return ctx.PostCheckResult.AllEntries
+	}
+	return 0
+}
+
+// BeforeNewCount returns translate new (untranslated) entries before from ctx.
+func (ctx *AgentRunContext) BeforeNewCount() int {
+	if ctx != nil && ctx.PreCheckResult != nil {
+		return ctx.PreCheckResult.UntranslatePoEntries
+	}
+	return 0
+}
+
+// AfterNewCount returns translate new (untranslated) entries after from ctx.
+func (ctx *AgentRunContext) AfterNewCount() int {
+	if ctx != nil && ctx.PostCheckResult != nil {
+		return ctx.PostCheckResult.UntranslatePoEntries
+	}
+	return 0
+}
+
+// BeforeFuzzyCount returns translate fuzzy entries before from ctx.
+func (ctx *AgentRunContext) BeforeFuzzyCount() int {
+	if ctx != nil && ctx.PreCheckResult != nil {
+		return ctx.PreCheckResult.FuzzyPoEntries
+	}
+	return 0
+}
+
+// AfterFuzzyCount returns translate fuzzy entries after from ctx.
+func (ctx *AgentRunContext) AfterFuzzyCount() int {
+	if ctx != nil && ctx.PostCheckResult != nil {
+		return ctx.PostCheckResult.FuzzyPoEntries
+	}
+	return 0
 }
 
 // AgentRunWorkflow is the interface for agent-run subcommands. Each command

@@ -110,13 +110,15 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 
 		// Pre-validation: count new/fuzzy before translation (same as CmdAgentRunTranslate).
 		// Without this, BeforeNewCount/BeforeFuzzyCount stay 0 and Score never becomes 100.
-		preResult, preErr := validateTranslatePreResult(poFile)
+		pre, preErr := validateTranslatePreResult(poFile)
 		if preErr != nil {
-			// Nothing to translate or PO missing — record preResult and skip agent run
+			// Nothing to translate or PO missing — record pre and skip agent run
+			runCtx := &AgentRunContext{Result: &AgentRunResult{Score: 0}, PreCheckResult: pre}
 			result := TestRunResult{
-				AgentRunResult: *preResult,
+				AgentRunResult: AgentRunResult{Score: 0},
 				RunNumber:      runNum,
 				RunError:       preErr,
+				Ctx:            runCtx,
 			}
 			result.ExecutionTime = time.Since(iterStartTime)
 			results[i] = result
@@ -129,14 +131,9 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 		agentResult, runErr := RunAgentTranslate(cfg, agentName, poFile, true, useLocalOrchestration, batchSize)
 		err = runErr
 
-		// Copy before counts from pre-validation onto agent result (local orchestration
-		// and direct translate do not set these; only CmdAgentRunTranslate did).
-		agentResult.BeforeNewCount = preResult.BeforeNewCount
-		agentResult.BeforeFuzzyCount = preResult.BeforeFuzzyCount
-
-		// Post-validation: after counts + Score 100/100 (same as CmdAgentRunTranslate).
-		// Ignore return error so agent-test collects all runs; failures are in result.
-		_ = validateTranslatePostResult(poFile, agentResult)
+		// Build ctx with pre-check; validateTranslatePostResult fills PostCheckResult.
+		runCtx := &AgentRunContext{Result: agentResult, PreCheckResult: pre}
+		_ = validateTranslatePostResult(poFile, runCtx)
 
 		// Calculate execution time for this iteration
 		iterExecutionTime := time.Since(iterStartTime)
@@ -146,6 +143,7 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 			AgentRunResult: *agentResult,
 			RunNumber:      runNum,
 			RunError:       err,
+			Ctx:            runCtx,
 		}
 		result.ExecutionTime = iterExecutionTime
 
@@ -248,10 +246,12 @@ func displayTranslateTestResults(results []TestRunResult, averageScore float64, 
 
 		// Show translation counts
 		if result.AgentExecuted {
-			fmt.Printf("  New entries:     %d (before) -> %d (after)\n",
-				result.BeforeNewCount, result.AfterNewCount)
-			fmt.Printf("  Fuzzy entries:   %d (before) -> %d (after)\n",
-				result.BeforeFuzzyCount, result.AfterFuzzyCount)
+			if result.Ctx != nil {
+				fmt.Printf("  New entries:     %d (before) -> %d (after)\n",
+					result.Ctx.BeforeNewCount(), result.Ctx.AfterNewCount())
+				fmt.Printf("  Fuzzy entries:   %d (before) -> %d (after)\n",
+					result.Ctx.BeforeFuzzyCount(), result.Ctx.AfterFuzzyCount())
+			}
 
 			if result.RunError == nil {
 				fmt.Printf("  Agent execution: PASS\n")
@@ -259,10 +259,10 @@ func displayTranslateTestResults(results []TestRunResult, averageScore float64, 
 				fmt.Printf("  Agent execution: FAIL - %v\n", result.RunError)
 			}
 
-			if result.PostValidationError == nil {
+			if result.Ctx != nil && result.Ctx.PostValidationError() == nil {
 				fmt.Printf("  Validation:      PASS (all entries translated)\n")
-			} else {
-				fmt.Printf("  Validation:      FAIL - %s\n", result.PostValidationError)
+			} else if result.Ctx != nil {
+				fmt.Printf("  Validation:      FAIL - %s\n", result.Ctx.PostValidationError())
 			}
 		} else {
 			fmt.Printf("  Agent execution: SKIPPED (pre-validation failed)\n")

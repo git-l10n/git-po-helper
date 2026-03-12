@@ -35,34 +35,34 @@ func (r *ReviewReport) PerfectCount() int {
 	return n
 }
 
-// PoUpdateResult holds entry counts for update-po/update-pot operations.
-// Embedded in AgentRunResult; zero values when not from update-po/update-pot.
-type PoUpdateResult struct {
-	EntryCountBeforeUpdate int // PO/POT msgid count before agent update
-	EntryCountAfterUpdate  int // PO/POT msgid count after agent update
+// PreCheckResult holds pre-check outcome for all agent-run commands.
+// Each command sets only the fields it uses; others remain zero.
+type PreCheckResult struct {
+	Error                error // Pre-validation error; nil = success
+	AllEntries           int   // Update-pot/po: PO/POT msgid count before agent update
+	UntranslatePoEntries int   // Translate: new (untranslated) entries before
+	FuzzyPoEntries       int   // Translate: fuzzy entries before
+	ReviewTotalEntries   int   // Review: total entries in review-input.po
 }
 
-// TranslateResult holds new/fuzzy entry counts for translate operations.
-// Embedded in AgentRunResult; zero values when not from translate.
-type TranslateResult struct {
-	BeforeNewCount   int // New (untranslated) entries before
-	AfterNewCount    int // New (untranslated) entries after
-	BeforeFuzzyCount int // Fuzzy entries before
-	AfterFuzzyCount  int // Fuzzy entries after
+// PostCheckResult holds post-check outcome for all agent-run commands.
+// Each command sets only the fields it uses; others remain zero.
+type PostCheckResult struct {
+	Error                 error // Post-validation error; nil = success
+	SyntaxValidationError error // File syntax validation error; nil = success
+	Score                 int   // 0-100, calculated from validations
+	AllEntries            int   // Update-pot/po: PO/POT msgid count after agent update
+	UntranslatePoEntries  int   // Translate: new (untranslated) entries after
+	FuzzyPoEntries        int   // Translate: fuzzy entries after
+	ReviewPendingEntries  int   // Review: remaining entries in review-pending.po
 }
 
 // AgentRunResult holds the result of a single agent-run execution.
+// Pre/post check data lives in AgentRunContext; use ctx for validation.
 type AgentRunResult struct {
-	AgentExecuted         bool
-	PreValidationError    error // nil = success
-	PostValidationError   error // nil = success
-	SyntaxValidationError error // nil = success
-	Score                 int // 0-100, calculated based on validations
+	AgentExecuted bool
+	Score         int // 0-100, from PostCheckResult or ReviewReport
 
-	// Update-po/update-pot: embedded when from update-po/update-pot
-	PoUpdateResult
-	// Translate: embedded when from translate
-	TranslateResult
 	// Review: embedded when from review; ReviewResult==nil when not from review
 	ReviewReport
 
