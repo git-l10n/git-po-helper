@@ -10,7 +10,7 @@ import (
 
 // applyReviewJSON applies review suggestions from the review JSON result to PO entries,
 // then writes the result to the outputFile. It reads from inputFile, loads entities,
-// applies suggest_msgstr and suggest_msgstr_plural to matching entries (by msgid+msgid_plural),
+// applies suggest_msgstr (array) to matching entries (by msgid),
 // and serializes to outputFile.
 // Returns (applied, err): applied is true if any suggestion was applied; err is non-nil on failure.
 func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) (bool, error) {
@@ -50,25 +50,14 @@ func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) (bo
 		if !ok {
 			continue
 		}
-		if entry.MsgIDPlural != "" {
-			if len(issue.SuggestMsgstrPlural) > 0 {
-				entry.MsgStr = make([]string, len(issue.SuggestMsgstrPlural))
-				copy(entry.MsgStr, issue.SuggestMsgstrPlural)
-				applyMap[entry.MsgID] = true
-				applyCount++
-			} else {
-				applyMap[entry.MsgID] = false
-				log.Warnf("apply review: no suggest_msgstr_plural provided for msgid_plural: %q, skipping", entry.MsgIDPlural)
-			}
+		if len(issue.SuggestMsgstr) > 0 {
+			entry.MsgStr = make([]string, len(issue.SuggestMsgstr))
+			copy(entry.MsgStr, issue.SuggestMsgstr)
+			applyMap[entry.MsgID] = true
+			applyCount++
 		} else {
-			if issue.SuggestMsgstr != "" {
-				entry.MsgStr = []string{issue.SuggestMsgstr}
-				applyMap[entry.MsgID] = true
-				applyCount++
-			} else {
-				applyMap[entry.MsgID] = false
-				log.Warnf("apply review: no suggest_msgstr provided for msgid: %q, skipping", entry.MsgID)
-			}
+			applyMap[entry.MsgID] = false
+			log.Warnf("apply review: no suggest_msgstr provided for msgid: %q, skipping", entry.MsgID)
 		}
 	}
 	for _, issue := range review.Issues {
@@ -161,9 +150,9 @@ func ParseReviewJSON(jsonData []byte) (*ReviewJSONResult, error) {
 
 	log.Debugf("parsing JSON data (length: %d bytes)", len(jsonData))
 
-	var review ReviewJSONResult
-	if err := json.Unmarshal(jsonData, &review); err != nil {
-		log.Debugf("JSON unmarshal failed: %v", err)
+	review, err := DecodeReviewJSONBytes(jsonData)
+	if err != nil {
+		log.Debugf("JSON decode failed: %v", err)
 		return nil, fmt.Errorf("failed to parse JSON: %w", err)
 	}
 
@@ -198,9 +187,9 @@ func ParseReviewJSON(jsonData []byte) (*ReviewJSONResult, error) {
 		log.Debugf("issue[%d]: msgid=%q, score=%d, description=%q", i, issue.MsgID, issue.Score, issue.Description)
 	}
 
-	normalizeReviewIssuesToPoFormat(&review)
+	// normalizeReviewIssuesToPoFormat already applied in DecodeReviewJSONBytes
 	log.Debugf("JSON validation passed: %d total entries, %d issues", review.TotalEntries, len(review.Issues))
-	return &review, nil
+	return review, nil
 }
 
 // aggregateReviewJSONResult merges multiple review JSON results. For each msgid that
@@ -254,14 +243,12 @@ func normalizeReviewIssuesToPoFormat(review *ReviewJSONResult) {
 	for i := range review.Issues {
 		issue := &review.Issues[i]
 		issue.MsgID = jsonDecodedToPoFormat(issue.MsgID)
-		issue.MsgStr = jsonDecodedToPoFormat(issue.MsgStr)
 		issue.MsgIDPlural = jsonDecodedToPoFormat(issue.MsgIDPlural)
-		for k := range issue.MsgStrPlural {
-			issue.MsgStrPlural[k] = jsonDecodedToPoFormat(issue.MsgStrPlural[k])
+		for k := range issue.MsgStr {
+			issue.MsgStr[k] = jsonDecodedToPoFormat(issue.MsgStr[k])
 		}
-		issue.SuggestMsgstr = jsonDecodedToPoFormat(issue.SuggestMsgstr)
-		for k := range issue.SuggestMsgstrPlural {
-			issue.SuggestMsgstrPlural[k] = jsonDecodedToPoFormat(issue.SuggestMsgstrPlural[k])
+		for k := range issue.SuggestMsgstr {
+			issue.SuggestMsgstr[k] = jsonDecodedToPoFormat(issue.SuggestMsgstr[k])
 		}
 	}
 }

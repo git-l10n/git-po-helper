@@ -309,12 +309,14 @@ output/
 
 ```go
 // ReviewIssue represents a single issue in a review JSON result.
+// MsgStr and SuggestMsgstr are JSON arrays (one element singular, multiple plural).
 type ReviewIssue struct {
-    MsgID       string `json:"msgid"`
-    MsgStr      string `json:"msgstr"`
-    Score       int    `json:"score"`
-    Description string `json:"description"`
-    Suggestion  string `json:"suggestion"`
+    MsgID         string   `json:"msgid"`
+    MsgStr        []string `json:"msgstr,omitempty"`
+    MsgIDPlural   string   `json:"msgid_plural,omitempty"`
+    Score         int      `json:"score"`
+    Description   string   `json:"description"`
+    SuggestMsgstr []string `json:"suggest_msgstr"`
 }
 
 // ReviewJSONResult represents the overall review JSON format produced by an agent.

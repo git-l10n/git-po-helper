@@ -52,24 +52,32 @@ func parseReviewJSONWithGjson(data []byte, err error) *ReviewJSONResult {
 	var issues []ReviewIssue
 	for _, r := range issuesResult.Array() {
 		issue := ReviewIssue{
-			MsgID:         r.Get("msgid").String(),
-			MsgStr:        r.Get("msgstr").String(),
-			MsgIDPlural:   r.Get("msgid_plural").String(),
-			Score:         int(r.Get("score").Int()),
-			Description:   r.Get("description").String(),
-			SuggestMsgstr: r.Get("suggest_msgstr").String(),
+			MsgID:       r.Get("msgid").String(),
+			MsgIDPlural: r.Get("msgid_plural").String(),
+			Score:       int(r.Get("score").Int()),
+			Description: r.Get("description").String(),
 		}
-		if s := r.Get("suggestion").String(); s != "" && issue.SuggestMsgstr == "" {
-			issue.SuggestMsgstr = s
-		}
-		if arr := r.Get("msgstr_plural"); arr.Exists() && arr.IsArray() {
-			for _, v := range arr.Array() {
-				issue.MsgStrPlural = append(issue.MsgStrPlural, v.String())
+		if arr := r.Get("msgstr"); arr.Exists() {
+			if arr.IsArray() {
+				for _, v := range arr.Array() {
+					issue.MsgStr = append(issue.MsgStr, v.String())
+				}
+			} else if s := arr.String(); s != "" {
+				issue.MsgStr = []string{s}
 			}
 		}
-		if arr := r.Get("suggest_msgstr_plural"); arr.Exists() && arr.IsArray() {
-			for _, v := range arr.Array() {
-				issue.SuggestMsgstrPlural = append(issue.SuggestMsgstrPlural, v.String())
+		if arr := r.Get("suggest_msgstr"); arr.Exists() {
+			if arr.IsArray() {
+				for _, v := range arr.Array() {
+					issue.SuggestMsgstr = append(issue.SuggestMsgstr, v.String())
+				}
+			} else if s := arr.String(); s != "" {
+				issue.SuggestMsgstr = []string{s}
+			}
+		}
+		if len(issue.SuggestMsgstr) == 0 {
+			if s := r.Get("suggestion").String(); s != "" {
+				issue.SuggestMsgstr = []string{s}
 			}
 		}
 		issues = append(issues, issue)
@@ -77,6 +85,29 @@ func parseReviewJSONWithGjson(data []byte, err error) *ReviewJSONResult {
 	result := &ReviewJSONResult{TotalEntries: int(totalEntries), Issues: issues}
 	normalizeReviewIssuesToPoFormat(result)
 	return result
+}
+
+// DecodeReviewJSONBytes parses review JSON from bytes using the same pipeline as
+// loadReviewJSONFromFile: json.Unmarshal (ReviewIssue.UnmarshalJSON normalizes
+// msgstr/suggest_msgstr string or array), PrepareJSONForParse retry, then gjson
+// fallback. Ensures Issues is non-nil and runs normalizeReviewIssuesToPoFormat.
+// All review JSON loading should go through this or ParseReviewJSON (which uses it).
+func DecodeReviewJSONBytes(data []byte) (*ReviewJSONResult, error) {
+	var review ReviewJSONResult
+	if err := json.Unmarshal(data, &review); err != nil {
+		prepared := PrepareJSONForParse(data, err)
+		if err2 := json.Unmarshal(prepared, &review); err2 != nil {
+			if parsed := parseReviewJSONWithGjson(prepared, err2); parsed != nil {
+				return parsed, nil
+			}
+			return nil, fmt.Errorf("decode review JSON: %w", err)
+		}
+	}
+	if review.Issues == nil {
+		review.Issues = []ReviewIssue{}
+	}
+	normalizeReviewIssuesToPoFormat(&review)
+	return &review, nil
 }
 
 // loadReviewJSONFromFile reads and parses a single review JSON file with the same
@@ -87,21 +118,11 @@ func loadReviewJSONFromFile(jsonFile string) (*ReviewJSONResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", jsonFile, err)
 	}
-	var review ReviewJSONResult
-	if err := json.Unmarshal(data, &review); err != nil {
-		prepared := PrepareJSONForParse(data, err)
-		if err2 := json.Unmarshal(prepared, &review); err2 != nil {
-			if parsed := parseReviewJSONWithGjson(prepared, err2); parsed != nil {
-				return parsed, nil
-			}
-			return nil, fmt.Errorf("failed to parse review JSON %s: %w", jsonFile, err)
-		}
+	review, err := DecodeReviewJSONBytes(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse review JSON %s: %w", jsonFile, err)
 	}
-	if review.Issues == nil {
-		review.Issues = []ReviewIssue{}
-	}
-	normalizeReviewIssuesToPoFormat(&review)
-	return &review, nil
+	return review, nil
 }
 
 // AggregateReviewBatches finds *-result-<N>.json batch files, checks timestamps,

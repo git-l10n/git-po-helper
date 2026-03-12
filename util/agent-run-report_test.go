@@ -83,8 +83,8 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 	review := &ReviewJSONResult{
 		TotalEntries: 100,
 		Issues: []ReviewIssue{
-			{MsgID: "commit", Score: 0, Description: "term error", SuggestMsgstr: "提交"},
-			{MsgID: "file", Score: 2, Description: "minor", SuggestMsgstr: "档案"},
+			{MsgID: "commit", Score: 0, Description: "term error", SuggestMsgstr: []string{"提交"}},
+			{MsgID: "file", Score: 2, Description: "minor", SuggestMsgstr: []string{"档案"}},
 		},
 	}
 	data, err := json.Marshal(review)
@@ -194,9 +194,41 @@ msgstr "old"
 	}
 }
 
+func TestDecodeReviewJSONBytes_MsgstrAndSuggestStringCompat(t *testing.T) {
+	// LLM may emit msgstr / suggest_msgstr as strings; must normalize to []string.
+	jsonStr := `{"total_entries": 2, "issues": [
+		{"msgid": "a", "msgstr": "旧", "score": 1, "description": "d1", "suggest_msgstr": "新"},
+		{"msgid": "b", "msgstr": ["x", "y"], "score": 2, "description": "d2", "suggest_msgstr": ["p", "q"]}
+	]}`
+	r, err := DecodeReviewJSONBytes([]byte(jsonStr))
+	if err != nil {
+		t.Fatalf("DecodeReviewJSONBytes: %v", err)
+	}
+	if len(r.Issues) != 2 {
+		t.Fatalf("expected 2 issues, got %d", len(r.Issues))
+	}
+	if len(r.Issues[0].MsgStr) != 1 || r.Issues[0].MsgStr[0] != "旧" {
+		t.Errorf("issue0 MsgStr: got %#v", r.Issues[0].MsgStr)
+	}
+	if len(r.Issues[0].SuggestMsgstr) != 1 || r.Issues[0].SuggestMsgstr[0] != "新" {
+		t.Errorf("issue0 SuggestMsgstr: got %#v", r.Issues[0].SuggestMsgstr)
+	}
+	if len(r.Issues[1].MsgStr) != 2 || r.Issues[1].SuggestMsgstr[0] != "p" {
+		t.Errorf("issue1 arrays: MsgStr=%#v SuggestMsgstr=%#v", r.Issues[1].MsgStr, r.Issues[1].SuggestMsgstr)
+	}
+	// ParseReviewJSON uses DecodeReviewJSONBytes then validates
+	r2, err := ParseReviewJSON([]byte(`{"total_entries": 1, "issues": [{"msgid": "m", "msgstr": "s", "score": 0, "description": "ok", "suggest_msgstr": "t"}]}`))
+	if err != nil {
+		t.Fatalf("ParseReviewJSON string fields: %v", err)
+	}
+	if len(r2.Issues) != 1 || len(r2.Issues[0].SuggestMsgstr) != 1 || r2.Issues[0].SuggestMsgstr[0] != "t" {
+		t.Errorf("ParseReviewJSON: got %#v", r2.Issues[0].SuggestMsgstr)
+	}
+}
+
 func TestReportReviewMarkdownWrappedJSON(t *testing.T) {
 	// JSON wrapped in markdown (common LLM output) - tests preprocessing
-	validInMarkdown := "```json\n" + `{"total_entries": 5, "issues": [{"msgid": "x", "score": 2, "description": "d", "suggest_msgstr": "s"}]}` + "\n```"
+	validInMarkdown := "```json\n" + `{"total_entries": 5, "issues": [{"msgid": "x", "score": 2, "description": "d", "suggest_msgstr": ["s"]}]}` + "\n```"
 	tmpDir := t.TempDir()
 	origWd, err := os.Getwd()
 	if err != nil {

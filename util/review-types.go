@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -88,15 +89,59 @@ const (
 )
 
 // ReviewIssue represents a single issue in a review JSON result.
+// MsgStr and SuggestMsgstr are always JSON arrays: one element for singular,
+// multiple for plural forms (same shape as GettextEntry.MsgStr).
 type ReviewIssue struct {
-	MsgID               string   `json:"msgid"`                   // original msgid (singular)
-	MsgStr              string   `json:"msgstr"`                  // original translation (singular)
-	MsgIDPlural         string   `json:"msgid_plural,omitempty"`  // original msgid (plural)
-	MsgStrPlural        []string `json:"msgstr_plural,omitempty"` // original translation (plural)
-	Score               int      `json:"score"`                   // issue score (ReviewIssueScoreCritical..ReviewIssueScorePerfect)
-	Description         string   `json:"description"`             // issue description
-	SuggestMsgstr       string   `json:"suggest_msgstr"`          // corrected translation (singular)
-	SuggestMsgstrPlural []string `json:"suggest_msgstr_plural"`   // corrected translation (plural)
+	MsgID         string   `json:"msgid"`                  // original msgid (singular)
+	MsgStr        []string `json:"msgstr,omitempty"`       // original translation forms
+	MsgIDPlural   string   `json:"msgid_plural,omitempty"` // original msgid (plural)
+	Score         int      `json:"score"`                  // issue score (ReviewIssueScoreCritical..ReviewIssueScorePerfect)
+	Description   string   `json:"description"`            // issue description
+	SuggestMsgstr []string `json:"suggest_msgstr"`         // corrected translation forms
+}
+
+// UnmarshalJSON accepts msgstr and suggest_msgstr as JSON string or array of strings,
+// normalizing to MsgStr and SuggestMsgstr []string (same shape as GettextEntry.MsgStr).
+func (issue *ReviewIssue) UnmarshalJSON(data []byte) error {
+	var aux struct {
+		MsgID            string          `json:"msgid"`
+		MsgStrRaw        json.RawMessage `json:"msgstr"`
+		MsgIDPlural      string          `json:"msgid_plural,omitempty"`
+		Score            int             `json:"score"`
+		Description      string          `json:"description"`
+		SuggestMsgstrRaw json.RawMessage `json:"suggest_msgstr"`
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	issue.MsgID = aux.MsgID
+	issue.MsgIDPlural = aux.MsgIDPlural
+	issue.Score = aux.Score
+	issue.Description = aux.Description
+	var err error
+	if issue.MsgStr, err = unmarshalStringOrStringSlice(aux.MsgStrRaw, "msgstr"); err != nil {
+		return err
+	}
+	if issue.SuggestMsgstr, err = unmarshalStringOrStringSlice(aux.SuggestMsgstrRaw, "suggest_msgstr"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// unmarshalStringOrStringSlice decodes raw as JSON string -> []string{s}, array -> []string, null/absent -> nil.
+func unmarshalStringOrStringSlice(raw json.RawMessage, field string) ([]string, error) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil, nil
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err == nil {
+		return []string{s}, nil
+	}
+	var arr []string
+	if err := json.Unmarshal(raw, &arr); err == nil {
+		return arr, nil
+	}
+	return nil, fmt.Errorf("%s: want string or array of strings", field)
 }
 
 // ReviewJSONResult represents the overall review JSON format produced by an agent.

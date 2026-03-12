@@ -236,7 +236,8 @@ func ParseGettextJSON(r io.Reader) (*GettextJSON, error) {
 	return ParseGettextJSONBytes(data)
 }
 
-// convertGettextJSONToPoFormat converts JSON-decoded strings (newline, tab) to PO format.
+// convertGettextJSONToPoFormat converts JSON-decoded strings (newline, tab) to PO format
+// for header_meta, msgid/msgid_plural/msgid_previous, msgstr forms, and comment lines.
 func convertGettextJSONToPoFormat(j *GettextJSON) {
 	if j == nil {
 		return
@@ -250,6 +251,9 @@ func convertGettextJSONToPoFormat(j *GettextJSON) {
 		e.MsgIDPrevious = jsonDecodedToPoFormat(e.MsgIDPrevious)
 		for k := range e.MsgStr {
 			e.MsgStr[k] = jsonDecodedToPoFormat(e.MsgStr[k])
+		}
+		for k := range e.Comments {
+			e.Comments[k] = jsonDecodedToPoFormat(e.Comments[k])
 		}
 	}
 }
