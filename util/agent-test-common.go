@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -125,12 +124,10 @@ func backupFileIfExists(paths ...string) {
 // This is useful for agent-test operations to ensure a clean state before each test run.
 // Returns an error if the git restore command fails.
 func CleanPoDirectory(paths ...string) error {
-	workDir := repository.WorkDirOrCwd()
-
 	// If no paths provided, do not reset for security
 	targetPaths := paths
 
-	log.Debugf("cleaning paths using git restore (workDir: %s, paths: %v)", workDir, targetPaths)
+	log.Debugf("cleaning paths using git restore (paths: %v)", targetPaths)
 
 	// Process each path individually to avoid failures on non-existent paths
 	for _, path := range targetPaths {
@@ -150,7 +147,6 @@ func CleanPoDirectory(paths ...string) error {
 		}
 
 		cmd := exec.Command("git", args...)
-		cmd.Dir = workDir
 
 		// Capture stderr for error messages
 		stderr, err := cmd.StderrPipe()
@@ -201,7 +197,6 @@ func CleanPoDirectory(paths ...string) error {
 			"-fx",
 			"--",
 			"po/git.pot")
-		cleanCmd.Dir = workDir
 
 		// Capture stderr for error messages
 		cleanStderr, err := cleanCmd.StderrPipe()

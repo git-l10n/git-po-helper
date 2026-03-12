@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -37,16 +36,16 @@ func (w *workflowUpdatePo) PreCheck(ctx *AgentRunContext) error {
 	if err != nil {
 		return err
 	}
-	poFile, err := GetPoFileAbsPath(ctx.Cfg, ctx.PoFile)
+	rel, err := GetPoFileRelPath(ctx.Cfg, ctx.PoFile)
 	if err != nil {
 		return err
 	}
-	ctx.poFileAbs = poFile
-	log.Debugf("PO file path: %s", ctx.poFileAbs)
+	ctx.PoFile = rel
+	log.Debugf("PO file path: %s", ctx.PoFile)
 	ctx.PreCheckResult = &PreCheckResult{}
-	if !Exist(ctx.poFileAbs) {
+	if !Exist(ctx.PoFile) {
 		ctx.PreCheckResult.AllEntries = 0
-	} else if stats, err := GetPoStats(ctx.poFileAbs); err == nil {
+	} else if stats, err := GetPoStats(ctx.PoFile); err == nil {
 		ctx.PreCheckResult.AllEntries = stats.Total()
 	}
 	return nil
@@ -58,14 +57,14 @@ func (w *workflowUpdatePo) AgentRun(ctx *AgentRunContext) error {
 
 func (w *workflowUpdatePo) PostCheck(ctx *AgentRunContext) error {
 	ctx.PostCheckResult = &PostCheckResult{Score: 100}
-	if Exist(ctx.poFileAbs) {
-		if stats, err := GetPoStats(ctx.poFileAbs); err == nil {
+	if Exist(ctx.PoFile) {
+		if stats, err := GetPoStats(ctx.PoFile); err == nil {
 			ctx.PostCheckResult.AllEntries = stats.Total()
 		}
 	}
 	ctx.Result.Score = 100
-	log.Infof("validating file syntax: %s", ctx.poFileAbs)
-	if err := ValidatePoFile(ctx.poFileAbs); err != nil {
+	log.Infof("validating file syntax: %s", ctx.PoFile)
+	if err := ValidatePoFile(ctx.PoFile); err != nil {
 		log.Errorf("file syntax validation failed: %v", err)
 		ctx.PostCheckResult.SyntaxValidationError = err
 		ctx.Result.Score = 0
@@ -103,11 +102,7 @@ func agentRunUpdatePoExecute(ctx *AgentRunContext) error {
 	if err != nil {
 		return err
 	}
-	workDir := repository.WorkDirOrCwd()
-	sourcePath := ctx.poFileAbs
-	if rel, err := filepath.Rel(workDir, ctx.poFileAbs); err == nil && rel != "" && rel != "." {
-		sourcePath = filepath.ToSlash(rel)
-	}
+	sourcePath := filepath.ToSlash(ctx.PoFile)
 	vars := PlaceholderVars{"prompt": prompt, "source": sourcePath}
 	resolvedPrompt, err := ExecutePromptTemplate(prompt, vars)
 	if err != nil {

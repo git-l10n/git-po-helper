@@ -3,7 +3,6 @@ package repository
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/jiangxin/goconfig"
 	log "github.com/sirupsen/logrus"
@@ -71,19 +70,6 @@ func GitDir() string {
 func WorkDir() string {
 	assertRepositoryNotNil()
 	return theRepository.repository.WorkDir()
-}
-
-// WorkDirOrCwd returns WorkDir() when a repository is opened, otherwise the current working directory.
-// Use this in commands that can run without a repo; paths will be relative to cwd when not in repo.
-func WorkDirOrCwd() string {
-	if Opened() {
-		return theRepository.repository.WorkDir()
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return "."
-	}
-	return wd
 }
 
 // Config is git config for the repository.

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,7 +16,6 @@ import (
 // tracked by git. Corresponds to AGENTS.md Task 3 Step 8 (po_cleanup): these files must
 // be removed before each test run to avoid stale state from a previous run.
 func cleanL10nIntermediateFiles() {
-	workDir := repository.WorkDirOrCwd()
 	files := []string{
 		"po/l10n-pending.po",
 		"po/l10n-todo.json",
@@ -26,8 +24,7 @@ func cleanL10nIntermediateFiles() {
 		"po/l10n-done.merged",
 	}
 	for _, f := range files {
-		p := filepath.Join(workDir, f)
-		if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(f); err != nil && !os.IsNotExist(err) {
 			log.Debugf("failed to remove %s: %v", f, err)
 		}
 	}
@@ -80,14 +77,12 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 	}
 	_ = selectedAgent // Avoid unused variable warning
 
-	// Determine PO file path
-	poFile, err = GetPoFileAbsPath(cfg, poFile)
+	// Resolve to relative path (cwd at repo root)
+	poFile, err = GetPoFileRelPath(cfg, poFile)
 	if err != nil {
 		return nil, 0, err
 	}
-
-	// Will clean poFile using relative path
-	relPoFile, err := GetPoFileRelPath(cfg, poFile)
+	relPoFile := poFile
 	if err != nil {
 		log.Warnf("failed to get relative path of poFile: %v", err)
 	}
@@ -169,8 +164,11 @@ func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.Agent
 // It creates output/<agent-name>/<run-number>/ directory and copies the PO file
 // and execution logs to preserve translation results for later review.
 func SaveTranslateResults(agentName string, runNumber int, poFile string, stdout, stderr []byte) error {
-	// Determine output directory path
-	workDir := repository.WorkDirOrCwd()
+	// Determine output directory path (relative to process cwd)
+	workDir, _ := os.Getwd()
+	if workDir == "" {
+		workDir = "."
+	}
 	outputDir := filepath.Join(workDir, "output", agentName, fmt.Sprintf("%d", runNumber))
 
 	log.Debugf("saving translation results to %s", outputDir)

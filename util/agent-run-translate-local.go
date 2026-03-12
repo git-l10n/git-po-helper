@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -41,10 +40,11 @@ func RunAgentTranslateLocalOrchestration(cfg *config.AgentConfig, agentName, poF
 		return result, err
 	}
 
-	poFile, err = GetPoFileAbsPath(cfg, poFile)
+	rel, err := GetPoFileRelPath(cfg, poFile)
 	if err != nil {
 		return result, err
 	}
+	poFile = rel
 
 	if !Exist(poFile) {
 		return result, fmt.Errorf("PO file does not exist: %s\nHint: Ensure the PO file exists before running translate", poFile)
@@ -183,7 +183,10 @@ func translateOneBatch(cfg *config.AgentConfig, selectedAgent config.AgentEntry,
 		return err
 	}
 
-	workDir := repository.WorkDirOrCwd()
+	workDir, _ := os.Getwd()
+	if workDir == "" {
+		workDir = "."
+	}
 	sourceRel, _ := filepath.Rel(workDir, todoJSON)
 	destRel, _ := filepath.Rel(workDir, doneJSON)
 	if sourceRel == "" || sourceRel == "." {
@@ -348,7 +351,10 @@ func fixPoWithAgent(cfg *config.AgentConfig, selectedAgent config.AgentEntry, po
 		return fmt.Errorf("fix-po prompt not configured: %w", err)
 	}
 
-	workDir := repository.WorkDirOrCwd()
+	workDir, _ := os.Getwd()
+	if workDir == "" {
+		workDir = "."
+	}
 	sourceRel, _ := filepath.Rel(workDir, poFile)
 	if sourceRel == "" || sourceRel == "." {
 		sourceRel = poFile

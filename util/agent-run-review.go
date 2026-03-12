@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -193,7 +192,10 @@ func runAgentReviewDispatch(cfg *config.AgentConfig, agentName string, target *C
 // Before execution: deletes review.po and review.json. After: expects review.json to exist.
 func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string, target *CompareTarget) (*AgentRunResult, error) {
 	ps := GetReviewPathSet()
-	workDir := repository.WorkDirOrCwd()
+	workDir, _ := os.Getwd()
+	if workDir == "" {
+		workDir = "."
+	}
 	startTime := time.Now()
 	result := &AgentRunResult{Score: 0}
 

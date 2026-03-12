@@ -50,11 +50,7 @@ func CmdAgentTestUpdatePo(agentName, poFile string, runs int, skipConfirmation b
 // when configured in cfg.AgentTest.
 // Returns scores for each run, average score, and error.
 func RunAgentTestUpdatePo(agentName, poFile string, runs int, cfg *config.AgentConfig) ([]TestRunResult, float64, error) {
-	// Resolve PO file path once
-	poFileAbs, err := GetPoFileAbsPath(cfg, poFile)
-	if err != nil {
-		return nil, 0, err
-	}
+	// Resolve PO file to relative path once (cwd at repo root)
 	relPoFile, err := GetPoFileRelPath(cfg, poFile)
 	if err != nil {
 		log.Warnf("failed to get relative path of poFile: %v", err)
@@ -86,13 +82,13 @@ func RunAgentTestUpdatePo(agentName, poFile string, runs int, cfg *config.AgentC
 			agentResult = &AgentRunResult{Score: 0}
 			runCtx = &AgentRunContext{Result: agentResult}
 			runCtx.PreCheckResult = &PreCheckResult{}
-			if !Exist(poFileAbs) {
+			if !Exist(relPoFile) {
 				runCtx.PreCheckResult.AllEntries = 0
-			} else if stats, e := GetPoStats(poFileAbs); e == nil {
+			} else if stats, e := GetPoStats(relPoFile); e == nil {
 				runCtx.PreCheckResult.AllEntries = stats.Total()
 			}
-			if runErr = ValidatePoEntryCount(poFileAbs, cfg.AgentTest.PoEntriesBeforeUpdate, "before update"); runErr != nil {
-				runCtx.PreCheckResult.Error = fmt.Errorf("pre-validation failed: %w\nHint: Ensure %s exists and has the expected number of entries", runErr, poFileAbs)
+			if runErr = ValidatePoEntryCount(relPoFile, cfg.AgentTest.PoEntriesBeforeUpdate, "before update"); runErr != nil {
+				runCtx.PreCheckResult.Error = fmt.Errorf("pre-validation failed: %w\nHint: Ensure %s exists and has the expected number of entries", runErr, relPoFile)
 				agentResult.Score = 0
 				// Skip agent run when pre-validation fails
 			} else {
@@ -109,12 +105,12 @@ func RunAgentTestUpdatePo(agentName, poFile string, runs int, cfg *config.AgentC
 			if runCtx.PostCheckResult == nil {
 				runCtx.PostCheckResult = &PostCheckResult{}
 			}
-			if Exist(poFileAbs) {
-				if stats, e := GetPoStats(poFileAbs); e == nil {
+			if Exist(relPoFile) {
+				if stats, e := GetPoStats(relPoFile); e == nil {
 					runCtx.PostCheckResult.AllEntries = stats.Total()
 				}
 			}
-			if postErr := ValidatePoEntryCount(poFileAbs, cfg.AgentTest.PoEntriesAfterUpdate, "after update"); postErr != nil {
+			if postErr := ValidatePoEntryCount(relPoFile, cfg.AgentTest.PoEntriesAfterUpdate, "after update"); postErr != nil {
 				runCtx.PostCheckResult.Error = fmt.Errorf("post-validation failed: %w\nHint: The agent may not have updated the PO file correctly", postErr)
 				agentResult.Score = 0
 			} else {

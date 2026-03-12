@@ -25,11 +25,7 @@ type AgentRunContext struct {
 	PostCheckResult *PostCheckResult
 
 	// Set by workflows during execution
-	poFileAbs string // absolute PO path when applicable
-	potFile   string // update-pot
-
-	// Translate workflow only: PreCheck snapshot for AgentRun.
-	translatePreCheck *PreCheckResult // validateTranslatePreResult output
+	potFile string // update-pot
 }
 
 // PreValidationError returns the pre-check error from ctx; nil when ctx or PreCheckResult is nil.

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -182,8 +181,11 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 // and saves the execution log. Files are overwritten if the directory exists.
 // Returns error if any operation fails.
 func SaveReviewResults(agentName string, runNumber int, poFile string, jsonFile string, stdout, stderr []byte) error {
-	// Determine output directory path
-	workDir := repository.WorkDirOrCwd()
+	// Determine output directory path (relative to process cwd)
+	workDir, _ := os.Getwd()
+	if workDir == "" {
+		workDir = "."
+	}
 	outputDir := filepath.Join(workDir, "output", agentName, fmt.Sprintf("%d", runNumber))
 
 	log.Debugf("saving review results to %s", outputDir)

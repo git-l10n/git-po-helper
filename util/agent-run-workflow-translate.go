@@ -44,20 +44,18 @@ func (w *workflowTranslate) InitContext(cfg *config.AgentConfig) *AgentRunContex
 }
 
 func (w *workflowTranslate) PreCheck(ctx *AgentRunContext) error {
-	poFile, err := GetPoFileAbsPath(ctx.Cfg, ctx.PoFile)
+	rel, err := GetPoFileRelPath(ctx.Cfg, ctx.PoFile)
 	if err != nil {
 		return err
 	}
-	ctx.poFileAbs = poFile
-	pre, err := validateTranslatePreResult(ctx.poFileAbs)
+	ctx.PoFile = rel
+	pre, err := validateTranslatePreResult(ctx.PoFile)
 	if err != nil {
 		ctx.PreCheckResult = pre
-		ctx.translatePreCheck = pre
 		return err
 	}
 	ctx.PreCheckResult = pre
-	ctx.translatePreCheck = pre
-	if stats, err := GetPoStats(ctx.poFileAbs); err == nil {
+	if stats, err := GetPoStats(ctx.PoFile); err == nil {
 		w.translateStatsBefore = fmt.Sprintf("Translation statistics: before: %d translated, %d untranslated, %d fuzzy.",
 			stats.Translated, stats.Untranslated, stats.Fuzzy)
 	}
@@ -66,7 +64,7 @@ func (w *workflowTranslate) PreCheck(ctx *AgentRunContext) error {
 
 func (w *workflowTranslate) AgentRun(ctx *AgentRunContext) error {
 	// Dispatch only; stats printing is deferred to Report so agent-test can keep using RunAgentTranslate.
-	result, err := runAgentTranslateDispatch(ctx.Cfg, ctx.AgentName, ctx.poFileAbs, ctx.UseLocalOrchestration, ctx.BatchSize)
+	result, err := runAgentTranslateDispatch(ctx.Cfg, ctx.AgentName, ctx.PoFile, ctx.UseLocalOrchestration, ctx.BatchSize)
 	if result == nil {
 		result = &AgentRunResult{Score: 0}
 	}
@@ -76,12 +74,12 @@ func (w *workflowTranslate) AgentRun(ctx *AgentRunContext) error {
 }
 
 func (w *workflowTranslate) PostCheck(ctx *AgentRunContext) error {
-	return validateTranslatePostResult(ctx.poFileAbs, ctx)
+	return validateTranslatePostResult(ctx.PoFile, ctx)
 }
 
 func (w *workflowTranslate) Report(ctx *AgentRunContext, agentRunErr error) error {
 	// Print before/after stats (same behavior as RunAgentTranslate after dispatch)
-	if stats, errStats := GetPoStats(ctx.poFileAbs); errStats != nil {
+	if stats, errStats := GetPoStats(ctx.PoFile); errStats != nil {
 		log.Errorf("GetPoStats after agent: %v", errStats)
 		if w.translateStatsBefore != "" {
 			fmt.Fprintln(os.Stderr, w.translateStatsBefore)

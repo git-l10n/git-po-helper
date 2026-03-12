@@ -13,7 +13,6 @@ import (
 
 	"github.com/git-l10n/git-po-helper/config"
 	"github.com/git-l10n/git-po-helper/flag"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -144,7 +143,7 @@ func ValidatePoEntryCount(poFile string, expectedCount *int, stage string) error
 // For .po files, it uses msgfmt to validate.
 // Returns an error if the file is invalid, nil if valid.
 // If the file path is absolute, it doesn't require repository context.
-// If the file path is relative, it uses repository.WorkDirOrCwd() as the working directory.
+// If the file path is relative, the subprocess uses the process current working directory (cmd.Dir unset).
 func ValidatePoFile(potFile string) error {
 	return validatePoFileInternal(potFile, false)
 }
@@ -155,7 +154,7 @@ func ValidatePoFile(potFile string) error {
 // For .po files, it uses msgfmt --check-format to validate (only checks format, not completeness).
 // Returns an error if the file format is invalid, nil if valid.
 // If the file path is absolute, it doesn't require repository context.
-// If the file path is relative, it uses repository.WorkDirOrCwd() as the working directory.
+// If the file path is relative, the subprocess uses the process current working directory (cmd.Dir unset).
 func ValidatePoFileFormat(potFile string) error {
 	return validatePoFileInternal(potFile, true)
 }
@@ -248,7 +247,10 @@ func validatePoFileInternal(potFile string, checkFormatOnly bool) error {
 // If poFile is empty, it uses the effective default_lang_code (config or system locale) to construct the path.
 // If poFile is provided but not absolute, it's treated as relative to the repository root.
 func GetPoFileAbsPath(cfg *config.AgentConfig, poFile string) (string, error) {
-	workDir := repository.WorkDirOrCwd()
+	workDir, err := os.Getwd()
+	if err != nil {
+		workDir = "."
+	}
 	if poFile == "" {
 		lang := cfg.DefaultLangCode
 		if lang == "" {
@@ -263,31 +265,30 @@ func GetPoFileAbsPath(cfg *config.AgentConfig, poFile string) (string, error) {
 }
 
 // GetPoFileRelPath determines the relative path of a PO file in "po/XX.po" format.
-// If poFile is empty, it uses the effective default_lang_code (config or system locale) to construct the path.
-// If poFile is an absolute path, it converts it to a relative path.
-// If poFile is already a relative path, it normalizes it to "po/XX.po" format.
-// Returns the relative path and an error if default_lang_code is not configured when needed.
+// If poFile is empty, it uses default_lang_code to construct PoDir/lang.po (relative).
+// If poFile is absolute, it converts via filepath.Rel to repository root.
+// If poFile is already relative, it normalizes with filepath.Clean and ToSlash.
+// Does not join with workDir—callers run with cwd at repo root so relative paths suffice.
 func GetPoFileRelPath(cfg *config.AgentConfig, poFile string) (string, error) {
-	workDir := repository.WorkDirOrCwd()
-	var absPath string
-	var err error
-
-	// First get the absolute path
-	absPath, err = GetPoFileAbsPath(cfg, poFile)
+	workDir, err := os.Getwd()
 	if err != nil {
-		return "", err
+		workDir = "."
 	}
-
-	// Convert absolute path to relative path
-	relPath, err := filepath.Rel(workDir, absPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to convert path to relative: %w", err)
+	if poFile == "" {
+		lang := cfg.DefaultLangCode
+		if lang == "" {
+			return "", fmt.Errorf("default_lang_code is not configured\nHint: Provide po/XX.po on the command line or set default_lang_code in git-po-helper.yaml")
+		}
+		return filepath.ToSlash(filepath.Join(PoDir, fmt.Sprintf("%s.po", lang))), nil
 	}
-
-	// Normalize to use forward slashes (for consistency with "po/XX.po" format)
-	relPath = filepath.ToSlash(relPath)
-
-	return relPath, nil
+	if filepath.IsAbs(poFile) {
+		relPath, err := filepath.Rel(workDir, poFile)
+		if err != nil {
+			return "", fmt.Errorf("failed to convert path to relative: %w", err)
+		}
+		return filepath.ToSlash(relPath), nil
+	}
+	return filepath.ToSlash(filepath.Clean(poFile)), nil
 }
 
 // detectAgentOutputFormat inspects the first non-empty line and returns the detected

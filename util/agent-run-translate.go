@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,26 +18,27 @@ import (
 // or RunAgentTranslatePromptOrchestration.
 func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentTest, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
 	result := &AgentRunResult{Score: 0}
-	poFileAbs, err := GetPoFileAbsPath(cfg, poFile)
+	rel, err := GetPoFileRelPath(cfg, poFile)
 	if err != nil {
 		return result, err
 	}
-	log.Debugf("PO file path: %s", poFileAbs)
+	poFile = rel
+	log.Debugf("PO file path: %s", poFile)
 
 	var translateStatsSummary string
-	if stats, err := GetPoStats(poFileAbs); err != nil {
+	if stats, err := GetPoStats(poFile); err != nil {
 		log.Debugf("GetPoStats before agent: %v", err)
 	} else {
 		translateStatsSummary = fmt.Sprintf("Translation statistics: before: %d translated, %d untranslated, %d fuzzy.",
 			stats.Translated, stats.Untranslated, stats.Fuzzy)
 	}
 
-	result, agentErr := runAgentTranslateDispatch(cfg, agentName, poFileAbs, useLocalOrchestration, batchSize)
+	result, agentErr := runAgentTranslateDispatch(cfg, agentName, poFile, useLocalOrchestration, batchSize)
 	if result == nil {
 		result = &AgentRunResult{Score: 0}
 	}
 
-	if stats, errStats := GetPoStats(poFileAbs); errStats != nil {
+	if stats, errStats := GetPoStats(poFile); errStats != nil {
 		log.Errorf("GetPoStats after agent: %v", errStats)
 		if translateStatsSummary != "" {
 			fmt.Fprintln(os.Stderr, translateStatsSummary)
@@ -82,23 +82,12 @@ func RunAgentTranslatePromptOrchestration(cfg *config.AgentConfig, agentName, po
 
 	log.Debugf("using agent: %s (%s)", agentName, selectedAgent.Kind)
 
-	poFile, err = GetPoFileAbsPath(cfg, poFile)
-	if err != nil {
-		return result, err
-	}
-
-	log.Debugf("PO file path: %s", poFile)
-
 	prompt, err := GetRawPrompt(cfg, "translate")
 	if err != nil {
 		return result, err
 	}
 
-	workDir := repository.WorkDirOrCwd()
-	sourcePath := poFile
-	if rel, err := filepath.Rel(workDir, poFile); err == nil && rel != "" && rel != "." {
-		sourcePath = filepath.ToSlash(rel)
-	}
+	sourcePath := filepath.ToSlash(filepath.Clean(poFile))
 	vars := PlaceholderVars{"prompt": prompt, "source": sourcePath}
 	resolvedPrompt, err := ExecutePromptTemplate(prompt, vars)
 	if err != nil {
