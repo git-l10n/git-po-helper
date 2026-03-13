@@ -127,8 +127,12 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 		t.Fatalf("GetReviewReport failed: %v", err)
 	}
 	// TotalEntries is taken from the PO file (2 entries), not from JSON
-	if result.TotalEntries != 2 {
-		t.Errorf("expected TotalEntries 2 (from PO), got %d", result.TotalEntries)
+	totalEntries, err := result.GetTotalEntries()
+	if err != nil {
+		t.Fatalf("GetTotalEntries: %v", err)
+	}
+	if totalEntries != 2 {
+		t.Errorf("expected TotalEntries 2 (from PO), got %d", totalEntries)
 	}
 	if len(result.Issues) != 2 {
 		t.Errorf("expected 2 issues, got %d", len(result.Issues))
@@ -253,8 +257,12 @@ func TestReportReviewMarkdownWrappedJSON(t *testing.T) {
 		t.Fatalf("GetReviewReport failed: %v", err)
 	}
 	// TotalEntries comes from the PO file (1 entry)
-	if result.TotalEntries != 1 {
-		t.Errorf("expected TotalEntries 1 (from PO), got %d", result.TotalEntries)
+	totalEntries, err := result.GetTotalEntries()
+	if err != nil {
+		t.Fatalf("GetTotalEntries: %v", err)
+	}
+	if totalEntries != 1 {
+		t.Errorf("expected TotalEntries 1 (from PO), got %d", totalEntries)
 	}
 	if len(result.Issues) != 1 {
 		t.Errorf("expected 1 issue, got %d", len(result.Issues))

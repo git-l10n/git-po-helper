@@ -346,11 +346,16 @@ func runMergeAndSummary(ps ReviewPathSet, startTime time.Time, result *AgentRunR
 		return result, err
 	}
 	result.ReviewResult = reportResult
-	result.Score = reportResult.Score
+	score, err := reportResult.GetScore()
+	if err != nil {
+		return result, err
+	}
+	result.Score = score
 	result.ExecutionTime = time.Since(startTime)
 	// Local orchestration merge path completes the review workflow (agent ran in prior batches or resume).
 	result.AgentExecuted = true
+	totalEntries, _ := reportResult.GetTotalEntries()
 	log.Infof("review completed successfully (score: %d/100, total entries: %d, issues: %d)",
-		reportResult.Score, reportResult.TotalEntries, len(reportResult.Issues))
+		score, totalEntries, len(reportResult.Issues))
 	return result, nil
 }

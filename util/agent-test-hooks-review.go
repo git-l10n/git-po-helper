@@ -51,10 +51,11 @@ func (agentTestHooksReview) PostProcess(results []TestRunResult, cfg *config.Age
 		}
 		if result.ReviewResult != nil {
 			reviewJSONs = append(reviewJSONs, result.ReviewResult)
+			totalEntries, _ := result.ReviewResult.GetTotalEntries()
 			log.Infof("loop %d: review score: %d (total_entries=%d, issues=%d)",
 				result.RunNumber,
 				result.Score,
-				result.ReviewResult.TotalEntries,
+				totalEntries,
 				len(result.ReviewResult.Issues))
 		} else {
 			log.Warnf("loop %d: no report returned", result.RunNumber)

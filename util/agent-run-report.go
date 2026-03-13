@@ -236,35 +236,20 @@ func GetReviewReport() (*ReviewResult, error) {
 		return nil, err
 	}
 
-	// Get TotalEntries from ps.InputPO or ps.OutputPO, and fill it to review
+	// Set source PO for lazy init of TotalEntries/Score/counts (default ps.InputPO)
 	poFile := ps.InputPO
 	if !Exist(poFile) {
 		poFile = ps.OutputPO
 	}
-	if Exist(poFile) {
-		stats, err := GetPoStats(poFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to count entries in %s: %w", poFile, err)
-		}
-		review.TotalEntries = stats.Total()
-	} else {
+	if !Exist(poFile) {
 		return nil, fmt.Errorf("file does not exist: %s (need review-input.po for total_entries)", poFile)
 	}
-
-	// Calculate review score and issue counts
-	score, err := CalculateReviewScore(review)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate review score: %w", err)
-	}
-	critical, major, minor := CountReviewIssueScores(review)
-	review.Score = score
-	review.CriticalCount = critical
-	review.MajorCount = major
-	review.MinorCount = minor
-	review.ReportFile = jsonFile
+	review.SetReviewSource(poFile)
+	appliedFile := ""
 	if Exist(ps.OutputPO) {
-		review.AppliedFile = ps.OutputPO
+		appliedFile = ps.OutputPO
 	}
+	review.SetReviewPaths(jsonFile, appliedFile)
 	return review, nil
 }
 
@@ -273,24 +258,39 @@ func PrintReviewReportResult(r *ReviewResult) {
 	if r == nil {
 		return
 	}
+	score, errScore := r.GetScore()
+	totalEntries, errTotal := r.GetTotalEntries()
+	if errScore != nil || errTotal != nil {
+		if errTotal != nil {
+			fmt.Printf("  Review init error: %v\n", errTotal)
+		} else {
+			fmt.Printf("  Review init error: %v\n", errScore)
+		}
+		return
+	}
 	w := ReportLabelWidth
 
 	fmt.Println("🔍 Review Report")
 	fmt.Println()
-	fmt.Printf("  %-*s %d/100\n", w, "Review score:", r.Score)
-	fmt.Printf("  %-*s %d\n", w, "Total entries:", r.TotalEntries)
+	fmt.Printf("  %-*s %d/100\n", w, "Review score:", score)
+	fmt.Printf("  %-*s %d\n", w, "Total entries:", totalEntries)
 	fmt.Printf("  %-*s %d\n", w, "Perfect (no issue):", r.PerfectCount())
 	fmt.Printf("  %-*s %d\n", w, "With issues:", r.IssueCount())
 	fmt.Println()
-	fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Critical (score %d):", ReviewIssueScoreCritical), r.CriticalCount)
-	fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Major (score %d):", ReviewIssueScoreMajor), r.MajorCount)
-	fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Minor (score %d):", ReviewIssueScoreMinor), r.MinorCount)
+	critical, _ := r.GetCriticalCount()
+	major, _ := r.GetMajorCount()
+	minor, _ := r.GetMinorCount()
+	fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Critical (score %d):", ReviewIssueScoreCritical), critical)
+	fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Major (score %d):", ReviewIssueScoreMajor), major)
+	fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Minor (score %d):", ReviewIssueScoreMinor), minor)
 	fmt.Println()
-	if r.AppliedFile != "" {
-		fmt.Printf("  %-*s %s\n", w, "Applied PO:", r.AppliedFile)
+	appliedFile, _ := r.GetAppliedFile()
+	if appliedFile != "" {
+		fmt.Printf("  %-*s %s\n", w, "Applied PO:", appliedFile)
 	}
-	if r.ReportFile != "" {
-		fmt.Printf("  %-*s %s\n", w, "Report JSON:", r.ReportFile)
+	reportFile, _ := r.GetReportFile()
+	if reportFile != "" {
+		fmt.Printf("  %-*s %s\n", w, "Report JSON:", reportFile)
 		fmt.Println()
 		fmt.Println("For full review details, see the report JSON file")
 		fmt.Println()

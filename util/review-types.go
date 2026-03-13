@@ -6,6 +6,7 @@ import (
 	"math"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -124,24 +125,164 @@ func unmarshalStringOrStringSlice(raw json.RawMessage, field string) ([]string, 
 }
 
 // ReviewResult represents the overall review JSON format produced by an agent.
-// Score, CriticalCount, MajorCount, MinorCount, ReportFile, AppliedFile are filled by GetReviewReport (not from JSON).
+// TotalEntries/Score/CriticalCount/MajorCount/MinorCount are initialized on first Get* call via GetPoStats and CalculateReviewScore/CountReviewIssueScores.
+// SetReviewSource sets the PO file used for TotalEntries (default ps.InputPO); SetReviewPaths sets ReportFile/AppliedFile.
 type ReviewResult struct {
-	TotalEntries  int           `json:"total_entries"`
-	Issues        []ReviewIssue `json:"issues"`
-	Score         int           `json:"-"` // 0-100, from CalculateReviewScore
-	CriticalCount int           `json:"-"` // ReviewIssueScoreCritical
-	MajorCount    int           `json:"-"` // ReviewIssueScoreMajor
-	MinorCount    int           `json:"-"` // ReviewIssueScoreMinor
-	ReportFile    string        `json:"-"` // Review JSON file path
-	AppliedFile   string        `json:"-"` // Output PO file path after applying suggestions
+	TotalEntries int           `json:"total_entries"` // set from JSON; overwritten by init from GetPoStats(sourceFile)
+	Issues       []ReviewIssue `json:"issues"`
+
+	score         int
+	criticalCount int
+	majorCount    int
+	minorCount    int
+
+	sourceFile  string
+	reportFile  string
+	appliedFile string
+	initOnce    sync.Once
+	initErr     error
 }
 
-// PerfectCount returns the number of entries with no reported issue.
+// SetReviewSource sets the PO file path used to initialize TotalEntries (e.g. ps.InputPO).
+func (r *ReviewResult) SetReviewSource(sourceFile string) {
+	if r == nil {
+		return
+	}
+	r.sourceFile = sourceFile
+}
+
+// GetReviewSource returns the PO file path set by SetReviewSource.
+func (r *ReviewResult) GetReviewSource() string {
+	if r == nil {
+		return ""
+	}
+	return r.sourceFile
+}
+
+// SetReviewPaths sets the report JSON path and applied PO path for GetReportFile/GetAppliedFile.
+func (r *ReviewResult) SetReviewPaths(reportFile, appliedFile string) {
+	if r == nil {
+		return
+	}
+	r.reportFile = reportFile
+	r.appliedFile = appliedFile
+}
+
+// init runs once when sourceFile is set: GetPoStats(sourceFile) -> TotalEntries; CalculateReviewScore; CountReviewIssueScores -> Score, counts.
+// If sourceFile is empty (e.g. aggregated result), no-op and fields keep their current values.
+// If sourceFile is set but the file does not exist, initErr is set and TotalEntries remains 0.
+func (r *ReviewResult) init() error {
+	if r == nil {
+		return nil
+	}
+	if r.sourceFile == "" {
+		return nil
+	}
+	r.initOnce.Do(func() {
+		if !Exist(r.sourceFile) {
+			r.initErr = fmt.Errorf("file does not exist: %s (need review-input.po for total_entries)", r.sourceFile)
+			return
+		}
+		stats, err := GetPoStats(r.sourceFile)
+		if err != nil {
+			r.initErr = fmt.Errorf("failed to count entries in %s: %w", r.sourceFile, err)
+			return
+		}
+		r.TotalEntries = stats.Total()
+		score, err := CalculateReviewScore(r)
+		if err != nil {
+			r.initErr = fmt.Errorf("failed to calculate review score: %w", err)
+			return
+		}
+		r.score = score
+		critical, major, minor := CountReviewIssueScores(r)
+		r.criticalCount = critical
+		r.majorCount = major
+		r.minorCount = minor
+	})
+	return r.initErr
+}
+
+// GetTotalEntries returns total entries (from GetPoStats on source file). Initializes on first call.
+func (r *ReviewResult) GetTotalEntries() (int, error) {
+	if r == nil {
+		return 0, nil
+	}
+	if err := r.init(); err != nil {
+		return 0, err
+	}
+	return r.TotalEntries, nil
+}
+
+// GetScore returns the 0-100 review score. Initializes on first call.
+func (r *ReviewResult) GetScore() (int, error) {
+	if r == nil {
+		return 0, nil
+	}
+	if err := r.init(); err != nil {
+		return 0, err
+	}
+	return r.score, nil
+}
+
+// GetCriticalCount returns the count of critical issues. Initializes on first call.
+func (r *ReviewResult) GetCriticalCount() (int, error) {
+	if r == nil {
+		return 0, nil
+	}
+	if err := r.init(); err != nil {
+		return 0, err
+	}
+	return r.criticalCount, nil
+}
+
+// GetMajorCount returns the count of major issues. Initializes on first call.
+func (r *ReviewResult) GetMajorCount() (int, error) {
+	if r == nil {
+		return 0, nil
+	}
+	if err := r.init(); err != nil {
+		return 0, err
+	}
+	return r.majorCount, nil
+}
+
+// GetMinorCount returns the count of minor issues. Initializes on first call.
+func (r *ReviewResult) GetMinorCount() (int, error) {
+	if r == nil {
+		return 0, nil
+	}
+	if err := r.init(); err != nil {
+		return 0, err
+	}
+	return r.minorCount, nil
+}
+
+// GetReportFile returns the report JSON file path set by SetReviewPaths.
+func (r *ReviewResult) GetReportFile() (string, error) {
+	if r == nil {
+		return "", nil
+	}
+	return r.reportFile, nil
+}
+
+// GetAppliedFile returns the applied PO file path set by SetReviewPaths.
+func (r *ReviewResult) GetAppliedFile() (string, error) {
+	if r == nil {
+		return "", nil
+	}
+	return r.appliedFile, nil
+}
+
+// PerfectCount returns the number of entries with no reported issue. Calls init; returns 0 on error.
 func (r *ReviewResult) PerfectCount() int {
 	if r == nil {
 		return 0
 	}
-	n := r.TotalEntries - (r.CriticalCount + r.MinorCount + r.MajorCount)
+	if err := r.init(); err != nil {
+		return 0
+	}
+	n := r.TotalEntries - (r.criticalCount + r.minorCount + r.majorCount)
 	if n < 0 {
 		return 0
 	}

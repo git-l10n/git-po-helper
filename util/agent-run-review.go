@@ -173,11 +173,16 @@ func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string
 	}
 
 	result.ReviewResult = reportResult
-	result.Score = reportResult.Score
+	score, err := reportResult.GetScore()
+	if err != nil {
+		return result, fmt.Errorf("review score: %w", err)
+	}
+	result.Score = score
 	result.ExecutionTime = time.Since(startTime)
 
+	totalEntries, _ := reportResult.GetTotalEntries()
 	log.Infof("review completed (score: %d/100, total entries: %d, issues: %d)",
-		reportResult.Score, reportResult.TotalEntries, len(reportResult.Issues))
+		score, totalEntries, len(reportResult.Issues))
 
 	return result, nil
 }

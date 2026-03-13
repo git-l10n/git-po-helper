@@ -65,7 +65,9 @@ func (w *workflowReview) PostCheck(ctx *AgentRunContext) error {
 	}
 	result := ctx.Result
 	if result.ReviewResult != nil {
-		result.Score = result.ReviewResult.Score
+		if score, err := result.ReviewResult.GetScore(); err == nil {
+			result.Score = score
+		}
 	}
 	ctx.PostCheckResult.Score = result.Score
 
