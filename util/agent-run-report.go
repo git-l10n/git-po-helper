@@ -23,7 +23,7 @@ var ReportLabelWidth = 22
 
 // CountReviewIssueScores returns counts by issue score from a review.
 // ReviewIssueScoreCritical, ReviewIssueScoreMajor, ReviewIssueScoreMinor. Perfect count is derived: TotalEntries - (critical + major + minor).
-func CountReviewIssueScores(review *ReviewJSONResult) (critical, major, minor int) {
+func CountReviewIssueScores(review *ReviewResult) (critical, major, minor int) {
 	for _, issue := range review.Issues {
 		switch issue.Score {
 		case ReviewIssueScoreCritical:
@@ -39,7 +39,7 @@ func CountReviewIssueScores(review *ReviewJSONResult) (critical, major, minor in
 
 // parseReviewJSONWithGjson parses review JSON using gjson, which can tolerate
 // some malformed LLM output (e.g. missing colons). Returns nil if parsing fails.
-func parseReviewJSONWithGjson(data []byte, err error) *ReviewJSONResult {
+func parseReviewJSONWithGjson(data []byte, err error) *ReviewResult {
 	log.Warnf("fall back to gjson to fix json: %v", err)
 	totalEntries := gjson.GetBytes(data, "total_entries").Int()
 	issuesResult := gjson.GetBytes(data, "issues")
@@ -47,7 +47,7 @@ func parseReviewJSONWithGjson(data []byte, err error) *ReviewJSONResult {
 		if totalEntries == 0 {
 			return nil
 		}
-		return &ReviewJSONResult{TotalEntries: int(totalEntries), Issues: nil}
+		return &ReviewResult{TotalEntries: int(totalEntries), Issues: nil}
 	}
 	var issues []ReviewIssue
 	for _, r := range issuesResult.Array() {
@@ -82,7 +82,7 @@ func parseReviewJSONWithGjson(data []byte, err error) *ReviewJSONResult {
 		}
 		issues = append(issues, issue)
 	}
-	result := &ReviewJSONResult{TotalEntries: int(totalEntries), Issues: issues}
+	result := &ReviewResult{TotalEntries: int(totalEntries), Issues: issues}
 	normalizeReviewIssuesToPoFormat(result)
 	return result
 }
@@ -92,8 +92,8 @@ func parseReviewJSONWithGjson(data []byte, err error) *ReviewJSONResult {
 // msgstr/suggest_msgstr string or array), PrepareJSONForParse retry, then gjson
 // fallback. Ensures Issues is non-nil and runs normalizeReviewIssuesToPoFormat.
 // All review JSON loading should go through this or ParseReviewJSON (which uses it).
-func DecodeReviewJSONBytes(data []byte) (*ReviewJSONResult, error) {
-	var review ReviewJSONResult
+func DecodeReviewJSONBytes(data []byte) (*ReviewResult, error) {
+	var review ReviewResult
 	if err := json.Unmarshal(data, &review); err != nil {
 		prepared := PrepareJSONForParse(data, err)
 		if err2 := json.Unmarshal(prepared, &review); err2 != nil {
@@ -113,7 +113,7 @@ func DecodeReviewJSONBytes(data []byte) (*ReviewJSONResult, error) {
 // loadReviewJSONFromFile reads and parses a single review JSON file with the same
 // robustness as GetReviewReport (BOM, markdown wrapping, gjson fallback).
 // It does not fill TotalEntries from a PO file.
-func loadReviewJSONFromFile(jsonFile string) (*ReviewJSONResult, error) {
+func loadReviewJSONFromFile(jsonFile string) (*ReviewResult, error) {
 	data, err := os.ReadFile(jsonFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", jsonFile, err)
@@ -172,7 +172,7 @@ func AggregateReviewBatches(ps ReviewPathSet) error {
 	}
 
 	// Load batch files and merge; for duplicate msgid, AggregateReviewJSON keeps lower score.
-	var batchReviews []*ReviewJSONResult
+	var batchReviews []*ReviewResult
 	for _, f := range batchMatches {
 		r, err := loadReviewJSONFromFile(f)
 		if err != nil {
@@ -184,7 +184,7 @@ func AggregateReviewBatches(ps ReviewPathSet) error {
 	}
 	merged := aggregateReviewJSONResult(batchReviews, true)
 	if merged == nil {
-		merged = &ReviewJSONResult{Issues: []ReviewIssue{}}
+		merged = &ReviewResult{Issues: []ReviewIssue{}}
 	}
 	if err := saveReviewJSON(merged, resultJSONFile); err != nil {
 		return fmt.Errorf("failed to save aggregated review to %s: %w", resultJSONFile, err)
@@ -213,7 +213,8 @@ func ApplyReviewFromResultJSON(ps ReviewPathSet) (bool, error) {
 }
 
 // GetReviewReport reads ps.ResultJSON and fills total_entries from ps.InputPO (or ps.OutputPO).
-func GetReviewReport() (*ReviewReport, error) {
+// Returns *ReviewJSONResult with Score, CriticalCount, MajorCount, MinorCount, ReportFile, AppliedFile set.
+func GetReviewReport() (*ReviewResult, error) {
 	ps := GetReviewPathSet()
 
 	if err := AggregateReviewBatches(ps); err != nil {
@@ -250,78 +251,48 @@ func GetReviewReport() (*ReviewReport, error) {
 		return nil, fmt.Errorf("file does not exist: %s (need review-input.po for total_entries)", poFile)
 	}
 
-	// Calculate review score
+	// Calculate review score and issue counts
 	score, err := CalculateReviewScore(review)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate review score: %w", err)
 	}
-
-	// Count review issue numbers
 	critical, major, minor := CountReviewIssueScores(review)
-
-	appliedFile := ""
+	review.Score = score
+	review.CriticalCount = critical
+	review.MajorCount = major
+	review.MinorCount = minor
+	review.ReportFile = jsonFile
 	if Exist(ps.OutputPO) {
-		appliedFile = ps.OutputPO
+		review.AppliedFile = ps.OutputPO
 	}
-	return &ReviewReport{
-		ReviewResult:  review,
-		Score:         score,
-		CriticalCount: critical,
-		MajorCount:    major,
-		MinorCount:    minor,
-		ReportFile:    jsonFile,
-		AppliedFile:   appliedFile,
-	}, nil
+	return review, nil
 }
 
-// WrapReviewReportForPrint builds an AgentRunResult with only ReviewReport fields set,
-// for callers that have *ReviewReport (e.g. cmd agent-run report).
-func WrapReviewReportForPrint(r *ReviewReport) *AgentRunResult {
+// PrintReviewReportResult prints "## Review Statistics" when the result has content.
+func PrintReviewReportResult(r *ReviewResult) {
 	if r == nil {
-		return nil
-	}
-	ar := &AgentRunResult{AgentExecuted: true}
-	ar.ReviewResult = r.ReviewResult
-	ar.Score = r.Score
-	ar.CriticalCount = r.CriticalCount
-	ar.MajorCount = r.MajorCount
-	ar.MinorCount = r.MinorCount
-	ar.ReportFile = r.ReportFile
-	ar.AppliedFile = r.AppliedFile
-	return ar
-}
-
-// PrintReviewReportResult prints "## Review Statistics" when ReviewResult is present,
-// then agent execution / validation lines (PreValidationError, PostValidationError, runErr).
-// ar is typically RunAgentReview's return value; runErr is result.RunError for agent-test.
-// ctx holds PreCheckResult/PostCheckResult; nil when only *ReviewReport is available (e.g. cmd agent-run report).
-func PrintReviewReportResult(ar *AgentRunResult, runErr error, ctx *AgentRunContext) {
-	if ar == nil {
 		return
 	}
 	w := ReportLabelWidth
 
-	// "## Review Statistics" block whenever review JSON was loaded
-	if ar.ReviewResult != nil {
-		fmt.Println("🔍 Review Report")
+	fmt.Println("🔍 Review Report")
+	fmt.Println()
+	fmt.Printf("  %-*s %d/100\n", w, "Review score:", r.Score)
+	fmt.Printf("  %-*s %d\n", w, "Total entries:", r.TotalEntries)
+	fmt.Printf("  %-*s %d\n", w, "Perfect (no issue):", r.PerfectCount())
+	fmt.Printf("  %-*s %d\n", w, "With issues:", r.IssueCount())
+	fmt.Println()
+	fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Critical (score %d):", ReviewIssueScoreCritical), r.CriticalCount)
+	fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Major (score %d):", ReviewIssueScoreMajor), r.MajorCount)
+	fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Minor (score %d):", ReviewIssueScoreMinor), r.MinorCount)
+	fmt.Println()
+	if r.AppliedFile != "" {
+		fmt.Printf("  %-*s %s\n", w, "Applied PO:", r.AppliedFile)
+	}
+	if r.ReportFile != "" {
+		fmt.Printf("  %-*s %s\n", w, "Report JSON:", r.ReportFile)
 		fmt.Println()
-		fmt.Printf("  %-*s %d/100\n", w, "Review score:", ar.Score)
-		fmt.Printf("  %-*s %d\n", w, "Total entries:", ar.ReviewResult.TotalEntries)
-		fmt.Printf("  %-*s %d\n", w, "Perfect (no issue):", ar.PerfectCount())
-		fmt.Printf("  %-*s %d\n", w, "With issues:", ar.ReviewResult.IssueCount())
+		fmt.Println("For full review details, see the report JSON file")
 		fmt.Println()
-		fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Critical (score %d):", ReviewIssueScoreCritical), ar.CriticalCount)
-		fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Major (score %d):", ReviewIssueScoreMajor), ar.MajorCount)
-		fmt.Printf("  %-*s %d\n", w, fmt.Sprintf("Minor (score %d):", ReviewIssueScoreMinor), ar.MinorCount)
-		fmt.Println()
-		if ar.AppliedFile != "" {
-			fmt.Printf("  %-*s %s\n", w, "Applied PO:", ar.AppliedFile)
-		}
-		if ar.ReportFile != "" {
-			fmt.Printf("  %-*s %s\n", w, "Report JSON:", ar.ReportFile)
-			fmt.Println()
-			fmt.Println("For full review details, see the report JSON file")
-			fmt.Println()
-		}
 	}
 }

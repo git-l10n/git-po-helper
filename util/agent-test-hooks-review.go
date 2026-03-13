@@ -12,7 +12,7 @@ import (
 // score and merged review JSON for display in ReportSummary and for the caller.
 type ReviewPostResult struct {
 	Score      int
-	Aggregated *ReviewJSONResult
+	Aggregated *ReviewResult
 }
 
 // agentTestHooksReview cleans review output files before each loop.
@@ -36,7 +36,7 @@ func (agentTestHooksReview) ValidateAfterPostCheck(ctx *AgentRunContext, cfg *co
 // saves the merged JSON, applies it to the output PO, and returns the aggregated score and result.
 func (agentTestHooksReview) PostProcess(results []TestRunResult, cfg *config.AgentConfig) (interface{}, error) {
 	ps := GetReviewPathSet()
-	var reviewJSONs []*ReviewJSONResult
+	var reviewJSONs []*ReviewResult
 
 	for i := range results {
 		result := &results[i]
@@ -49,13 +49,13 @@ func (agentTestHooksReview) PostProcess(results []TestRunResult, cfg *config.Age
 			result.Score = 0
 			continue
 		}
-		if result.ReviewReport.ReviewResult != nil {
-			reviewJSONs = append(reviewJSONs, result.ReviewReport.ReviewResult)
+		if result.ReviewResult != nil {
+			reviewJSONs = append(reviewJSONs, result.ReviewResult)
 			log.Infof("loop %d: review score: %d (total_entries=%d, issues=%d)",
 				result.RunNumber,
 				result.Score,
-				result.ReviewReport.ReviewResult.TotalEntries,
-				len(result.ReviewReport.ReviewResult.Issues))
+				result.ReviewResult.TotalEntries,
+				len(result.ReviewResult.Issues))
 		} else {
 			log.Warnf("loop %d: no report returned", result.RunNumber)
 			result.Score = 0
@@ -93,19 +93,16 @@ func (agentTestHooksReview) PostProcess(results []TestRunResult, cfg *config.Age
 	return &ReviewPostResult{Score: aggregatedScore, Aggregated: aggregated}, nil
 }
 
-// ReportSummary prints per-run review reports and the aggregated report (when postResult is *ReviewPostResult).
+// ReportSummary prints per-run status and the aggregated report (when postResult is *ReviewPostResult).
+// Full review report for each run is produced by workflowReview.Report and shown via ReportOutput in the workflow.
 func (agentTestHooksReview) ReportSummary(results []TestRunResult, cfg *config.AgentConfig, postResult interface{}) {
 	w := ReportLabelWidth
-	// Per-run review report
 	for _, result := range results {
 		status := "FAIL"
 		if result.Score > 0 {
 			status = "PASS"
 		}
 		fmt.Printf("  %-*s loop %d: %s (Score: %d/100)\n", w, "Run:", result.RunNumber, status, result.Score)
-		ar := result.AgentRunResult
-		PrintReviewReportResult(&ar, result.RunError, result.Ctx)
-		fmt.Println()
 	}
 	// Aggregated report (aggregated score from merged JSON; per-run scores in parentheses)
 	if postResult != nil {

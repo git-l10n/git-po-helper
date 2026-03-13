@@ -19,7 +19,7 @@ they are aggregated; otherwise review-result.json is used.`,
 			if err != nil {
 				return NewStandardErrorF("%v", err)
 			}
-			util.PrintReviewReportResult(util.WrapReviewReportForPrint(result), nil, nil)
+			util.PrintReviewReportResult(result)
 			return nil
 		},
 	}

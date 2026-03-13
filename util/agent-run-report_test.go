@@ -8,7 +8,7 @@ import (
 )
 
 func TestCountReviewIssueScores(t *testing.T) {
-	review := &ReviewJSONResult{
+	review := &ReviewResult{
 		TotalEntries: 10,
 		Issues: []ReviewIssue{
 			{Score: 0}, {Score: 0},
@@ -29,19 +29,19 @@ func TestCountReviewIssueScores(t *testing.T) {
 
 func TestIssueCount(t *testing.T) {
 	t.Run("nil receiver", func(t *testing.T) {
-		var r *ReviewJSONResult
+		var r *ReviewResult
 		if got := r.IssueCount(); got != 0 {
 			t.Errorf("(*ReviewJSONResult)(nil).IssueCount() = %d; want 0", got)
 		}
 	})
 	t.Run("empty issues", func(t *testing.T) {
-		r := &ReviewJSONResult{TotalEntries: 5, Issues: []ReviewIssue{}}
+		r := &ReviewResult{TotalEntries: 5, Issues: []ReviewIssue{}}
 		if got := r.IssueCount(); got != 0 {
 			t.Errorf("IssueCount() = %d; want 0", got)
 		}
 	})
 	t.Run("only score 3 excluded", func(t *testing.T) {
-		r := &ReviewJSONResult{
+		r := &ReviewResult{
 			TotalEntries: 10,
 			Issues: []ReviewIssue{
 				{Score: 0}, {Score: 1}, {Score: 2}, {Score: 3}, {Score: 3},
@@ -52,7 +52,7 @@ func TestIssueCount(t *testing.T) {
 		}
 	})
 	t.Run("all scores 0-2 count", func(t *testing.T) {
-		r := &ReviewJSONResult{
+		r := &ReviewResult{
 			TotalEntries: 4,
 			Issues:       []ReviewIssue{{Score: 0}, {Score: 1}, {Score: 2}, {Score: 2}},
 		}
@@ -80,7 +80,7 @@ msgstr ""
 
 func TestReportReviewWithTotalEntries(t *testing.T) {
 	// Create a review JSON with 2 issues
-	review := &ReviewJSONResult{
+	review := &ReviewResult{
 		TotalEntries: 100,
 		Issues: []ReviewIssue{
 			{MsgID: "commit", Score: 0, Description: "term error", SuggestMsgstr: []string{"提交"}},
@@ -127,11 +127,11 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 		t.Fatalf("GetReviewReport failed: %v", err)
 	}
 	// TotalEntries is taken from the PO file (2 entries), not from JSON
-	if result.ReviewResult.TotalEntries != 2 {
-		t.Errorf("expected TotalEntries 2 (from PO), got %d", result.ReviewResult.TotalEntries)
+	if result.TotalEntries != 2 {
+		t.Errorf("expected TotalEntries 2 (from PO), got %d", result.TotalEntries)
 	}
-	if len(result.ReviewResult.Issues) != 2 {
-		t.Errorf("expected 2 issues, got %d", len(result.ReviewResult.Issues))
+	if len(result.Issues) != 2 {
+		t.Errorf("expected 2 issues, got %d", len(result.Issues))
 	}
 	// PerfectCount is derived: 2 - (1 critical + 1 major) = 0
 	if got := result.PerfectCount(); got != 0 {
@@ -253,10 +253,10 @@ func TestReportReviewMarkdownWrappedJSON(t *testing.T) {
 		t.Fatalf("GetReviewReport failed: %v", err)
 	}
 	// TotalEntries comes from the PO file (1 entry)
-	if result.ReviewResult.TotalEntries != 1 {
-		t.Errorf("expected TotalEntries 1 (from PO), got %d", result.ReviewResult.TotalEntries)
+	if result.TotalEntries != 1 {
+		t.Errorf("expected TotalEntries 1 (from PO), got %d", result.TotalEntries)
 	}
-	if len(result.ReviewResult.Issues) != 1 {
-		t.Errorf("expected 1 issue, got %d", len(result.ReviewResult.Issues))
+	if len(result.Issues) != 1 {
+		t.Errorf("expected 1 issue, got %d", len(result.Issues))
 	}
 }

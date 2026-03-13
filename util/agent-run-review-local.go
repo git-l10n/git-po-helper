@@ -182,7 +182,7 @@ func renameReviewDone(ps ReviewPathSet) error {
 }
 
 // parseAndAccumulateReviewJSON extracts and parses JSON from stdout, updates total_entries.
-func parseAndAccumulateReviewJSON(stdout []byte, entryCount int) (*ReviewJSONResult, error) {
+func parseAndAccumulateReviewJSON(stdout []byte, entryCount int) (*ReviewResult, error) {
 	jsonBytes, err := ExtractJSONFromOutput(stdout)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract JSON: %w", err)
@@ -345,12 +345,12 @@ func runMergeAndSummary(ps ReviewPathSet, startTime time.Time, result *AgentRunR
 	if err != nil {
 		return result, err
 	}
-	result.ReviewReport = *reportResult
+	result.ReviewResult = reportResult
 	result.Score = reportResult.Score
 	result.ExecutionTime = time.Since(startTime)
 	// Local orchestration merge path completes the review workflow (agent ran in prior batches or resume).
 	result.AgentExecuted = true
 	log.Infof("review completed successfully (score: %d/100, total entries: %d, issues: %d)",
-		reportResult.Score, reportResult.ReviewResult.TotalEntries, len(reportResult.ReviewResult.Issues))
+		reportResult.Score, reportResult.TotalEntries, len(reportResult.Issues))
 	return result, nil
 }

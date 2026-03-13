@@ -195,6 +195,9 @@ func RunAgentTestWorkflowLoops(newWorkflow func() AgentRunWorkflow, hooks AgentT
 		fmt.Println(results[i].ReportOutput)
 	}
 
+	// PostProcess runs once after all loops; it may aggregate results and write output (e.g. review).
+	postResult, postErr := hooks.PostProcess(results, cfg)
+
 	fmt.Println()
 	fmt.Printf("========== 📝 Reports for each run ==========\n")
 	fmt.Println()
@@ -210,10 +213,7 @@ func RunAgentTestWorkflowLoops(newWorkflow func() AgentRunWorkflow, hooks AgentT
 	fmt.Println()
 	elapsed := time.Since(startTime)
 	PrintAgentTestSummaryReport(results, elapsed)
-	postResult, postErr := hooks.PostProcess(results, cfg)
-	if postErr != nil {
-		return nil, postErr
-	}
+	// Hook's specific ReportSummary prints workflow-specific stats and optionally the aggregated report.
 	hooks.ReportSummary(results, cfg, postResult)
-	return results, nil
+	return results, postErr
 }

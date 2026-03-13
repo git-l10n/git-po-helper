@@ -11,30 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ReviewReport holds the result of reporting from a review JSON file.
-// Issue scores: ReviewIssueScoreCritical, ReviewIssueScoreMajor, ReviewIssueScoreMinor. Perfect = ReviewIssueScorePerfect.
-type ReviewReport struct {
-	ReviewResult  *ReviewJSONResult
-	Score         int
-	CriticalCount int    // ReviewIssueScoreCritical
-	MajorCount    int    // ReviewIssueScoreMajor
-	MinorCount    int    // ReviewIssueScoreMinor
-	ReportFile    string // Review JSON file path, if it exists
-	AppliedFile   string // Output PO file path (after applying suggestions), if it exists
-}
-
-// PerfectCount returns the number of entries with no reported issue.
-func (r *ReviewReport) PerfectCount() int {
-	if r == nil || r.ReviewResult == nil {
-		return 0
-	}
-	n := r.ReviewResult.TotalEntries - (r.CriticalCount + r.MinorCount + r.MajorCount)
-	if n < 0 {
-		return 0
-	}
-	return n
-}
-
 // PreCheckResult holds pre-check outcome for all agent-run commands.
 // Each command sets only the fields it uses; others remain zero.
 type PreCheckResult struct {
@@ -61,10 +37,10 @@ type PostCheckResult struct {
 type AgentRunResult struct {
 	AgentExecuted bool
 	Error         error // AgentRun failure; nil when agent process succeeded
-	Score         int   // 0-100, from PostCheckResult or ReviewReport
+	Score         int   // 0-100, from PostCheckResult or ReviewResult
 
-	// Review: embedded when from review; ReviewResult==nil when not from review
-	ReviewReport
+	// Review: set when from review; nil when not from review
+	ReviewResult *ReviewResult
 
 	// Agent output (for saving logs in agent-test)
 	AgentStdout []byte `json:"-"`
@@ -147,15 +123,34 @@ func unmarshalStringOrStringSlice(raw json.RawMessage, field string) ([]string, 
 	return nil, fmt.Errorf("%s: want string or array of strings", field)
 }
 
-// ReviewJSONResult represents the overall review JSON format produced by an agent.
-type ReviewJSONResult struct {
-	TotalEntries int           `json:"total_entries"`
-	Issues       []ReviewIssue `json:"issues"`
+// ReviewResult represents the overall review JSON format produced by an agent.
+// Score, CriticalCount, MajorCount, MinorCount, ReportFile, AppliedFile are filled by GetReviewReport (not from JSON).
+type ReviewResult struct {
+	TotalEntries  int           `json:"total_entries"`
+	Issues        []ReviewIssue `json:"issues"`
+	Score         int           `json:"-"` // 0-100, from CalculateReviewScore
+	CriticalCount int           `json:"-"` // ReviewIssueScoreCritical
+	MajorCount    int           `json:"-"` // ReviewIssueScoreMajor
+	MinorCount    int           `json:"-"` // ReviewIssueScoreMinor
+	ReportFile    string        `json:"-"` // Review JSON file path
+	AppliedFile   string        `json:"-"` // Output PO file path after applying suggestions
+}
+
+// PerfectCount returns the number of entries with no reported issue.
+func (r *ReviewResult) PerfectCount() int {
+	if r == nil {
+		return 0
+	}
+	n := r.TotalEntries - (r.CriticalCount + r.MinorCount + r.MajorCount)
+	if n < 0 {
+		return 0
+	}
+	return n
 }
 
 // IssueCount returns the number of issues that count as problems (score < ReviewIssueScorePerfect).
 // Issues with score ReviewIssueScorePerfect are not counted as problems.
-func (r *ReviewJSONResult) IssueCount() int {
+func (r *ReviewResult) IssueCount() int {
 	if r == nil {
 		return 0
 	}
@@ -230,7 +225,7 @@ func (p ReviewPathSet) ReviewResultJSONPath(n int) string {
 // The scoring model treats each entry as having a maximum of ReviewIssueScoreMax points.
 // For each reported issue, the score is reduced by (ReviewIssueScoreMax - issue.Score).
 // The final score is normalized to 0-100.
-func CalculateReviewScore(review *ReviewJSONResult) (int, error) {
+func CalculateReviewScore(review *ReviewResult) (int, error) {
 	// If total_entries is 0, we can't calculate a meaningful score
 	// This might happen if the calculation hasn't been performed yet
 	if review.TotalEntries <= 0 {

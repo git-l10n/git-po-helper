@@ -13,7 +13,7 @@ import (
 // applies suggest_msgstr (array) to matching entries (by msgid),
 // and serializes to outputFile.
 // Returns (applied, err): applied is true if any suggestion was applied; err is non-nil on failure.
-func applyReviewJSON(review *ReviewJSONResult, inputFile, outputFile string) (bool, error) {
+func applyReviewJSON(review *ReviewResult, inputFile, outputFile string) (bool, error) {
 	if review == nil {
 		log.Info("review result is nil, no suggestions to apply")
 		return false, nil
@@ -142,7 +142,7 @@ func ExtractJSONFromOutput(output []byte) ([]byte, error) {
 // It validates that the JSON matches ReviewJSONResult structure and that
 // all score values are in the valid range (0-3).
 // Returns parsed result or error.
-func ParseReviewJSON(jsonData []byte) (*ReviewJSONResult, error) {
+func ParseReviewJSON(jsonData []byte) (*ReviewResult, error) {
 	if len(jsonData) == 0 {
 		log.Debugf("JSON data is empty")
 		return nil, fmt.Errorf("empty JSON data")
@@ -196,7 +196,7 @@ func ParseReviewJSON(jsonData []byte) (*ReviewJSONResult, error) {
 // appears in multiple runs, the issue with the lowest score (most severe) is kept.
 // total_entries is taken from the first non-empty review. Returns nil if no valid input.
 // If warnDup is true, logs an error when duplicate msgid issues are found.
-func aggregateReviewJSONResult(reviews []*ReviewJSONResult, warnDup bool) *ReviewJSONResult {
+func aggregateReviewJSONResult(reviews []*ReviewResult, warnDup bool) *ReviewResult {
 	if len(reviews) == 0 {
 		return nil
 	}
@@ -230,13 +230,13 @@ func aggregateReviewJSONResult(reviews []*ReviewJSONResult, warnDup bool) *Revie
 	for _, issue := range byMsgID {
 		issues = append(issues, *issue)
 	}
-	return &ReviewJSONResult{TotalEntries: totalEntries, Issues: issues}
+	return &ReviewResult{TotalEntries: totalEntries, Issues: issues}
 }
 
 // normalizeReviewIssuesToPoFormat converts JSON-decoded strings in ReviewIssue to PO format.
 // JSON uses \n for newline, \t for tab, etc.; PO stores them as literal \n, \t (backslash+char).
 // This ensures matching works when looking up entries in PO files.
-func normalizeReviewIssuesToPoFormat(review *ReviewJSONResult) {
+func normalizeReviewIssuesToPoFormat(review *ReviewResult) {
 	if review == nil {
 		return
 	}
@@ -254,7 +254,7 @@ func normalizeReviewIssuesToPoFormat(review *ReviewJSONResult) {
 }
 
 // saveReviewJSON saves review JSON result to the given file path.
-func saveReviewJSON(review *ReviewJSONResult, jsonFile string) error {
+func saveReviewJSON(review *ReviewResult, jsonFile string) error {
 	if review == nil {
 		return fmt.Errorf("review result is nil")
 	}

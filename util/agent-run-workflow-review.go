@@ -64,8 +64,8 @@ func (w *workflowReview) PostCheck(ctx *AgentRunContext) error {
 		return nil
 	}
 	result := ctx.Result
-	if result.ReviewReport.ReviewResult != nil {
-		result.Score = result.ReviewReport.Score
+	if result.ReviewResult != nil {
+		result.Score = result.ReviewResult.Score
 	}
 	ctx.PostCheckResult.Score = result.Score
 
@@ -138,7 +138,7 @@ func (w *workflowReview) PostCheck(ctx *AgentRunContext) error {
 
 func (w *workflowReview) Report(ctx *AgentRunContext) {
 	// Show review statistics
-	PrintReviewReportResult(ctx.Result, ctx.Result.Error, ctx)
+	PrintReviewReportResult(ctx.Result.ReviewResult)
 
 	// PO entry counts (same info formerly logged in PostCheck)
 	labelWidth := ReportLabelWidth
@@ -154,18 +154,5 @@ func (w *workflowReview) Report(ctx *AgentRunContext) {
 	}
 	if pre.ReviewTotalEntries > 0 && post.ReviewPendingEntries == 0 && post.Error == nil {
 		fmt.Printf("  %-*s %s\n", labelWidth, "Pending cleared:", "all entries reviewed")
-	}
-	// Print errors if any
-	if pre.Error != nil || post.Error != nil || ctx.Result.Error != nil {
-		fmt.Println()
-		if pre.Error != nil {
-			fmt.Printf("  %-*s %s\n", labelWidth, "Pre-validation:", pre.Error.Error())
-		}
-		if post.Error != nil {
-			fmt.Printf("  %-*s %s\n", labelWidth, "Post-validation:", post.Error.Error())
-		}
-		if ctx.Result.Error != nil {
-			fmt.Printf("  %-*s %s\n", labelWidth, "Agent execution:", ctx.Result.Error.Error())
-		}
 	}
 }

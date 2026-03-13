@@ -172,12 +172,12 @@ func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string
 		return result, fmt.Errorf("failed to read review JSON: %w", err)
 	}
 
-	result.ReviewReport = *reportResult
+	result.ReviewResult = reportResult
 	result.Score = reportResult.Score
 	result.ExecutionTime = time.Since(startTime)
 
 	log.Infof("review completed (score: %d/100, total entries: %d, issues: %d)",
-		reportResult.Score, reportResult.ReviewResult.TotalEntries, len(reportResult.ReviewResult.Issues))
+		reportResult.Score, reportResult.TotalEntries, len(reportResult.Issues))
 
 	return result, nil
 }
