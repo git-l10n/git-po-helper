@@ -17,9 +17,9 @@ import (
 // Used by agent-run report when no path is given.
 var DefaultReviewBase = filepath.Join(PoDir, "review")
 
-// ReviewStatLabelWidth is the column width for left-aligned review statistic labels
-// (PrintReviewReportResult, agent-test review display). Change this to adjust alignment.
-var ReviewStatLabelWidth = 22
+// ReportLabelWidth is the column width for left-aligned labels in report output
+// (agent-run Report, agent-test summary, review stats). Used with "  " prefix for alignment.
+var ReportLabelWidth = 22
 
 // CountReviewIssueScores returns counts by issue score from a review.
 // ReviewIssueScoreCritical, ReviewIssueScoreMajor, ReviewIssueScoreMinor. Perfect count is derived: TotalEntries - (critical + major + minor).
@@ -299,7 +299,7 @@ func PrintReviewReportResult(ar *AgentRunResult, runErr error, ctx *AgentRunCont
 	if ar == nil {
 		return
 	}
-	w := ReviewStatLabelWidth
+	w := ReportLabelWidth
 
 	// "## Review Statistics" block whenever review JSON was loaded
 	if ar.ReviewResult != nil {

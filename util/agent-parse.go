@@ -178,7 +178,7 @@ func GetAgentDiagnostics(result *AgentRunResult, streamResult AgentStreamResult)
 }
 
 // PrintAgentDiagnosticsFromResult prints diagnostics from AgentRunResult (fields set by GetAgentDiagnostics).
-// Format aligns with PrintReviewReportResult (ReviewStatLabelWidth, two-space indent, label: value).
+// Format aligns with PrintReviewReportResult (ReportLabelWidth, two-space indent, label: value).
 func PrintAgentDiagnosticsFromResult(result *AgentRunResult) {
 	if result == nil {
 		return
@@ -187,7 +187,7 @@ func PrintAgentDiagnosticsFromResult(result *AgentRunResult) {
 	if !hasInfo {
 		return
 	}
-	w := ReviewStatLabelWidth
+	w := ReportLabelWidth
 	fmt.Println()
 	fmt.Println("📊 Agent Diagnostics")
 	fmt.Println()

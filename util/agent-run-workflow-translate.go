@@ -131,7 +131,7 @@ func (w *workflowTranslate) Report(ctx *AgentRunContext) {
 		return
 	}
 
-	labelWidth := ReviewStatLabelWidth
+	labelWidth := ReportLabelWidth
 	pre, post := ctx.PreCheckResult, ctx.PostCheckResult
 	// Print report when we have any pre/post context or errors to show.
 	fmt.Println()

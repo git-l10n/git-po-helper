@@ -94,7 +94,7 @@ func (w *workflowUpdatePo) Report(ctx *AgentRunContext) {
 		return
 	}
 
-	labelWidth := ReviewStatLabelWidth
+	labelWidth := ReportLabelWidth
 	pre, post := ctx.PreCheckResult, ctx.PostCheckResult
 	fmt.Println()
 	fmt.Println("🔍 Update PO Report")

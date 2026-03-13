@@ -295,7 +295,7 @@ func displayReviewTestResults(results []TestRunResult, aggregatedScore int, tota
 	}
 
 	// Display summary statistics (aggregated score as total, per-run in parentheses)
-	const labelWidth = 25
+	labelWidth := ReportLabelWidth
 	fmt.Println("=" + strings.Repeat("=", 70))
 	fmt.Println("Summary")
 	fmt.Println("=" + strings.Repeat("=", 70))

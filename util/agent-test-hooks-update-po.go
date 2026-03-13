@@ -106,7 +106,7 @@ func (agentTestHooksUpdatePo) ReportSummary(results []TestRunResult, cfg *config
 		untranslatedPre = append(untranslatedPre, pUntrans)
 		untranslatedPost = append(untranslatedPost, gUntrans)
 	}
-	labelWidth := ReviewStatLabelWidth
+	labelWidth := ReportLabelWidth
 	printLine := func(label string, preVals, postVals []int) {
 		allSamePre := true
 		for _, v := range preVals[1:] {

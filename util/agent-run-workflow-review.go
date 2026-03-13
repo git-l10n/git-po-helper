@@ -141,7 +141,7 @@ func (w *workflowReview) Report(ctx *AgentRunContext) {
 	PrintReviewReportResult(ctx.Result, ctx.Result.Error, ctx)
 
 	// PO entry counts (same info formerly logged in PostCheck)
-	labelWidth := ReviewStatLabelWidth
+	labelWidth := ReportLabelWidth
 	pre, post := ctx.PreCheckResult, ctx.PostCheckResult
 	fmt.Println("📋 Summary")
 	fmt.Println()

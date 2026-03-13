@@ -74,7 +74,7 @@ func AverageScoreFromResults(results []TestRunResult) float64 {
 // PrintAgentTestSummaryReport prints the common agent-test summary (Total runs,
 // Successful/Failed runs, Average score, pre/post-validation failures, Avg Num turns,
 // Avg Execution Time, Total Elapsed Time) using the same format as workflow Report
-// (ReviewStatLabelWidth, two-space indent). Call this after all loops in the workflow.
+// (ReportLabelWidth, two-space indent). Call this after all loops in the workflow.
 func PrintAgentTestSummaryReport(results []TestRunResult, elapsed time.Duration) {
 	runs := len(results)
 	successCount := 0
@@ -107,10 +107,10 @@ func PrintAgentTestSummaryReport(results []TestRunResult, elapsed time.Duration)
 		totalExecutionTime += result.ExecutionTime
 	}
 
-	labelWidth := ReviewStatLabelWidth
+	labelWidth := ReportLabelWidth
 	fmt.Printf("  %-*s %d\n", labelWidth, "Total runs:", runs)
-	fmt.Printf("  %-*s %d\n", labelWidth, "Successful runs:", successCount)
-	fmt.Printf("  %-*s %d\n", labelWidth, "Failed runs:", runs-successCount)
+	fmt.Printf("  %-*s %d ✅\n", labelWidth, "Successful runs:", successCount)
+	fmt.Printf("  %-*s %d ❌\n", labelWidth, "Failed runs:", runs-successCount)
 	fmt.Println()
 	fmt.Printf("  %-*s %d (%s)\n", labelWidth, "Avg Num turns:",
 		totalNumTurns/runs, strings.Join(numTurnsStrs, ", "))

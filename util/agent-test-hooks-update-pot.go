@@ -74,7 +74,7 @@ func (agentTestHooksUpdatePot) ReportSummary(results []TestRunResult, cfg *confi
 		preVals = append(preVals, pre)
 		postVals = append(postVals, post)
 	}
-	labelWidth := ReviewStatLabelWidth
+	labelWidth := ReportLabelWidth
 	allSamePre := true
 	for _, v := range preVals[1:] {
 		if v != preVals[0] {
