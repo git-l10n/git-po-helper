@@ -20,3 +20,8 @@ func (agentTestHooksReview) ValidateAfterPreCheck(ctx *AgentRunContext, cfg *con
 func (agentTestHooksReview) ValidateAfterPostCheck(ctx *AgentRunContext, cfg *config.AgentConfig) error {
 	return nil
 }
+
+// ReportSummary is a no-op here: review uses aggregated JSON score; CmdAgentTestReview
+// calls displayReviewTestResults after RunAgentTestReview with aggregatedScore.
+func (agentTestHooksReview) ReportSummary(results []TestRunResult, cfg *config.AgentConfig) {
+}

@@ -3,7 +3,6 @@ package util
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
 	log "github.com/sirupsen/logrus"
@@ -26,34 +25,27 @@ func CmdAgentTestUpdatePo(agentName, poFile string, runs int, skipConfirmation b
 
 	log.Infof("starting agent-test update-po with %d runs", runs)
 
-	startTime := time.Now()
-
-	// Run the test
-	results, averageScore, err := RunAgentTestUpdatePo(agentName, poFile, runs, cfg)
+	_, err = RunAgentTestUpdatePo(agentName, poFile, runs, cfg)
 	if err != nil {
 		return fmt.Errorf("agent-test failed: %w", err)
 	}
-
-	elapsed := time.Since(startTime)
-
-	// Display results
-	log.Debugf("displaying test results (average score: %.2f)", averageScore)
-	displayTestResults(results, averageScore, runs, elapsed, cfg.AgentTest.PoEntriesBeforeUpdate, cfg.AgentTest.PoEntriesAfterUpdate)
-
-	log.Infof("agent-test update-po completed successfully (average score: %.2f/100)", averageScore)
 	return nil
 }
 
 // RunAgentTestUpdatePo runs the agent-test update-po operation multiple times.
 // Each loop uses workflow PreCheck/AgentRun/PostCheck/Report plus agent-test hooks.
-func RunAgentTestUpdatePo(agentName, poFile string, runs int, cfg *config.AgentConfig) ([]TestRunResult, float64, error) {
+func RunAgentTestUpdatePo(agentName, poFile string, runs int, cfg *config.AgentConfig) ([]TestRunResult, error) {
 	relPoFile, err := GuessPoFilePath(cfg, poFile)
 	if err != nil {
 		log.Warnf("failed to get relative path of poFile: %v", err)
 		relPoFile = poFile
 	}
 	hooks := agentTestHooksUpdatePo{relPoFile: relPoFile}
-	return RunAgentTestWorkflowLoops(func() AgentRunWorkflow {
+	results, err := RunAgentTestWorkflowLoops(func() AgentRunWorkflow {
 		return NewWorkflowUpdatePo(agentName, poFile)
 	}, hooks, cfg, runs)
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
 }

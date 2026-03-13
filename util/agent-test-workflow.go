@@ -1,34 +1,81 @@
 // Package util provides agent-test loop orchestration aligned with AgentRunWorkflow.
 // Each loop: Cleanup → PreCheck → agent-test pre validation → AgentRun → PostCheck →
-// agent-test post validation → Report; then aggregate stats.
+// agent-test post validation → Report (to stdout or writer); then aggregate stats.
 package util
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"os"
+	"sync"
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
 	log "github.com/sirupsen/logrus"
 )
 
+// reportStdoutMu serializes os.Stdout replacement so concurrent agent-test is safe.
+var reportStdoutMu sync.Mutex
+
+// runReportWithWriter runs wf.Report(ctx). If writer is nil, prints run header to stdout
+// then calls Report (same as agent-run). If writer is non-nil, captures Report stdout
+// and stderr into writer (including run header) so the caller can store it in
+// tr.ReportOutput and display it when running agent-test.
+func runReportWithWriter(wf AgentRunWorkflow, ctx *AgentRunContext, writer io.Writer, runNum, totalRuns int) {
+	header := fmt.Sprintf("\n--- Report for loop %d/%d ---\n", runNum, totalRuns)
+	if writer == nil {
+		fmt.Print(header)
+		wf.Report(ctx)
+		return
+	}
+	// Capture stdout and stderr from Report by temporarily redirecting os.Stdout and os.Stderr.
+	reportStdoutMu.Lock()
+	defer reportStdoutMu.Unlock()
+	r, w, err := os.Pipe()
+	if err != nil {
+		fmt.Print(header)
+		wf.Report(ctx)
+		return
+	}
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	os.Stdout = w
+	os.Stderr = w
+	done := make(chan struct{})
+	var copyErr error
+	go func() {
+		_, copyErr = io.Copy(writer, r)
+		_ = r.Close()
+		close(done)
+	}()
+	_, _ = io.WriteString(writer, header)
+	wf.Report(ctx)
+	_ = w.Sync() // flush so all Report output is in the pipe before close
+	_ = w.Close()
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+	<-done
+	if copyErr != nil {
+		log.Debugf("report capture copy: %v", copyErr)
+	}
+}
+
 // AgentTestLoopHooks is implemented per command (update-pot, update-po, translate, review).
 // Cleanup runs before every iteration. Validators run after workflow PreCheck/PostCheck
 // and may set ctx.PreCheckResult.Error / ctx.PostCheckResult.Error and zero score.
+// ReportSummary runs once after all loops to print workflow-specific stats (e.g. POT entry counts).
 type AgentTestLoopHooks interface {
-	// CleanupBeforeLoop resets filesystem/state so each run starts clean.
-	// Errors are logged; loop continues unless hooks choose to return fatal err.
 	CleanupBeforeLoop(ctx *AgentRunContext, runNum, totalRuns int) error
-	// ValidateAfterPreCheck runs after wf.PreCheck; use cfg.AgentTest expectations.
 	ValidateAfterPreCheck(ctx *AgentRunContext, cfg *config.AgentConfig) error
-	// ValidateAfterPostCheck runs after wf.PostCheck; validates post state (entry counts, etc.).
 	ValidateAfterPostCheck(ctx *AgentRunContext, cfg *config.AgentConfig) error
+	ReportSummary(results []TestRunResult, cfg *config.AgentConfig)
 }
 
-// runAgentTestSingleLoop executes one iteration: cleanup, PreCheck, pre validation,
-// AgentRun (sets ctx.Result.Error), PostCheck, post validation.
-// Report is not called here; RunAgentTestWorkflowLoops calls Workflow.Report(Ctx) after all loops.
-// Returns TestRunResult with Ctx and Workflow filled for deferred Report and aggregation.
-func runAgentTestSingleLoop(wf AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *config.AgentConfig, runNum, totalRuns int) TestRunResult {
+// runAgentTestSingleLoop executes one iteration through PostCheck; then calls Report
+// with reportWriter (nil => stdout). Returns TestRunResult with Ctx and optional
+// ReportOutput filled when reportWriter is a *bytes.Buffer (caller reads .String()).
+func runAgentTestSingleLoop(wf AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *config.AgentConfig, runNum, totalRuns int, reportWriter io.Writer) TestRunResult {
 	var (
 		ctx    = wf.InitContext(cfg)
 		runErr error
@@ -49,7 +96,6 @@ func runAgentTestSingleLoop(wf AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *
 		log.Warnf("run %d: cleanup: %v", runNum, err)
 	}
 
-	// PreCheck — workflow prepares paths and fills PreCheckResult where applicable
 	preErr := wf.PreCheck(ctx)
 	if preErr != nil {
 		if ctx.PreCheckResult == nil {
@@ -61,7 +107,6 @@ func runAgentTestSingleLoop(wf AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *
 		ctx.Result.Score = 0
 	}
 
-	// Agent-test validation based on precheck (config-driven)
 	if valErr := hooks.ValidateAfterPreCheck(ctx, cfg); valErr != nil {
 		ctx.Result.Score = 0
 		if ctx.PreCheckResult == nil {
@@ -85,7 +130,6 @@ func runAgentTestSingleLoop(wf AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *
 		agentErr = ctx.PreValidationError()
 	}
 
-	// PostCheck always (matches RunAgentRunWorkflow); may fix score on success
 	_ = wf.PostCheck(ctx)
 	if ctx.PostValidationError() != nil {
 		ctx.Result.Score = 0
@@ -102,11 +146,8 @@ func runAgentTestSingleLoop(wf AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *
 		ctx.Result.Score = 0
 	}
 
-	// Per-loop report (same output as agent-run single shot)
-	fmt.Printf("\n--- Run %d/%d ---\n", runNum, totalRuns)
-	wf.Report(ctx)
+	runReportWithWriter(wf, ctx, reportWriter, runNum, totalRuns)
 
-	// Terminal error for this run: agent failure takes precedence for RunError
 	runErr = agentErr
 	if runErr == nil && ctx.PreValidationError() != nil {
 		runErr = ctx.PreValidationError()
@@ -115,45 +156,56 @@ func runAgentTestSingleLoop(wf AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *
 		runErr = ctx.PostValidationError()
 	}
 
-	// Sync embedded result from ctx (Score etc. updated on ctx.Result during loop)
 	if ctx.Result != nil {
 		tr.AgentRunResult = *ctx.Result
 	}
 	tr.ExecutionTime = time.Since(iterStart)
 	tr.RunError = runErr
+	if buf, ok := reportWriter.(*bytes.Buffer); ok {
+		tr.ReportOutput = buf.String()
+	}
 	return tr
 }
 
-// RunAgentTestWorkflowLoops runs newWorkflow() once per iteration so each loop gets a
-// fresh workflow instance (no shared mutable state across runs).
-func RunAgentTestWorkflowLoops(newWorkflow func() AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *config.AgentConfig, runs int) ([]TestRunResult, float64, error) {
+// RunAgentTestWorkflowLoops runs newWorkflow() once per iteration. Each run captures
+// Report into ReportOutput, then prints all captured reports again after the loop.
+// Finally hooks.ReportSummary prints aggregated statistics.
+func RunAgentTestWorkflowLoops(newWorkflow func() AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *config.AgentConfig, runs int) ([]TestRunResult, error) {
 	if runs <= 0 {
-		return nil, 0, fmt.Errorf("runs must be positive")
+		return nil, fmt.Errorf("runs must be positive")
 	}
 	if newWorkflow == nil {
-		return nil, 0, fmt.Errorf("newWorkflow must not be nil")
+		return nil, fmt.Errorf("newWorkflow must not be nil")
 	}
+	workflowName := ""
+	startTime := time.Now()
 	results := make([]TestRunResult, runs)
-	totalScore := 0
 	for i := 0; i < runs; i++ {
 		runNum := i + 1
 		wf := newWorkflow()
-		log.Infof("run %d/%d (%s)", runNum, runs, wf.Name())
-		results[i] = runAgentTestSingleLoop(wf, hooks, cfg, runNum, runs)
-		totalScore += results[i].Score
+		workflowName = wf.Name()
+		log.Infof("⏳ Starting loop %d/%d (%s)", runNum, runs, wf.Name())
+		buf := &bytes.Buffer{}
+		results[i] = runAgentTestSingleLoop(wf, hooks, cfg, runNum, runs, buf)
+		// First print the report for the loop
+		fmt.Println(results[i].ReportOutput)
 	}
 
-	// After all loops, print each run's Report using stored Workflow + Ctx
 	fmt.Println()
-	fmt.Println("========== Reports for each run ==========")
+	fmt.Printf("========== 📝 Reports for each run ==========\n")
+	fmt.Println()
 	for i := range results {
-		if results[i].Workflow != nil && results[i].Ctx != nil {
-			fmt.Printf("\n--- Run %d/%d ---\n", results[i].RunNumber, runs)
-			results[i].Workflow.Report(results[i].Ctx)
+		// Second print the report for the loop
+		if results[i].ReportOutput != "" {
+			fmt.Println(results[i].ReportOutput)
 		}
 	}
 
-	avg := float64(totalScore) / float64(runs)
-	log.Infof("all runs completed. Total score: %d/%d, Average: %.2f/100", totalScore, runs*100, avg)
-	return results, avg, nil
+	fmt.Println()
+	fmt.Printf("========== ✅ Summary of [%s] workflow ==========\n", workflowName)
+	fmt.Println()
+	elapsed := time.Since(startTime)
+	PrintAgentTestSummaryReport(results, elapsed)
+	hooks.ReportSummary(results, cfg)
+	return results, nil
 }

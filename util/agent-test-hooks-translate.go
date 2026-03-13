@@ -1,6 +1,8 @@
 package util
 
 import (
+	"time"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/git-l10n/git-po-helper/config"
@@ -26,4 +28,19 @@ func (agentTestHooksTranslate) ValidateAfterPreCheck(ctx *AgentRunContext, cfg *
 
 func (agentTestHooksTranslate) ValidateAfterPostCheck(ctx *AgentRunContext, cfg *config.AgentConfig) error {
 	return nil
+}
+
+func (agentTestHooksTranslate) ReportSummary(results []TestRunResult, cfg *config.AgentConfig) {
+	runs := len(results)
+	var sumScore int
+	var totalExecution time.Duration
+	for _, r := range results {
+		sumScore += r.Score
+		totalExecution += r.ExecutionTime
+	}
+	var averageScore float64
+	if runs > 0 {
+		averageScore = float64(sumScore) / float64(runs)
+	}
+	displayTranslateTestResults(results, averageScore, runs, totalExecution)
 }

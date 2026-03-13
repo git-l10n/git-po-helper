@@ -94,7 +94,7 @@ func RunAgentTestReview(cfg *config.AgentConfig, agentName string, target *Compa
 	results := make([]TestRunResult, runs)
 	var reviewJSONs []*ReviewJSONResult
 
-	loopResults, _, err := RunAgentTestWorkflowLoops(func() AgentRunWorkflow {
+	loopResults, err := RunAgentTestWorkflowLoops(func() AgentRunWorkflow {
 		return NewWorkflowReview(agentName, target, useLocalOrchestration, batchSize)
 	}, agentTestHooksReview{}, cfg, runs)
 	if err != nil {

@@ -48,39 +48,32 @@ func CmdAgentTestTranslate(agentName, poFile string, runs int, skipConfirmation 
 
 	log.Infof("starting agent-test translate with %d runs", runs)
 
-	startTime := time.Now()
-
-	// Run the test
-	results, averageScore, err := RunAgentTestTranslate(agentName, poFile, runs, cfg, useLocalOrchestration, batchSize)
+	_, err = RunAgentTestTranslate(agentName, poFile, runs, cfg, useLocalOrchestration, batchSize)
 	if err != nil {
 		return fmt.Errorf("agent-test failed: %w", err)
 	}
-
-	elapsed := time.Since(startTime)
-
-	// Display results
-	log.Debugf("displaying test results (average score: %.2f)", averageScore)
-	displayTranslateTestResults(results, averageScore, runs, elapsed)
-
-	log.Infof("agent-test translate completed successfully (average score: %.2f/100)", averageScore)
 	return nil
 }
 
 // RunAgentTestTranslate runs the agent-test translate operation multiple times.
 // Uses AgentRunWorkflow (translate) + hooks: cleanup before each loop; PreCheck/PostCheck
 // on the workflow perform validation; Report runs per loop; then aggregate scores.
-func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.AgentConfig, useLocalOrchestration bool, batchSize int) ([]TestRunResult, float64, error) {
+func RunAgentTestTranslate(agentName, poFile string, runs int, cfg *config.AgentConfig, useLocalOrchestration bool, batchSize int) ([]TestRunResult, error) {
 	if _, err := SelectAgent(cfg, agentName); err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	resolvedPo, err := GuessPoFilePath(cfg, poFile)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	hooks := agentTestHooksTranslate{relPoFile: resolvedPo}
-	return RunAgentTestWorkflowLoops(func() AgentRunWorkflow {
+	results, err := RunAgentTestWorkflowLoops(func() AgentRunWorkflow {
 		return NewWorkflowTranslate(agentName, poFile, useLocalOrchestration, batchSize)
 	}, hooks, cfg, runs)
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
 }
 
 // SaveTranslateResults saves the translation results to the output directory.

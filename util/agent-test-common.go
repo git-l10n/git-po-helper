@@ -50,13 +50,84 @@ func formatDuration(d time.Duration) string {
 // It embeds AgentRunResult so agent-run fields (Score, etc.)
 // are inherited; RunNumber is test-specific.
 // Ctx holds PreCheckResult/PostCheckResult for display.
-// Workflow is the workflow instance for this run; used to call Report(ctx) again after all loops.
+// ReportOutput holds captured stdout from workflow Report when agent-test runs with a buffer.
 type TestRunResult struct {
 	AgentRunResult
-	RunNumber int              // Test run index (1-based)
-	RunError  error            // Error from agent run, for display when run fails
-	Ctx       *AgentRunContext // Context after PreCheck/AgentRun/PostCheck; pass to Workflow.Report
-	Workflow  AgentRunWorkflow // Workflow used for this run; nil if not from agent-test loop runner
+	RunNumber    int              // Test run index (1-based)
+	RunError     error            // Error from agent run, for display when run fails
+	Ctx          *AgentRunContext // Context after PreCheck/AgentRun/PostCheck
+	ReportOutput string           // Captured Report output when run via agent-test loop (optional)
+}
+
+// AverageScoreFromResults returns the average Score of results (0 if empty).
+func AverageScoreFromResults(results []TestRunResult) float64 {
+	if len(results) == 0 {
+		return 0
+	}
+	sum := 0
+	for _, r := range results {
+		sum += r.Score
+	}
+	return float64(sum) / float64(len(results))
+}
+
+// PrintAgentTestSummaryReport prints the common agent-test summary (Total runs,
+// Successful/Failed runs, Average score, pre/post-validation failures, Avg Num turns,
+// Avg Execution Time, Total Elapsed Time) using the same format as workflow Report
+// (ReviewStatLabelWidth, two-space indent). Call this after all loops in the workflow.
+func PrintAgentTestSummaryReport(results []TestRunResult, elapsed time.Duration) {
+	runs := len(results)
+	successCount := 0
+	preValidationFailures := 0
+	postValidationFailures := 0
+	var totalNumTurns int
+	var totalExecutionTime time.Duration
+	if runs == 0 {
+		log.Warnf("no results for summary")
+		return
+	}
+
+	var runScores []string
+	var numTurnsStrs []string
+	var executionTimeStrs []string
+	for _, result := range results {
+		runScores = append(runScores, fmt.Sprintf("%d", result.Score))
+		numTurnsStrs = append(numTurnsStrs, fmt.Sprintf("%d", result.NumTurns))
+		executionTimeStrs = append(executionTimeStrs, formatDuration(result.ExecutionTime))
+		if result.Score == 100 {
+			successCount++
+		}
+		if result.Ctx != nil && result.Ctx.PreValidationError() != nil {
+			preValidationFailures++
+		}
+		if result.Ctx != nil && result.Ctx.PostValidationError() != nil {
+			postValidationFailures++
+		}
+		totalNumTurns += result.NumTurns
+		totalExecutionTime += result.ExecutionTime
+	}
+
+	labelWidth := ReviewStatLabelWidth
+	fmt.Printf("  %-*s %d\n", labelWidth, "Total runs:", runs)
+	fmt.Printf("  %-*s %d\n", labelWidth, "Successful runs:", successCount)
+	fmt.Printf("  %-*s %d\n", labelWidth, "Failed runs:", runs-successCount)
+	fmt.Println()
+	fmt.Printf("  %-*s %d (%s)\n", labelWidth, "Avg Num turns:",
+		totalNumTurns/runs, strings.Join(numTurnsStrs, ", "))
+	fmt.Printf("  %-*s %s (%s)\n", labelWidth, "Avg Execution Time:",
+		formatDuration(totalExecutionTime/time.Duration(runs)), strings.Join(executionTimeStrs, ", "))
+	fmt.Printf("  %-*s %.0f/100 (%s)\n", labelWidth, "Average score:",
+		AverageScoreFromResults(results), strings.Join(runScores, ", "))
+	fmt.Println()
+	if preValidationFailures > 0 {
+		fmt.Printf("  %-*s %d\n", labelWidth, "Pre-validation failures:", preValidationFailures)
+	}
+	if postValidationFailures > 0 {
+		fmt.Printf("  %-*s %d\n", labelWidth, "Post-validation failures:", postValidationFailures)
+	}
+	fmt.Printf("  %-*s %s\n", labelWidth, "Total Elapsed Time:", formatDuration(elapsed))
+	fmt.Println()
+	flushStdout()
 }
 
 // ConfirmAgentTestExecution displays a warning and requires user confirmation before proceeding.
@@ -251,131 +322,4 @@ func containsPath(paths []string, target string) bool {
 		}
 	}
 	return false
-}
-
-// displayTestResults displays the test results in a readable format.
-// expectedBefore and expectedAfter are from config (PoEntriesBeforeUpdate/PoEntriesAfterUpdate
-// or PotEntriesBeforeUpdate/PotEntriesAfterUpdate); nil when validation is not configured.
-func displayTestResults(results []TestRunResult, averageScore float64, totalRuns int, elapsed time.Duration, expectedBefore, expectedAfter *int) {
-	fmt.Println()
-	fmt.Println("=" + strings.Repeat("=", 70))
-	fmt.Println("Agent Test Results")
-	fmt.Println("=" + strings.Repeat("=", 70))
-	fmt.Println()
-
-	successCount := 0
-	failureCount := 0
-	preValidationFailures := 0
-	postValidationFailures := 0
-
-	// Display individual run results
-	for _, result := range results {
-		status := "FAIL"
-		if result.Score == 100 {
-			status = "PASS"
-			successCount++
-		} else {
-			failureCount++
-		}
-
-		fmt.Printf("Run %d: %s (Score: %d/100)\n", result.RunNumber, status, result.Score)
-
-		// Show validation status
-		if expectedBefore != nil && *expectedBefore != 0 && result.Ctx != nil {
-			if result.Ctx.PreValidationError() == nil {
-				fmt.Printf("  Pre-validation:  PASS (expected: %d, actual: %d)\n",
-					*expectedBefore, result.Ctx.EntryCountBeforeUpdate())
-			} else {
-				fmt.Printf("  Pre-validation:  FAIL - %s\n", result.Ctx.PreValidationError())
-				preValidationFailures++
-			}
-		}
-
-		if result.AgentExecuted {
-			if result.RunError == nil {
-				fmt.Printf("  Agent execution: PASS\n")
-			} else {
-				fmt.Printf("  Agent execution: FAIL - %v\n", result.RunError)
-			}
-		} else {
-			fmt.Printf("  Agent execution: SKIPPED (pre-validation failed)\n")
-		}
-
-		if expectedAfter != nil && *expectedAfter != 0 && result.Ctx != nil {
-			if result.Ctx.PostValidationError() == nil {
-				fmt.Printf("  Post-validation: PASS (expected: %d, actual: %d)\n",
-					*expectedAfter, result.Ctx.EntryCountAfterUpdate())
-			} else {
-				fmt.Printf("  Post-validation: FAIL - %s\n", result.Ctx.PostValidationError())
-				postValidationFailures++
-			}
-		} else if result.AgentExecuted && result.Ctx != nil {
-			// Show entry counts even if validation is not configured
-			fmt.Printf("  Entry count:     %d (before) -> %d (after)\n",
-				result.Ctx.EntryCountBeforeUpdate(), result.Ctx.EntryCountAfterUpdate())
-		}
-
-		fmt.Println()
-	}
-
-	// Calculate statistics for NumTurns and execution time
-	var numTurnsList []int
-	var executionTimes []time.Duration
-	totalNumTurns := 0
-	totalExecutionTime := time.Duration(0)
-	numTurnsCount := 0
-
-	for _, result := range results {
-		if result.NumTurns > 0 {
-			numTurnsList = append(numTurnsList, result.NumTurns)
-			totalNumTurns += result.NumTurns
-			numTurnsCount++
-		}
-		// Always collect execution time (we measure it ourselves in the loop)
-		executionTimes = append(executionTimes, result.ExecutionTime)
-		totalExecutionTime += result.ExecutionTime
-	}
-
-	// Display summary statistics
-	const labelWidth = 25
-	fmt.Println("=" + strings.Repeat("=", 70))
-	fmt.Println("Summary")
-	fmt.Println("=" + strings.Repeat("=", 70))
-	fmt.Printf("%-*s %d\n", labelWidth, "Total runs:", totalRuns)
-	fmt.Printf("%-*s %d\n", labelWidth, "Successful runs:", successCount)
-	fmt.Printf("%-*s %d\n", labelWidth, "Failed runs:", failureCount)
-	if preValidationFailures > 0 {
-		fmt.Printf("%-*s %d\n", labelWidth, "Pre-validation failures:", preValidationFailures)
-	}
-	if postValidationFailures > 0 {
-		fmt.Printf("%-*s %d\n", labelWidth, "Post-validation failures:", postValidationFailures)
-	}
-	fmt.Printf("%-*s %.2f/100\n", labelWidth, "Average score:", averageScore)
-
-	// Display NumTurns statistics
-	if numTurnsCount > 0 {
-		avgNumTurns := totalNumTurns / numTurnsCount
-		var numTurnsStrs []string
-		for _, turns := range numTurnsList {
-			turnsStr := fmt.Sprintf("%d", turns)
-			numTurnsStrs = append(numTurnsStrs, turnsStr)
-		}
-		fmt.Printf("%-*s %d (%s)\n", labelWidth, "Avg Num turns:", avgNumTurns, strings.Join(numTurnsStrs, ", "))
-	}
-
-	// Display execution time statistics
-	if len(executionTimes) > 0 {
-		avgExecutionTime := totalExecutionTime / time.Duration(len(executionTimes))
-		var execTimeStrs []string
-		avgTimeStr := formatDuration(avgExecutionTime)
-		for _, execTime := range executionTimes {
-			timeStr := formatDuration(execTime)
-			execTimeStrs = append(execTimeStrs, timeStr)
-		}
-		fmt.Printf("%-*s %s (%s)\n", labelWidth, "Avg Execution Time:", avgTimeStr, strings.Join(execTimeStrs, ", "))
-	}
-
-	// Always display total elapsed time
-	fmt.Printf("%-*s %s\n", labelWidth, "Total Elapsed Time:", formatDuration(elapsed))
-	fmt.Println("=" + strings.Repeat("=", 70))
 }
