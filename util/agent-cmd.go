@@ -200,9 +200,9 @@ func GetRawPrompt(cfg *config.AgentConfig, action string) (string, error) {
 	case "translate":
 		prompt = cfg.Prompt.Translate
 		promptName = "prompt.translate"
-	case "review":
-		prompt = cfg.Prompt.Review
-		promptName = "prompt.review"
+	case "local-orchestration-review":
+		prompt = cfg.Prompt.LocalOrchestrationReview
+		promptName = "prompt.local_orchestration_review"
 	case "local-orchestration-translation":
 		prompt = cfg.Prompt.LocalOrchestrationTranslation
 		promptName = "prompt.local_orchestration_translation"
@@ -210,7 +210,7 @@ func GetRawPrompt(cfg *config.AgentConfig, action string) (string, error) {
 		prompt = cfg.Prompt.FixPo
 		promptName = "prompt.fix_po"
 	default:
-		return "", fmt.Errorf("unknown action: %s\nHint: Supported actions are: update-pot, update-po, translate, review, local-orchestration-translation, fix-po", action)
+		return "", fmt.Errorf("unknown action: %s\nHint: Supported actions are: update-pot, update-po, translate, local-orchestration-review, local-orchestration-translation, fix-po", action)
 	}
 
 	if prompt == "" {
