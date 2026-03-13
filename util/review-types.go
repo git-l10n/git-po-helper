@@ -168,27 +168,26 @@ func (r *ReviewResult) SetReviewPaths(reportFile, appliedFile string) {
 	r.appliedFile = appliedFile
 }
 
-// init runs once when sourceFile is set: GetPoStats(sourceFile) -> TotalEntries; CalculateReviewScore; CountReviewIssueScores -> Score, counts.
-// If sourceFile is empty (e.g. aggregated result), no-op and fields keep their current values.
+// init runs once: when sourceFile is set, GetPoStats(sourceFile) -> TotalEntries then score/counts;
+// when sourceFile is empty (e.g. aggregated result), use existing TotalEntries/Issues and only set score/counts.
 // If sourceFile is set but the file does not exist, initErr is set and TotalEntries remains 0.
 func (r *ReviewResult) init() error {
 	if r == nil {
 		return nil
 	}
-	if r.sourceFile == "" {
-		return nil
-	}
 	r.initOnce.Do(func() {
-		if !Exist(r.sourceFile) {
-			r.initErr = fmt.Errorf("file does not exist: %s (need review-input.po for total_entries)", r.sourceFile)
-			return
+		if r.sourceFile != "" {
+			if !Exist(r.sourceFile) {
+				r.initErr = fmt.Errorf("file does not exist: %s (need review-input.po for total_entries)", r.sourceFile)
+				return
+			}
+			stats, err := GetPoStats(r.sourceFile)
+			if err != nil {
+				r.initErr = fmt.Errorf("failed to count entries in %s: %w", r.sourceFile, err)
+				return
+			}
+			r.TotalEntries = stats.Total()
 		}
-		stats, err := GetPoStats(r.sourceFile)
-		if err != nil {
-			r.initErr = fmt.Errorf("failed to count entries in %s: %w", r.sourceFile, err)
-			return
-		}
-		r.TotalEntries = stats.Total()
 		score, err := CalculateReviewScore(r)
 		if err != nil {
 			r.initErr = fmt.Errorf("failed to calculate review score: %w", err)

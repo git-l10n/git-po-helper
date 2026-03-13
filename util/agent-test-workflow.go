@@ -23,7 +23,7 @@ var reportStdoutMu sync.Mutex
 // and stderr into writer (including run header) so the caller can store it in
 // tr.ReportOutput and display it when running agent-test.
 func runReportWithWriter(wf AgentRunWorkflow, ctx *AgentRunContext, writer io.Writer, runNum, totalRuns int) {
-	header := fmt.Sprintf("\n--- Report for loop %d/%d ---\n", runNum, totalRuns)
+	header := fmt.Sprintf("\n--- Report for loop %d/%d ---\n\n", runNum, totalRuns)
 	if writer == nil {
 		fmt.Print(header)
 		wf.Report(ctx)

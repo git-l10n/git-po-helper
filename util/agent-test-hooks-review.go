@@ -67,14 +67,11 @@ func (agentTestHooksReview) PostProcess(results []TestRunResult, cfg *config.Age
 	aggregated := aggregateReviewJSONResult(reviewJSONs, false)
 	if aggregated != nil {
 		if Exist(ps.InputPO) {
-			if stats, err := GetPoStats(ps.InputPO); err != nil {
-				log.Warnf("failed to count entries in %s: %v", ps.InputPO, err)
-			} else {
-				aggregated.TotalEntries = stats.Total()
-			}
+			aggregated.SetReviewSource(ps.InputPO)
 		}
+		aggregated.SetReviewPaths(ps.ResultJSON, ps.OutputPO)
 		var scoreErr error
-		aggregatedScore, scoreErr = CalculateReviewScore(aggregated)
+		aggregatedScore, scoreErr = aggregated.GetScore()
 		if scoreErr != nil {
 			log.Warnf("failed to calculate aggregated review score: %v", scoreErr)
 		} else {
@@ -97,26 +94,22 @@ func (agentTestHooksReview) PostProcess(results []TestRunResult, cfg *config.Age
 // ReportSummary prints per-run status and the aggregated report (when postResult is *ReviewPostResult).
 // Full review report for each run is produced by workflowReview.Report and shown via ReportOutput in the workflow.
 func (agentTestHooksReview) ReportSummary(results []TestRunResult, cfg *config.AgentConfig, postResult interface{}) {
+	var runScores []string
 	w := ReportLabelWidth
-	for _, result := range results {
-		status := "FAIL"
-		if result.Score > 0 {
-			status = "PASS"
-		}
-		fmt.Printf("  %-*s loop %d: %s (Score: %d/100)\n", w, "Run:", result.RunNumber, status, result.Score)
+	for _, res := range results {
+		runScores = append(runScores, fmt.Sprintf("%d", res.Score))
 	}
-	// Aggregated report (aggregated score from merged JSON; per-run scores in parentheses)
+	if len(runScores) > 0 {
+		fmt.Printf("  %-*s (%s)\n", w, "Per-run scores:", strings.Join(runScores, ", "))
+	}
+
+	// Aggregated report: header + per-run scores, then use the same print as workflow Report
 	if postResult != nil {
 		if r, ok := postResult.(*ReviewPostResult); ok && r.Aggregated != nil {
-			var runScores []string
-			for _, res := range results {
-				runScores = append(runScores, fmt.Sprintf("%d", res.Score))
-			}
-			fmt.Println("  --- Aggregated (merged from all runs) ---")
-			fmt.Printf("  %-*s %d/100 (%s)\n", w, "Aggregated score:", r.Score, strings.Join(runScores, ", "))
-			fmt.Printf("  %-*s %d\n", w, "Total entries:", r.Aggregated.TotalEntries)
-			fmt.Printf("  %-*s %d\n", w, "Unique issues:", len(r.Aggregated.Issues))
 			fmt.Println()
+			fmt.Println("🧩 Aggregated review report (all issues merged)")
+			fmt.Println()
+			PrintReviewReportResult(r.Aggregated)
 		}
 	}
 	flushStdout()
