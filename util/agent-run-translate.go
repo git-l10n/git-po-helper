@@ -3,7 +3,6 @@ package util
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -11,54 +10,6 @@ import (
 	"github.com/git-l10n/git-po-helper/config"
 	log "github.com/sirupsen/logrus"
 )
-
-// RunAgentTranslate runs translate using either local batch orchestration or
-// prompt orchestration. It prints translation statistics to stderr before and
-// after the run (used by agent-test). Dispatches to RunAgentTranslateLocalOrchestration
-// or RunAgentTranslatePromptOrchestration.
-func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentTest, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
-	result := &AgentRunResult{}
-	rel, err := GuessPoFilePath(cfg, poFile)
-	if err != nil {
-		return result, err
-	}
-	poFile = rel
-	log.Debugf("PO file path: %s", poFile)
-
-	var translateStatsSummary string
-	if stats, err := GetPoStats(poFile); err != nil {
-		log.Debugf("GetPoStats before agent: %v", err)
-	} else {
-		translateStatsSummary = fmt.Sprintf("Translation statistics: before: %d translated, %d untranslated, %d fuzzy.",
-			stats.Translated, stats.Untranslated, stats.Fuzzy)
-	}
-
-	result, agentErr := runAgentTranslateDispatch(cfg, agentName, poFile, useLocalOrchestration, batchSize)
-	if result == nil {
-		result = &AgentRunResult{}
-	}
-	// Non-workflow path: print diagnostics here (workflow prints before Report).
-	PrintAgentDiagnosticsFromResult(result)
-
-	if stats, errStats := GetPoStats(poFile); errStats != nil {
-		log.Errorf("GetPoStats after agent: %v", errStats)
-		if translateStatsSummary != "" {
-			fmt.Fprintln(os.Stderr, translateStatsSummary)
-		}
-	} else {
-		afterSummary := fmt.Sprintf("Translation statistics: after: %d translated, %d untranslated, %d fuzzy.",
-			stats.Translated, stats.Untranslated, stats.Fuzzy)
-		if translateStatsSummary != "" {
-			fmt.Fprintf(os.Stderr, "%s\n", translateStatsSummary)
-		}
-		fmt.Fprintf(os.Stderr, "%s\n", afterSummary)
-	}
-
-	if agentErr != nil {
-		return result, agentErr
-	}
-	return result, nil
-}
 
 // runAgentTranslateDispatch runs either local orchestration or prompt orchestration.
 func runAgentTranslateDispatch(cfg *config.AgentConfig, agentName, poFile string, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {

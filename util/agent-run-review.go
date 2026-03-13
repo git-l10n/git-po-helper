@@ -80,21 +80,6 @@ func buildReviewUseAgentMdPrompt(target *CompareTarget) string {
 	return taskDesc + " according to @po/AGENTS.md."
 }
 
-// RunAgentReview dispatches to local batch orchestration or prompt orchestration
-// (agent with po/AGENTS.md). Same pattern as RunAgentTranslate.
-// After a successful dispatch, verifies review-pending.po is empty or absent;
-// otherwise the review did not finish all entries.
-// Returns (result, ctx, error); ctx holds PreCheckResult/PostCheckResult for display.
-func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) (*AgentRunResult, *AgentRunContext, error) {
-	result, agentErr := runAgentReviewDispatch(cfg, agentName, target, useLocalOrchestration, batchSize)
-	if result == nil {
-		result = &AgentRunResult{}
-	}
-	ctx := &AgentRunContext{Result: result, UseLocalOrchestration: useLocalOrchestration}
-	_ = NewWorkflowReview(agentName, target, useLocalOrchestration, batchSize).PostCheck(ctx)
-	return result, ctx, agentErr
-}
-
 // runAgentReviewDispatch runs either local orchestration or prompt orchestration.
 func runAgentReviewDispatch(cfg *config.AgentConfig, agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
 	if useLocalOrchestration {
