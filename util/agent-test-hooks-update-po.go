@@ -73,9 +73,13 @@ func (h agentTestHooksUpdatePo) ValidateAfterPostCheck(ctx *AgentRunContext, cfg
 	return nil
 }
 
+func (agentTestHooksUpdatePo) PostProcess(results []TestRunResult, cfg *config.AgentConfig) (interface{}, error) {
+	return nil, nil
+}
+
 // ReportSummary prints update-po specific summary: PreCheck/PostCheck translated, fuzzy, untranslated.
 // If all runs agree, shows "n -> m"; otherwise "(n1,n2,...) -> (m1,m2,...)".
-func (agentTestHooksUpdatePo) ReportSummary(results []TestRunResult, cfg *config.AgentConfig) {
+func (agentTestHooksUpdatePo) ReportSummary(results []TestRunResult, cfg *config.AgentConfig, postResult interface{}) {
 	if len(results) == 0 {
 		return
 	}

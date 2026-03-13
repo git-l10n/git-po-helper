@@ -64,12 +64,15 @@ func runReportWithWriter(wf AgentRunWorkflow, ctx *AgentRunContext, writer io.Wr
 // AgentTestLoopHooks is implemented per command (update-pot, update-po, translate, review).
 // Cleanup runs before every iteration. Validators run after workflow PreCheck/PostCheck
 // and may set ctx.PreCheckResult.Error / ctx.PostCheckResult.Error and zero score.
-// ReportSummary runs once after all loops to print workflow-specific stats (e.g. POT entry counts).
+// PostProcess runs once after all loops; it may aggregate results and write output (e.g. review).
+// Its return value is passed to ReportSummary and to the runner's caller (e.g. aggregated score).
+// ReportSummary runs after PostProcess to print workflow-specific stats and optionally the aggregated report.
 type AgentTestLoopHooks interface {
 	CleanupBeforeLoop(ctx *AgentRunContext, runNum, totalRuns int) error
 	ValidateAfterPreCheck(ctx *AgentRunContext, cfg *config.AgentConfig) error
 	ValidateAfterPostCheck(ctx *AgentRunContext, cfg *config.AgentConfig) error
-	ReportSummary(results []TestRunResult, cfg *config.AgentConfig)
+	PostProcess(results []TestRunResult, cfg *config.AgentConfig) (interface{}, error)
+	ReportSummary(results []TestRunResult, cfg *config.AgentConfig, postResult interface{})
 }
 
 // runAgentTestSingleLoop executes one iteration through PostCheck; then calls Report
@@ -169,7 +172,8 @@ func runAgentTestSingleLoop(wf AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *
 
 // RunAgentTestWorkflowLoops runs newWorkflow() once per iteration. Each run captures
 // Report into ReportOutput, then prints all captured reports again after the loop.
-// Finally hooks.ReportSummary prints aggregated statistics.
+// PostProcess runs next (e.g. review aggregates and applies to output); its return value
+// is passed to ReportSummary. ReportSummary prints workflow-specific stats.
 func RunAgentTestWorkflowLoops(newWorkflow func() AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *config.AgentConfig, runs int) ([]TestRunResult, error) {
 	if runs <= 0 {
 		return nil, fmt.Errorf("runs must be positive")
@@ -206,6 +210,10 @@ func RunAgentTestWorkflowLoops(newWorkflow func() AgentRunWorkflow, hooks AgentT
 	fmt.Println()
 	elapsed := time.Since(startTime)
 	PrintAgentTestSummaryReport(results, elapsed)
-	hooks.ReportSummary(results, cfg)
+	postResult, postErr := hooks.PostProcess(results, cfg)
+	if postErr != nil {
+		return nil, postErr
+	}
+	hooks.ReportSummary(results, cfg, postResult)
 	return results, nil
 }

@@ -54,9 +54,13 @@ func (agentTestHooksUpdatePot) ValidateAfterPostCheck(ctx *AgentRunContext, cfg 
 	return nil
 }
 
+func (agentTestHooksUpdatePot) PostProcess(results []TestRunResult, cfg *config.AgentConfig) (interface{}, error) {
+	return nil, nil
+}
+
 // ReportSummary prints update-pot specific summary: PreCheck/PostCheck AllEntries (before -> after).
 // If all runs agree, shows "n -> m"; otherwise "(n1,n2,...) -> (m1,m2,...)".
-func (agentTestHooksUpdatePot) ReportSummary(results []TestRunResult, cfg *config.AgentConfig) {
+func (agentTestHooksUpdatePot) ReportSummary(results []TestRunResult, cfg *config.AgentConfig, postResult interface{}) {
 	if len(results) == 0 {
 		return
 	}
