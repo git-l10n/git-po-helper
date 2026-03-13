@@ -24,9 +24,9 @@ type PreCheckResult struct {
 
 // PostCheckResult holds post-check outcome for all agent-run commands.
 // Each command sets only the fields it uses; others remain zero.
+// Use AgentRunContext.Success() and Score() for pass/fail and score; do not add Score here.
 type PostCheckResult struct {
 	Error                error // Post-validation error (incl. syntax validation); nil = success
-	Score                int   // 0-100, calculated from validations
 	AllEntries           int   // Update-pot/po: PO/POT msgid count after agent update
 	UntranslatePoEntries int   // Translate: new (untranslated) entries after
 	FuzzyPoEntries       int   // Translate: fuzzy entries after
@@ -34,11 +34,10 @@ type PostCheckResult struct {
 }
 
 // AgentRunResult holds the result of a single agent-run execution.
-// Pre/post check data lives in AgentRunContext; use ctx for validation.
+// Pre/post check data lives in AgentRunContext; use ctx.Success() and ctx.Score() for pass/fail and score.
 type AgentRunResult struct {
 	AgentExecuted bool
 	Error         error // AgentRun failure; nil when agent process succeeded
-	Score         int   // 0-100, from PostCheckResult or ReviewResult
 
 	// Review: set when from review; nil when not from review
 	ReviewResult *ReviewResult

@@ -38,7 +38,7 @@ func (w *workflowReview) InitContext(cfg *config.AgentConfig) *AgentRunContext {
 		Target:                w.target,
 		UseLocalOrchestration: w.useLocalOrchestration,
 		BatchSize:             w.batchSize,
-		Result:                &AgentRunResult{Score: 0},
+		Result:                &AgentRunResult{},
 		PreCheckResult:        &PreCheckResult{},
 		PostCheckResult:       &PostCheckResult{},
 	}
@@ -59,17 +59,9 @@ func (w *workflowReview) AgentRun(ctx *AgentRunContext) error {
 
 func (w *workflowReview) PostCheck(ctx *AgentRunContext) error {
 	// Verifies review-pending.po is empty or absent after dispatch.
-	// Writes to ctx.PostCheckResult and ctx.Result.Score.
 	if ctx == nil || ctx.Result == nil {
 		return nil
 	}
-	result := ctx.Result
-	if result.ReviewResult != nil {
-		if score, err := result.ReviewResult.GetScore(); err == nil {
-			result.Score = score
-		}
-	}
-	ctx.PostCheckResult.Score = result.Score
 
 	setReviewPostValidation := func(err error) {
 		if err == nil {
@@ -78,8 +70,6 @@ func (w *workflowReview) PostCheck(ctx *AgentRunContext) error {
 		if ctx.PostCheckResult.Error == nil {
 			ctx.PostCheckResult.Error = err
 		}
-		ctx.PostCheckResult.Score = 0
-		result.Score = 0
 		log.Errorf("%v", err)
 	}
 
@@ -157,4 +147,6 @@ func (w *workflowReview) Report(ctx *AgentRunContext) {
 	if pre.ReviewTotalEntries > 0 && post.ReviewPendingEntries == 0 && post.Error == nil {
 		fmt.Printf("  %-*s %s\n", labelWidth, "Pending cleared:", "all entries reviewed")
 	}
+	PrintAgentRunStatus(ctx)
+	flushStdout()
 }

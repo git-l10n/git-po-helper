@@ -25,7 +25,7 @@ func (w *workflowUpdatePot) InitContext(cfg *config.AgentConfig) *AgentRunContex
 	return &AgentRunContext{
 		Cfg:             cfg,
 		AgentName:       w.agentName,
-		Result:          &AgentRunResult{Score: 0},
+		Result:          &AgentRunResult{},
 		PreCheckResult:  &PreCheckResult{},
 		PostCheckResult: &PostCheckResult{},
 	}
@@ -102,10 +102,6 @@ func (w *workflowUpdatePot) PostCheck(ctx *AgentRunContext) error {
 			ctx.PostCheckResult.AllEntries = stats.Total()
 		}
 	}
-	if ctx.PostCheckResult.AllEntries > 0 {
-		ctx.PostCheckResult.Score = 100
-	}
-	ctx.Result.Score = ctx.PostCheckResult.Score
 	log.Infof("validating file syntax: %s", ctx.potFile)
 	if err := ValidatePoFile(ctx.potFile); err != nil {
 		log.Errorf("file syntax validation failed: %v", err)
@@ -115,8 +111,6 @@ func (w *workflowUpdatePot) PostCheck(ctx *AgentRunContext) error {
 		} else {
 			ctx.PostCheckResult.Error = fmt.Errorf("file syntax validation failed: %w\nHint: Check the PO file syntax using 'msgfmt --check-format'", err)
 		}
-		ctx.PostCheckResult.Score = 0
-		ctx.Result.Score = 0
 	} else {
 		log.Infof("file syntax validation passed")
 	}
@@ -135,18 +129,6 @@ func (w *workflowUpdatePot) Report(ctx *AgentRunContext) {
 	fmt.Println()
 	fmt.Printf("  %-*s %d\n", labelWidth, "Before AllEntries:", pre.AllEntries)
 	fmt.Printf("  %-*s %d\n", labelWidth, "After AllEntries:", post.AllEntries)
-	if pre.Error != nil || post.Error != nil || ctx.Result.Error != nil {
-		fmt.Println()
-	}
-	if ctx.Result != nil && ctx.Result.Error != nil {
-		fmt.Printf("  %-*s %s\n", labelWidth, "Agent execution:", ctx.Result.Error)
-	}
-	if pre.Error != nil {
-		fmt.Printf("  %-*s %s\n", labelWidth, "Pre-validation:", pre.Error.Error())
-	}
-	if post.Error != nil {
-		fmt.Printf("  %-*s %s\n", labelWidth, "Post-validation:", post.Error.Error())
-	}
-	fmt.Println()
+	PrintAgentRunStatus(ctx)
 	flushStdout()
 }

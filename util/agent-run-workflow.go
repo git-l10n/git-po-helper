@@ -3,6 +3,7 @@
 package util
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
@@ -41,6 +42,65 @@ func (ctx *AgentRunContext) PostValidationError() error {
 		return ctx.PostCheckResult.Error
 	}
 	return nil
+}
+
+// Success returns true when no error in PreCheck, PostCheck, or AgentRun (Result.Error).
+// Use this instead of checking Score; Score() is derived from Success() and ReviewResult.
+func (ctx *AgentRunContext) Success() bool {
+	if ctx == nil {
+		return false
+	}
+	if ctx.PreCheckResult != nil && ctx.PreCheckResult.Error != nil {
+		return false
+	}
+	if ctx.PostCheckResult != nil && ctx.PostCheckResult.Error != nil {
+		return false
+	}
+	if ctx.Result != nil && ctx.Result.Error != nil {
+		return false
+	}
+	return true
+}
+
+// GetScore returns 0 when !Success(); when Success(), returns 100 for update-pot/update-po/translate,
+// or ReviewResult.GetScore() for review. Caller may ignore the error and treat as 0.
+func (ctx *AgentRunContext) GetScore() (int, error) {
+	if !ctx.Success() {
+		return 0, nil
+	}
+	if ctx.Result != nil && ctx.Result.ReviewResult != nil {
+		return ctx.Result.ReviewResult.GetScore()
+	}
+	return 100, nil
+}
+
+// PrintAgentRunStatus prints the run status line (✅ Execution succeeded or ❌ Error found)
+// and, when any error is present, the Agent execution / Pre-validation / Post-validation lines.
+// Use this at the end of each workflow Report() to avoid duplicated status blocks.
+func PrintAgentRunStatus(ctx *AgentRunContext) {
+	if ctx == nil {
+		return
+	}
+	w := ReportLabelWidth
+	if ctx.Success() {
+		fmt.Println()
+		fmt.Printf("✅ Execution succeeded\n")
+		fmt.Println()
+	} else {
+		fmt.Println()
+		fmt.Printf("❌ Error found\n")
+		fmt.Println()
+		if ctx.Result != nil && ctx.Result.Error != nil {
+			fmt.Printf("  %-*s %s\n", w, "Agent execution:", ctx.Result.Error)
+		}
+		if ctx.PreCheckResult != nil && ctx.PreCheckResult.Error != nil {
+			fmt.Printf("  %-*s %s\n", w, "Pre-validation:", ctx.PreCheckResult.Error.Error())
+		}
+		if ctx.PostCheckResult != nil && ctx.PostCheckResult.Error != nil {
+			fmt.Printf("  %-*s %s\n", w, "Post-validation:", ctx.PostCheckResult.Error.Error())
+		}
+	}
+	fmt.Println()
 }
 
 // EntryCountBeforeUpdate returns PO/POT entry count before update from ctx.
@@ -119,16 +179,13 @@ func RunAgentRunWorkflow(wf AgentRunWorkflow) error {
 	}
 	ctx := wf.InitContext(cfg)
 	if ctx.Result == nil {
-		ctx.Result = &AgentRunResult{Score: 0}
+		ctx.Result = &AgentRunResult{}
 	}
 	start := time.Now()
 	if err := wf.PreCheck(ctx); err != nil {
 		return err
 	}
 	err = wf.AgentRun(ctx)
-	if ctx.Result == nil {
-		ctx.Result = &AgentRunResult{Score: 0}
-	}
 	ctx.Result.Error = err
 	ctx.Result.ExecutionTime = time.Since(start)
 	// Print agent diagnostics from ctx.Result before workflow Report (fields filled by GetAgentDiagnostics during AgentRun).

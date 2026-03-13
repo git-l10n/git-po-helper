@@ -37,7 +37,7 @@ func (w *workflowTranslate) InitContext(cfg *config.AgentConfig) *AgentRunContex
 		PoFile:                w.poFile,
 		UseLocalOrchestration: w.useLocalOrchestration,
 		BatchSize:             w.batchSize,
-		Result:                &AgentRunResult{Score: 0},
+		Result:                &AgentRunResult{},
 		PreCheckResult:        &PreCheckResult{},
 		PostCheckResult:       &PostCheckResult{},
 	}
@@ -78,7 +78,7 @@ func (w *workflowTranslate) AgentRun(ctx *AgentRunContext) error {
 	// Dispatch only; stats printing is deferred to Report so agent-test can keep using RunAgentTranslate.
 	result, err := runAgentTranslateDispatch(ctx.Cfg, ctx.AgentName, ctx.PoFile, ctx.UseLocalOrchestration, ctx.BatchSize)
 	if result == nil {
-		result = &AgentRunResult{Score: 0}
+		result = &AgentRunResult{}
 	}
 	// Single assignment from dispatch; PreCheckResult already set in PreCheck.
 	*ctx.Result = *result
@@ -104,20 +104,14 @@ func (w *workflowTranslate) PostCheck(ctx *AgentRunContext) error {
 	log.Infof("fuzzy entries after translation: %d", statsAfter.Fuzzy)
 
 	if statsAfter.Untranslated != 0 || statsAfter.Fuzzy != 0 {
-		ctx.PostCheckResult.Score = 0
-		ctx.Result.Score = 0
 		ctx.PostCheckResult.Error = fmt.Errorf("post-validation: translation incomplete: %d new entries and %d fuzzy entries remaining", statsAfter.Untranslated, statsAfter.Fuzzy)
 		return ctx.PostCheckResult.Error
 	}
 
-	ctx.PostCheckResult.Score = 100
-	ctx.Result.Score = 100
 	log.Infof("post-validation passed: all entries translated")
 
 	log.Infof("validating file syntax: %s", poFile)
 	if err := ValidatePoFile(poFile); err != nil {
-		ctx.PostCheckResult.Score = 0
-		ctx.Result.Score = 0
 		ctx.PostCheckResult.Error = fmt.Errorf("post-validation: file syntax validation failed: %v", err)
 		return ctx.PostCheckResult.Error
 	} else {
@@ -145,9 +139,6 @@ func (w *workflowTranslate) Report(ctx *AgentRunContext) {
 		fmt.Printf("  %-*s %d\n", labelWidth, "Before translated:", beforeTranslated)
 		fmt.Printf("  %-*s %d\n", labelWidth, "Before untranslated:", pre.UntranslatePoEntries)
 		fmt.Printf("  %-*s %d\n", labelWidth, "Before fuzzy:", pre.FuzzyPoEntries)
-		if pre.Error != nil {
-			fmt.Printf("  %-*s %s\n", labelWidth, "Pre-validation:", pre.Error.Error())
-		}
 	}
 	if post != nil {
 		fmt.Println()
@@ -158,14 +149,7 @@ func (w *workflowTranslate) Report(ctx *AgentRunContext) {
 		fmt.Printf("  %-*s %d\n", labelWidth, "After translated:", afterTranslated)
 		fmt.Printf("  %-*s %d\n", labelWidth, "After untranslated:", post.UntranslatePoEntries)
 		fmt.Printf("  %-*s %d\n", labelWidth, "After fuzzy:", post.FuzzyPoEntries)
-		if post.Error != nil {
-			fmt.Printf("  %-*s %s\n", labelWidth, "Post-validation:", post.Error.Error())
-		}
 	}
-	if ctx.Result.Error != nil {
-		fmt.Println()
-		fmt.Printf("  %-*s %s\n", labelWidth, "Agent execution:", ctx.Result.Error)
-	}
-	fmt.Println()
+	PrintAgentRunStatus(ctx)
 	flushStdout()
 }

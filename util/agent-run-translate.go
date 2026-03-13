@@ -17,7 +17,7 @@ import (
 // after the run (used by agent-test). Dispatches to RunAgentTranslateLocalOrchestration
 // or RunAgentTranslatePromptOrchestration.
 func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentTest, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
-	result := &AgentRunResult{Score: 0}
+	result := &AgentRunResult{}
 	rel, err := GuessPoFilePath(cfg, poFile)
 	if err != nil {
 		return result, err
@@ -35,7 +35,7 @@ func RunAgentTranslate(cfg *config.AgentConfig, agentName, poFile string, agentT
 
 	result, agentErr := runAgentTranslateDispatch(cfg, agentName, poFile, useLocalOrchestration, batchSize)
 	if result == nil {
-		result = &AgentRunResult{Score: 0}
+		result = &AgentRunResult{}
 	}
 	// Non-workflow path: print diagnostics here (workflow prints before Report).
 	PrintAgentDiagnosticsFromResult(result)
@@ -75,7 +75,7 @@ func runAgentTranslateDispatch(cfg *config.AgentConfig, agentName, poFile string
 // with the full/extracted PO as source and running the agent.
 func RunAgentTranslatePromptOrchestration(cfg *config.AgentConfig, agentName, poFile string) (*AgentRunResult, error) {
 	startTime := time.Now()
-	result := &AgentRunResult{Score: 0}
+	result := &AgentRunResult{}
 
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {

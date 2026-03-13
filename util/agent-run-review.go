@@ -88,7 +88,7 @@ func buildReviewUseAgentMdPrompt(target *CompareTarget) string {
 func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) (*AgentRunResult, *AgentRunContext, error) {
 	result, agentErr := runAgentReviewDispatch(cfg, agentName, target, useLocalOrchestration, batchSize)
 	if result == nil {
-		result = &AgentRunResult{Score: 0}
+		result = &AgentRunResult{}
 	}
 	ctx := &AgentRunContext{Result: result, UseLocalOrchestration: useLocalOrchestration}
 	NewWorkflowReview(agentName, target, useLocalOrchestration, batchSize).PostCheck(ctx)
@@ -116,7 +116,7 @@ func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string
 		workDir = "."
 	}
 	startTime := time.Now()
-	result := &AgentRunResult{Score: 0}
+	result := &AgentRunResult{}
 
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {
@@ -173,13 +173,12 @@ func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string
 	}
 
 	result.ReviewResult = reportResult
+	result.ExecutionTime = time.Since(startTime)
+
 	score, err := reportResult.GetScore()
 	if err != nil {
 		return result, fmt.Errorf("review score: %w", err)
 	}
-	result.Score = score
-	result.ExecutionTime = time.Since(startTime)
-
 	totalEntries, _ := reportResult.GetTotalEntries()
 	log.Infof("review completed (score: %d/100, total entries: %d, issues: %d)",
 		score, totalEntries, len(reportResult.Issues))

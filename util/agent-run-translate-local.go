@@ -33,7 +33,7 @@ const (
 //	Step 6: repeat from Step 1 until l10n-pending.po is empty
 func RunAgentTranslateLocalOrchestration(cfg *config.AgentConfig, agentName, poFile string, batchSize int) (*AgentRunResult, error) {
 	startTime := time.Now()
-	result := &AgentRunResult{Score: 0}
+	result := &AgentRunResult{}
 
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {
@@ -77,7 +77,6 @@ func RunAgentTranslateLocalOrchestration(cfg *config.AgentConfig, agentName, poF
 			if entryCount == 0 {
 				log.Infof("no untranslated or fuzzy entries, translation complete")
 				cleanupIntermediateFiles(poDir)
-				result.Score = 100
 				result.ExecutionTime = time.Since(startTime)
 				return result, nil
 			}

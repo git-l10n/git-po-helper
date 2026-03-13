@@ -80,19 +80,17 @@ type AgentTestLoopHooks interface {
 // ReportOutput filled when reportWriter is a *bytes.Buffer (caller reads .String()).
 func runAgentTestSingleLoop(wf AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *config.AgentConfig, runNum, totalRuns int, reportWriter io.Writer) TestRunResult {
 	var (
-		ctx    = wf.InitContext(cfg)
-		runErr error
-		tr     = TestRunResult{
+		ctx = wf.InitContext(cfg)
+		tr  = TestRunResult{
 			AgentRunResult: *ctx.Result,
 			RunNumber:      runNum,
-			RunError:       runErr,
 			Ctx:            ctx,
 		}
 	)
 
 	iterStart := time.Now()
 	if ctx.Result == nil {
-		ctx.Result = &AgentRunResult{Score: 0}
+		ctx.Result = &AgentRunResult{}
 	}
 
 	if err := hooks.CleanupBeforeLoop(ctx, runNum, totalRuns); err != nil {
@@ -107,11 +105,9 @@ func runAgentTestSingleLoop(wf AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *
 		if ctx.PreCheckResult.Error == nil {
 			ctx.PreCheckResult.Error = preErr
 		}
-		ctx.Result.Score = 0
 	}
 
 	if valErr := hooks.ValidateAfterPreCheck(ctx, cfg); valErr != nil {
-		ctx.Result.Score = 0
 		if ctx.PreCheckResult == nil {
 			ctx.PreCheckResult = &PreCheckResult{}
 		}
@@ -120,23 +116,12 @@ func runAgentTestSingleLoop(wf AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *
 		}
 	}
 
-	var agentErr error
 	if ctx.PreValidationError() == nil {
-		agentErr = wf.AgentRun(ctx)
-		if ctx.Result != nil {
-			ctx.Result.Error = agentErr
-		}
-		if agentErr != nil {
-			ctx.Result.Score = 0
-		}
-	} else {
-		agentErr = ctx.PreValidationError()
+		// Only call AgentRun if PreCheck passed
+		ctx.Result.Error = wf.AgentRun(ctx)
 	}
 
 	_ = wf.PostCheck(ctx)
-	if ctx.PostValidationError() != nil {
-		ctx.Result.Score = 0
-	}
 
 	if valErr := hooks.ValidateAfterPostCheck(ctx, cfg); valErr != nil {
 		if ctx.PostCheckResult == nil {
@@ -145,25 +130,14 @@ func runAgentTestSingleLoop(wf AgentRunWorkflow, hooks AgentTestLoopHooks, cfg *
 		if ctx.PostCheckResult.Error == nil {
 			ctx.PostCheckResult.Error = valErr
 		}
-		ctx.PostCheckResult.Score = 0
-		ctx.Result.Score = 0
 	}
 
 	runReportWithWriter(wf, ctx, reportWriter, runNum, totalRuns)
-
-	runErr = agentErr
-	if runErr == nil && ctx.PreValidationError() != nil {
-		runErr = ctx.PreValidationError()
-	}
-	if runErr == nil && ctx.PostValidationError() != nil {
-		runErr = ctx.PostValidationError()
-	}
 
 	if ctx.Result != nil {
 		tr.AgentRunResult = *ctx.Result
 	}
 	tr.ExecutionTime = time.Since(iterStart)
-	tr.RunError = runErr
 	if buf, ok := reportWriter.(*bytes.Buffer); ok {
 		tr.ReportOutput = buf.String()
 	}

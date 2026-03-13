@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -47,16 +48,35 @@ func formatDuration(d time.Duration) string {
 }
 
 // TestRunResult holds the result of a single test run.
-// It embeds AgentRunResult so agent-run fields (Score, etc.)
+// It embeds AgentRunResult so agent-run fields (Error, ReviewResult, NumTurns, etc.)
 // are inherited; RunNumber is test-specific.
 // Ctx holds PreCheckResult/PostCheckResult for display.
 // ReportOutput holds captured stdout from workflow Report when agent-test runs with a buffer.
 type TestRunResult struct {
 	AgentRunResult
 	RunNumber    int              // Test run index (1-based)
-	RunError     error            // Error from agent run, for display when run fails
 	Ctx          *AgentRunContext // Context after PreCheck/AgentRun/PostCheck
 	ReportOutput string           // Captured Report output when run via agent-test loop (optional)
+}
+
+// Success returns true when Ctx.Success() (or, if Ctx is nil, when Result.Error is nil).
+func (r *TestRunResult) Success() bool {
+	if r.Ctx != nil {
+		return r.Ctx.Success()
+	}
+	return r.Error == nil
+}
+
+// Score returns 0 when !Success(); when Success(), 100 for update-pot/update-po/translate,
+// or ReviewResult.GetScore() for review. Caller may ignore error and treat as 0.
+func (r *TestRunResult) Score() (int, error) {
+	if !r.Success() {
+		return 0, nil
+	}
+	if r.ReviewResult != nil {
+		return r.ReviewResult.GetScore()
+	}
+	return 100, nil
 }
 
 // AverageScoreFromResults returns the average Score of results (0 if empty).
@@ -65,8 +85,9 @@ func AverageScoreFromResults(results []TestRunResult) float64 {
 		return 0
 	}
 	sum := 0
-	for _, r := range results {
-		sum += r.Score
+	for i := range results {
+		s, _ := results[i].Score()
+		sum += s
 	}
 	return float64(sum) / float64(len(results))
 }
@@ -78,8 +99,6 @@ func AverageScoreFromResults(results []TestRunResult) float64 {
 func PrintAgentTestSummaryReport(results []TestRunResult, elapsed time.Duration) {
 	runs := len(results)
 	successCount := 0
-	preValidationFailures := 0
-	postValidationFailures := 0
 	var totalNumTurns int
 	var totalExecutionTime time.Duration
 	if runs == 0 {
@@ -90,18 +109,27 @@ func PrintAgentTestSummaryReport(results []TestRunResult, elapsed time.Duration)
 	var runScores []string
 	var numTurnsStrs []string
 	var executionTimeStrs []string
+	uniqueErrors := make(map[string]struct{}) // dedupe by error string
 	for _, result := range results {
-		runScores = append(runScores, fmt.Sprintf("%d", result.Score))
+		s, _ := result.Score()
+		runScores = append(runScores, fmt.Sprintf("%d", s))
 		numTurnsStrs = append(numTurnsStrs, fmt.Sprintf("%d", result.NumTurns))
 		executionTimeStrs = append(executionTimeStrs, formatDuration(result.ExecutionTime))
-		if result.Score == 100 {
+		if result.Success() {
 			successCount++
-		}
-		if result.Ctx != nil && result.Ctx.PreValidationError() != nil {
-			preValidationFailures++
-		}
-		if result.Ctx != nil && result.Ctx.PostValidationError() != nil {
-			postValidationFailures++
+		} else {
+			// Collect the three error types from this result, dedupe by message
+			if result.Error != nil {
+				uniqueErrors[result.Error.Error()] = struct{}{}
+			}
+			if result.Ctx != nil {
+				if result.Ctx.PreCheckResult != nil && result.Ctx.PreCheckResult.Error != nil {
+					uniqueErrors[result.Ctx.PreCheckResult.Error.Error()] = struct{}{}
+				}
+				if result.Ctx.PostCheckResult != nil && result.Ctx.PostCheckResult.Error != nil {
+					uniqueErrors[result.Ctx.PostCheckResult.Error.Error()] = struct{}{}
+				}
+			}
 		}
 		totalNumTurns += result.NumTurns
 		totalExecutionTime += result.ExecutionTime
@@ -109,8 +137,12 @@ func PrintAgentTestSummaryReport(results []TestRunResult, elapsed time.Duration)
 
 	labelWidth := ReportLabelWidth
 	fmt.Printf("  %-*s %d\n", labelWidth, "Total runs:", runs)
-	fmt.Printf("  %-*s %d ✅\n", labelWidth, "Successful runs:", successCount)
-	fmt.Printf("  %-*s %d ❌\n", labelWidth, "Failed runs:", runs-successCount)
+	if successCount > 0 {
+		fmt.Printf("  %-*s %d ✅\n", labelWidth, "Successful runs:", successCount)
+	}
+	if runs-successCount > 0 {
+		fmt.Printf("  %-*s %d ❌\n", labelWidth, "Failed runs:", runs-successCount)
+	}
 	fmt.Println()
 	fmt.Printf("  %-*s %d (%s)\n", labelWidth, "Avg Num turns:",
 		totalNumTurns/runs, strings.Join(numTurnsStrs, ", "))
@@ -119,11 +151,19 @@ func PrintAgentTestSummaryReport(results []TestRunResult, elapsed time.Duration)
 	fmt.Printf("  %-*s %.0f/100 (%s)\n", labelWidth, "Average score:",
 		AverageScoreFromResults(results), strings.Join(runScores, ", "))
 	fmt.Println()
-	if preValidationFailures > 0 {
-		fmt.Printf("  %-*s %d\n", labelWidth, "Pre-validation failures:", preValidationFailures)
-	}
-	if postValidationFailures > 0 {
-		fmt.Printf("  %-*s %d\n", labelWidth, "Post-validation failures:", postValidationFailures)
+	if len(uniqueErrors) > 0 {
+		errStrs := make([]string, 0, len(uniqueErrors))
+		for s := range uniqueErrors {
+			errStrs = append(errStrs, s)
+		}
+		sort.Strings(errStrs)
+		fmt.Println()
+		fmt.Printf("  ❌ Error found\n")
+		fmt.Println()
+		for _, errStr := range errStrs {
+			fmt.Printf("  %-*s %s\n", labelWidth, "Error:", errStr)
+		}
+		fmt.Println()
 	}
 	fmt.Printf("  %-*s %s\n", labelWidth, "Total Elapsed Time:", formatDuration(elapsed))
 	fmt.Println()

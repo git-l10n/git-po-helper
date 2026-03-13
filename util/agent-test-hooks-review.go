@@ -40,26 +40,24 @@ func (agentTestHooksReview) PostProcess(results []TestRunResult, cfg *config.Age
 
 	for i := range results {
 		result := &results[i]
-		if result.RunError != nil {
-			log.Errorf("loop %d: agent-run returned error: %v", result.RunNumber, result.RunError)
-			result.Score = 0
+		if result.Error != nil {
+			log.Errorf("loop %d: agent-run returned error: %v", result.RunNumber, result.Error)
 			continue
 		}
 		if result.Ctx != nil && result.Ctx.PostValidationError() != nil {
-			result.Score = 0
 			continue
 		}
 		if result.ReviewResult != nil {
 			reviewJSONs = append(reviewJSONs, result.ReviewResult)
+			score, _ := result.Score()
 			totalEntries, _ := result.ReviewResult.GetTotalEntries()
 			log.Infof("loop %d: review score: %d (total_entries=%d, issues=%d)",
 				result.RunNumber,
-				result.Score,
+				score,
 				totalEntries,
 				len(result.ReviewResult.Issues))
 		} else {
 			log.Warnf("loop %d: no report returned", result.RunNumber)
-			result.Score = 0
 		}
 	}
 
@@ -96,8 +94,14 @@ func (agentTestHooksReview) PostProcess(results []TestRunResult, cfg *config.Age
 func (agentTestHooksReview) ReportSummary(results []TestRunResult, cfg *config.AgentConfig, postResult interface{}) {
 	var runScores []string
 	w := ReportLabelWidth
-	for _, res := range results {
-		runScores = append(runScores, fmt.Sprintf("%d", res.Score))
+	for _, result := range results {
+		status := "FAIL"
+		if result.Success() {
+			status = "PASS"
+		}
+		s, _ := result.Score()
+		fmt.Printf("  %-*s loop %d: %s (Score: %d/100)\n", w, "Run:", result.RunNumber, status, s)
+		runScores = append(runScores, fmt.Sprintf("%d", s))
 	}
 	if len(runScores) > 0 {
 		fmt.Printf("  %-*s (%s)\n", w, "Per-run scores:", strings.Join(runScores, ", "))
