@@ -28,9 +28,10 @@ const (
 //	Step 1: extract po/XX.po → l10n-pending.po (untranslated+fuzzy)
 //	Step 2: slice first batch from l10n-pending.po → l10n-todo.json
 //	Step 3a: agent translates l10n-todo.json → l10n-done.json
-//	Step 4: validate (msgid consistency + msgfmt), convert → l10n-done.po
-//	Step 5: msgcat l10n-done.po + po/XX.po → l10n-done.merged → replace po/XX.po
-//	Step 6: repeat from Step 1 until l10n-pending.po is empty
+//	Step 5: validate (msgid consistency + msgfmt), convert → l10n-done.po
+//	Step 6: msgcat l10n-done.po + po/XX.po → l10n-done.merged → replace po/XX.po; cleanup
+//	Step 7: repeat from Step 1 until l10n-pending.po is empty
+//	Step 8: when loop exits, msgfmt --check --stat on final po/XX.po, then cleanup
 func RunAgentTranslateLocalOrchestration(cfg *config.AgentConfig, agentName, poFile string, batchSize int) (*AgentRunResult, error) {
 	startTime := time.Now()
 	result := &AgentRunResult{}
@@ -76,6 +77,15 @@ func RunAgentTranslateLocalOrchestration(cfg *config.AgentConfig, agentName, poF
 			}
 			if entryCount == 0 {
 				log.Infof("no untranslated or fuzzy entries, translation complete")
+				// Step 8 (AGENTS.md): validate final PO and display report before exit
+				cmd := exec.Command("msgfmt", "--check", "--stat", "-o", os.DevNull, poFile)
+				out, err := cmd.CombinedOutput()
+				if err != nil {
+					return result, fmt.Errorf("msgfmt --check --stat failed on final %s: %w\n%s", poFile, err, string(out))
+				}
+				if len(out) > 0 {
+					log.Infof("msgfmt --stat: %s", strings.TrimSpace(string(out)))
+				}
 				cleanupIntermediateFiles(poDir)
 				result.ExecutionTime = time.Since(startTime)
 				return result, nil
@@ -395,8 +405,10 @@ func fixPoWithAgent(cfg *config.AgentConfig, selectedAgent config.AgentEntry, po
 // cleanupAfterMerge removes intermediate files after a successful batch merge.
 // pendingPO (l10n-pending.po) is deleted so the next iteration re-extracts from
 // the updated po/XX.po (AGENTS.md Task 3 Step 6: repeat from Step 1).
+// Also removes PENDING_REFER (l10n-pending.po.fuzzy.reference) per l10n_merge_batch.
 func cleanupAfterMerge(pendingPO, doneJSON, donePO, mergedFile string) {
 	os.Remove(pendingPO)
+	os.Remove(pendingPO + ".fuzzy.reference") // PENDING_REFER in AGENTS.md
 	os.Remove(doneJSON)
 	os.Remove(donePO)
 	os.Remove(mergedFile)
