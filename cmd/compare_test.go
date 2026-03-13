@@ -310,7 +310,7 @@ func runCompareWithOptions(t *testing.T, tmpDir string, stat bool, rangeArg, com
 
 	w.Close()
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	_, _ = buf.ReadFrom(r)
 	return buf.String()
 }
 

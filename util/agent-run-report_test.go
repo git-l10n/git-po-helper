@@ -97,7 +97,7 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Getwd: %v", err)
 	}
-	defer os.Chdir(origWd)
+	defer func() { _ = os.Chdir(origWd) }()
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("Chdir %s: %v", tmpDir, err)
 	}
@@ -164,7 +164,7 @@ msgstr "old"
 	if err != nil {
 		t.Fatalf("Getwd: %v", err)
 	}
-	defer os.Chdir(origWd)
+	defer func() { _ = os.Chdir(origWd) }()
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("Chdir %s: %v", tmpDir, err)
 	}
@@ -238,7 +238,7 @@ func TestReportReviewMarkdownWrappedJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Getwd: %v", err)
 	}
-	defer os.Chdir(origWd)
+	defer func() { _ = os.Chdir(origWd) }()
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("Chdir %s: %v", tmpDir, err)
 	}

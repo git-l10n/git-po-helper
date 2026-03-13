@@ -91,7 +91,7 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 		result = &AgentRunResult{}
 	}
 	ctx := &AgentRunContext{Result: result, UseLocalOrchestration: useLocalOrchestration}
-	NewWorkflowReview(agentName, target, useLocalOrchestration, batchSize).PostCheck(ctx)
+	_ = NewWorkflowReview(agentName, target, useLocalOrchestration, batchSize).PostCheck(ctx)
 	return result, ctx, agentErr
 }
 

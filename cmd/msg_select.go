@@ -94,41 +94,41 @@ Examples:
 	fs.BoolVar(&v.O.JSON, "json", false, "output JSON instead of PO text")
 	fs.StringVarP(&v.O.Output, "output", "o", "",
 		"write output to file (use - for stdout); empty output overwrites file")
-	fs.SetAnnotation("range", "group", []string{"General options"})
-	fs.SetAnnotation("head", "group", []string{"General options"})
-	fs.SetAnnotation("tail", "group", []string{"General options"})
-	fs.SetAnnotation("since", "group", []string{"General options"})
-	fs.SetAnnotation("no-header", "group", []string{"General options"})
-	fs.SetAnnotation("json", "group", []string{"General options"})
-	fs.SetAnnotation("output", "group", []string{"General options"})
+	_ = fs.SetAnnotation("range", "group", []string{"General options"})
+	_ = fs.SetAnnotation("head", "group", []string{"General options"})
+	_ = fs.SetAnnotation("tail", "group", []string{"General options"})
+	_ = fs.SetAnnotation("since", "group", []string{"General options"})
+	_ = fs.SetAnnotation("no-header", "group", []string{"General options"})
+	_ = fs.SetAnnotation("json", "group", []string{"General options"})
+	_ = fs.SetAnnotation("output", "group", []string{"General options"})
 
 	// State filter: translated, untranslated, fuzzy (OR when combined)
 	fs.BoolVar(&v.O.Translated, "translated", false, "select translated entries (msgstr not empty, not fuzzy)")
 	fs.BoolVar(&v.O.Untranslated, "untranslated", false, "select untranslated entries (msgstr empty)")
 	fs.BoolVar(&v.O.Fuzzy, "fuzzy", false, "select fuzzy entries")
-	fs.SetAnnotation("translated", "group", []string{"State filter"})
-	fs.SetAnnotation("untranslated", "group", []string{"State filter"})
-	fs.SetAnnotation("fuzzy", "group", []string{"State filter"})
+	_ = fs.SetAnnotation("translated", "group", []string{"State filter"})
+	_ = fs.SetAnnotation("untranslated", "group", []string{"State filter"})
+	_ = fs.SetAnnotation("fuzzy", "group", []string{"State filter"})
 
 	// Obsolete handling: include or exclude
 	fs.BoolVar(&v.O.WithObsolete, "with-obsolete", false, "include obsolete entries (default)")
 	fs.BoolVar(&v.O.NoObsolete, "no-obsolete", false, "exclude obsolete entries")
-	fs.SetAnnotation("with-obsolete", "group", []string{"Obsolete handling"})
-	fs.SetAnnotation("no-obsolete", "group", []string{"Obsolete handling"})
+	_ = fs.SetAnnotation("with-obsolete", "group", []string{"Obsolete handling"})
+	_ = fs.SetAnnotation("no-obsolete", "group", []string{"Obsolete handling"})
 
 	// Single-state filter: mutually exclusive with state filter above
 	fs.BoolVar(&v.O.OnlySame, "only-same", false, "only entries where msgstr equals msgid")
 	fs.BoolVar(&v.O.OnlyObsolete, "only-obsolete", false, "only obsolete entries")
-	fs.SetAnnotation("only-same", "group", []string{"Single-state filter"})
-	fs.SetAnnotation("only-obsolete", "group", []string{"Single-state filter"})
+	_ = fs.SetAnnotation("only-same", "group", []string{"Single-state filter"})
+	_ = fs.SetAnnotation("only-obsolete", "group", []string{"Single-state filter"})
 
 	// Fuzzy handling
 	fs.BoolVar(&v.O.UnsetFuzzy, "unset-fuzzy", false,
 		"remove fuzzy marker from fuzzy entries in output (keep translations)")
 	fs.BoolVar(&v.O.ClearFuzzy, "clear-fuzzy", false,
 		"remove fuzzy marker and clear msgstr for fuzzy entries (msgid/msgid_plural preserved)")
-	fs.SetAnnotation("unset-fuzzy", "group", []string{"Fuzzy handling"})
-	fs.SetAnnotation("clear-fuzzy", "group", []string{"Fuzzy handling"})
+	_ = fs.SetAnnotation("unset-fuzzy", "group", []string{"Fuzzy handling"})
+	_ = fs.SetAnnotation("clear-fuzzy", "group", []string{"Fuzzy handling"})
 
 	// Custom usage template with grouped flags
 	v.cmd.SetUsageTemplate(`Usage:{{if .Runnable}}

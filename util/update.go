@@ -37,8 +37,7 @@ func UpdatePotFile() (string, bool) {
 		showHorizontalLine()
 		log.Infof("downloading pot file from %s", PotFileURL)
 		if err := httpDownload(PotFileURL, potFile, showProgress); err != nil {
-			os.Remove(potFile)
-			potFile = ""
+			_ = os.Remove(potFile)
 			for _, msg := range []string{
 				fmt.Sprintf("fail to download latest pot file from %s.", PotFileURL),
 				"",
@@ -195,7 +194,10 @@ func CmdUpdate(fileName string) bool {
 		log.Errorf(`fail to write to "%s": %s`, tmpFile, err)
 		return false
 	}
-	os.Rename(tmpFile, poFile)
+	if err := os.Rename(tmpFile, poFile); err != nil {
+		log.Errorf(`fail to rename "%s" to "%s": %s`, tmpFile, poFile, err)
+		return false
+	}
 
 	if optNoLocation {
 		if err := cmd.Wait(); err != nil {

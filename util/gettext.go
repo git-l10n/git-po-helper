@@ -481,7 +481,7 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			idxStr := strings.TrimPrefix(trimmed, "msgstr[")
 			idxStr = strings.Split(idxStr, "]")[0]
 			var idx int
-			fmt.Sscanf(idxStr, "%d", &idx)
+			_, _ = fmt.Sscanf(idxStr, "%d", &idx)
 			// Extend slice if needed
 			for len(msgstrPluralValues) <= idx {
 				msgstrPluralValues = append(msgstrPluralValues, strings.Builder{})
@@ -613,7 +613,7 @@ func BuildPoContent(header []string, entries []*GettextEntry) []byte {
 				b.WriteString("\n")
 			}
 		} else {
-			writeGettextEntryToPO(&b, *entry)
+			_ = writeGettextEntryToPO(&b, *entry)
 		}
 		// Add blank line between entries, but not after the last one
 		if i < len(entries)-1 {
