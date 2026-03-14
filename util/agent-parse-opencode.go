@@ -45,7 +45,7 @@ func (a *opencodeAgent) BuildCommand(vars map[string]string) ([]string, error) {
 		return nil, err
 	}
 	if format, explicit := a.getExplicitOutputFormat("--format"); !explicit {
-		formatArg := format
+		var formatArg string
 		if format == config.OutputStreamJSON || format == config.OutputJSON {
 			formatArg = "json" // opencode CLI expects "json" and "default', not "stream-json"
 		} else {

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -29,23 +28,24 @@ const (
 //	Step 1: extract po/XX.po → l10n-pending.po (untranslated+fuzzy)
 //	Step 2: slice first batch from l10n-pending.po → l10n-todo.json
 //	Step 3a: agent translates l10n-todo.json → l10n-done.json
-//	Step 4: validate (msgid consistency + msgfmt), convert → l10n-done.po
-//	Step 5: msgcat l10n-done.po + po/XX.po → l10n-done.merged → replace po/XX.po
-//	Step 6: repeat from Step 1 until l10n-pending.po is empty
+//	Step 5: validate (msgid consistency + msgfmt), convert → l10n-done.po
+//	Step 6: msgcat l10n-done.po + po/XX.po → l10n-done.merged → replace po/XX.po; cleanup
+//	Step 7: repeat from Step 1 until l10n-pending.po is empty
+//	Step 8: when loop exits, msgfmt --check --stat on final po/XX.po, then cleanup
 func RunAgentTranslateLocalOrchestration(cfg *config.AgentConfig, agentName, poFile string, batchSize int) (*AgentRunResult, error) {
 	startTime := time.Now()
-	result := &AgentRunResult{Score: 0}
+	result := &AgentRunResult{}
 
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {
-		result.AgentError = err
 		return result, err
 	}
 
-	poFile, err = GetPoFileAbsPath(cfg, poFile)
+	rel, err := GuessPoFilePath(cfg, poFile)
 	if err != nil {
 		return result, err
 	}
+	poFile = rel
 
 	if !Exist(poFile) {
 		return result, fmt.Errorf("PO file does not exist: %s\nHint: Ensure the PO file exists before running translate", poFile)
@@ -77,8 +77,16 @@ func RunAgentTranslateLocalOrchestration(cfg *config.AgentConfig, agentName, poF
 			}
 			if entryCount == 0 {
 				log.Infof("no untranslated or fuzzy entries, translation complete")
+				// Step 8 (AGENTS.md): validate final PO and display report before exit
+				cmd := exec.Command("msgfmt", "--check", "--stat", "-o", os.DevNull, poFile)
+				out, err := cmd.CombinedOutput()
+				if err != nil {
+					return result, fmt.Errorf("msgfmt --check --stat failed on final %s: %w\n%s", poFile, err, string(out))
+				}
+				if len(out) > 0 {
+					log.Infof("msgfmt --stat: %s", strings.TrimSpace(string(out)))
+				}
 				cleanupIntermediateFiles(poDir)
-				result.Score = 100
 				result.ExecutionTime = time.Since(startTime)
 				return result, nil
 			}
@@ -133,7 +141,7 @@ func generatePendingPO(poFile, pendingPO string, filter *EntryStateFilter) error
 }
 
 func countContentEntries(poFile string) (int, error) {
-	total, err := countMsgidEntriesInFile(poFile)
+	total, err := CountMsgidEntries(poFile)
 	if err != nil {
 		return 0, err
 	}
@@ -141,40 +149,6 @@ func countContentEntries(poFile string) (int, error) {
 		total-- // exclude header
 	}
 	return total, nil
-}
-
-func countMsgidEntriesInFile(path string) (int, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0, err
-	}
-	count := 0
-	for _, line := range strings.Split(string(data), "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), "msgid ") {
-			count++
-		}
-	}
-	return count, nil
-}
-
-// batchSizeFromFormula returns the number of entries to process in one batch.
-// Aligns with AGENTS.md Task 3 Step 2 (l10n_one_batch) formula:
-//
-//	entryCount <= minBatchSize          → process all
-//	entryCount > minBatchSize*8         → minBatchSize * 2
-//	entryCount > minBatchSize*4         → minBatchSize + minBatchSize/2
-//	otherwise                           → minBatchSize
-func batchSizeFromFormula(entryCount, minBatchSize int) int {
-	if entryCount <= minBatchSize {
-		return entryCount
-	}
-	if entryCount > minBatchSize*8 {
-		return minBatchSize * 2
-	}
-	if entryCount > minBatchSize*4 {
-		return minBatchSize + minBatchSize/2
-	}
-	return minBatchSize
 }
 
 // generateOneBatchJSON slices the first batch from pendingPO and writes it as l10n-todo.json.
@@ -188,7 +162,7 @@ func generateOneBatchJSON(pendingPO, todoJSON string, minBatchSize int) error {
 		return nil
 	}
 
-	num := batchSizeFromFormula(entryCount, minBatchSize)
+	num := CalcBatchSize(entryCount, minBatchSize)
 	var rangeSpec string
 	if num >= entryCount {
 		rangeSpec = "1-"
@@ -218,7 +192,10 @@ func translateOneBatch(cfg *config.AgentConfig, selectedAgent config.AgentEntry,
 		return err
 	}
 
-	workDir := repository.WorkDirOrCwd()
+	workDir, _ := os.Getwd()
+	if workDir == "" {
+		workDir = "."
+	}
 	sourceRel, _ := filepath.Rel(workDir, todoJSON)
 	destRel, _ := filepath.Rel(workDir, doneJSON)
 	if sourceRel == "" || sourceRel == "." {
@@ -245,19 +222,19 @@ func translateOneBatch(cfg *config.AgentConfig, selectedAgent config.AgentEntry,
 	if err != nil {
 		return fmt.Errorf("failed to build agent command: %w", err)
 	}
+	// Align with RunAgentTranslate prompt path: mark executed before RunAgentAndParse.
+	result.AgentExecuted = true
 	log.Infof("translating: %s -> %s (output=%s, streaming=%v)", sourceRel, destRel, outputFormat,
 		outputFormat == config.OutputJSON || outputFormat == config.OutputStreamJSON)
-	result.AgentExecuted = true
 
 	_, _, stderr, streamResult, execErr := RunAgentAndParse(agentCmd, outputFormat, selectedAgent.Kind)
 	if execErr != nil {
 		if len(stderr) > 0 {
 			log.Debugf("agent stderr: %s", string(stderr))
 		}
-		result.AgentError = execErr
 		return fmt.Errorf("agent failed: %w", execErr)
 	}
-	applyAgentDiagnostics(result, streamResult)
+	GetAgentDiagnostics(result, streamResult)
 
 	if !Exist(doneJSON) {
 		return fmt.Errorf("agent did not create output file %s\nHint: The agent must write the translated JSON to {{.dest}}", destRel)
@@ -383,7 +360,10 @@ func fixPoWithAgent(cfg *config.AgentConfig, selectedAgent config.AgentEntry, po
 		return fmt.Errorf("fix-po prompt not configured: %w", err)
 	}
 
-	workDir := repository.WorkDirOrCwd()
+	workDir, _ := os.Getwd()
+	if workDir == "" {
+		workDir = "."
+	}
 	sourceRel, _ := filepath.Rel(workDir, poFile)
 	if sourceRel == "" || sourceRel == "." {
 		sourceRel = poFile
@@ -415,10 +395,9 @@ func fixPoWithAgent(cfg *config.AgentConfig, selectedAgent config.AgentEntry, po
 		if len(stderr) > 0 {
 			log.Debugf("agent stderr: %s", string(stderr))
 		}
-		result.AgentError = execErr
 		return fmt.Errorf("agent fix failed: %w", execErr)
 	}
-	applyAgentDiagnostics(result, streamResult)
+	GetAgentDiagnostics(result, streamResult)
 	log.Infof("agent completed fix, re-validating with msgfmt")
 	return nil
 }
@@ -426,8 +405,10 @@ func fixPoWithAgent(cfg *config.AgentConfig, selectedAgent config.AgentEntry, po
 // cleanupAfterMerge removes intermediate files after a successful batch merge.
 // pendingPO (l10n-pending.po) is deleted so the next iteration re-extracts from
 // the updated po/XX.po (AGENTS.md Task 3 Step 6: repeat from Step 1).
+// Also removes PENDING_REFER (l10n-pending.po.fuzzy.reference) per l10n_merge_batch.
 func cleanupAfterMerge(pendingPO, doneJSON, donePO, mergedFile string) {
 	os.Remove(pendingPO)
+	os.Remove(pendingPO + ".fuzzy.reference") // PENDING_REFER in AGENTS.md
 	os.Remove(doneJSON)
 	os.Remove(donePO)
 	os.Remove(mergedFile)

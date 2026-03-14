@@ -199,14 +199,14 @@ func TestGetDefaultConfig(t *testing.T) {
 	if !strings.Contains(config.Prompt.Translate, "{{.source}}") {
 		t.Fatalf("Translate should contain '{{.source}}', got '%s'", config.Prompt.Translate)
 	}
-	if config.Prompt.Review == "" {
+	if config.Prompt.LocalOrchestrationReview == "" {
 		t.Fatal("Review should not be empty")
 	}
-	if !strings.Contains(config.Prompt.Review, "{{.source}}") {
-		t.Fatalf("Review should contain '{{.source}}', got '%s'", config.Prompt.Review)
+	if !strings.Contains(config.Prompt.LocalOrchestrationReview, "{{.source}}") {
+		t.Fatalf("Review should contain '{{.source}}', got '%s'", config.Prompt.LocalOrchestrationReview)
 	}
-	if !strings.Contains(config.Prompt.Review, "JSON") {
-		t.Fatalf("Review should contain 'JSON' (extended prompt), got '%s'", config.Prompt.Review)
+	if !strings.Contains(config.Prompt.LocalOrchestrationReview, "JSON") {
+		t.Fatalf("Review should contain 'JSON' (extended prompt), got '%s'", config.Prompt.LocalOrchestrationReview)
 	}
 
 	// Check agent-test defaults

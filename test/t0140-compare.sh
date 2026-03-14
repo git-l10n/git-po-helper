@@ -70,8 +70,8 @@ test_expect_success "compare --json: output JSON when there are new/changed entr
 	# 2. 检查是否有 entries 字段
 	jq -e "has(\"entries\")" out.json &&
 
-		# 4. 检查 Hello -> 您好
-	jq -e ".entries[] | select(.msgid == \"Hello\") | .msgstr == \"您好\"" out.json  &&
+		# 4. 检查 Hello -> 您好 (msgstr is JSON array)
+	jq -e ".entries[] | select(.msgid == \"Hello\") | .msgstr == [\"您好\"]" out.json  &&
 
 	# 5. 检查 New entry 是否存在
 	jq -e ".entries[] | select(.msgid == \"New entry\")" out.json

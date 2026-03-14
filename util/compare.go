@@ -20,21 +20,15 @@ func GettextEntriesEqual(e1, e2 *GettextEntry) bool {
 	if e1.MsgID != e2.MsgID {
 		return false
 	}
-	if e1.MsgStr != e2.MsgStr {
+	if len(e1.MsgStr) != len(e2.MsgStr) {
 		return false
 	}
-	if e1.MsgIDPlural != e2.MsgIDPlural {
-		return false
-	}
-	if len(e1.MsgStrPlural) != len(e2.MsgStrPlural) {
-		return false
-	}
-	for i := range e1.MsgStrPlural {
-		if e1.MsgStrPlural[i] != e2.MsgStrPlural[i] {
+	for i := range e1.MsgStr {
+		if e1.MsgStr[i] != e2.MsgStr[i] {
 			return false
 		}
 	}
-	return true
+	return e1.MsgIDPlural == e2.MsgIDPlural
 }
 
 // CompareGettextEntries compares old and new GettextJSON. Returns DiffStat and

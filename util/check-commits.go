@@ -359,8 +359,8 @@ func checkCommits(commits ...string) bool {
 			changes        []string
 			notL10nChanges []string
 			l10nChanges    []string
-			ok             = true
-			brk            = false
+			ok             bool
+			brk            bool
 		)
 
 		changes, ok = getCommitChanges(commit)

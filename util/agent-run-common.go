@@ -12,115 +12,113 @@ import (
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/repository"
+	"github.com/git-l10n/git-po-helper/flag"
 	log "github.com/sirupsen/logrus"
 )
 
-// getRelativePath converts an absolute path to a path relative to the current directory.
-// If conversion fails, returns the original absolute path as fallback.
-func getRelativePath(absPath string) string {
-	if absPath == "" {
-		return ""
-	}
-	cwd, err := os.Getwd()
+// LoadAgentConfigForCmd loads agent configuration from the standard location
+// (flag.AgentConfigFile()). On failure returns an error wrapped with a consistent
+// hint for missing or invalid git-po-helper.yaml.
+func LoadAgentConfigForCmd() (*config.AgentConfig, error) {
+	log.Debugf("loading agent configuration")
+	cfg, err := config.LoadAgentConfig(flag.AgentConfigFile())
 	if err != nil {
-		return absPath // fallback to absolute path
+		return nil, fmt.Errorf("failed to load agent configuration: %w\nHint: Ensure git-po-helper.yaml exists in repository root or user home directory", err)
 	}
-	relPath, err := filepath.Rel(cwd, absPath)
+	return cfg, nil
+}
+
+// CountMsgidEntries counts the number of msgid entries in a PO file by counting
+// lines that start with "msgid "
+func CountMsgidEntries(filePath string) (int, error) {
+	file, err := os.Open(filePath)
 	if err != nil {
-		return absPath // fallback to absolute path
+		return 0, fmt.Errorf("failed to open file %s: %w", filePath, err)
 	}
-	return relPath
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	count := 0
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "msgid ") {
+			count++
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, fmt.Errorf("error reading file %s: %w", filePath, err)
+	}
+	return count, nil
+}
+
+// CalcBatchSize returns the batch size for the given entryCount and minBatchSize,
+// following the AGENTS.md formula exactly.
+func CalcBatchSize(entryCount, minBatchSize int) int {
+	if entryCount > minBatchSize*8 {
+		return minBatchSize * 2
+	}
+	if entryCount > minBatchSize*4 {
+		return minBatchSize + minBatchSize/2
+	}
+	if entryCount > minBatchSize {
+		return minBatchSize
+	}
+	return entryCount
+}
+
+// validateEntryCount is the internal implementation for POT/PO entry count validation.
+// filePath is used in error messages. stage is "before update" or "after update".
+func validateEntryCount(filePath string, expectedCount *int, stage string) error {
+	if expectedCount == nil || *expectedCount == 0 {
+		return nil
+	}
+
+	fileExists := Exist(filePath)
+	var actualCount int
+	var err error
+
+	if !fileExists {
+		if stage == "before update" {
+			actualCount = 0
+			log.Debugf("file %s does not exist, treating entry count as 0 for %s validation", filePath, stage)
+		} else {
+			return fmt.Errorf("file does not exist %s: %s\nHint: The agent should have created the file", stage, filePath)
+		}
+	} else {
+		var stats *PoStats
+		stats, err = GetPoStats(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to count entries %s in %s: %w", stage, filePath, err)
+		}
+		actualCount = stats.Total()
+	}
+
+	if actualCount != *expectedCount {
+		return fmt.Errorf("entry count %s: expected %d, got %d (file: %s)", stage, *expectedCount, actualCount, filePath)
+	}
+
+	log.Debugf("entry count %s validation passed: %d entries", stage, actualCount)
+	return nil
 }
 
 // ValidatePotEntryCount validates the entry count in a POT file.
 // If expectedCount is nil or 0, validation is disabled and the function returns nil.
-// Otherwise, it counts entries using CountReportStats() and compares with expectedCount.
+// Otherwise, it counts entries using GetPoStats() and compares with expectedCount.
 // Returns an error if counts don't match, nil if they match or validation is disabled.
 // The stage parameter is used for error messages ("before update" or "after update").
 // For "before update" stage, if the file doesn't exist, the entry count is treated as 0.
 func ValidatePotEntryCount(potFile string, expectedCount *int, stage string) error {
-	// If expectedCount is nil or 0, validation is disabled
-	if expectedCount == nil || *expectedCount == 0 {
-		return nil
-	}
-
-	// Check if file exists
-	fileExists := Exist(potFile)
-	var actualCount int
-	var err error
-
-	if !fileExists {
-		// For "before update" stage, treat missing file as 0 entries
-		if stage == "before update" {
-			actualCount = 0
-			log.Debugf("file %s does not exist, treating entry count as 0 for %s validation", potFile, stage)
-		} else {
-			// For "after update" stage, file should exist
-			return fmt.Errorf("file does not exist %s: %s\nHint: The agent should have created the file", stage, potFile)
-		}
-	} else {
-		// Count entries in POT file
-		var stats *PoReportStats
-		stats, err = CountReportStats(potFile)
-		if err != nil {
-			return fmt.Errorf("failed to count entries %s in %s: %w", stage, potFile, err)
-		}
-		actualCount = stats.Total()
-	}
-
-	// Compare with expected count
-	if actualCount != *expectedCount {
-		return fmt.Errorf("entry count %s: expected %d, got %d (file: %s)", stage, *expectedCount, actualCount, potFile)
-	}
-
-	log.Debugf("entry count %s validation passed: %d entries", stage, actualCount)
-	return nil
+	return validateEntryCount(potFile, expectedCount, stage)
 }
 
 // ValidatePoEntryCount validates the entry count in a PO file.
 // If expectedCount is nil or 0, validation is disabled and the function returns nil.
-// Otherwise, it counts entries using CountReportStats() and compares with expectedCount.
+// Otherwise, it counts entries using GetPoStats() and compares with expectedCount.
 // Returns an error if counts don't match, nil if they match or validation is disabled.
 // The stage parameter is used for error messages ("before update" or "after update").
 // For "before update" stage, if the file doesn't exist, the entry count is treated as 0.
 func ValidatePoEntryCount(poFile string, expectedCount *int, stage string) error {
-	// If expectedCount is nil or 0, validation is disabled
-	if expectedCount == nil || *expectedCount == 0 {
-		return nil
-	}
-
-	// Check if file exists
-	fileExists := Exist(poFile)
-	var actualCount int
-	var err error
-
-	if !fileExists {
-		// For "before update" stage, treat missing file as 0 entries
-		if stage == "before update" {
-			actualCount = 0
-			log.Debugf("file %s does not exist, treating entry count as 0 for %s validation", poFile, stage)
-		} else {
-			// For "after update" stage, file should exist
-			return fmt.Errorf("file does not exist %s: %s\nHint: The agent should have created the file", stage, poFile)
-		}
-	} else {
-		// Count entries in PO file
-		var stats *PoReportStats
-		stats, err = CountReportStats(poFile)
-		if err != nil {
-			return fmt.Errorf("failed to count entries %s in %s: %w", stage, poFile, err)
-		}
-		actualCount = stats.Total()
-	}
-
-	// Compare with expected count
-	if actualCount != *expectedCount {
-		return fmt.Errorf("entry count %s: expected %d, got %d (file: %s)", stage, *expectedCount, actualCount, poFile)
-	}
-
-	log.Debugf("entry count %s validation passed: %d entries", stage, actualCount)
-	return nil
+	return validateEntryCount(poFile, expectedCount, stage)
 }
 
 // ValidatePoFile validates POT/PO file syntax.
@@ -128,7 +126,7 @@ func ValidatePoEntryCount(poFile string, expectedCount *int, stage string) error
 // For .po files, it uses msgfmt to validate.
 // Returns an error if the file is invalid, nil if valid.
 // If the file path is absolute, it doesn't require repository context.
-// If the file path is relative, it uses repository.WorkDirOrCwd() as the working directory.
+// If the file path is relative, the subprocess uses the process current working directory (cmd.Dir unset).
 func ValidatePoFile(potFile string) error {
 	return validatePoFileInternal(potFile, false)
 }
@@ -139,7 +137,7 @@ func ValidatePoFile(potFile string) error {
 // For .po files, it uses msgfmt --check-format to validate (only checks format, not completeness).
 // Returns an error if the file format is invalid, nil if valid.
 // If the file path is absolute, it doesn't require repository context.
-// If the file path is relative, it uses repository.WorkDirOrCwd() as the working directory.
+// If the file path is relative, the subprocess uses the process current working directory (cmd.Dir unset).
 func ValidatePoFileFormat(potFile string) error {
 	return validatePoFileInternal(potFile, true)
 }
@@ -232,7 +230,10 @@ func validatePoFileInternal(potFile string, checkFormatOnly bool) error {
 // If poFile is empty, it uses the effective default_lang_code (config or system locale) to construct the path.
 // If poFile is provided but not absolute, it's treated as relative to the repository root.
 func GetPoFileAbsPath(cfg *config.AgentConfig, poFile string) (string, error) {
-	workDir := repository.WorkDirOrCwd()
+	workDir, err := os.Getwd()
+	if err != nil {
+		workDir = "."
+	}
 	if poFile == "" {
 		lang := cfg.DefaultLangCode
 		if lang == "" {
@@ -246,32 +247,31 @@ func GetPoFileAbsPath(cfg *config.AgentConfig, poFile string) (string, error) {
 	return poFile, nil
 }
 
-// GetPoFileRelPath determines the relative path of a PO file in "po/XX.po" format.
-// If poFile is empty, it uses the effective default_lang_code (config or system locale) to construct the path.
-// If poFile is an absolute path, it converts it to a relative path.
-// If poFile is already a relative path, it normalizes it to "po/XX.po" format.
-// Returns the relative path and an error if default_lang_code is not configured when needed.
-func GetPoFileRelPath(cfg *config.AgentConfig, poFile string) (string, error) {
-	workDir := repository.WorkDirOrCwd()
-	var absPath string
-	var err error
-
-	// First get the absolute path
-	absPath, err = GetPoFileAbsPath(cfg, poFile)
+// GuessPoFilePath determines the relative path of a PO file in "po/XX.po" format.
+// If poFile is empty, it uses default_lang_code to construct PoDir/lang.po (relative).
+// If poFile is absolute, it converts via filepath.Rel to repository root.
+// If poFile is already relative, it normalizes with filepath.Clean and ToSlash.
+// Does not join with workDir—callers run with cwd at repo root so relative paths suffice.
+func GuessPoFilePath(cfg *config.AgentConfig, poFile string) (string, error) {
+	workDir, err := os.Getwd()
 	if err != nil {
-		return "", err
+		workDir = "."
 	}
-
-	// Convert absolute path to relative path
-	relPath, err := filepath.Rel(workDir, absPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to convert path to relative: %w", err)
+	if poFile == "" {
+		lang := cfg.DefaultLangCode
+		if lang == "" {
+			return "", fmt.Errorf("default_lang_code is not configured\nHint: Provide po/XX.po on the command line or set default_lang_code in git-po-helper.yaml")
+		}
+		return filepath.ToSlash(filepath.Join(PoDir, fmt.Sprintf("%s.po", lang))), nil
 	}
-
-	// Normalize to use forward slashes (for consistency with "po/XX.po" format)
-	relPath = filepath.ToSlash(relPath)
-
-	return relPath, nil
+	if filepath.IsAbs(poFile) {
+		relPath, err := filepath.Rel(workDir, poFile)
+		if err != nil {
+			return "", fmt.Errorf("failed to convert path to relative: %w", err)
+		}
+		return filepath.ToSlash(relPath), nil
+	}
+	return filepath.ToSlash(filepath.Clean(poFile)), nil
 }
 
 // detectAgentOutputFormat inspects the first non-empty line and returns the detected
@@ -413,16 +413,5 @@ func parseStreamByKind(kind string, reader io.Reader) (stdout []byte, streamResu
 			log.Warnf("failed to parse stream JSON: %v", e)
 		}
 		return parsed, res, e
-	}
-}
-
-// applyAgentDiagnostics prints diagnostics and extracts NumTurns from streamResult.
-func applyAgentDiagnostics(result *AgentRunResult, streamResult AgentStreamResult) {
-	if streamResult == nil {
-		return
-	}
-	PrintAgentDiagnostics(streamResult)
-	if n := streamResult.GetNumTurns(); n > 0 {
-		result.NumTurns = n
 	}
 }

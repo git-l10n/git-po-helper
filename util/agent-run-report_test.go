@@ -3,13 +3,12 @@ package util
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestCountReviewIssueScores(t *testing.T) {
-	review := &ReviewJSONResult{
+	review := &ReviewResult{
 		TotalEntries: 10,
 		Issues: []ReviewIssue{
 			{Score: 0}, {Score: 0},
@@ -17,32 +16,32 @@ func TestCountReviewIssueScores(t *testing.T) {
 			{Score: 2}, {Score: 2}, {Score: 2},
 		},
 	}
-	critical, minor, major := CountReviewIssueScores(review)
-	if critical != 2 || minor != 1 || major != 3 {
-		t.Errorf("CountReviewIssueScores: critical=%d minor=%d major=%d; want 2,1,3",
-			critical, minor, major)
+	critical, major, minor := CountReviewIssueScores(review)
+	if critical != 2 || major != 1 || minor != 3 {
+		t.Errorf("CountReviewIssueScores: critical=%d major=%d minor=%d; want 2,1,3",
+			critical, major, minor)
 	}
 	// Perfect is derived: TotalEntries - (2+1+3) = 4
-	if got := review.TotalEntries - (critical + minor + major); got != 4 {
+	if got := review.TotalEntries - (critical + major + minor); got != 4 {
 		t.Errorf("derived perfect = TotalEntries - (critical+minor+major) = %d; want 4", got)
 	}
 }
 
 func TestIssueCount(t *testing.T) {
 	t.Run("nil receiver", func(t *testing.T) {
-		var r *ReviewJSONResult
+		var r *ReviewResult
 		if got := r.IssueCount(); got != 0 {
 			t.Errorf("(*ReviewJSONResult)(nil).IssueCount() = %d; want 0", got)
 		}
 	})
 	t.Run("empty issues", func(t *testing.T) {
-		r := &ReviewJSONResult{TotalEntries: 5, Issues: []ReviewIssue{}}
+		r := &ReviewResult{TotalEntries: 5, Issues: []ReviewIssue{}}
 		if got := r.IssueCount(); got != 0 {
 			t.Errorf("IssueCount() = %d; want 0", got)
 		}
 	})
 	t.Run("only score 3 excluded", func(t *testing.T) {
-		r := &ReviewJSONResult{
+		r := &ReviewResult{
 			TotalEntries: 10,
 			Issues: []ReviewIssue{
 				{Score: 0}, {Score: 1}, {Score: 2}, {Score: 3}, {Score: 3},
@@ -53,7 +52,7 @@ func TestIssueCount(t *testing.T) {
 		}
 	})
 	t.Run("all scores 0-2 count", func(t *testing.T) {
-		r := &ReviewJSONResult{
+		r := &ReviewResult{
 			TotalEntries: 4,
 			Issues:       []ReviewIssue{{Score: 0}, {Score: 1}, {Score: 2}, {Score: 2}},
 		}
@@ -81,11 +80,11 @@ msgstr ""
 
 func TestReportReviewWithTotalEntries(t *testing.T) {
 	// Create a review JSON with 2 issues
-	review := &ReviewJSONResult{
+	review := &ReviewResult{
 		TotalEntries: 100,
 		Issues: []ReviewIssue{
-			{MsgID: "commit", Score: 0, Description: "term error", SuggestMsgstr: "提交"},
-			{MsgID: "file", Score: 2, Description: "minor", SuggestMsgstr: "档案"},
+			{MsgID: "commit", Score: 0, Description: "term error", SuggestMsgstr: []string{"提交"}},
+			{MsgID: "file", Score: 2, Description: "minor", SuggestMsgstr: []string{"档案"}},
 		},
 	}
 	data, err := json.Marshal(review)
@@ -94,13 +93,23 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
-	jsonFile := filepath.Join(tmpDir, "review.json")
-	poFile := filepath.Join(tmpDir, "review.po")
-	if err := os.WriteFile(jsonFile, data, 0644); err != nil {
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	defer func() { _ = os.Chdir(origWd) }()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir %s: %v", tmpDir, err)
+	}
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatalf("MkdirAll po: %v", err)
+	}
+	ps := GetReviewPathSet()
+	if err := os.WriteFile(ps.ResultJSON, data, 0644); err != nil {
 		t.Fatalf("write failed: %v", err)
 	}
-	// ReportReviewFromJSON requires the .po to exist; it sets TotalEntries from PO stats.
-	if err := os.WriteFile(poFile, []byte(minimalPoWithEntries(2)), 0644); err != nil {
+	// GetReviewReport requires the .po to exist; it sets TotalEntries from PO stats.
+	if err := os.WriteFile(ps.InputPO, []byte(minimalPoWithEntries(2)), 0644); err != nil {
 		t.Fatalf("write po failed: %v", err)
 	}
 
@@ -113,16 +122,20 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 		t.Errorf("expected score ~98, got %d", score)
 	}
 
-	_, result, err := ReportReviewFromJSON(jsonFile)
+	result, err := GetReviewReport()
 	if err != nil {
-		t.Fatalf("ReportReviewFromJSON failed: %v", err)
+		t.Fatalf("GetReviewReport failed: %v", err)
 	}
 	// TotalEntries is taken from the PO file (2 entries), not from JSON
-	if result.Review.TotalEntries != 2 {
-		t.Errorf("expected TotalEntries 2 (from PO), got %d", result.Review.TotalEntries)
+	totalEntries, err := result.GetTotalEntries()
+	if err != nil {
+		t.Fatalf("GetTotalEntries: %v", err)
 	}
-	if len(result.Review.Issues) != 2 {
-		t.Errorf("expected 2 issues, got %d", len(result.Review.Issues))
+	if totalEntries != 2 {
+		t.Errorf("expected TotalEntries 2 (from PO), got %d", totalEntries)
+	}
+	if len(result.Issues) != 2 {
+		t.Errorf("expected 2 issues, got %d", len(result.Issues))
 	}
 	// PerfectCount is derived: 2 - (1 critical + 1 major) = 0
 	if got := result.PerfectCount(); got != 0 {
@@ -147,9 +160,20 @@ msgstr "old"
 	reviewJSON := `{"total_entries": 1, "issues": [{"msgid": "line1\nline2", "score": 0, "description": "fix", "suggest_msgstr": "new1\nnew2"}]}`
 
 	tmpDir := t.TempDir()
-	ps := ReviewPathSetFromBase(filepath.Join(tmpDir, "review"))
-	if err := os.WriteFile(ps.PendingPO, []byte(inputPO), 0644); err != nil {
-		t.Fatalf("write pending PO: %v", err)
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	defer func() { _ = os.Chdir(origWd) }()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir %s: %v", tmpDir, err)
+	}
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatalf("MkdirAll po: %v", err)
+	}
+	ps := GetReviewPathSet()
+	if err := os.WriteFile(ps.InputPO, []byte(inputPO), 0644); err != nil {
+		t.Fatalf("write input PO: %v", err)
 	}
 	if err := os.WriteFile(ps.ResultJSON, []byte(reviewJSON), 0644); err != nil {
 		t.Fatalf("write review JSON: %v", err)
@@ -159,7 +183,7 @@ msgstr "old"
 	if err != nil {
 		t.Fatalf("loadReviewJSONFromFile: %v", err)
 	}
-	if err := applyReviewJSON(review, ps); err != nil {
+	if _, err := applyReviewJSON(review, ps.InputPO, ps.OutputPO); err != nil {
 		t.Fatalf("applyReviewJSON: %v", err)
 	}
 
@@ -174,27 +198,73 @@ msgstr "old"
 	}
 }
 
+func TestDecodeReviewJSONBytes_MsgstrAndSuggestStringCompat(t *testing.T) {
+	// LLM may emit msgstr / suggest_msgstr as strings; must normalize to []string.
+	jsonStr := `{"total_entries": 2, "issues": [
+		{"msgid": "a", "msgstr": "旧", "score": 1, "description": "d1", "suggest_msgstr": "新"},
+		{"msgid": "b", "msgstr": ["x", "y"], "score": 2, "description": "d2", "suggest_msgstr": ["p", "q"]}
+	]}`
+	r, err := DecodeReviewJSONBytes([]byte(jsonStr))
+	if err != nil {
+		t.Fatalf("DecodeReviewJSONBytes: %v", err)
+	}
+	if len(r.Issues) != 2 {
+		t.Fatalf("expected 2 issues, got %d", len(r.Issues))
+	}
+	if len(r.Issues[0].MsgStr) != 1 || r.Issues[0].MsgStr[0] != "旧" {
+		t.Errorf("issue0 MsgStr: got %#v", r.Issues[0].MsgStr)
+	}
+	if len(r.Issues[0].SuggestMsgstr) != 1 || r.Issues[0].SuggestMsgstr[0] != "新" {
+		t.Errorf("issue0 SuggestMsgstr: got %#v", r.Issues[0].SuggestMsgstr)
+	}
+	if len(r.Issues[1].MsgStr) != 2 || r.Issues[1].SuggestMsgstr[0] != "p" {
+		t.Errorf("issue1 arrays: MsgStr=%#v SuggestMsgstr=%#v", r.Issues[1].MsgStr, r.Issues[1].SuggestMsgstr)
+	}
+	// ParseReviewJSON uses DecodeReviewJSONBytes then validates
+	r2, err := ParseReviewJSON([]byte(`{"total_entries": 1, "issues": [{"msgid": "m", "msgstr": "s", "score": 0, "description": "ok", "suggest_msgstr": "t"}]}`))
+	if err != nil {
+		t.Fatalf("ParseReviewJSON string fields: %v", err)
+	}
+	if len(r2.Issues) != 1 || len(r2.Issues[0].SuggestMsgstr) != 1 || r2.Issues[0].SuggestMsgstr[0] != "t" {
+		t.Errorf("ParseReviewJSON: got %#v", r2.Issues[0].SuggestMsgstr)
+	}
+}
+
 func TestReportReviewMarkdownWrappedJSON(t *testing.T) {
 	// JSON wrapped in markdown (common LLM output) - tests preprocessing
-	validInMarkdown := "```json\n" + `{"total_entries": 5, "issues": [{"msgid": "x", "score": 2, "description": "d", "suggest_msgstr": "s"}]}` + "\n```"
+	validInMarkdown := "```json\n" + `{"total_entries": 5, "issues": [{"msgid": "x", "score": 2, "description": "d", "suggest_msgstr": ["s"]}]}` + "\n```"
 	tmpDir := t.TempDir()
-	jsonFile := filepath.Join(tmpDir, "review.json")
-	poFile := filepath.Join(tmpDir, "review.po")
-	if err := os.WriteFile(jsonFile, []byte(validInMarkdown), 0644); err != nil {
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	defer func() { _ = os.Chdir(origWd) }()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir %s: %v", tmpDir, err)
+	}
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatalf("MkdirAll po: %v", err)
+	}
+	ps := GetReviewPathSet()
+	if err := os.WriteFile(ps.ResultJSON, []byte(validInMarkdown), 0644); err != nil {
 		t.Fatalf("write failed: %v", err)
 	}
-	if err := os.WriteFile(poFile, []byte(minimalPoWithEntries(1)), 0644); err != nil {
+	if err := os.WriteFile(ps.InputPO, []byte(minimalPoWithEntries(1)), 0644); err != nil {
 		t.Fatalf("write po failed: %v", err)
 	}
-	_, result, err := ReportReviewFromJSON(jsonFile)
+	result, err := GetReviewReport()
 	if err != nil {
-		t.Fatalf("ReportReviewFromJSON failed: %v", err)
+		t.Fatalf("GetReviewReport failed: %v", err)
 	}
 	// TotalEntries comes from the PO file (1 entry)
-	if result.Review.TotalEntries != 1 {
-		t.Errorf("expected TotalEntries 1 (from PO), got %d", result.Review.TotalEntries)
+	totalEntries, err := result.GetTotalEntries()
+	if err != nil {
+		t.Fatalf("GetTotalEntries: %v", err)
 	}
-	if len(result.Review.Issues) != 1 {
-		t.Errorf("expected 1 issue, got %d", len(result.Review.Issues))
+	if totalEntries != 1 {
+		t.Errorf("expected TotalEntries 1 (from PO), got %d", totalEntries)
+	}
+	if len(result.Issues) != 1 {
+		t.Errorf("expected 1 issue, got %d", len(result.Issues))
 	}
 }

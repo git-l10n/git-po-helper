@@ -1,33 +1,79 @@
-Translate the gettext JSON file "{{.source}}" to the target language and write
-the result to "{{.dest}}". For the format of the source and destination JSON
-files, see the "GETTEXT JSON format" section under "Background knowledge for
-localization workflows". When translating, follow these guidelines:
+Review the translations in `{{.source}}` and write a JSON report of any issues
+found to `{{.dest}}`, using the format specified in the "Review result JSON
+format" section below. When reviewing, follow these guidelines:
 
-- **Task**: Translate `{{.source}}` (input, GETTEXT JSON) into `{{.dest}}`
-  (output, GETTEXT JSON). See the "GETTEXT JSON format" section below for
-  format details and translation rules.
-- **Reference glossary**: Read the glossary from the batch file's
-  `header_comment` (see "Glossary Section" below) and use it for
-  consistent terminology.
-- **When translating**: Follow the "Quality checklist" below for correctness
-  and quality. Handle escape sequences (`\n`, `\"`, `\\`, `\t`), placeholders,
-  and quotes correctly as in `msgid`. For JSON, correctly escape and unescape
-  these sequences when reading and writing. Modify `msgstr` and `msgstr[n]`
-  (for plural entries); clear the fuzzy flag (omit or set `fuzzy` to `false`).
-  Do **not** modify `msgid` or `msgid_plural`.
+- Use "Background knowledge for localization workflows" for the format of the
+  source JSON file, placeholders, and terminology.
+- If `header_comment` includes a glossary, follow it for consistency.
+- Do **not** review the header (`header_comment`, `header_meta`).
+- For every other entry, check the entry's `msgstr` **array** (translation
+  forms) against `msgid` / `msgid_plural` using the "Quality checklist" below.
+- Write JSON per "Review result JSON format" below; use `{"issues": []}` when
+  there are no issues. **Always** write `{{.dest}}`—it marks the
+  batch complete.
+
+**Review result JSON format**:
+
+The **Review result JSON** format defines the structure for translation
+review reports. For each entry with translation issues, create an issue
+object as follows:
+
+- Copy the original entry's `msgid`, optional `msgid_plural`, and optional
+  `msgstr` array (original translation forms) into the issue object. Use the
+  same shape as GETTEXT JSON: `msgstr` is **always a JSON array** when present
+  (one element singular, multiple for plural).
+- Write a summary of all issues found for this entry in `description`.
+- Set `score` according to the severity of issues found for this entry,
+  from 0 to 3 (0 = critical; 1 = major; 2 = minor; 3 = perfect, no issues).
+  **Lower score means more severe issues.**
+- Place the suggested translation in **`suggest_msgstr`** as a **JSON array**:
+  one string for singular, multiple strings for plural forms in order. This is
+  required for `git-po-helper` to apply suggestions.
+- Include only entries with issues (score less than 3). When no issues are
+  found in the batch, write `{"issues": []}`.
+
+Example review result (with issues):
+
+```json
+{
+  "issues": [
+    {
+      "msgid": "commit",
+      "msgstr": ["委托"],
+      "score": 0,
+      "description": "Terminology error: 'commit' should be translated as '提交'",
+      "suggest_msgstr": ["提交"]
+    },
+    {
+      "msgid": "repository",
+      "msgid_plural": "repositories",
+      "msgstr": ["版本库", "版本库"],
+      "score": 2,
+      "description": "Consistency issue: suggest using '仓库' consistently",
+      "suggest_msgstr": ["仓库", "仓库"]
+    }
+  ]
+}
+```
+
+Field descriptions for each issue object (element of the `issues` array):
+
+- `msgid` (and optional `msgid_plural` for plural entries): Original source text.
+- `msgstr` (optional): JSON array of original translation forms (same meaning as
+  in GETTEXT JSON entries).
+- `suggest_msgstr`: JSON array of suggested translation forms; **must be an
+  array** (e.g. `["提交"]` for singular). Plural entries use multiple elements
+  in order.
+- `score`: 0–3 (0 = critical; 1 = major; 2 = minor; 3 = perfect, no issues).
+- `description`: Brief summary of the issue.
 
 
-## Background knowledge for localization workflows
+## Background Knowledge for Translators and Reviewers
 
-Essential background for the workflows below; understand these concepts before
-performing any housekeeping tasks in this document.
-
-### Language code and notation (XX, ll, ll\_CC)
-
-**XX** is a placeholder for the language code: either `ll` (ISO 639) or
-`ll_CC` (e.g. `de`, `zh_CN`). It appears in the PO file header metadata
-(e.g. `"Language: zh_CN\n"`) and is typically used to name the PO file:
-`po/XX.po`.
+This section provides essential background knowledge about PO file structure
+and format that is required for both translation and review tasks. Understanding
+these concepts is fundamental before performing any translation or review
+operations on `po/XX.po` files.
 
 
 ### Header Entry

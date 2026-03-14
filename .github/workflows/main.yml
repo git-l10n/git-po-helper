@@ -40,7 +40,7 @@ jobs:
           sudo test/install-prereq.sh
 
       - name: "Test: Integration test"
-        run: make it DEFAULT_TEST_TARGET=test
+        run: make it DEFAULT_TEST_TARGET=test GIT_TEST_OPTS="--verbose --debug"
 
       - name: "Test: Unit test"
         run: make ut

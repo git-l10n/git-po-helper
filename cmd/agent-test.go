@@ -69,7 +69,7 @@ updates files with the expected number of entries.`,
 	v.cmd.AddCommand(newAgentTestUpdatePoCmd(&v.O))
 	v.cmd.AddCommand(newAgentTestTranslateCmd(&v.O))
 	v.cmd.AddCommand(newAgentTestReviewCmd(&v.O))
-	v.cmd.AddCommand(newAgentTestShowConfigCmd())
+	v.cmd.AddCommand(newShowConfigCmd())
 
 	return v.cmd
 }

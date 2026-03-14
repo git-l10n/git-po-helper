@@ -6,10 +6,10 @@ import (
 
 func TestFilterGettextEntries_Default(t *testing.T) {
 	entries := []GettextEntry{
-		{MsgID: "a", MsgStr: "A", Obsolete: false},
-		{MsgID: "b", MsgStr: "", Obsolete: false},
-		{MsgID: "c", MsgStr: "c", Fuzzy: false, Obsolete: false},
-		{MsgID: "d", MsgStr: "", Obsolete: true},
+		{MsgID: "a", MsgStr: []string{"A"}, Obsolete: false},
+		{MsgID: "b", MsgStr: []string{""}, Obsolete: false},
+		{MsgID: "c", MsgStr: []string{"c"}, Fuzzy: false, Obsolete: false},
+		{MsgID: "d", MsgStr: []string{""}, Obsolete: true},
 	}
 	f := DefaultFilter()
 	got := FilterGettextEntries(entries, f)
@@ -20,8 +20,8 @@ func TestFilterGettextEntries_Default(t *testing.T) {
 
 func TestFilterGettextEntries_NoObsolete(t *testing.T) {
 	entries := []GettextEntry{
-		{MsgID: "a", MsgStr: "A", Obsolete: false},
-		{MsgID: "d", MsgStr: "", Obsolete: true},
+		{MsgID: "a", MsgStr: []string{"A"}, Obsolete: false},
+		{MsgID: "d", MsgStr: []string{""}, Obsolete: true},
 	}
 	f := EntryStateFilter{NoObsolete: true}
 	got := FilterGettextEntries(entries, f)
@@ -35,9 +35,9 @@ func TestFilterGettextEntries_NoObsolete(t *testing.T) {
 
 func TestFilterGettextEntries_OnlyTranslated(t *testing.T) {
 	entries := []GettextEntry{
-		{MsgID: "a", MsgStr: "A", Obsolete: false},
-		{MsgID: "b", MsgStr: "", Obsolete: false},
-		{MsgID: "c", MsgStr: "c", Fuzzy: false, Obsolete: false},
+		{MsgID: "a", MsgStr: []string{"A"}, Obsolete: false},
+		{MsgID: "b", MsgStr: []string{""}, Obsolete: false},
+		{MsgID: "c", MsgStr: []string{"c"}, Fuzzy: false, Obsolete: false},
 	}
 	f := EntryStateFilter{Translated: true, WithObsolete: false}
 	got := FilterGettextEntries(entries, f)
@@ -49,8 +49,8 @@ func TestFilterGettextEntries_OnlyTranslated(t *testing.T) {
 
 func TestFilterGettextEntries_OnlyObsolete(t *testing.T) {
 	entries := []GettextEntry{
-		{MsgID: "a", MsgStr: "A", Obsolete: false},
-		{MsgID: "d", MsgStr: "x", Obsolete: true},
+		{MsgID: "a", MsgStr: []string{"A"}, Obsolete: false},
+		{MsgID: "d", MsgStr: []string{"x"}, Obsolete: true},
 	}
 	f := EntryStateFilter{OnlyObsolete: true}
 	got := FilterGettextEntries(entries, f)
@@ -64,8 +64,8 @@ func TestFilterGettextEntries_OnlyObsolete(t *testing.T) {
 
 func TestFilterGettextEntries_OnlySame(t *testing.T) {
 	entries := []GettextEntry{
-		{MsgID: "a", MsgStr: "A", Obsolete: false},
-		{MsgID: "b", MsgStr: "b", Obsolete: false},
+		{MsgID: "a", MsgStr: []string{"A"}, Obsolete: false},
+		{MsgID: "b", MsgStr: []string{"b"}, Obsolete: false},
 	}
 	f := EntryStateFilter{OnlySame: true}
 	got := FilterGettextEntries(entries, f)

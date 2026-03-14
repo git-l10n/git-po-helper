@@ -105,7 +105,6 @@ func httpDownload(URL string, fileName string, showProgress bool) error {
 				if !stop {
 					fi, err := os.Stat(fullpath)
 					if err != nil {
-						stop = true
 						break
 					}
 					size := fi.Size()

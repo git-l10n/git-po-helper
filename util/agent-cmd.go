@@ -8,7 +8,6 @@ import (
 	"text/template"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -168,8 +167,7 @@ func BuildAgentCommand(entry config.AgentEntry, vars PlaceholderVars) ([]string,
 
 // GetPotFilePath returns the full path to the POT file in the repository.
 func GetPotFilePath() string {
-	workDir := repository.WorkDirOrCwd()
-	return filepath.Join(workDir, PoDir, GitPot)
+	return filepath.Join(PoDir, GitPot)
 }
 
 // GetRawPrompt returns the prompt for the specified action from configuration, or an error if not configured.
@@ -202,9 +200,9 @@ func GetRawPrompt(cfg *config.AgentConfig, action string) (string, error) {
 	case "translate":
 		prompt = cfg.Prompt.Translate
 		promptName = "prompt.translate"
-	case "review":
-		prompt = cfg.Prompt.Review
-		promptName = "prompt.review"
+	case "local-orchestration-review":
+		prompt = cfg.Prompt.LocalOrchestrationReview
+		promptName = "prompt.local_orchestration_review"
 	case "local-orchestration-translation":
 		prompt = cfg.Prompt.LocalOrchestrationTranslation
 		promptName = "prompt.local_orchestration_translation"
@@ -212,7 +210,7 @@ func GetRawPrompt(cfg *config.AgentConfig, action string) (string, error) {
 		prompt = cfg.Prompt.FixPo
 		promptName = "prompt.fix_po"
 	default:
-		return "", fmt.Errorf("unknown action: %s\nHint: Supported actions are: update-pot, update-po, translate, review, local-orchestration-translation, fix-po", action)
+		return "", fmt.Errorf("unknown action: %s\nHint: Supported actions are: update-pot, update-po, translate, local-orchestration-review, local-orchestration-translation, fix-po", action)
 	}
 
 	if prompt == "" {

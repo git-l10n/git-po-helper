@@ -278,17 +278,17 @@ The agent must output a JSON object with the following structure:
   "issues": [
     {
       "msgid": "commit",
-      "msgstr": "承诺",
+      "msgstr": ["承诺"],
       "score": 0,
       "description": "术语错误：'commit'应译为'提交'",
-      "suggestion": "提交"
+      "suggest_msgstr": ["提交"]
     },
     {
       "msgid": "repository",
-      "msgstr": "仓库",
+      "msgstr": ["仓库"],
       "score": 2,
       "description": "一致性问题：其他地方使用'版本库'",
-      "suggestion": "版本库"
+      "suggest_msgstr": ["版本库"]
     }
   ]
 }

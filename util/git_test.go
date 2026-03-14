@@ -10,15 +10,54 @@ import (
 	"github.com/git-l10n/git-po-helper/repository"
 )
 
+// gitTestEnv returns an environment that isolates git from global config and from
+// GIT_DIR/GIT_WORK_TREE (set when tests run under pre-commit hook).
+func gitTestEnv() []string {
+	env := os.Environ()
+	filtered := make([]string, 0, len(env)+2)
+	for _, e := range env {
+		if strings.HasPrefix(e, "GIT_DIR=") || strings.HasPrefix(e, "GIT_WORK_TREE=") ||
+			strings.HasPrefix(e, "GIT_INDEX_FILE=") || strings.HasPrefix(e, "GIT_COMMON_DIR=") {
+			continue
+		}
+		filtered = append(filtered, e)
+	}
+	return append(filtered, "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null")
+}
+
 // TestGetChangedPoFiles tests GetChangedPoFiles with a temporary git repository.
 // It creates a repo with po files, makes commits, and verifies the changed files list.
+// Uses GIT_CONFIG_GLOBAL/SYSTEM=/dev/null to avoid global config (e.g. hooks) affecting the test.
 func TestGetChangedPoFiles(t *testing.T) {
 	tmpDir := t.TempDir()
+
+	// Unset GIT_DIR/GIT_WORK_TREE so production git calls use tmpDir (pre-commit sets these).
+	os.Unsetenv("GIT_DIR")
+	os.Unsetenv("GIT_WORK_TREE")
+	os.Unsetenv("GIT_INDEX_FILE")
+	os.Unsetenv("GIT_COMMON_DIR")
+	// Chdir to tmpDir so repository and git operations use the sandbox; restore on exit.
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir %s: %v", tmpDir, err)
+	}
+	defer func() {
+		_ = os.Chdir(origWd)
+		repository.OpenRepository(origWd)
+	}()
+
+	// Isolate from global git config and parent git context (GIT_DIR, GIT_WORK_TREE
+	// set by pre-commit hook); otherwise git uses the project repo instead of tmpDir.
+	gitEnv := gitTestEnv()
 
 	// Initialize git repository
 	runGit := func(args ...string) {
 		cmd := exec.Command("git", args...)
 		cmd.Dir = tmpDir
+		cmd.Env = gitEnv
 		if output, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, string(output))
 		}
@@ -49,7 +88,7 @@ msgstr "你好"
 	}
 
 	runGit("add", "po/")
-	runGit("commit", "-m", "initial")
+	runGit("commit", "--no-verify", "-m", "initial")
 
 	// Modify only zh_CN.po
 	modifiedContent := poContent + "\nmsgid \"World\"\nmsgstr \"世界\"\n"
@@ -87,7 +126,7 @@ msgstr ""
 			t.Fatalf("failed to write git.pot: %v", err)
 		}
 		runGit("add", "po/git.pot")
-		runGit("commit", "-m", "add pot")
+		runGit("commit", "--no-verify", "-m", "add pot")
 
 		// Modify pot file
 		if err := os.WriteFile(filepath.Join(poDir, "git.pot"), []byte(potContent+"\nmsgid \"extra\"\nmsgstr \"\"\n"), 0644); err != nil {

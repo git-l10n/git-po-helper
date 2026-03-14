@@ -20,11 +20,11 @@ type AgentStreamResult interface {
 }
 
 func truncateCommandDisplay(s string) string {
-	const headLen, tailLen = 128, 32
+	const headLen, tailLen = 256, 128
 	if len(s) <= headLen+tailLen {
 		return s
 	}
-	return s[:headLen] + "..." + s[len(s)-tailLen:]
+	return s[:headLen] + " [...] " + s[len(s)-tailLen:]
 }
 
 func truncateText(text string, maxBytes int, maxLines int) string {
@@ -88,148 +88,122 @@ func indentSubsequentLines(text string) string {
 	return strings.Join(result, "\n")
 }
 
-// PrintAgentDiagnostics prints diagnostic information in a beautiful format.
-func PrintAgentDiagnostics(result interface{}) {
-	var numTurns int
-	var inputTokens, outputTokens int
-	var durationAPIMS int
-	hasInfo := false
-
-	switch r := result.(type) {
+// GetAgentDiagnostics copies diagnostic fields from streamResult into result. No printing.
+func GetAgentDiagnostics(result *AgentRunResult, streamResult AgentStreamResult) {
+	if result == nil || streamResult == nil {
+		return
+	}
+	if n := streamResult.GetNumTurns(); n > 0 {
+		result.NumTurns = n
+	}
+	switch r := streamResult.(type) {
 	case *GeminiJSONOutput:
 		if r == nil {
 			return
 		}
-		if r.NumTurns > 0 {
-			numTurns = r.NumTurns
-			hasInfo = true
-		}
 		if r.Usage != nil {
 			if r.Usage.InputTokens > 0 {
-				inputTokens = r.Usage.InputTokens
-				hasInfo = true
+				result.AgentInputTokens = r.Usage.InputTokens
 			}
 			if r.Usage.OutputTokens > 0 {
-				outputTokens = r.Usage.OutputTokens
-				hasInfo = true
+				result.AgentOutputTokens = r.Usage.OutputTokens
 			}
 		}
 		if r.DurationAPIMS > 0 {
-			durationAPIMS = r.DurationAPIMS
-			hasInfo = true
+			result.AgentDurationAPIMS = r.DurationAPIMS
 		}
 	case *ClaudeJSONOutput:
 		if r == nil {
 			return
 		}
-		if r.NumTurns > 0 {
-			numTurns = r.NumTurns
-			hasInfo = true
-		}
 		if r.Usage != nil {
 			if r.Usage.InputTokens > 0 {
-				inputTokens = r.Usage.InputTokens
-				hasInfo = true
+				result.AgentInputTokens = r.Usage.InputTokens
 			}
 			if r.Usage.OutputTokens > 0 {
-				outputTokens = r.Usage.OutputTokens
-				hasInfo = true
+				result.AgentOutputTokens = r.Usage.OutputTokens
 			}
 		}
 		if r.DurationAPIMS > 0 {
-			durationAPIMS = r.DurationAPIMS
-			hasInfo = true
+			result.AgentDurationAPIMS = r.DurationAPIMS
 		}
 	case *CodexJSONOutput:
 		if r == nil {
 			return
 		}
-		if r.NumTurns > 0 {
-			numTurns = r.NumTurns
-			hasInfo = true
-		}
 		if r.Usage != nil {
 			if r.Usage.InputTokens > 0 {
-				inputTokens = r.Usage.InputTokens
-				hasInfo = true
+				result.AgentInputTokens = r.Usage.InputTokens
 			}
 			if r.Usage.OutputTokens > 0 {
-				outputTokens = r.Usage.OutputTokens
-				hasInfo = true
+				result.AgentOutputTokens = r.Usage.OutputTokens
 			}
 		}
 		if r.DurationAPIMS > 0 {
-			durationAPIMS = r.DurationAPIMS
-			hasInfo = true
+			result.AgentDurationAPIMS = r.DurationAPIMS
 		}
 	case *OpenCodeJSONOutput:
 		if r == nil {
 			return
 		}
-		if r.NumTurns > 0 {
-			numTurns = r.NumTurns
-			hasInfo = true
-		}
 		if r.Usage != nil {
 			if r.Usage.InputTokens > 0 {
-				inputTokens = r.Usage.InputTokens
-				hasInfo = true
+				result.AgentInputTokens = r.Usage.InputTokens
 			}
 			if r.Usage.OutputTokens > 0 {
-				outputTokens = r.Usage.OutputTokens
-				hasInfo = true
+				result.AgentOutputTokens = r.Usage.OutputTokens
 			}
 		}
 		if r.DurationAPIMS > 0 {
-			durationAPIMS = r.DurationAPIMS
-			hasInfo = true
+			result.AgentDurationAPIMS = r.DurationAPIMS
 		}
 	case *QoderJSONOutput:
 		if r == nil {
 			return
 		}
-		if r.NumTurns > 0 {
-			numTurns = r.NumTurns
-			hasInfo = true
-		}
 		if r.Usage != nil {
 			if r.Usage.InputTokens > 0 {
-				inputTokens = r.Usage.InputTokens
-				hasInfo = true
+				result.AgentInputTokens = r.Usage.InputTokens
 			}
 			if r.Usage.OutputTokens > 0 {
-				outputTokens = r.Usage.OutputTokens
-				hasInfo = true
+				result.AgentOutputTokens = r.Usage.OutputTokens
 			}
 		}
 		if r.DurationAPIMS > 0 {
-			durationAPIMS = r.DurationAPIMS
-			hasInfo = true
+			result.AgentDurationAPIMS = r.DurationAPIMS
 		}
 	default:
 		return
 	}
+}
 
+// PrintAgentDiagnosticsFromResult prints diagnostics from AgentRunResult (fields set by GetAgentDiagnostics).
+// Format aligns with PrintReviewReportResult (ReportLabelWidth, two-space indent, label: value).
+func PrintAgentDiagnosticsFromResult(result *AgentRunResult) {
+	if result == nil {
+		return
+	}
+	hasInfo := result.NumTurns > 0 || result.AgentInputTokens > 0 || result.AgentOutputTokens > 0 || result.AgentDurationAPIMS > 0
 	if !hasInfo {
 		return
 	}
-
+	w := ReportLabelWidth
 	fmt.Println()
 	fmt.Println("📊 Agent Diagnostics")
-	fmt.Println("==========================================")
-	if numTurns > 0 {
-		fmt.Printf("**Num turns:** %d\n", numTurns)
+	fmt.Println()
+	if result.NumTurns > 0 {
+		fmt.Printf("  %-*s %d\n", w, "Num turns:", result.NumTurns)
 	}
-	if inputTokens > 0 {
-		fmt.Printf("**Input tokens:** %d\n", inputTokens)
+	if result.AgentInputTokens > 0 {
+		fmt.Printf("  %-*s %d\n", w, "Input tokens:", result.AgentInputTokens)
 	}
-	if outputTokens > 0 {
-		fmt.Printf("**Output tokens:** %d\n", outputTokens)
+	if result.AgentOutputTokens > 0 {
+		fmt.Printf("  %-*s %d\n", w, "Output tokens:", result.AgentOutputTokens)
 	}
-	if durationAPIMS > 0 {
-		durationSec := float64(durationAPIMS) / 1000.0
-		fmt.Printf("**API duration:** %.2f s\n", durationSec)
+	if result.AgentDurationAPIMS > 0 {
+		durationSec := float64(result.AgentDurationAPIMS) / 1000.0
+		fmt.Printf("  %-*s %.2f s\n", w, "API duration:", durationSec)
 	}
-	fmt.Println("==========================================")
+	fmt.Println()
 	flushStdout()
 }

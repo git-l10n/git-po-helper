@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
-	"github.com/git-l10n/git-po-helper/repository"
+	"github.com/git-l10n/git-po-helper/config"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,26 +47,127 @@ func formatDuration(d time.Duration) string {
 	return strings.Join(parts, "")
 }
 
-// RunResult holds the result of a single test run.
-type RunResult struct {
-	RunNumber           int
-	Score               int
-	PreValidationPass   bool
-	PostValidationPass  bool
-	AgentExecuted       bool
-	PreValidationError  string
-	PostValidationError string
-	AgentError          error
-	BeforeCount         int
-	AfterCount          int
-	BeforeNewCount      int // For translate: new (untranslated) entries before
-	AfterNewCount       int // For translate: new (untranslated) entries after
-	BeforeFuzzyCount    int // For translate: fuzzy entries before
-	AfterFuzzyCount     int // For translate: fuzzy entries after
-	ExpectedBefore      *int
-	ExpectedAfter       *int
-	NumTurns            int           // Number of turns in the conversation
-	ExecutionTime       time.Duration // Execution time for this run
+// TestRunResult holds the result of a single test run.
+// It embeds AgentRunResult so agent-run fields (Error, ReviewResult, NumTurns, etc.)
+// are inherited; RunNumber is test-specific.
+// Ctx holds PreCheckResult/PostCheckResult for display.
+// ReportOutput holds captured stdout from workflow Report when agent-test runs with a buffer.
+type TestRunResult struct {
+	AgentRunResult
+	RunNumber    int              // Test run index (1-based)
+	Ctx          *AgentRunContext // Context after PreCheck/AgentRun/PostCheck
+	ReportOutput string           // Captured Report output when run via agent-test loop (optional)
+}
+
+// Success returns true when Ctx.Success() (or, if Ctx is nil, when Result.Error is nil).
+func (r *TestRunResult) Success() bool {
+	if r.Ctx != nil {
+		return r.Ctx.Success()
+	}
+	return r.Error == nil
+}
+
+// Score returns 0 when !Success(); when Success(), 100 for update-pot/update-po/translate,
+// or ReviewResult.GetScore() for review. Caller may ignore error and treat as 0.
+func (r *TestRunResult) Score() (int, error) {
+	if !r.Success() {
+		return 0, nil
+	}
+	if r.ReviewResult != nil {
+		return r.ReviewResult.GetScore()
+	}
+	return 100, nil
+}
+
+// AverageScoreFromResults returns the average Score of results (0 if empty).
+func AverageScoreFromResults(results []TestRunResult) float64 {
+	if len(results) == 0 {
+		return 0
+	}
+	sum := 0
+	for i := range results {
+		s, _ := results[i].Score()
+		sum += s
+	}
+	return float64(sum) / float64(len(results))
+}
+
+// PrintAgentTestSummaryReport prints the common agent-test summary (Total runs,
+// Successful/Failed runs, Average score, pre/post-validation failures, Avg Num turns,
+// Avg Execution Time, Total Elapsed Time) using the same format as workflow Report
+// (ReportLabelWidth, two-space indent). Call this after all loops in the workflow.
+func PrintAgentTestSummaryReport(results []TestRunResult, elapsed time.Duration) {
+	runs := len(results)
+	successCount := 0
+	var totalNumTurns int
+	var totalExecutionTime time.Duration
+	if runs == 0 {
+		log.Warnf("no results for summary")
+		return
+	}
+
+	var runScores []string
+	var numTurnsStrs []string
+	var executionTimeStrs []string
+	uniqueErrors := make(map[string]struct{}) // dedupe by error string
+	for _, result := range results {
+		s, _ := result.Score()
+		runScores = append(runScores, fmt.Sprintf("%d", s))
+		numTurnsStrs = append(numTurnsStrs, fmt.Sprintf("%d", result.NumTurns))
+		executionTimeStrs = append(executionTimeStrs, formatDuration(result.ExecutionTime))
+		if result.Success() {
+			successCount++
+		} else {
+			// Collect the three error types from this result, dedupe by message
+			if result.Error != nil {
+				uniqueErrors[result.Error.Error()] = struct{}{}
+			}
+			if result.Ctx != nil {
+				if result.Ctx.PreCheckResult != nil && result.Ctx.PreCheckResult.Error != nil {
+					uniqueErrors[result.Ctx.PreCheckResult.Error.Error()] = struct{}{}
+				}
+				if result.Ctx.PostCheckResult != nil && result.Ctx.PostCheckResult.Error != nil {
+					uniqueErrors[result.Ctx.PostCheckResult.Error.Error()] = struct{}{}
+				}
+			}
+		}
+		totalNumTurns += result.NumTurns
+		totalExecutionTime += result.ExecutionTime
+	}
+
+	labelWidth := ReportLabelWidth
+	fmt.Printf("  %-*s %d\n", labelWidth, "Total runs:", runs)
+	if successCount > 0 {
+		fmt.Printf("  %-*s %d ✅\n", labelWidth, "Successful runs:", successCount)
+	}
+	if runs-successCount > 0 {
+		fmt.Printf("  %-*s %d ❌\n", labelWidth, "Failed runs:", runs-successCount)
+	}
+	fmt.Println()
+	fmt.Printf("  %-*s %d (%s)\n", labelWidth, "Avg Num turns:",
+		totalNumTurns/runs, strings.Join(numTurnsStrs, ", "))
+	fmt.Printf("  %-*s %s (%s)\n", labelWidth, "Avg Execution Time:",
+		formatDuration(totalExecutionTime/time.Duration(runs)), strings.Join(executionTimeStrs, ", "))
+	fmt.Printf("  %-*s %.0f/100 (%s)\n", labelWidth, "Average score:",
+		AverageScoreFromResults(results), strings.Join(runScores, ", "))
+	fmt.Println()
+	if len(uniqueErrors) > 0 {
+		errStrs := make([]string, 0, len(uniqueErrors))
+		for s := range uniqueErrors {
+			errStrs = append(errStrs, s)
+		}
+		sort.Strings(errStrs)
+		fmt.Println()
+		fmt.Printf("  ❌ Error found\n")
+		fmt.Println()
+		for _, errStr := range errStrs {
+			fmt.Printf("  %-*s %s\n", labelWidth, "Error:", errStr)
+		}
+		fmt.Println()
+	}
+	fmt.Printf("  %-*s %s\n", labelWidth, "Total Elapsed Time:", formatDuration(elapsed))
+	fmt.Println()
+	flushStdout()
 }
 
 // ConfirmAgentTestExecution displays a warning and requires user confirmation before proceeding.
@@ -94,23 +197,57 @@ func ConfirmAgentTestExecution(skipConfirmation bool) error {
 	return nil
 }
 
+// ResolveAgentTestRuns returns the effective run count for agent-test commands.
+// If runs > 0, that value is used (from command line). Otherwise uses cfg.AgentTest.Runs
+// when set and positive, or defaults to 5. Logs the source at debug level.
+func ResolveAgentTestRuns(cfg *config.AgentConfig, runs int) int {
+	if runs != 0 {
+		log.Debugf("using runs from command line: %d", runs)
+		return runs
+	}
+	if cfg.AgentTest.Runs != nil && *cfg.AgentTest.Runs > 0 {
+		runs = *cfg.AgentTest.Runs
+		log.Debugf("using runs from configuration: %d", runs)
+		return runs
+	}
+	runs = 5
+	log.Debugf("using default number of runs: %d", runs)
+	return runs
+}
+
+// backupFileIfExists backs up path to path.<MM-DD-HH-MM-SS> if it exists and is a regular file.
+func backupFileIfExists(paths ...string) {
+	timeSuffix := time.Now().Format("01-02-15-04-05")
+	for _, path := range paths {
+		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
+			backupPath := path + "." + timeSuffix
+			data, err := os.ReadFile(path)
+			if err != nil {
+				log.Debugf("failed to read %s for backup: %v", path, err)
+			} else if err := os.WriteFile(backupPath, data, 0644); err != nil {
+				log.Debugf("failed to write backup %s: %v", backupPath, err)
+			} else {
+				log.Debugf("backed up %s to %s", path, filepath.Base(backupPath))
+			}
+		}
+	}
+}
+
 // CleanPoDirectory restores the po/ directory to its state in HEAD using git restore.
 // This is useful for agent-test operations to ensure a clean state before each test run.
 // Returns an error if the git restore command fails.
 func CleanPoDirectory(paths ...string) error {
-	workDir := repository.WorkDirOrCwd()
-
-	// If no paths provided, use default "po/"
+	// If no paths provided, do not reset for security
 	targetPaths := paths
-	if len(targetPaths) == 0 {
-		targetPaths = []string{"po/"}
-	}
 
-	log.Debugf("cleaning paths using git restore (workDir: %s, paths: %v)", workDir, targetPaths)
+	log.Debugf("cleaning paths using git restore (paths: %v)", targetPaths)
 
 	// Process each path individually to avoid failures on non-existent paths
 	for _, path := range targetPaths {
 		log.Debugf("restoring path: %s", path)
+
+		// Backup .po files before restore to protect modified content
+		backupFileIfExists(path)
 
 		// Build git restore command for this path
 		args := []string{
@@ -123,7 +260,6 @@ func CleanPoDirectory(paths ...string) error {
 		}
 
 		cmd := exec.Command("git", args...)
-		cmd.Dir = workDir
 
 		// Capture stderr for error messages
 		stderr, err := cmd.StderrPipe()
@@ -164,30 +300,6 @@ func CleanPoDirectory(paths ...string) error {
 
 	log.Debugf("all paths processed")
 
-	// Clean untracked l10n intermediate files that are never tracked by git.
-	// Corresponds to AGENTS.md Task 3 Step 8 (po_cleanup): these files must be
-	// removed before each test run to avoid stale state from a previous run.
-	shouldCleanL10n := len(paths) == 0 || containsPath(paths, "po/")
-	if shouldCleanL10n {
-		patterns := []string{
-			"po/l10n-pending.po",
-			"po/l10n-todo.json",
-			"po/l10n-done.json",
-			"po/l10n-done.po",
-			"po/l10n-done.merged",
-		}
-		cleanArgs := append([]string{"clean", "-fx", "--"}, patterns...)
-		cleanCmd := exec.Command("git", cleanArgs...)
-		cleanCmd.Dir = workDir
-		if out, err := cleanCmd.CombinedOutput(); err != nil {
-			log.Debugf("git clean l10n intermediates (ignored): %s", string(out))
-		} else {
-			log.Debugf("l10n intermediate files cleaned")
-		}
-	} else {
-		log.Debugf("skipping l10n intermediate files cleanup (not in specified paths)")
-	}
-
 	// Clean untracked po/git.pot file that might not be in git repository
 	// Only clean po/git.pot if default path "po/" is being used or explicitly specified
 	shouldCleanPot := len(paths) == 0 || containsPath(paths, "po/") || containsPath(paths, "po/git.pot")
@@ -198,7 +310,6 @@ func CleanPoDirectory(paths ...string) error {
 			"-fx",
 			"--",
 			"po/git.pot")
-		cleanCmd.Dir = workDir
 
 		// Capture stderr for error messages
 		cleanStderr, err := cleanCmd.StderrPipe()
@@ -251,129 +362,4 @@ func containsPath(paths []string, target string) bool {
 		}
 	}
 	return false
-}
-
-// displayTestResults displays the test results in a readable format.
-func displayTestResults(results []RunResult, averageScore float64, totalRuns int, elapsed time.Duration) {
-	fmt.Println()
-	fmt.Println("=" + strings.Repeat("=", 70))
-	fmt.Println("Agent Test Results")
-	fmt.Println("=" + strings.Repeat("=", 70))
-	fmt.Println()
-
-	successCount := 0
-	failureCount := 0
-	preValidationFailures := 0
-	postValidationFailures := 0
-
-	// Display individual run results
-	for _, result := range results {
-		status := "FAIL"
-		if result.Score == 100 {
-			status = "PASS"
-			successCount++
-		} else {
-			failureCount++
-		}
-
-		fmt.Printf("Run %d: %s (Score: %d/100)\n", result.RunNumber, status, result.Score)
-
-		// Show validation status
-		if result.ExpectedBefore != nil && *result.ExpectedBefore != 0 {
-			if result.PreValidationPass {
-				fmt.Printf("  Pre-validation:  PASS (expected: %d, actual: %d)\n",
-					*result.ExpectedBefore, result.BeforeCount)
-			} else {
-				fmt.Printf("  Pre-validation:  FAIL - %s\n", result.PreValidationError)
-				preValidationFailures++
-			}
-		}
-
-		if result.AgentExecuted {
-			if result.AgentError == nil {
-				fmt.Printf("  Agent execution: PASS\n")
-			} else {
-				fmt.Printf("  Agent execution: FAIL - %v\n", result.AgentError)
-			}
-		} else {
-			fmt.Printf("  Agent execution: SKIPPED (pre-validation failed)\n")
-		}
-
-		if result.ExpectedAfter != nil && *result.ExpectedAfter != 0 {
-			if result.PostValidationPass {
-				fmt.Printf("  Post-validation: PASS (expected: %d, actual: %d)\n",
-					*result.ExpectedAfter, result.AfterCount)
-			} else {
-				fmt.Printf("  Post-validation: FAIL - %s\n", result.PostValidationError)
-				postValidationFailures++
-			}
-		} else if result.AgentExecuted {
-			// Show entry counts even if validation is not configured
-			fmt.Printf("  Entry count:     %d (before) -> %d (after)\n",
-				result.BeforeCount, result.AfterCount)
-		}
-
-		fmt.Println()
-	}
-
-	// Calculate statistics for NumTurns and execution time
-	var numTurnsList []int
-	var executionTimes []time.Duration
-	totalNumTurns := 0
-	totalExecutionTime := time.Duration(0)
-	numTurnsCount := 0
-
-	for _, result := range results {
-		if result.NumTurns > 0 {
-			numTurnsList = append(numTurnsList, result.NumTurns)
-			totalNumTurns += result.NumTurns
-			numTurnsCount++
-		}
-		// Always collect execution time (we measure it ourselves in the loop)
-		executionTimes = append(executionTimes, result.ExecutionTime)
-		totalExecutionTime += result.ExecutionTime
-	}
-
-	// Display summary statistics
-	const labelWidth = 25
-	fmt.Println("=" + strings.Repeat("=", 70))
-	fmt.Println("Summary")
-	fmt.Println("=" + strings.Repeat("=", 70))
-	fmt.Printf("%-*s %d\n", labelWidth, "Total runs:", totalRuns)
-	fmt.Printf("%-*s %d\n", labelWidth, "Successful runs:", successCount)
-	fmt.Printf("%-*s %d\n", labelWidth, "Failed runs:", failureCount)
-	if preValidationFailures > 0 {
-		fmt.Printf("%-*s %d\n", labelWidth, "Pre-validation failures:", preValidationFailures)
-	}
-	if postValidationFailures > 0 {
-		fmt.Printf("%-*s %d\n", labelWidth, "Post-validation failures:", postValidationFailures)
-	}
-	fmt.Printf("%-*s %.2f/100\n", labelWidth, "Average score:", averageScore)
-
-	// Display NumTurns statistics
-	if numTurnsCount > 0 {
-		avgNumTurns := totalNumTurns / numTurnsCount
-		var numTurnsStrs []string
-		for _, turns := range numTurnsList {
-			turnsStr := fmt.Sprintf("%d", turns)
-			numTurnsStrs = append(numTurnsStrs, turnsStr)
-		}
-		fmt.Printf("%-*s %d (%s)\n", labelWidth, "Avg Num turns:", avgNumTurns, strings.Join(numTurnsStrs, ", "))
-	}
-
-	// Display execution time statistics
-	if len(executionTimes) > 0 {
-		avgExecutionTime := totalExecutionTime / time.Duration(len(executionTimes))
-		var execTimeStrs []string
-		avgTimeStr := formatDuration(avgExecutionTime)
-		for _, execTime := range executionTimes {
-			timeStr := formatDuration(execTime)
-			execTimeStrs = append(execTimeStrs, timeStr)
-		}
-		fmt.Printf("%-*s %s (%s)\n", labelWidth, "Avg Execution Time:", avgTimeStr, strings.Join(execTimeStrs, ", "))
-	}
-
-	// Always display total elapsed time
-	fmt.Printf("%-*s %s\n", labelWidth, "Total Elapsed Time:", formatDuration(elapsed))
-	fmt.Println("=" + strings.Repeat("=", 70))
 }

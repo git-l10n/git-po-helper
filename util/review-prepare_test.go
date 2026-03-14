@@ -3,6 +3,7 @@ package util
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -135,20 +136,11 @@ func TestParsePoEntriesRoundTrip(t *testing.T) {
 		if originalEntry.MsgID != writtenEntry.MsgID {
 			t.Errorf("entry %d MsgID mismatch: original '%s', written '%s'", i, originalEntry.MsgID, writtenEntry.MsgID)
 		}
-		if originalEntry.MsgStr != writtenEntry.MsgStr {
-			t.Errorf("entry %d MsgStr mismatch: original '%s', written '%s'", i, originalEntry.MsgStr, writtenEntry.MsgStr)
+		if !reflect.DeepEqual(originalEntry.MsgStr, writtenEntry.MsgStr) {
+			t.Errorf("entry %d MsgStr mismatch: original %v, written %v", i, originalEntry.MsgStr, writtenEntry.MsgStr)
 		}
 		if originalEntry.MsgIDPlural != writtenEntry.MsgIDPlural {
 			t.Errorf("entry %d MsgIDPlural mismatch: original '%s', written '%s'", i, originalEntry.MsgIDPlural, writtenEntry.MsgIDPlural)
-		}
-		if len(originalEntry.MsgStrPlural) != len(writtenEntry.MsgStrPlural) {
-			t.Errorf("entry %d MsgStrPlural length mismatch: original has %d, written has %d", i, len(originalEntry.MsgStrPlural), len(writtenEntry.MsgStrPlural))
-		} else {
-			for j, originalPlural := range originalEntry.MsgStrPlural {
-				if writtenEntry.MsgStrPlural[j] != originalPlural {
-					t.Errorf("entry %d MsgStrPlural[%d] mismatch: original '%s', written '%s'", i, j, originalPlural, writtenEntry.MsgStrPlural[j])
-				}
-			}
 		}
 		if len(originalEntry.Comments) != len(writtenEntry.Comments) {
 			t.Errorf("entry %d comments count mismatch: original has %d, written has %d", i, len(originalEntry.Comments), len(writtenEntry.Comments))
@@ -206,20 +198,11 @@ func TestParsePoEntriesRoundTrip(t *testing.T) {
 		if originalEntry.MsgID != secondReadEntry.MsgID {
 			t.Errorf("second round-trip entry %d MsgID mismatch: original '%s', second written '%s'", i, originalEntry.MsgID, secondReadEntry.MsgID)
 		}
-		if originalEntry.MsgStr != secondReadEntry.MsgStr {
-			t.Errorf("second round-trip entry %d MsgStr mismatch: original '%s', second written '%s'", i, originalEntry.MsgStr, secondReadEntry.MsgStr)
+		if !reflect.DeepEqual(originalEntry.MsgStr, secondReadEntry.MsgStr) {
+			t.Errorf("second round-trip entry %d MsgStr mismatch: original %v, second written %v", i, originalEntry.MsgStr, secondReadEntry.MsgStr)
 		}
 		if originalEntry.MsgIDPlural != secondReadEntry.MsgIDPlural {
 			t.Errorf("second round-trip entry %d MsgIDPlural mismatch: original '%s', second written '%s'", i, originalEntry.MsgIDPlural, secondReadEntry.MsgIDPlural)
-		}
-		if len(originalEntry.MsgStrPlural) != len(secondReadEntry.MsgStrPlural) {
-			t.Errorf("second round-trip entry %d MsgStrPlural length mismatch: original has %d, second written has %d", i, len(originalEntry.MsgStrPlural), len(secondReadEntry.MsgStrPlural))
-		} else {
-			for j, originalPlural := range originalEntry.MsgStrPlural {
-				if secondReadEntry.MsgStrPlural[j] != originalPlural {
-					t.Errorf("second round-trip entry %d MsgStrPlural[%d] mismatch: original '%s', second written '%s'", i, j, originalPlural, secondReadEntry.MsgStrPlural[j])
-				}
-			}
 		}
 		if len(originalEntry.Comments) != len(secondReadEntry.Comments) {
 			t.Errorf("second round-trip entry %d comments count mismatch: original has %d, second written has %d", i, len(originalEntry.Comments), len(secondReadEntry.Comments))
@@ -234,12 +217,12 @@ func TestParsePoEntriesRoundTrip(t *testing.T) {
 }
 
 func TestLoadFileToGettextJSON_JSON(t *testing.T) {
-	jsonData := []byte(`{"header_comment":"","header_meta":"Content-Type: text/plain; charset=UTF-8\n","entries":[{"msgid":"Hello","msgstr":"你好","fuzzy":false}]}`)
+	jsonData := []byte(`{"header_comment":"","header_meta":"Content-Type: text/plain; charset=UTF-8\n","entries":[{"msgid":"Hello","msgstr":["你好"],"fuzzy":false}]}`)
 	j, err := LoadFileToGettextJSON(jsonData, "test.json")
 	if err != nil {
 		t.Fatalf("LoadFileToGettextJSON with JSON: %v", err)
 	}
-	if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hello" || j.Entries[0].MsgStr != "你好" {
+	if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hello" || j.Entries[0].MsgStrSingle() != "你好" {
 		t.Errorf("expected Hello/你好, got %d entries: %+v", len(j.Entries), j.Entries)
 	}
 	if j.HeaderMeta == "" {
@@ -259,7 +242,7 @@ msgstr "你好"
 	if err != nil {
 		t.Fatalf("LoadFileToGettextJSON with PO: %v", err)
 	}
-	if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hello" || j.Entries[0].MsgStr != "你好" {
+	if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hello" || j.Entries[0].MsgStrSingle() != "你好" {
 		t.Errorf("expected Hello/你好, got %+v", j.Entries)
 	}
 }

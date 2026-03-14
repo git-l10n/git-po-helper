@@ -55,7 +55,7 @@ func (v statCommand) Execute(args []string) error {
 			continue
 		}
 
-		stats, err := util.CountReportStats(file)
+		stats, err := util.GetPoStats(file)
 		if err != nil {
 			errs = append(errs, fmt.Sprintf("%s: %v", file, err))
 			continue

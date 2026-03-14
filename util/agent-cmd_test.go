@@ -176,17 +176,17 @@ func TestGetPrompt(t *testing.T) {
 		},
 		{
 			name:   "error when config prompt is empty and no override",
-			action: "review",
+			action: "local-orchestration-review",
 			cfg: &config.AgentConfig{
 				Prompt: config.PromptConfig{
-					Review: "",
+					LocalOrchestrationReview: "",
 				},
 			},
 			agentRunPrompt:  "",
 			agentTestPrompt: "",
 			expected:        "",
 			expectError:     true,
-			errorContains:   "prompt.review is not configured",
+			errorContains:   "prompt.local_orchestration_review is not configured",
 		},
 		{
 			name:   "error for unknown action",
@@ -205,10 +205,10 @@ func TestGetPrompt(t *testing.T) {
 			action: "update-pot",
 			cfg: &config.AgentConfig{
 				Prompt: config.PromptConfig{
-					UpdatePot: "config prompt",
-					UpdatePo:  "config prompt",
-					Translate: "config prompt",
-					Review:    "config prompt",
+					UpdatePot:                "config prompt",
+					UpdatePo:                 "config prompt",
+					Translate:                "config prompt",
+					LocalOrchestrationReview: "config prompt",
 				},
 			},
 			agentRunPrompt:  "override prompt",

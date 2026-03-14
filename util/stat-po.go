@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// PoReportStats holds statistics for a PO file.
-type PoReportStats struct {
+// PoStats holds statistics for a PO file.
+type PoStats struct {
 	Translated   int // Entries with non-empty translation, not fuzzy, not same as msgid
 	Untranslated int // Entries with empty msgstr
 	Same         int // Entries where msgstr equals msgid (suspect untranslated)
@@ -17,13 +17,13 @@ type PoReportStats struct {
 }
 
 // Total returns the sum of Translated, Untranslated, and Fuzzy (excludes Obsolete and Same).
-func (s *PoReportStats) Total() int {
+func (s *PoStats) Total() int {
 	return s.Translated + s.Untranslated + s.Fuzzy
 }
 
-// countStatsFromGettextJSON computes PoReportStats from GettextJSON entries.
-func countStatsFromGettextJSON(j *GettextJSON) *PoReportStats {
-	stats := &PoReportStats{}
+// getPoStatsFromGettextJSON computes PoReportStats from GettextJSON entries.
+func getPoStatsFromGettextJSON(j *GettextJSON) *PoStats {
+	stats := &PoStats{}
 	if j == nil {
 		return stats
 	}
@@ -37,19 +37,14 @@ func countStatsFromGettextJSON(j *GettextJSON) *PoReportStats {
 		}
 		hasTranslation := false
 		msgstrValue := ""
-		if len(e.MsgStrPlural) > 0 {
-			for _, s := range e.MsgStrPlural {
-				if s != "" {
-					hasTranslation = true
-					break
-				}
+		for _, s := range e.MsgStr {
+			if s != "" {
+				hasTranslation = true
+				break
 			}
-			if len(e.MsgStrPlural) > 0 {
-				msgstrValue = e.MsgStrPlural[0]
-			}
-		} else {
-			hasTranslation = e.MsgStr != ""
-			msgstrValue = e.MsgStr
+		}
+		if len(e.MsgStr) > 0 {
+			msgstrValue = e.MsgStr[0]
 		}
 		if e.Fuzzy {
 			stats.Fuzzy++
@@ -69,9 +64,9 @@ func countStatsFromGettextJSON(j *GettextJSON) *PoReportStats {
 	return stats
 }
 
-// CountReportStats reads a PO or gettext JSON file and returns entry statistics.
+// GetPoStats reads a PO or gettext JSON file and returns entry statistics.
 // Uses LoadFileToGettextJSON for unified loading (same interface as msg-select, msg-cat, compare).
-func CountReportStats(file string) (*PoReportStats, error) {
+func GetPoStats(file string) (*PoStats, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", file, err)
@@ -80,12 +75,12 @@ func CountReportStats(file string) (*PoReportStats, error) {
 	if err != nil {
 		return nil, err
 	}
-	return countStatsFromGettextJSON(j), nil
+	return getPoStatsFromGettextJSON(j), nil
 }
 
 // FormatMsgfmtStatistics formats stats to match msgfmt --statistics output.
 // For compatibility, "same" (msgstr == msgid) is counted as translated.
-func FormatMsgfmtStatistics(stats *PoReportStats) string {
+func FormatMsgfmtStatistics(stats *PoStats) string {
 	translated := stats.Translated + stats.Same
 	var parts []string
 	if translated > 0 {
@@ -117,7 +112,7 @@ func FormatMsgfmtStatistics(stats *PoReportStats) string {
 
 // FormatStatLine formats stats in one line, similar to msgfmt --statistics,
 // but also includes same and obsolete. Only non-zero categories are shown.
-func FormatStatLine(stats *PoReportStats) string {
+func FormatStatLine(stats *PoStats) string {
 	var parts []string
 	if stats.Translated > 0 {
 		if stats.Translated == 1 {

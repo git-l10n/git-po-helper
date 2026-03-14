@@ -129,7 +129,7 @@ func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string
 		return err
 	}
 
-	log.Debugf("extracting differences to review-input")
+	log.Debugf("extracting differences to review-pending")
 	_, reviewEntries := CompareGettextEntries(oldJ, newJ, msgidOnly)
 
 	if len(reviewEntries) == 0 {

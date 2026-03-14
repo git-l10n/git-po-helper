@@ -9,29 +9,40 @@ import (
 )
 
 // applyReviewJSON applies review suggestions from the review JSON result to PO entries,
-// then writes the result to the OutputPO file. It reads from PendingPO, loads entities,
-// applies suggest_msgstr and suggest_msgstr_plural to matching entries (by msgid+msgid_plural),
-// and serializes to OutputPO.
-func applyReviewJSON(review *ReviewJSONResult, ps ReviewPathSet) error {
+// then writes the result to the outputFile. It reads from inputFile, loads entities,
+// applies suggest_msgstr (array) to matching entries (by msgid),
+// and serializes to outputFile.
+// Returns (applied, err): applied is true if any suggestion was applied; err is non-nil on failure.
+func applyReviewJSON(review *ReviewResult, inputFile, outputFile string) (bool, error) {
 	if review == nil {
-		return fmt.Errorf("review result is nil")
-	}
-	inputData, err := os.ReadFile(ps.PendingPO)
-	if err != nil {
-		return fmt.Errorf("failed to read pending PO %s: %w", ps.PendingPO, err)
-	}
-	j, err := LoadFileToGettextJSON(inputData, ps.PendingPO)
-	if err != nil {
-		return fmt.Errorf("failed to load pending PO %s: %w", ps.PendingPO, err)
+		log.Info("review result is nil, no suggestions to apply")
+		return false, nil
 	}
 	byMsgID := make(map[string]*ReviewIssue)
 	for i := range review.Issues {
 		issue := &review.Issues[i]
+		if issue.Score >= ReviewIssueScorePerfect {
+			continue
+		}
 		byMsgID[issue.MsgID] = issue
 	}
-	applied := make(map[string]bool)
-	for i := range j.Entries {
-		entry := &j.Entries[i]
+	if len(byMsgID) == 0 {
+		log.Info("no issues found in review, no suggestions to apply")
+		return false, nil
+	}
+
+	inputData, err := os.ReadFile(inputFile)
+	if err != nil {
+		return false, fmt.Errorf("failed to read pending PO %s: %w", inputFile, err)
+	}
+	inputJSON, err := LoadFileToGettextJSON(inputData, inputFile)
+	if err != nil {
+		return false, fmt.Errorf("failed to load pending PO %s: %w", inputFile, err)
+	}
+	applyMap := make(map[string]bool)
+	applyCount := 0
+	for i := range inputJSON.Entries {
+		entry := &inputJSON.Entries[i]
 		if entry.MsgID == "" {
 			continue
 		}
@@ -39,34 +50,37 @@ func applyReviewJSON(review *ReviewJSONResult, ps ReviewPathSet) error {
 		if !ok {
 			continue
 		}
-		if entry.MsgIDPlural != "" {
-			if len(issue.SuggestMsgstrPlural) > 0 {
-				entry.MsgStrPlural = make([]string, len(issue.SuggestMsgstrPlural))
-				copy(entry.MsgStrPlural, issue.SuggestMsgstrPlural)
-				applied[entry.MsgID] = true
-			}
+		if len(issue.SuggestMsgstr) > 0 {
+			entry.MsgStr = make([]string, len(issue.SuggestMsgstr))
+			copy(entry.MsgStr, issue.SuggestMsgstr)
+			applyMap[entry.MsgID] = true
+			applyCount++
 		} else {
-			if issue.SuggestMsgstr != "" {
-				entry.MsgStr = issue.SuggestMsgstr
-				applied[entry.MsgID] = true
-			}
+			applyMap[entry.MsgID] = false
+			log.Warnf("apply review: no suggest_msgstr provided for msgid: %q, skipping", entry.MsgID)
 		}
 	}
 	for _, issue := range review.Issues {
-		if !applied[issue.MsgID] {
-			fmt.Fprintf(os.Stderr, "review: msgid not applied (no matching entry in PO): %q\n", issue.MsgID)
+		if issue.Score >= ReviewIssueScorePerfect {
+			continue
+		}
+		if _, ok := applyMap[issue.MsgID]; !ok {
+			log.Errorf("apply review: msgid not applied (no matching entry in PO): %q\n", issue.MsgID)
 		}
 	}
-	f, err := os.Create(ps.OutputPO)
+	if applyCount == 0 {
+		log.Warnf("no suggestions applied, no output file created: %s", outputFile)
+		return false, nil
+	}
+	f, err := os.Create(outputFile)
 	if err != nil {
-		return fmt.Errorf("failed to create output PO %s: %w", ps.OutputPO, err)
+		return false, fmt.Errorf("failed to create output PO %s: %w", outputFile, err)
 	}
 	defer f.Close()
-	if err := WriteGettextJSONToPO(j, f, false, false); err != nil {
-		return fmt.Errorf("failed to write output PO %s: %w", ps.OutputPO, err)
+	if err := WriteGettextJSONToPO(inputJSON, f, false, false); err != nil {
+		return false, fmt.Errorf("failed to write output PO %s: %w", outputFile, err)
 	}
-	log.Infof("applied review suggestions to %s", ps.OutputPO)
-	return nil
+	return true, nil
 }
 
 // ExtractJSONFromOutput extracts a JSON object from agent output.
@@ -128,7 +142,7 @@ func ExtractJSONFromOutput(output []byte) ([]byte, error) {
 // It validates that the JSON matches ReviewJSONResult structure and that
 // all score values are in the valid range (0-3).
 // Returns parsed result or error.
-func ParseReviewJSON(jsonData []byte) (*ReviewJSONResult, error) {
+func ParseReviewJSON(jsonData []byte) (*ReviewResult, error) {
 	if len(jsonData) == 0 {
 		log.Debugf("JSON data is empty")
 		return nil, fmt.Errorf("empty JSON data")
@@ -136,9 +150,9 @@ func ParseReviewJSON(jsonData []byte) (*ReviewJSONResult, error) {
 
 	log.Debugf("parsing JSON data (length: %d bytes)", len(jsonData))
 
-	var review ReviewJSONResult
-	if err := json.Unmarshal(jsonData, &review); err != nil {
-		log.Debugf("JSON unmarshal failed: %v", err)
+	review, err := DecodeReviewJSONBytes(jsonData)
+	if err != nil {
+		log.Debugf("JSON decode failed: %v", err)
 		return nil, fmt.Errorf("failed to parse JSON: %w", err)
 	}
 
@@ -158,9 +172,9 @@ func ParseReviewJSON(jsonData []byte) (*ReviewJSONResult, error) {
 	// Validate each issue
 	for i, issue := range review.Issues {
 		// Validate score range
-		if issue.Score < 0 || issue.Score > 3 {
-			log.Debugf("validation failed: issue[%d].score=%d (must be 0-3)", i, issue.Score)
-			return nil, fmt.Errorf("invalid issue score %d at index %d: must be between 0 and 3", issue.Score, i)
+		if issue.Score < ReviewIssueScoreCritical || issue.Score > ReviewIssueScoreMax {
+			log.Debugf("validation failed: issue[%d].score=%d (must be %d-%d)", i, issue.Score, ReviewIssueScoreCritical, ReviewIssueScoreMax)
+			return nil, fmt.Errorf("invalid issue score %d at index %d: must be between %d and %d", issue.Score, i, ReviewIssueScoreCritical, ReviewIssueScoreMax)
 		}
 
 		// Validate required fields are not empty (msgid and msgstr can be empty, but should be present)
@@ -173,16 +187,16 @@ func ParseReviewJSON(jsonData []byte) (*ReviewJSONResult, error) {
 		log.Debugf("issue[%d]: msgid=%q, score=%d, description=%q", i, issue.MsgID, issue.Score, issue.Description)
 	}
 
-	normalizeReviewIssuesToPoFormat(&review)
+	// normalizeReviewIssuesToPoFormat already applied in DecodeReviewJSONBytes
 	log.Debugf("JSON validation passed: %d total entries, %d issues", review.TotalEntries, len(review.Issues))
-	return &review, nil
+	return review, nil
 }
 
-// AggregateReviewJSON merges multiple review JSON results. For each msgid that
+// aggregateReviewJSONResult merges multiple review JSON results. For each msgid that
 // appears in multiple runs, the issue with the lowest score (most severe) is kept.
 // total_entries is taken from the first non-empty review. Returns nil if no valid input.
 // If warnDup is true, logs an error when duplicate msgid issues are found.
-func AggregateReviewJSON(reviews []*ReviewJSONResult, warnDup bool) *ReviewJSONResult {
+func aggregateReviewJSONResult(reviews []*ReviewResult, warnDup bool) *ReviewResult {
 	if len(reviews) == 0 {
 		return nil
 	}
@@ -193,8 +207,12 @@ func AggregateReviewJSON(reviews []*ReviewJSONResult, warnDup bool) *ReviewJSONR
 		if r == nil {
 			continue
 		}
-		if r.TotalEntries > 0 && totalEntries == 0 {
-			totalEntries = r.TotalEntries
+		if r.TotalEntries > 0 {
+			if totalEntries == 0 {
+				totalEntries = r.TotalEntries
+			} else if totalEntries != r.TotalEntries {
+				log.Warnf("aggregateReviewJSONResult: inconsistent total_entries: %d != %d", totalEntries, r.TotalEntries)
+			}
 		}
 		for i := range r.Issues {
 			issue := &r.Issues[i]
@@ -212,33 +230,31 @@ func AggregateReviewJSON(reviews []*ReviewJSONResult, warnDup bool) *ReviewJSONR
 	for _, issue := range byMsgID {
 		issues = append(issues, *issue)
 	}
-	return &ReviewJSONResult{TotalEntries: totalEntries, Issues: issues}
+	return &ReviewResult{TotalEntries: totalEntries, Issues: issues}
 }
 
 // normalizeReviewIssuesToPoFormat converts JSON-decoded strings in ReviewIssue to PO format.
 // JSON uses \n for newline, \t for tab, etc.; PO stores them as literal \n, \t (backslash+char).
 // This ensures matching works when looking up entries in PO files.
-func normalizeReviewIssuesToPoFormat(review *ReviewJSONResult) {
+func normalizeReviewIssuesToPoFormat(review *ReviewResult) {
 	if review == nil {
 		return
 	}
 	for i := range review.Issues {
 		issue := &review.Issues[i]
 		issue.MsgID = jsonDecodedToPoFormat(issue.MsgID)
-		issue.MsgStr = jsonDecodedToPoFormat(issue.MsgStr)
 		issue.MsgIDPlural = jsonDecodedToPoFormat(issue.MsgIDPlural)
-		for k := range issue.MsgStrPlural {
-			issue.MsgStrPlural[k] = jsonDecodedToPoFormat(issue.MsgStrPlural[k])
+		for k := range issue.MsgStr {
+			issue.MsgStr[k] = jsonDecodedToPoFormat(issue.MsgStr[k])
 		}
-		issue.SuggestMsgstr = jsonDecodedToPoFormat(issue.SuggestMsgstr)
-		for k := range issue.SuggestMsgstrPlural {
-			issue.SuggestMsgstrPlural[k] = jsonDecodedToPoFormat(issue.SuggestMsgstrPlural[k])
+		for k := range issue.SuggestMsgstr {
+			issue.SuggestMsgstr[k] = jsonDecodedToPoFormat(issue.SuggestMsgstr[k])
 		}
 	}
 }
 
 // saveReviewJSON saves review JSON result to the given file path.
-func saveReviewJSON(review *ReviewJSONResult, jsonFile string) error {
+func saveReviewJSON(review *ReviewResult, jsonFile string) error {
 	if review == nil {
 		return fmt.Errorf("review result is nil")
 	}

@@ -75,7 +75,7 @@ ut: $(TARGET)
 
 it: $(TARGET)
 	$(call message,Testing git-po-helper for integration tests)
-	@make -C test
+	@make -C test GIT_TEST_OPTS="--debug --verbose-log -x" prove
 
 clean:
 	$(call message,Cleaning $(TARGET))

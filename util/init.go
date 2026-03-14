@@ -136,7 +136,7 @@ func cmdInitObsolete(locale string, localeFullName string, onlyCore bool) bool {
 	if onlyCore {
 		if msgs, ok := genCorePot(); !ok {
 			for _, msg := range msgs {
-				log.Errorf(msg)
+				log.Error(msg)
 			}
 			return false
 		}

@@ -3,20 +3,19 @@ package util
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
-	"github.com/git-l10n/git-po-helper/flag"
-	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
 // executeReviewAgent executes the agent command for reviewing the given file.
 // vars contains placeholder values (e.g. "prompt", "source" for the file to review).
 // Returns stdout (for JSON extraction), stderr, originalStdout (raw before parsing), streamResult.
-// Updates result with AgentExecuted, AgentError, AgentStdout, AgentStderr.
+// Updates result with AgentExecuted, AgentStdout, AgentStderr.
 func executeReviewAgent(selectedAgent config.AgentEntry, vars PlaceholderVars, result *AgentRunResult) (stdout, stderr, originalStdout []byte, streamResult AgentStreamResult, err error) {
 	agentCmd, outputFormat, err := BuildAgentCommand(selectedAgent, vars)
 	if err != nil {
@@ -37,12 +36,11 @@ func executeReviewAgent(selectedAgent config.AgentEntry, vars PlaceholderVars, r
 		if len(stdout) > 0 {
 			log.Debugf("agent command stdout: %s", string(stdout))
 		}
-		result.AgentError = execErr
 		return nil, stderr, originalStdout, streamResult, execErr
 	}
 	log.Infof("agent command completed successfully")
 
-	applyAgentDiagnostics(result, streamResult)
+	GetAgentDiagnostics(result, streamResult)
 	result.AgentStdout = originalStdout
 	if len(stderr) > 0 {
 		result.AgentStderr = stderr
@@ -82,18 +80,31 @@ func buildReviewUseAgentMdPrompt(target *CompareTarget) string {
 	return taskDesc + " according to @po/AGENTS.md."
 }
 
-// RunAgentReview executes review using agent with po/AGENTS.md (default mode).
+// runAgentReviewDispatch runs either local orchestration or prompt orchestration.
+func runAgentReviewDispatch(cfg *config.AgentConfig, agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
+	if useLocalOrchestration {
+		if batchSize <= 0 {
+			batchSize = 50
+		}
+		return RunAgentReviewLocalOrchestration(cfg, agentName, target, batchSize)
+	}
+	return RunAgentReviewPromptOrchestration(cfg, agentName, target)
+}
+
+// RunAgentReviewPromptOrchestration executes review using agent with po/AGENTS.md (default mode).
 // No programmatic extraction or batching; the agent does everything and writes review.json.
 // Before execution: deletes review.po and review.json. After: expects review.json to exist.
-func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTarget, agentTest bool, outputBase string) (*AgentRunResult, error) {
-	ps := ReviewPathSetFromBase(outputBase)
-	workDir := repository.WorkDirOrCwd()
+func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string, target *CompareTarget) (*AgentRunResult, error) {
+	ps := GetReviewPathSet()
+	workDir, _ := os.Getwd()
+	if workDir == "" {
+		workDir = "."
+	}
 	startTime := time.Now()
-	result := &AgentRunResult{Score: 0}
+	result := &AgentRunResult{}
 
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {
-		result.AgentError = err
 		return result, err
 	}
 
@@ -106,7 +117,6 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 		return result, err
 	}
 	if !Exist(poFile) {
-		result.AgentError = fmt.Errorf("PO file does not exist: %s", poFile)
 		return result, fmt.Errorf("PO file does not exist: %s\nHint: Ensure the PO file exists before running review", poFile)
 	}
 
@@ -126,10 +136,9 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 	kind := selectedAgent.Kind
 	stdout, _, stderr, streamResult, err := RunAgentAndParse(agentCmd, outputFormat, kind)
 	if err != nil {
-		result.AgentError = err
 		return result, err
 	}
-	applyAgentDiagnostics(result, streamResult)
+	GetAgentDiagnostics(result, streamResult)
 	log.Infof("agent command completed successfully")
 
 	if len(stdout) > 0 {
@@ -143,78 +152,26 @@ func RunAgentReview(cfg *config.AgentConfig, agentName string, target *CompareTa
 		return result, fmt.Errorf("review JSON not generated at %s\nHint: The agent must write the review result to this file", ps.ResultJSON)
 	}
 
-	_, reportResult, err := ReportReviewFromJSON(ps.ResultJSON)
+	reportResult, err := GetReviewReport()
 	if err != nil {
 		return result, fmt.Errorf("failed to read review JSON: %w", err)
 	}
 
-	result.ReviewJSON = reportResult.Review
-	result.ReviewJSONPath = ps.ResultJSON
-	result.ReviewScore = reportResult.Score
-	result.Score = reportResult.Score
-	result.ReviewedFilePath = poFile
+	result.ReviewResult = reportResult
 	result.ExecutionTime = time.Since(startTime)
 
+	score, err := reportResult.GetScore()
+	if err != nil {
+		return result, fmt.Errorf("review score: %w", err)
+	}
+	totalEntries, _ := reportResult.GetTotalEntries()
 	log.Infof("review completed (score: %d/100, total entries: %d, issues: %d)",
-		reportResult.Score, reportResult.Review.TotalEntries, len(reportResult.Review.Issues))
+		score, totalEntries, len(reportResult.Issues))
 
 	return result, nil
 }
 
-// CmdAgentRunReview implements the agent-run review command logic.
-// It loads configuration and calls RunAgentReview or RunAgentReviewUseAgentMd.
-// outputBase: base path for review output files (e.g. "po/review"); empty uses default.
-// useLocalOrchestration: if true, use local orchestration (--use-local-orchestration);
-// otherwise use agent with po/AGENTS.md (default).
-func CmdAgentRunReview(agentName string, target *CompareTarget, outputBase string, useLocalOrchestration bool, batchSize int) error {
-	// Load configuration
-	log.Debugf("loading agent configuration")
-	cfg, err := config.LoadAgentConfig(flag.AgentConfigFile())
-	if err != nil {
-		return fmt.Errorf("failed to load agent configuration: %w\nHint: Ensure git-po-helper.yaml exists in repository root or user home directory", err)
-	}
-
-	startTime := time.Now()
-
-	var result *AgentRunResult
-	if useLocalOrchestration {
-		result, err = RunAgentReviewLocalOrchestration(cfg, agentName, target, false, outputBase, batchSize)
-	} else {
-		result, err = RunAgentReview(cfg, agentName, target, false, outputBase)
-	}
-	if err != nil {
-		return err
-	}
-
-	// For agent-run, we require agent execution to succeed (no error set)
-	if result.AgentError != nil {
-		return fmt.Errorf("agent execution failed: %w", result.AgentError)
-	}
-
-	elapsed := time.Since(startTime)
-
-	// Display review report (same format as agent-run report)
-	if result.ReviewJSON != nil && result.ReviewJSONPath != "" {
-		critical, minor, major := CountReviewIssueScores(result.ReviewJSON)
-		reportResult := &ReviewReportResult{
-			Review:        result.ReviewJSON,
-			Score:         result.ReviewScore,
-			CriticalCount: critical,
-			MinorCount:    minor,
-			MajorCount:    major,
-		}
-		PrintReviewReportResult(result.ReviewJSONPath, reportResult)
-	}
-
-	fmt.Printf("\nSummary:\n")
-	if result.ReviewJSONPath != "" {
-		fmt.Printf("  Review JSON: %s\n", getRelativePath(result.ReviewJSONPath))
-	}
-	if result.NumTurns > 0 {
-		fmt.Printf("  Turns: %d\n", result.NumTurns)
-	}
-	fmt.Printf("  Execution time: %s\n", elapsed.Round(time.Millisecond))
-
-	log.Infof("agent-run review completed successfully")
-	return nil
+// CmdAgentRunReview implements the agent-run review command logic via AgentRunWorkflow.
+func CmdAgentRunReview(agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) error {
+	return RunAgentRunWorkflow(NewWorkflowReview(agentName, target, useLocalOrchestration, batchSize))
 }

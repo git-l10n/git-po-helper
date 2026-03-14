@@ -41,14 +41,16 @@ test_expect_success "setup: create identical input.po and input.json" '
 	msgid "Simple %s"
 	msgstr "简单 %s"
 	ENDPO
-	cat >>input.json <<-\ENDJSON &&
+	cat >input.json <<-\ENDJSON &&
 	{
 	  "header_comment": "",
 	  "header_meta": "Content-Type: text/plain; charset=UTF-8\\n",
 	  "entries": [
 	    {
 	      "msgid": "Line one\\nLine two\\twith tab\\nLine three\\rwith CR\\nLine four\\\"with quote\\nLine five\\\\with slash\\n",
-	      "msgstr": "第1行\\n第2行\\t带制表符\\n第3行\\r带回车\\n第4行\\\"带引号\\n第5行\\\\带斜线\\n",
+	      "msgstr": [
+	        "第1行\\n第2行\\t带制表符\\n第3行\\r带回车\\n第4行\\\"带引号\\n第5行\\\\带斜线\\n"
+	      ],
 	      "comments": [
 	        "#: src/a.c"
 	      ],
@@ -56,7 +58,9 @@ test_expect_success "setup: create identical input.po and input.json" '
 	    },
 	    {
 	      "msgid": "Simple %s",
-	      "msgstr": "简单 %s",
+	      "msgstr": [
+	        "简单 %s"
+	      ],
 	      "comments": [
 	        "#, c-format"
 	      ],

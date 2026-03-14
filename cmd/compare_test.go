@@ -19,6 +19,49 @@ func requireMsgcmp(t *testing.T) {
 	}
 }
 
+// chdirRepoForCompare sets cwd to tmpDir and opens that repo; defer restore
+// restores cwd and re-opens the original dir so other tests are not affected.
+// Unsets GIT_DIR/GIT_WORK_TREE so production git calls use tmpDir (pre-commit
+// sets these and they override cmd.Dir/cwd). All git commits for compare tests
+// must run with cmd.Dir = tmpDir only; Chdir must succeed or Execute would run
+// against the wrong repository.
+func chdirRepoForCompare(t *testing.T, tmpDir string) (restore func()) {
+	t.Helper()
+	os.Unsetenv("GIT_DIR")
+	os.Unsetenv("GIT_WORK_TREE")
+	os.Unsetenv("GIT_INDEX_FILE")
+	os.Unsetenv("GIT_COMMON_DIR")
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir %s: %v", tmpDir, err)
+	}
+	repository.OpenRepository(tmpDir)
+	return func() {
+		if err := os.Chdir(origWd); err != nil {
+			t.Errorf("Chdir restore %s: %v", origWd, err)
+		}
+		repository.OpenRepository(origWd)
+	}
+}
+
+// gitTestEnv isolates git from global config and from GIT_DIR/GIT_WORK_TREE
+// (set when tests run under pre-commit hook); otherwise git uses the project repo.
+func gitTestEnv() []string {
+	env := os.Environ()
+	filtered := make([]string, 0, len(env)+2)
+	for _, e := range env {
+		if strings.HasPrefix(e, "GIT_DIR=") || strings.HasPrefix(e, "GIT_WORK_TREE=") ||
+			strings.HasPrefix(e, "GIT_INDEX_FILE=") || strings.HasPrefix(e, "GIT_COMMON_DIR=") {
+			continue
+		}
+		filtered = append(filtered, e)
+	}
+	return append(filtered, "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null")
+}
+
 // setupCompareRepo creates a temp git repo with po files for compare tests.
 func setupCompareRepo(t *testing.T) string {
 	t.Helper()
@@ -27,6 +70,7 @@ func setupCompareRepo(t *testing.T) string {
 	runGit := func(args ...string) {
 		cmd := exec.Command("git", args...)
 		cmd.Dir = tmpDir
+		cmd.Env = gitTestEnv()
 		if output, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, string(output))
 		}
@@ -56,7 +100,7 @@ msgstr "你好"
 	}
 
 	runGit("add", "po/")
-	runGit("commit", "-m", "initial")
+	runGit("commit", "--no-verify", "-m", "initial")
 
 	// Second commit for HEAD~..HEAD tests
 	modifiedContent := poContent + "\nmsgid \"World\"\nmsgstr \"世界\"\n"
@@ -64,7 +108,7 @@ msgstr "你好"
 		t.Fatalf("failed to modify zh_CN.po: %v", err)
 	}
 	runGit("add", "po/zh_CN.po")
-	runGit("commit", "-m", "add World")
+	runGit("commit", "--no-verify", "-m", "add World")
 
 	// Modify zh_CN.po for HEAD vs worktree tests
 	modifiedContent = modifiedContent + "\nmsgid \"Foo\"\nmsgstr \"富\"\n"
@@ -78,11 +122,8 @@ msgstr "你好"
 // TestCompareCommand_Quick runs fast validation tests with a single repo setup.
 func TestCompareCommand_Quick(t *testing.T) {
 	tmpDir := setupCompareRepo(t)
-	repository.OpenRepository(tmpDir)
-
-	origWd, _ := os.Getwd()
-	defer os.Chdir(origWd)
-	os.Chdir(tmpDir)
+	restore := chdirRepoForCompare(t, tmpDir)
+	defer restore()
 
 	t.Run("too many args", func(t *testing.T) {
 		c := compareCommand{}
@@ -186,6 +227,7 @@ msgstr ""
 	runGit := func(args ...string) {
 		cmd := exec.Command("git", args...)
 		cmd.Dir = tmpDir
+		cmd.Env = gitTestEnv()
 		if output, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, string(output))
 		}
@@ -210,7 +252,7 @@ msgstr "你好"
 		}
 	}
 	runGit("add", "po/")
-	runGit("commit", "-m", "v1")
+	runGit("commit", "--no-verify", "-m", "v1")
 
 	// Commit 2: zh_CN adds World, Foo; zh_TW unchanged
 	v2 := poHeader + `msgid "Hello"
@@ -226,7 +268,7 @@ msgstr "酒吧"
 		t.Fatalf("failed to write zh_CN.po v2: %v", err)
 	}
 	runGit("add", "po/zh_CN.po")
-	runGit("commit", "-m", "v2")
+	runGit("commit", "--no-verify", "-m", "v2")
 
 	// Worktree: zh_CN has Foo removed, Bar added, World msgstr modified
 	v3 := poHeader + `msgid "Hello"
@@ -248,11 +290,8 @@ msgstr "新条"
 // runCompareWithOptions runs compare with given options and returns captured stdout.
 func runCompareWithOptions(t *testing.T, tmpDir string, stat bool, rangeArg, commitArg, sinceArg string, args []string) string {
 	t.Helper()
-	repository.OpenRepository(tmpDir)
-
-	origWd, _ := os.Getwd()
-	defer os.Chdir(origWd)
-	os.Chdir(tmpDir)
+	restore := chdirRepoForCompare(t, tmpDir)
+	defer restore()
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -271,7 +310,7 @@ func runCompareWithOptions(t *testing.T, tmpDir string, stat bool, rangeArg, com
 
 	w.Close()
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	_, _ = buf.ReadFrom(r)
 	return buf.String()
 }
 

@@ -19,7 +19,7 @@ func CheckPoFile(locale, poFile string) bool {
 func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	var (
 		ret  = true
-		ok   = true
+		ok   bool
 		errs []string
 	)
 

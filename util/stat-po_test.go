@@ -45,7 +45,7 @@ msgstr "好"
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
-	stats, err := CountReportStats(poFile)
+	stats, err := GetPoStats(poFile)
 	if err != nil {
 		t.Fatalf("CountReportStats failed: %v", err)
 	}
@@ -127,7 +127,7 @@ msgstr "模糊"
 	msgfmtOut := sb.String()
 
 	// Get our report output
-	stats, err := CountReportStats(poFile)
+	stats, err := GetPoStats(poFile)
 	if err != nil {
 		t.Fatalf("CountReportStats: %v", err)
 	}
@@ -141,16 +141,16 @@ msgstr "模糊"
 func TestFormatMsgfmtStatistics(t *testing.T) {
 	tests := []struct {
 		name     string
-		stats    *PoReportStats
+		stats    *PoStats
 		expected string
 	}{
-		{"all zeros", &PoReportStats{}, "0 translated messages.\n"},
-		{"one translated", &PoReportStats{Translated: 1}, "1 translated message.\n"},
-		{"two translated", &PoReportStats{Translated: 2}, "2 translated messages.\n"},
-		{"one fuzzy", &PoReportStats{Fuzzy: 1}, "1 fuzzy translation.\n"},
-		{"one untranslated", &PoReportStats{Untranslated: 1}, "1 untranslated message.\n"},
-		{"same counts as translated", &PoReportStats{Same: 1}, "1 translated message.\n"},
-		{"mixed", &PoReportStats{Translated: 1, Same: 1, Fuzzy: 1, Untranslated: 1},
+		{"all zeros", &PoStats{}, "0 translated messages.\n"},
+		{"one translated", &PoStats{Translated: 1}, "1 translated message.\n"},
+		{"two translated", &PoStats{Translated: 2}, "2 translated messages.\n"},
+		{"one fuzzy", &PoStats{Fuzzy: 1}, "1 fuzzy translation.\n"},
+		{"one untranslated", &PoStats{Untranslated: 1}, "1 untranslated message.\n"},
+		{"same counts as translated", &PoStats{Same: 1}, "1 translated message.\n"},
+		{"mixed", &PoStats{Translated: 1, Same: 1, Fuzzy: 1, Untranslated: 1},
 			"2 translated messages, 1 fuzzy translation, 1 untranslated message.\n"},
 	}
 	for _, tt := range tests {
@@ -167,18 +167,18 @@ func TestFormatMsgfmtStatistics(t *testing.T) {
 func TestPoReportStats_Total(t *testing.T) {
 	tests := []struct {
 		name     string
-		stats    *PoReportStats
+		stats    *PoStats
 		expected int
 	}{
-		{"all zeros", &PoReportStats{}, 0},
-		{"only translated", &PoReportStats{Translated: 5}, 5},
-		{"only untranslated", &PoReportStats{Untranslated: 3}, 3},
-		{"only fuzzy", &PoReportStats{Fuzzy: 2}, 2},
-		{"translated plus untranslated", &PoReportStats{Translated: 2, Untranslated: 1}, 3},
-		{"translated plus fuzzy", &PoReportStats{Translated: 1, Fuzzy: 1}, 2},
-		{"all three", &PoReportStats{Translated: 4, Untranslated: 2, Fuzzy: 1}, 7},
-		{"same and obsolete excluded", &PoReportStats{Translated: 10, Same: 10, Obsolete: 5}, 10},
-		{"mixed with same and obsolete", &PoReportStats{Translated: 5, Untranslated: 2, Fuzzy: 1, Same: 3, Obsolete: 30}, 8},
+		{"all zeros", &PoStats{}, 0},
+		{"only translated", &PoStats{Translated: 5}, 5},
+		{"only untranslated", &PoStats{Untranslated: 3}, 3},
+		{"only fuzzy", &PoStats{Fuzzy: 2}, 2},
+		{"translated plus untranslated", &PoStats{Translated: 2, Untranslated: 1}, 3},
+		{"translated plus fuzzy", &PoStats{Translated: 1, Fuzzy: 1}, 2},
+		{"all three", &PoStats{Translated: 4, Untranslated: 2, Fuzzy: 1}, 7},
+		{"same and obsolete excluded", &PoStats{Translated: 10, Same: 10, Obsolete: 5}, 10},
+		{"mixed with same and obsolete", &PoStats{Translated: 5, Untranslated: 2, Fuzzy: 1, Same: 3, Obsolete: 30}, 8},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -265,7 +265,7 @@ msgstr ""
 			if err := os.WriteFile(potFile, []byte(tt.potContent), 0644); err != nil {
 				t.Fatalf("write POT file: %v", err)
 			}
-			stats, err := CountReportStats(potFile)
+			stats, err := GetPoStats(potFile)
 			if err != nil {
 				t.Fatalf("CountReportStats: %v", err)
 			}
@@ -375,7 +375,7 @@ msgstr ""
 			if err != nil {
 				t.Fatalf("Failed to create test POT file: %v", err)
 			}
-			stats, err := CountReportStats(potFile)
+			stats, err := GetPoStats(potFile)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected error but got none")
@@ -394,7 +394,7 @@ msgstr ""
 }
 
 func TestCountPotEntries_InvalidFile(t *testing.T) {
-	_, err := CountReportStats("/nonexistent/file.pot")
+	_, err := GetPoStats("/nonexistent/file.pot")
 	if err == nil {
 		t.Error("Expected error for non-existent file, got nil")
 	}
@@ -408,7 +408,7 @@ func TestCountPotEntries_EmptyFile(t *testing.T) {
 		t.Fatalf("Failed to create empty file: %v", err)
 	}
 	file.Close()
-	stats, err := CountReportStats(potFile)
+	stats, err := GetPoStats(potFile)
 	if err != nil {
 		t.Errorf("Unexpected error for empty file: %v", err)
 	}
@@ -503,7 +503,7 @@ msgstr ""
 			if err != nil {
 				t.Fatalf("Failed to create test PO file: %v", err)
 			}
-			stats, err := CountReportStats(poFile)
+			stats, err := GetPoStats(poFile)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected error but got none")
@@ -522,7 +522,7 @@ msgstr ""
 }
 
 func TestCountPoEntries_InvalidFile(t *testing.T) {
-	_, err := CountReportStats("/nonexistent/file.po")
+	_, err := GetPoStats("/nonexistent/file.po")
 	if err == nil {
 		t.Error("Expected error for non-existent PO file, got nil")
 	}
@@ -536,7 +536,7 @@ func TestCountPoEntries_EmptyFile(t *testing.T) {
 		t.Fatalf("Failed to create empty PO file: %v", err)
 	}
 	file.Close()
-	stats, err := CountReportStats(poFile)
+	stats, err := GetPoStats(poFile)
 	if err != nil {
 		t.Errorf("Unexpected error for empty PO file: %v", err)
 	}
@@ -621,7 +621,7 @@ msgstr "另一个字符串"
 			if err != nil {
 				t.Fatalf("Failed to create test PO file: %v", err)
 			}
-			stats, err := CountReportStats(poFile)
+			stats, err := GetPoStats(poFile)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected error but got none")
@@ -640,7 +640,7 @@ msgstr "另一个字符串"
 }
 
 func TestCountNewEntries_InvalidFile(t *testing.T) {
-	_, err := CountReportStats("/nonexistent/file.po")
+	_, err := GetPoStats("/nonexistent/file.po")
 	if err == nil {
 		t.Error("Expected error for non-existent file, got nil")
 	}
@@ -743,7 +743,7 @@ msgstr "普通字符串"
 			if err != nil {
 				t.Fatalf("Failed to create test PO file: %v", err)
 			}
-			stats, err := CountReportStats(poFile)
+			stats, err := GetPoStats(poFile)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected error but got none")
@@ -762,7 +762,7 @@ msgstr "普通字符串"
 }
 
 func TestCountFuzzyEntries_InvalidFile(t *testing.T) {
-	_, err := CountReportStats("/nonexistent/file.po")
+	_, err := GetPoStats("/nonexistent/file.po")
 	if err == nil {
 		t.Error("Expected error for non-existent file, got nil")
 	}

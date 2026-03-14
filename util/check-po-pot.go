@@ -19,7 +19,7 @@ var (
 
 func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 	var (
-		ok         = true
+		ok         bool
 		poTemplate string
 	)
 

@@ -23,8 +23,8 @@ var promptUpdatePo string
 //go:embed prompts/translate.txt
 var promptTranslate string
 
-//go:embed prompts/review.txt
-var promptReview string
+//go:embed prompts/local-orchestration-review.md
+var promptLocalOrchestrationReview string
 
 //go:embed prompts/local-orchestration-translation.md
 var promptLocalOrchestrationTranslation string
@@ -45,7 +45,7 @@ type PromptConfig struct {
 	UpdatePot                     string `yaml:"update_pot"`
 	UpdatePo                      string `yaml:"update_po"`
 	Translate                     string `yaml:"translate"`
-	Review                        string `yaml:"review"`
+	LocalOrchestrationReview      string `yaml:"local_orchestration_review"`
 	LocalOrchestrationTranslation string `yaml:"local_orchestration_translation"`
 	FixPo                         string `yaml:"fix_po"`
 }
@@ -181,7 +181,7 @@ func getDefaultConfig() *AgentConfig {
 			UpdatePot:                     loadEmbeddedPrompt(promptUpdatePot),
 			UpdatePo:                      loadEmbeddedPrompt(promptUpdatePo),
 			Translate:                     loadEmbeddedPrompt(promptTranslate),
-			Review:                        loadEmbeddedPrompt(promptReview),
+			LocalOrchestrationReview:      loadEmbeddedPrompt(promptLocalOrchestrationReview),
 			LocalOrchestrationTranslation: loadEmbeddedPrompt(promptLocalOrchestrationTranslation),
 			FixPo:                         loadEmbeddedPrompt(promptFixPo),
 		},
@@ -355,8 +355,8 @@ func mergeConfigs(baseConfig, overlay *AgentConfig, mergeAgents bool) *AgentConf
 		if overlay.Prompt.Translate != "" {
 			result.Prompt.Translate = overlay.Prompt.Translate
 		}
-		if overlay.Prompt.Review != "" {
-			result.Prompt.Review = overlay.Prompt.Review
+		if overlay.Prompt.LocalOrchestrationReview != "" {
+			result.Prompt.LocalOrchestrationReview = overlay.Prompt.LocalOrchestrationReview
 		}
 		if overlay.Prompt.LocalOrchestrationTranslation != "" {
 			result.Prompt.LocalOrchestrationTranslation = overlay.Prompt.LocalOrchestrationTranslation

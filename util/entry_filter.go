@@ -80,32 +80,26 @@ func MatchGettextEntryState(e GettextEntry, filter EntryStateFilter) bool {
 }
 
 func isTranslatedGettextEntry(e GettextEntry) bool {
-	if len(e.MsgStrPlural) > 0 {
-		for _, s := range e.MsgStrPlural {
-			if s != "" {
-				return true
-			}
+	for _, s := range e.MsgStr {
+		if s != "" {
+			return true
 		}
-		return false
 	}
-	return e.MsgStr != ""
+	return false
 }
 
 func isUntranslatedGettextEntry(e GettextEntry) bool {
-	if len(e.MsgStrPlural) > 0 {
-		for _, s := range e.MsgStrPlural {
-			if s != "" {
-				return false
-			}
+	for _, s := range e.MsgStr {
+		if s != "" {
+			return false
 		}
-		return true
 	}
-	return e.MsgStr == ""
+	return true
 }
 
 func isSameGettextEntry(e GettextEntry) bool {
-	if len(e.MsgStrPlural) > 0 {
-		return e.MsgStrPlural[0] == e.MsgID
+	if len(e.MsgStr) == 0 {
+		return false
 	}
-	return e.MsgStr == e.MsgID
+	return e.MsgStr[0] == e.MsgID
 }
