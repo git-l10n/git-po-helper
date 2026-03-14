@@ -2,62 +2,92 @@
 
 Changes of git-po-helper.
 
-## dev (2026-02-22)
+## 0.8.0 (2026-03-14)
 
 ### Agent commands (agent-run, agent-test)
 
 * feat: add agent-run and agent-test with update-po, update-pot, translate, review subcommands
-* feat: support multiple AI agents (Claude, Codex, OpenCode, Gemini, Qwen)
+* feat: support multiple AI agents (Claude, Codex, OpenCode, Gemini, Qwen, Qoder)
 * feat: stream-json real-time output with type-specific icons (🤔 thinking, 🤖 text, 🔧 tool, 💬 user)
 * feat: parse Claude/Gemini assistant content (text, thinking, tool_use) and user tool_result
 * feat: improve Codex JSONL parsing (thread.started, item.started/completed, turn.completed)
 * feat: improve OpenCode message output with tool input/output display
-* feat: add Kind field for type-safe agent detection (claude, codex, opencode, gemini)
-* feat: truncate long command display (first 128 + last 32 bytes)
-* feat: indent and wrap multi-line agent output at 80 chars with word boundary
+* feat: add Kind field for type-safe agent detection (claude, codex, opencode, gemini, qoder)
+* feat: truncate long command display (256 + 128 bytes) and indent/wrap multi-line output at 80 chars
 * feat: agent-test review aggregates JSON and uses lowest score per msgid
 * feat: add --range, --commit, --since and two-file support to review commands
+* feat: add --use-local-orchestration and --use-agent-md (rename from --all-with-llm) for review/translate
+* feat: translate/review local orchestration aligned with po/AGENTS.md Task 3 and Task 4
+* feat: review reads result from disk (po/review-done.json written by agent), not stdout
+* feat: add report subcommand (agent-run report) to replace stat --review; return JSON path and improve output
+* feat: add --batch-size for review batching; default batch size 100 (align with AGENTS.md)
+* feat: invoke agent to fix PO when msgfmt fails (fix-po flow)
+* feat: add NumTurns and execution time to agent-test output; execution time in agent-run summary
 * fix: flush stdout so agent output appears without -v
-* refactor: use AgentStreamResult interface to reduce redundancy
+* fix: route error output to stderr in main; send interactive prompts to stderr in compare
+* fix: resolve golangci-lint unused/errcheck/govet/ineffassign
 
 ### Compare command
 
 * feat: rename diff to compare, add --stat requirement
 * feat: add --commit and --since, refine -r range parsing (a..b, a.., a)
 * feat: merge new-entries into compare (default mode outputs new/changed entries)
-* refactor: extract ResolveCompareTarget to util/helper.go for reuse
-* refactor: use PoCompare for compare --stat
+* feat: add --json for JSON output; add --no-header to omit header
+* feat: add JSON format support for input files
+* feat: add --msgid for msgid-only comparison (ignore msgstr/fuzzy changes)
+* feat: add --assert-no-changes and --assert-changes for CI
+* feat: add -o/--output to write to file
+* fix: skip obsolete entries in PoCompare loop
+
+### msg-select and msg-cat
+
+* feat: add msg-select command to extract PO/POT entries by index range
+* feat: add msg-cat subcommand to merge PO/POT/JSON files (first occurrence of each msgid wins)
+* feat: msg-select supports gettext JSON input and --json output; PO↔gettext JSON round-trip
+* feat: add --head, --tail, --since as range shortcuts; allow without --range to select all
+* feat: add --unset-fuzzy and --clear-fuzzy to msg-select and msg-cat
+* feat: add --no-header to omit header; add -o/--output to write to file
+* feat: add entry state filter options; support obsolete entries (#~ and #~|) in PO parsing and JSON
+* fix: write empty file when no entries selected (no header-only output)
+* fix: accept empty JSON input for msg-select and msg-cat
+
+### stat command
+
+* feat: add stat command for PO file statistics
+* feat: support gettext JSON input; support multiple PO files
+* feat: derive json and po from --review path, no args required; add Total() and POT file tests
+* fix: count same-as-source entries as translated; fix stat-po count logic
 
 ### PO / gettext
 
 * feat: add strDeQuote, BuildPoContent and ParsePoEntries round-trip test
-* feat: set PoEntry.IsFuzzy from #, fuzzy flag comments
-* feat: add msg-select command to extract PO/POT entries by index range
+* feat: set PoEntry.IsFuzzy from #, fuzzy flag comments; keep fuzzy state only in GettextEntry.Fuzzy
+* feat: gettext JSON structs and header split for PO→JSON; PO format strings in GettextEntry for escape handling
 * fix: allow blank lines in header comment block
-* refactor: rename po_parse.go to gettext.go, move to util/gettext.go
+* fix: preserve quotes in PO file header continuation lines; store PO format strings for consistent escape handling
+* fix: convert absolute PO file path to relative path for git show
 
 ### Review
 
-* refactor: extract review logic to util/review.go (PrepareReviewData, extractReviewInput)
-* refactor: extract PoCompare with DiffStat (Added, Changed, Deleted)
-* refactor: use two-pointer merge instead of hash map for entry comparison
-* refactor: use temp files for orig/new in PrepareReviewData
+* feat: apply review suggestions to output PO file (applyReviewJSON); add IssueCount(), exclude score-3 from "With issues"
+* feat: add ReviewIssue score enum constants (Critical, Major, Minor, Perfect); add gjson fallback for malformed LLM JSON
+* feat: align review local orchestration with AGENTS.md Task 4 (review-input.po, review-todo.json, review-done.json, review-batch.txt)
 
 ### Configuration and prompts
 
+* feat: add --config flag and unified config merge with default
 * feat: add --prompt option to override prompts
 * feat: add multiple AI agent configurations
-* refactor: unify prompt retrieval with action parameter
-* feat: add prefix @ introducing po/README.md in prompts
+* feat: add local-orchestration-translation and local-orchestration-review prompts
+* feat: add prefix @ introducing po/README.md in prompts; update review prompt with quality checklist and JSON format
+* feat: use Go template placeholders {{.source}}, {{.prompt}}, {{.dest}} in prompts
 
-### Refactoring and infrastructure
+### Tests and documentation
 
-* refactor: extract git and file selection to util/git.go, util/files.go
-* refactor: return error instead of bool from diff stat functions
-* refactor: use newUserError for cmd error handling
-* test: add PoFileDiffStat, PoFileRevisionDiffStat, PoCompare tests
-* test: add ResolvePoFile and ResolveCompareTarget tests
-* docs: add agent-commands.md, update README and AGENTS.md
+* test: add integration test for translate --use-local-orchestration; PO round-trip and msg-select zh_CN example
+* test: remove jq dependency in t0123 for cross-platform; isolate unit tests from GIT_DIR/GIT_WORK_TREE in pre-commit
+* docs: add agent-commands.md, design docs for update-pot, update-po, translate, review; update README and AGENTS.md
+* docs: document commit conventions for agents; use {{.source}} and {{.prompt}} in config docs
 
 ## 0.7.6 (2026-02-07)
 
