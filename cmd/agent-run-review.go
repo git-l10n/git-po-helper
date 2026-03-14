@@ -57,8 +57,8 @@ With two file arguments, compare worktree files (revisions not allowed).`,
 		"agent",
 		"",
 		"agent name to use (required if multiple agents are configured)")
-	cmd.Flags().IntVar(&opts.BatchSize, "batch-size", 50,
-		"min entries per batch when splitting review (default: 50)")
+	cmd.Flags().IntVar(&opts.BatchSize, "batch-size", 100,
+		"min entries per batch when splitting review (default: 100)")
 	cmd.Flags().StringVarP(&opts.Range, "range", "r", "",
 		"revision range: a..b (a and b), a.. (a and working tree), or a (a~ and a)")
 	cmd.Flags().StringVar(&opts.Commit,
