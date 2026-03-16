@@ -57,6 +57,8 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 }
 
 // CmdCheckPo implements check-po sub command.
+// Args must be non-empty. Each arg is either a directory (scan for *.po in it, no recursion)
+// or a file (must have .po extension). All found/listed .po files are checked.
 func CmdCheckPo(args ...string) bool {
 	var (
 		ret     = true
@@ -64,42 +66,63 @@ func CmdCheckPo(args ...string) bool {
 	)
 
 	if len(args) == 0 {
-		err := filepath.Walk("po", func(path string, info os.FileInfo, err error) error {
-			if info == nil {
-				return filepath.SkipDir
-			}
-			if !info.IsDir() {
-				if filepath.Ext(path) == ".po" {
-					args = append(args, path)
-				}
-				return nil
-			}
-			if path == "po" {
-				return nil
-			}
-			// skip subdir
-			return filepath.SkipDir
-		})
-		if err != nil {
-			log.Errorf("fail to walk po directory: %s", err)
-			return false
-		}
+		log.Errorf("no arguments given; specify .po files or directories containing them")
+		return false
 	}
 
-	if len(args) == 0 {
-		log.Errorf(`cannot find any ".po" files to check`)
-		ret = false
-	}
+	type checkItem struct{ locale, poFile string }
+	var toCheck []checkItem
 
 	for _, arg := range args {
+		info, err := os.Stat(arg)
+		if err != nil {
+			log.Errorf("cannot access %q: %v", arg, err)
+			ret = false
+			continue
+		}
+		if info.IsDir() {
+			entries, err := os.ReadDir(arg)
+			if err != nil {
+				log.Errorf("cannot read directory %q: %v", arg, err)
+				ret = false
+				continue
+			}
+			for _, e := range entries {
+				if e.IsDir() {
+					continue
+				}
+				if filepath.Ext(e.Name()) != ".po" {
+					continue
+				}
+				poFile := filepath.Join(arg, e.Name())
+				locale := strings.TrimSuffix(e.Name(), ".po")
+				toCheck = append(toCheck, checkItem{locale: locale, poFile: poFile})
+			}
+			continue
+		}
+		// file
+		if filepath.Ext(arg) != ".po" {
+			log.Errorf("not a .po file: %q", arg)
+			ret = false
+			continue
+		}
+		poFile := arg
 		locale := strings.TrimSuffix(filepath.Base(arg), ".po")
-		poFile := filepath.Join(PoDir, locale+".po")
-		poFiles = append(poFiles, poFile)
-		if !CheckPoFile(locale, poFile) {
+		toCheck = append(toCheck, checkItem{locale: locale, poFile: poFile})
+	}
+
+	if len(toCheck) == 0 {
+		log.Errorf("no .po files to check (specify .po files or directories containing them)")
+		return false
+	}
+
+	for _, item := range toCheck {
+		poFiles = append(poFiles, item.poFile)
+		if !CheckPoFile(item.locale, item.poFile) {
 			ret = false
 		}
 		if flag.Core() {
-			if !CheckCorePoFile(locale) {
+			if !CheckCorePoFile(item.locale) {
 				ret = false
 			}
 		}
