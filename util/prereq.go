@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-
-	"github.com/git-l10n/git-po-helper/gettext"
 )
 
 // CheckPrereq checks prerequisites for po-helper.
@@ -25,8 +23,7 @@ func CheckPrereq() error {
 		}
 	}
 
-	gettext.FindGettext()
-	if len(gettext.GettextAppMap) == 0 {
+	if _, err := exec.LookPath("msgfmt"); err != nil {
 		return errors.New("gettext is not installed")
 	}
 

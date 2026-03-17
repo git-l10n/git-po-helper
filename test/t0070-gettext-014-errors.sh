@@ -57,9 +57,10 @@ test_expect_success "setup" '
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
+level=error msg="[fr.po]    entry 3 (msgid \"invalid --stat value: %s\"): #~| format not supported by gettext 0.14"
+------------------------------------------------------------------------------
 level=error msg="[fr.po]    2 translated messages."
 level=error msg="[fr.po]    too many obsolete entries (3) in comments, please remove them"
-level=error msg="[fr.po]    remove lines that start with '#~| msgid', for they are not compatible with gettext 0.14"
 ERROR: check-po command failed
 EOF
 
