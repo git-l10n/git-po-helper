@@ -122,6 +122,35 @@ func (po *GettextPO) Meta() []string {
 	return strings.Split(decoded, "\n")
 }
 
+// GetMeta returns the value part of the first header meta line whose key matches (case-insensitive).
+// Key should not include the colon, e.g. GetMeta("Project-Id-Version"). Returns empty string if not found.
+func (po *GettextPO) GetMeta(key string) string {
+	if po == nil || key == "" {
+		return ""
+	}
+	prefix := key + ":"
+	for _, line := range po.Meta() {
+		trimmed := strings.TrimSpace(line)
+		if len(trimmed) >= len(prefix) && strings.EqualFold(trimmed[:len(prefix)], prefix) {
+			return strings.TrimSpace(trimmed[len(prefix):])
+		}
+	}
+	return ""
+}
+
+// GetProject returns the project name from the Project-Id-Version meta line (first word of the value).
+// E.g. value "git v2.53.0-rc0" yields "git". Returns empty string if not found.
+func (po *GettextPO) GetProject() string {
+	value := po.GetMeta("Project-Id-Version")
+	if value == "" {
+		return ""
+	}
+	if i := strings.IndexAny(value, " \t"); i >= 0 {
+		return value[:i]
+	}
+	return value
+}
+
 // HeaderLines returns the header as raw lines for BuildPoContent.
 // Only adds msgid ""/msgstr "" and meta when the header had that block (MsgStr set).
 func (po *GettextPO) HeaderLines() []string {
