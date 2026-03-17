@@ -18,12 +18,12 @@ test_expect_success "setup" '
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
-level=error msg="[po/zh_CN.po]    po/zh_CN.po:25: end-of-line within string"
-level=error msg="[po/zh_CN.po]    msgfmt: found 1 fatal error"
-level=error msg="[po/zh_CN.po]    fail to check po: exit status 1"
+level=error msg="[zh_CN.po]    po/zh_CN.po:25: end-of-line within string"
+level=error msg="[zh_CN.po]    msgfmt: found 1 fatal error"
+level=error msg="[zh_CN.po]    fail to check po: exit status 1"
 ------------------------------------------------------------------------------
-level=error msg="[po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1"
-level=error msg="[po/zh_CN.po]    fail to generate mofile"
+level=error msg="[zh_CN.po]    fail to compile po/zh_CN.po: exit status 1"
+level=error msg="[zh_CN.po]    fail to generate mofile"
 ERROR: check-po command failed
 EOF
 
@@ -55,7 +55,7 @@ test_expect_success "bad syntax of zh_CN.po" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz""
 	EOF
 
-	test_must_fail git -C workdir $HELPER check-po $POT_FILE --report-file-locations=none zh_CN >out 2>&1 &&
+	test_must_fail git -C workdir $HELPER check-po $POT_FILE --report-file-locations=none po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	test_cmp expect actual
@@ -94,12 +94,12 @@ test_expect_success "update zh_CN successfully" '
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
-level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
+level=info msg="[zh_CN.po]    2 translated messages, 5102 untranslated messages."
 ------------------------------------------------------------------------------
 EOF
 
 test_expect_success "check update of zh_CN.po" '
-	git -C workdir $HELPER check-po $POT_FILE --report-file-locations=none zh_CN >out 2>&1 &&
+	git -C workdir $HELPER check-po $POT_FILE --report-file-locations=none po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
 		head -3 >actual &&
 	test_cmp expect actual
@@ -107,21 +107,21 @@ test_expect_success "check update of zh_CN.po" '
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
-level=info msg="[po/zh_CN.po]    2 translated messages, 5102 untranslated messages."
+level=info msg="[zh_CN.po]    2 translated messages, 5102 untranslated messages."
 ------------------------------------------------------------------------------
 level=info msg="[zh_CN.po (core)]    2 translated messages, 479 untranslated messages."
 ------------------------------------------------------------------------------
-level=warning msg="[po/zh_CN.po]    5102 untranslated string(s) in your 'po/XX.po'"
-level=warning msg="[po/zh_CN.po]"
-level=warning msg="[po/zh_CN.po]     > po/XX.po:18: this message is untranslated"
-level=warning msg="[po/zh_CN.po]     > po/XX.po:22: this message is untranslated"
-level=warning msg="[po/zh_CN.po]     > po/XX.po:26: this message is untranslated"
-level=warning msg="[po/zh_CN.po]     > ..."
-level=warning msg="[po/zh_CN.po]"
+level=warning msg="[zh_CN.po]    5102 untranslated string(s) in your 'po/XX.po'"
+level=warning msg="[zh_CN.po]"
+level=warning msg="[zh_CN.po]     > po/XX.po:18: this message is untranslated"
+level=warning msg="[zh_CN.po]     > po/XX.po:22: this message is untranslated"
+level=warning msg="[zh_CN.po]     > po/XX.po:26: this message is untranslated"
+level=warning msg="[zh_CN.po]     > ..."
+level=warning msg="[zh_CN.po]"
 EOF
 
 test_expect_success "check core update of zh_CN.po" '
-	git -C workdir $HELPER check-po $POT_FILE --report-file-locations=none --core zh_CN >out 2>&1 &&
+	git -C workdir $HELPER check-po $POT_FILE --report-file-locations=none --core po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

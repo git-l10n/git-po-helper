@@ -60,10 +60,10 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 			defer os.Remove(tmpFile.Tmpfile)
 			poFile = tmpFile.Tmpfile
 			prompt = fmt.Sprintf("[%s@%s]",
-				filepath.Join(PoDir, locale+".po"),
+				locale+".po",
 				AbbrevCommit(commit))
 		} else {
-			prompt = fmt.Sprintf("[%s]", poFile)
+			prompt = fmt.Sprintf("[%s]", filepath.Base(poFile))
 		}
 
 		// Check po file with pot file for missing translations.

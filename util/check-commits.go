@@ -138,7 +138,7 @@ func checkCommitChanges(commit string, notL10nChanges, l10nChanges []string) (ok
 		} else {
 			locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
 			prompt := fmt.Sprintf("[%s@%s]",
-				filepath.Join(PoDir, locale+".po"),
+				locale+".po",
 				AbbrevCommit(commit))
 			if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, prompt) {
 				// Error errs in CheckPoFileWithPrompt() have been output already,

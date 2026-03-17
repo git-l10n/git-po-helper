@@ -19,22 +19,22 @@ test_expect_success "setup" '
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
-ERROR [po/zh_CN.po]    po/zh_CN.po:25: end-of-line within string
-ERROR [po/zh_CN.po]    msgfmt: found 1 fatal error
-ERROR [po/zh_CN.po]    fail to check po: exit status 1
+ERROR [zh_CN.po]    po/zh_CN.po:25: end-of-line within string
+ERROR [zh_CN.po]    msgfmt: found 1 fatal error
+ERROR [zh_CN.po]    fail to check po: exit status 1
 ------------------------------------------------------------------------------
-ERROR [po/zh_CN.po]    Found file-location comments in po file. By submitting a location-less
-ERROR [po/zh_CN.po]    "po/XX.po" file, the size of the Git repository can be greatly reduced.
-ERROR [po/zh_CN.po]    See the discussion below:
-ERROR [po/zh_CN.po]
-ERROR [po/zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
-ERROR [po/zh_CN.po]
-ERROR [po/zh_CN.po]    As how to commit a location-less "po/XX.po" file, See:
-ERROR [po/zh_CN.po]
-ERROR [po/zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
+ERROR [zh_CN.po]    Found file-location comments in po file. By submitting a location-less
+ERROR [zh_CN.po]    "po/XX.po" file, the size of the Git repository can be greatly reduced.
+ERROR [zh_CN.po]    See the discussion below:
+ERROR [zh_CN.po]
+ERROR [zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ERROR [zh_CN.po]
+ERROR [zh_CN.po]    As how to commit a location-less "po/XX.po" file, See:
+ERROR [zh_CN.po]
+ERROR [zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
 ------------------------------------------------------------------------------
-ERROR [po/zh_CN.po]    fail to compile po/zh_CN.po: exit status 1
-ERROR [po/zh_CN.po]    fail to generate mofile
+ERROR [zh_CN.po]    fail to compile po/zh_CN.po: exit status 1
+ERROR [zh_CN.po]    fail to generate mofile
 ERROR: check-po command failed
 EOF
 
@@ -67,7 +67,7 @@ test_expect_success "bad syntax of zh_CN.po" '
 	EOF
 
 	test_must_fail git -C workdir $HELPER \
-		check-po $POT_FILE zh_CN >out 2>&1 &&
+		check-po $POT_FILE po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	test_cmp expect actual
@@ -77,7 +77,7 @@ test_expect_success "update zh_CN (--add-location=file)" '
 	cat >expect <<-EOF &&
 	INFO run msgmerge for "Chinese - China": msgmerge --add-location=file -o - po/zh_CN.po po/git.pot
 	------------------------------------------------------------------------------
-	INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
+	INFO [zh_CN.po]    2 translated messages, 5102 untranslated messages.
 	EOF
 
 	cat >workdir/po/zh_CN.po <<-\EOF &&
@@ -116,11 +116,11 @@ test_expect_success "update zh_CN (--add-location=file)" '
 test_expect_success "check update of zh_CN.po" '
 	cat >expect <<-\EOF &&
 	------------------------------------------------------------------------------
-	INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
+	INFO [zh_CN.po]    2 translated messages, 5102 untranslated messages.
 	EOF
 
 	git -C workdir $HELPER \
-		check-po $POT_FILE zh_CN >out 2>&1 &&
+		check-po $POT_FILE po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
 		head -2 >actual &&
 	test_cmp expect actual
@@ -128,22 +128,22 @@ test_expect_success "check update of zh_CN.po" '
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
-INFO [po/zh_CN.po]    2 translated messages, 5102 untranslated messages.
+INFO [zh_CN.po]    2 translated messages, 5102 untranslated messages.
 ------------------------------------------------------------------------------
 INFO [zh_CN.po (core)]    2 translated messages, 479 untranslated messages.
 ------------------------------------------------------------------------------
-WARNING [po/zh_CN.po]    5102 untranslated string(s) in your 'po/XX.po'
-WARNING [po/zh_CN.po]
-WARNING [po/zh_CN.po]     > po/XX.po:18: this message is untranslated
-WARNING [po/zh_CN.po]     > po/XX.po:22: this message is untranslated
-WARNING [po/zh_CN.po]     > po/XX.po:26: this message is untranslated
-WARNING [po/zh_CN.po]     > ...
-WARNING [po/zh_CN.po]
+WARNING [zh_CN.po]    5102 untranslated string(s) in your 'po/XX.po'
+WARNING [zh_CN.po]
+WARNING [zh_CN.po]     > po/XX.po:18: this message is untranslated
+WARNING [zh_CN.po]     > po/XX.po:22: this message is untranslated
+WARNING [zh_CN.po]     > po/XX.po:26: this message is untranslated
+WARNING [zh_CN.po]     > ...
+WARNING [zh_CN.po]
 EOF
 
 test_expect_success "check core update of zh_CN.po" '
 	git -C workdir $HELPER \
-		check-po $POT_FILE --core zh_CN >out 2>&1 &&
+		check-po $POT_FILE --core po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

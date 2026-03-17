@@ -30,7 +30,7 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 		return false
 	}
 	if prompt == "" {
-		prompt = fmt.Sprintf("[%s]", filepath.Join(PoDir, locale+".po"))
+		prompt = fmt.Sprintf("[%s]", locale+".po")
 	}
 
 	if !Exist(poFile) {
@@ -122,7 +122,7 @@ func CmdCheckPo(args ...string) bool {
 			ret = false
 		}
 		if flag.Core() {
-			if !CheckCorePoFile(item.locale) {
+			if !CheckCorePoFile(item.locale, item.poFile) {
 				ret = false
 			}
 		}

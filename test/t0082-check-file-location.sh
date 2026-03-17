@@ -18,28 +18,28 @@ test_expect_success "setup" '
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
-level=info msg="[po/zh_CN.po]    5282 translated messages."
+level=info msg="[zh_CN.po]    5282 translated messages."
 ------------------------------------------------------------------------------
-level=error msg="[po/zh_CN.po]    Found file-location comments in po file. By submitting a location-less"
-level=error msg="[po/zh_CN.po]    \"po/XX.po\" file, the size of the Git repository can be greatly reduced."
-level=error msg="[po/zh_CN.po]    See the discussion below:"
-level=error msg="[po/zh_CN.po]"
-level=error msg="[po/zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/"
-level=error msg="[po/zh_CN.po]"
-level=error msg="[po/zh_CN.po]    As how to commit a location-less \"po/XX.po\" file, See:"
-level=error msg="[po/zh_CN.po]"
-level=error msg="[po/zh_CN.po]     the [Updating a \"XX.po\" file] section in \"po/README.md\""
+level=error msg="[zh_CN.po]    Found file-location comments in po file. By submitting a location-less"
+level=error msg="[zh_CN.po]    \"po/XX.po\" file, the size of the Git repository can be greatly reduced."
+level=error msg="[zh_CN.po]    See the discussion below:"
+level=error msg="[zh_CN.po]"
+level=error msg="[zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/"
+level=error msg="[zh_CN.po]"
+level=error msg="[zh_CN.po]    As how to commit a location-less \"po/XX.po\" file, See:"
+level=error msg="[zh_CN.po]"
+level=error msg="[zh_CN.po]     the [Updating a \"XX.po\" file] section in \"po/README.md\""
 ------------------------------------------------------------------------------
-level=error msg="[po/zh_CN.po]    mismatched patterns: refs/remotes/"
-level=error msg="[po/zh_CN.po]    >> msgid: Note: A branch outside the refs/remotes/ hierarchy was not removed;"
-level=error msg="[po/zh_CN.po]    to delete it, use:"
-level=error msg="[po/zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一个分支未被移除。要删除它，使用："
-level=error msg="[po/zh_CN.po]"
-level=error msg="[po/zh_CN.po]    mismatched patterns: refs/remotes/"
-level=error msg="[po/zh_CN.po]    >> msgid: Note: Some branches outside the refs/remotes/ hierarchy were not removed;"
-level=error msg="[po/zh_CN.po]    to delete them, use:"
-level=error msg="[po/zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一些分支未被移除。要删除它们，使用："
-level=error msg="[po/zh_CN.po]"
+level=error msg="[zh_CN.po]    mismatched patterns: refs/remotes/"
+level=error msg="[zh_CN.po]    >> msgid: Note: A branch outside the refs/remotes/ hierarchy was not removed;"
+level=error msg="[zh_CN.po]    to delete it, use:"
+level=error msg="[zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一个分支未被移除。要删除它，使用："
+level=error msg="[zh_CN.po]"
+level=error msg="[zh_CN.po]    mismatched patterns: refs/remotes/"
+level=error msg="[zh_CN.po]    >> msgid: Note: Some branches outside the refs/remotes/ hierarchy were not removed;"
+level=error msg="[zh_CN.po]    to delete them, use:"
+level=error msg="[zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一些分支未被移除。要删除它们，使用："
+level=error msg="[zh_CN.po]"
 ERROR: check-po command failed
 EOF
 
@@ -59,18 +59,18 @@ test_expect_success "zh_CN.po: has file-locations (no --report-file-location opt
 
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
-level=info msg="[po/zh_CN.po]    5282 translated messages."
+level=info msg="[zh_CN.po]    5282 translated messages."
 ------------------------------------------------------------------------------
-level=error msg="[po/zh_CN.po]    mismatched patterns: refs/remotes/"
-level=error msg="[po/zh_CN.po]    >> msgid: Note: A branch outside the refs/remotes/ hierarchy was not removed;"
-level=error msg="[po/zh_CN.po]    to delete it, use:"
-level=error msg="[po/zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一个分支未被移除。要删除它，使用："
-level=error msg="[po/zh_CN.po]"
-level=error msg="[po/zh_CN.po]    mismatched patterns: refs/remotes/"
-level=error msg="[po/zh_CN.po]    >> msgid: Note: Some branches outside the refs/remotes/ hierarchy were not removed;"
-level=error msg="[po/zh_CN.po]    to delete them, use:"
-level=error msg="[po/zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一些分支未被移除。要删除它们，使用："
-level=error msg="[po/zh_CN.po]"
+level=error msg="[zh_CN.po]    mismatched patterns: refs/remotes/"
+level=error msg="[zh_CN.po]    >> msgid: Note: A branch outside the refs/remotes/ hierarchy was not removed;"
+level=error msg="[zh_CN.po]    to delete it, use:"
+level=error msg="[zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一个分支未被移除。要删除它，使用："
+level=error msg="[zh_CN.po]"
+level=error msg="[zh_CN.po]    mismatched patterns: refs/remotes/"
+level=error msg="[zh_CN.po]    >> msgid: Note: Some branches outside the refs/remotes/ hierarchy were not removed;"
+level=error msg="[zh_CN.po]    to delete them, use:"
+level=error msg="[zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一些分支未被移除。要删除它们，使用："
+level=error msg="[zh_CN.po]"
 ERROR: check-po command failed
 EOF
 

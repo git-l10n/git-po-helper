@@ -12,7 +12,7 @@ import (
 )
 
 // CheckCorePoFile checks syntax of "po/xx.po" against "po/git-core.pot"
-func CheckCorePoFile(locale string) bool {
+func CheckCorePoFile(locale, poFile string) bool {
 	var (
 		prompt = fmt.Sprintf("[%s.po (core)]", locale)
 		errs   []string
@@ -43,7 +43,7 @@ func CheckCorePoFile(locale string) bool {
 		infos = append(infos, msgs...)
 	}
 
-	fin, err := os.Open(filepath.Join(PoDir, locale+".po"))
+	fin, err := os.Open(poFile)
 	if err != nil {
 		errs = append(errs, err.Error())
 		return false
@@ -59,8 +59,7 @@ func CheckCorePoFile(locale string) bool {
 	_, err = io.Copy(fout, fin)
 	if err != nil {
 		errs = append(errs,
-			fmt.Sprintf("fail to copy %s/%s.po to tmpfile: %s",
-				PoDir, locale, err))
+			fmt.Sprintf("fail to copy %s to tmpfile: %s", poFile, err))
 		return false
 	}
 
@@ -77,15 +76,15 @@ func CheckCorePoFile(locale string) bool {
 		return false
 	}
 
-	poFile := fout.Name()
-	if !Exist(poFile) {
+	tmpPoFile := fout.Name()
+	if !Exist(tmpPoFile) {
 		errs = append(errs,
-			fmt.Sprintf(`fail to check "%s", does not exist`, poFile))
+			fmt.Sprintf(`fail to check "%s", does not exist`, tmpPoFile))
 		return false
 	}
 
 	// Run msgfmt to check syntax of a .po file
-	msgs, ret := checkPoSyntax(poFile)
+	msgs, ret := checkPoSyntax(tmpPoFile)
 	for _, msg := range msgs {
 		if !ret {
 			errs = append(errs, msg)
