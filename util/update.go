@@ -34,7 +34,7 @@ func UpdatePotFile() (string, bool) {
 		}
 		tmpfile.Close()
 		potFile := tmpfile.Name()
-		showHorizontalLine()
+		reportSectionStart(log.InfoLevel, "Download pot template")
 		log.Infof("downloading pot file from %s", PotFileURL)
 		if err := httpDownload(PotFileURL, potFile, showProgress); err != nil {
 			_ = os.Remove(potFile)
@@ -57,7 +57,7 @@ func UpdatePotFile() (string, bool) {
 	if opt == flag.PotFileFlagLocation {
 		potFile := flag.GetPotFileLocation()
 		if !Exist(potFile) {
-			showHorizontalLine()
+			reportSectionStart(log.ErrorLevel, "Pot file")
 			for _, msg := range []string{
 				fmt.Sprintf("pot file '%s' does not exist", potFile),
 				"",
@@ -77,7 +77,7 @@ func UpdatePotFile() (string, bool) {
 	// Try to build pot file from source.
 	if opt == flag.PotFileFlagUpdate {
 		cmd := exec.Command("make", "pot")
-		showHorizontalLine()
+		reportSectionStart(log.InfoLevel, "Build pot template")
 		log.Info("update pot file by running: make pot")
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
@@ -207,5 +207,6 @@ func CmdUpdate(fileName string) bool {
 	}
 
 	viper.Set("check--report-file-locations", "none")
+	viper.Set("check--allow-obsolete", true)
 	return CheckPoFile(locale, poFile)
 }

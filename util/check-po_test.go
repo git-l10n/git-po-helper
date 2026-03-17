@@ -43,7 +43,7 @@ func TestCheckPoMetaNewlines(t *testing.T) {
 				},
 				Entries: []GettextEntry{},
 			}
-			errs, ok := checkPoMetaNewlines(po)
+			errs, ok := checkPoMetaEscapeChars(po)
 			if ok == tt.wantErr {
 				t.Errorf("checkPoMetaNewlines() ok = %v, want %v", ok, !tt.wantErr)
 			}

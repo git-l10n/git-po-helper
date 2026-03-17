@@ -14,7 +14,7 @@ import (
 
 func checkPoFilterFormat(poFile string) ([]string, bool) {
 	var errs []string
-	if flag.ReportFileLocations() == flag.ReportIssueNone {
+	if flag.ReportFileLocations() == flag.ReportIssueNone || flag.AllowObsoleteEntries() {
 		return nil, true
 	}
 
@@ -35,8 +35,8 @@ func checkPoFilterFormat(poFile string) ([]string, bool) {
 	}
 	relPath, err := filepath.Rel(workDir, absPath)
 	if err != nil || strings.HasPrefix(relPath, "..") {
-		errs = append(errs, fmt.Sprintf("file %s is not under repository root", poFile))
-		return errs, false
+		// File is outside repo (e.g. temp file from check-commits); skip filter check
+		return nil, true
 	}
 	relPath = filepath.ToSlash(relPath)
 

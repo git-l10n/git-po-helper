@@ -11,9 +11,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// checkPoMetaNewlines reads meta line by line and reports abnormal newline sequences.
+// checkPoMetaEscapeChars reads meta line by line and reports abnormal newline sequences.
 // Abnormal: literal "\\n" (backslash+n) in decoded meta, which may indicate double-escape or corruption.
-func checkPoMetaNewlines(po *GettextPO) ([]string, bool) {
+func checkPoMetaEscapeChars(po *GettextPO) ([]string, bool) {
 	var errs []string
 	for i, line := range po.Meta() {
 		if strings.Contains(line, `\n`) {
@@ -120,15 +120,15 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 
 	// Run msgfmt to check syntax of a .po file
 	errs, ok = checkPoWithMsgfmt(poFile)
-	ReportInfoAndErrors(errs, prompt, ok)
+	ReportSection("Syntax check with msgfmt", ok, log.InfoLevel, prompt, errs...)
 	ret = ret && ok
 
 	// Get pretty locale name, and validate locale name.
 	locale = strings.TrimSuffix(filepath.Base(locale), ".po")
 	_, err := GetPrettyLocaleName(locale)
 	if err != nil {
-		log.Error(err)
-		return false
+		ReportSection("Locale name", false, log.InfoLevel, prompt, err.Error())
+		ret = false
 	}
 
 	poData, err := os.ReadFile(poFile)
@@ -143,36 +143,38 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	}
 
 	// Check header meta for abnormal newline sequences (e.g. literal \n).
-	errs, ok = checkPoMetaNewlines(po)
-	ReportInfoAndErrors(errs, prompt, ok)
+	errs, ok = checkPoMetaEscapeChars(po)
+	ReportSection("Syntax of PO header meta lines", ok, log.InfoLevel, prompt, errs...)
 	ret = ret && ok
 
 	// Check that location comments (#:) do not contain line numbers.
 	if flag.ReportFileLocations() != flag.ReportIssueNone {
 		errs, ok = checkPoLocationCommentsNoLineNumbers(po)
 		ok = ok || flag.ReportFileLocations() == flag.ReportIssueWarn
-		ReportInfoAndErrors(errs, prompt, ok)
+		ReportSection("Location comments (#:)", ok, log.InfoLevel, prompt, errs...)
 		ret = ret && ok
 	}
 
 	// Compatibility checks: msgctxt (gettext 0.15+), #~| and #~ msgctxt (gettext 0.14+).
 	errs, ok = checkPoCompatibility(po)
-	ReportInfoAndErrors(errs, prompt, ok)
+	ReportSection("gettext compatibility", ok, log.InfoLevel, prompt, errs...)
 	ret = ret && ok
 
-	// No obsolete entries allowed.
-	errs, ok = checkPoNoObsoleteEntries(po)
-	ReportInfoAndErrors(errs, prompt, ok)
-	ret = ret && ok
+	// No obsolete entries allowed (unless AllowObsoleteEntries, e.g. in update flow).
+	if !flag.AllowObsoleteEntries() {
+		errs, ok = checkPoNoObsoleteEntries(po)
+		ReportSection("Obsolete #~ entries", ok, log.InfoLevel, prompt, errs...)
+		ret = ret && ok
+	}
 
 	// Format check: use driver return from git-check-attr to format PO file
 	errs, ok = checkPoFilterFormat(poFile)
-	ReportInfoAndErrors(errs, prompt, ok)
+	ReportSection("PO filter (.gitattributes)", ok, log.InfoLevel, prompt, errs...)
 	ret = ret && ok
 
 	// Check possible typos in a .po file.
 	errs, ok = checkTyposInPoFile(locale, poFile)
-	ReportWarnAndErrors(errs, prompt, ok)
+	ReportSection("msgid/msgstr pattern check", ok, log.WarnLevel, prompt, errs...)
 	ret = ret && ok
 
 	return ret

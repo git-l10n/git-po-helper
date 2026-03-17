@@ -57,11 +57,12 @@ func (v *commitLog) checkAuthorCommitter() bool {
 	)
 
 	defer func() {
+		const title = "Author and committer"
 		if len(warns) > 0 {
-			reportResultMessages(warns, "", log.WarnLevel)
+			ReportSection(title, true, log.WarnLevel, "", warns...)
 		}
 		if len(errs) > 0 {
-			reportResultMessages(errs, "", log.ErrorLevel)
+			ReportSection(title, false, log.InfoLevel, "", errs...)
 		}
 	}()
 
@@ -155,11 +156,12 @@ func (v *commitLog) checkSubject() bool {
 	)
 
 	defer func() {
+		const title = "Commit subject"
 		if len(warns) > 0 {
-			reportResultMessages(warns, "", log.WarnLevel)
+			ReportSection(title, true, log.WarnLevel, "", warns...)
 		}
 		if len(errs) > 0 {
-			reportResultMessages(errs, "", log.ErrorLevel)
+			ReportSection(title, false, log.InfoLevel, "", errs...)
 		}
 	}()
 
@@ -255,11 +257,12 @@ func (v *commitLog) checkBody() bool {
 	)
 
 	defer func() {
+		const title = "Commit message body"
 		if len(warns) > 0 {
-			reportResultMessages(warns, "", log.WarnLevel)
+			ReportSection(title, true, log.WarnLevel, "", warns...)
 		}
 		if len(errs) > 0 {
-			reportResultMessages(errs, "", log.ErrorLevel)
+			ReportSection(title, false, log.InfoLevel, "", errs...)
 		}
 	}()
 
@@ -384,7 +387,7 @@ func (v *commitLog) checkGpg() bool {
 
 	defer func() {
 		if len(errs) > 0 {
-			reportResultMessages(errs, "", log.ErrorLevel)
+			ReportSection("GPG signature", false, log.InfoLevel, "", errs...)
 		}
 	}()
 
@@ -422,11 +425,12 @@ func (v *commitLog) checkEncoding() bool {
 	)
 
 	defer func() {
+		const title = "Commit log encoding"
 		if len(warns) > 0 {
-			reportResultMessages(warns, "", log.WarnLevel)
+			ReportSection(title, true, log.WarnLevel, "", warns...)
 		}
 		if len(errs) > 0 {
-			reportResultMessages(errs, "", log.ErrorLevel)
+			ReportSection(title, false, log.InfoLevel, "", errs...)
 		}
 	}()
 

@@ -23,18 +23,22 @@ ERROR [zh_CN.po]    po/zh_CN.po:25: end-of-line within string
 ERROR [zh_CN.po]    msgfmt: found 1 fatal error
 ERROR [zh_CN.po]    fail to check po: exit status 1
 ------------------------------------------------------------------------------
-ERROR [zh_CN.po]    Found file-location comments in po file. By submitting a location-less
-ERROR [zh_CN.po]    "po/XX.po" file, the size of the Git repository can be greatly reduced.
-ERROR [zh_CN.po]    See the discussion below:
+ERROR [zh_CN.po]    entry 1 (msgid "more than one receivepack g..."): location comment contains line number (use file-only or remove): "remote.c:399"
+------------------------------------------------------------------------------
+ERROR [zh_CN.po]    No filter attribute set for XX.po. This will introduce location newlines into the
+ERROR [zh_CN.po]    repository and cause repository bloat.
+ERROR [zh_CN.po]
+ERROR [zh_CN.po]    Please configure the filter attribute for XX.po, for example:
+ERROR [zh_CN.po]
+ERROR [zh_CN.po]     .gitattributes: *.po filter=gettext-no-location
+ERROR [zh_CN.po]
+ERROR [zh_CN.po]    See:
 ERROR [zh_CN.po]
 ERROR [zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
-ERROR [zh_CN.po]
-ERROR [zh_CN.po]    As how to commit a location-less "po/XX.po" file, See:
-ERROR [zh_CN.po]
-ERROR [zh_CN.po]     the [Updating a "XX.po" file] section in "po/README.md"
 ------------------------------------------------------------------------------
 ERROR [zh_CN.po]    fail to compile po/zh_CN.po: exit status 1
 ERROR [zh_CN.po]    fail to generate mofile
+------------------------------------------------------------------------------
 ERROR: check-po command failed
 EOF
 
@@ -78,6 +82,7 @@ test_expect_success "update zh_CN (--add-location=file)" '
 	INFO run msgmerge for "Chinese - China": msgmerge --add-location=file -o - po/zh_CN.po po/git.pot
 	------------------------------------------------------------------------------
 	INFO [zh_CN.po]    2 translated messages, 5102 untranslated messages.
+	------------------------------------------------------------------------------
 	EOF
 
 	cat >workdir/po/zh_CN.po <<-\EOF &&
@@ -102,9 +107,6 @@ test_expect_success "update zh_CN (--add-location=file)" '
 	#: remote.c:407
 	msgid "more than one uploadpack given, using the first"
 	msgstr "提供了一个以上的 uploadpack，使用第一个"
-
-	msgid "po-helper test: not a real l10n message: xyz"
-	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz"
 	EOF
 
 	git -C workdir $HELPER update $POT_FILE zh_CN 2>&1 |
@@ -120,7 +122,7 @@ test_expect_success "check update of zh_CN.po" '
 	EOF
 
 	git -C workdir $HELPER \
-		check-po $POT_FILE po/zh_CN.po >out 2>&1 &&
+		check-po $POT_FILE --report-file-locations=none po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out |
 		head -2 >actual &&
 	test_cmp expect actual
@@ -130,7 +132,9 @@ cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 INFO [zh_CN.po]    2 translated messages, 5102 untranslated messages.
 ------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 INFO [zh_CN.po (core)]    2 translated messages, 479 untranslated messages.
+------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
 WARNING [zh_CN.po]    5102 untranslated string(s) in your 'po/XX.po'
 WARNING [zh_CN.po]
@@ -139,11 +143,12 @@ WARNING [zh_CN.po]     > po/XX.po:22: this message is untranslated
 WARNING [zh_CN.po]     > po/XX.po:26: this message is untranslated
 WARNING [zh_CN.po]     > ...
 WARNING [zh_CN.po]
+------------------------------------------------------------------------------
 EOF
 
 test_expect_success "check core update of zh_CN.po" '
 	git -C workdir $HELPER \
-		check-po $POT_FILE --core po/zh_CN.po >out 2>&1 &&
+		check-po $POT_FILE --core --report-file-locations=none po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

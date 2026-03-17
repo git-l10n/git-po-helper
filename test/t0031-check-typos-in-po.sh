@@ -4,7 +4,7 @@ test_description="check typos in po files"
 
 . ./lib/test-lib.sh
 
-HELPER="po-helper --no-special-gettext-versions --report-typos=warn"
+HELPER="po-helper --no-special-gettext-versions --report-typos=warn --report-file-locations=none"
 POT_NO="--pot-file=no"
 
 test_expect_success "setup" '
@@ -43,17 +43,17 @@ test_expect_success "mismatched shell variables" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	------------------------------------------------------------------------------
-	level=info msg="[zh_CN.po]    2 translated messages."
-	------------------------------------------------------------------------------
-	level=warning msg="[zh_CN.po]    mismatched patterns: $branch, $remote_name, $sm_path, sm_path"
-	level=warning msg="[zh_CN.po]    >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}"
-	level=warning msg="[zh_CN.po]    >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本"
-	level=warning msg="[zh_CN.po]"
-	level=warning msg="[zh_CN.po]    mismatched patterns: $command, $res"
-	level=warning msg="[zh_CN.po]    >> msgid: exit code $res from $command is < 0 or >= 128"
-	level=warning msg="[zh_CN.po]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
-	level=warning msg="[zh_CN.po]"
+	ℹ️ Syntax check with msgfmt
+	 INFO [zh_CN.po] 2 translated messages.
+	⚠️ msgid/msgstr pattern check
+	 WARNING [zh_CN.po] mismatched patterns: $branch, $remote_name, $sm_path, sm_path
+	 WARNING [zh_CN.po] >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}
+	 WARNING [zh_CN.po] >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: $command, $res
+	 WARNING [zh_CN.po] >> msgid: exit code $res from $command is < 0 or >= 128
+	 WARNING [zh_CN.po] >> msgstr: 命令的退出码res 应该 < 0 或 >= 128
+	 WARNING [zh_CN.po]
 	EOF
 
 	test_cmp expect actual
@@ -85,13 +85,13 @@ test_expect_success "trash variables in msgStr (--typos=error)" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	------------------------------------------------------------------------------
-	level=info msg="[zh_CN.po]    1 translated message."
-	------------------------------------------------------------------------------
-	level=error msg="[zh_CN.po]    mismatched patterns: $command, $res"
-	level=error msg="[zh_CN.po]    >> msgid: exit code %d from %s is < 0 or >= 128"
-	level=error msg="[zh_CN.po]    >> msgstr: 命令 $command 的退出码 $res 应该 < 0 或 >= 128"
-	level=error msg="[zh_CN.po]"
+	ℹ️ Syntax check with msgfmt
+	 INFO [zh_CN.po] 1 translated message.
+	❌ msgid/msgstr pattern check
+	 ERROR [zh_CN.po] mismatched patterns: $command, $res
+	 ERROR [zh_CN.po] >> msgid: exit code %d from %s is < 0 or >= 128
+	 ERROR [zh_CN.po] >> msgstr: 命令 $command 的退出码 $res 应该 < 0 或 >= 128
+	 ERROR [zh_CN.po]
 	ERROR: check-po command failed
 	EOF
 
@@ -148,41 +148,41 @@ test_expect_success "check typos of mismatched constant strings" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	------------------------------------------------------------------------------
-	level=info msg="[zh_CN.po]    9 translated messages."
-	------------------------------------------------------------------------------
-	level=warning msg="[zh_CN.po]    mismatched patterns: CHERRY_PICK_HEAD, CHERRY_PICK_HEADS"
-	level=warning msg="[zh_CN.po]    >> msgid: CHERRY_PICK_HEAD exists"
-	level=warning msg="[zh_CN.po]    >> msgstr: 已存在 CHERRY_PICK_HEADS"
-	level=warning msg="[zh_CN.po]"
-	level=warning msg="[zh_CN.po]    mismatched patterns: config_variable"
-	level=warning msg="[zh_CN.po]    >> msgid: check settings of config_variable"
-	level=warning msg="[zh_CN.po]    >> msgstr: 检查配置变量的设置"
-	level=warning msg="[zh_CN.po]"
-	level=warning msg="[zh_CN.po]    mismatched patterns: config.variables"
-	level=warning msg="[zh_CN.po]    >> msgid: checking config.variables (one command)"
-	level=warning msg="[zh_CN.po]    >> msgstr: 检查 配置.变量（一条命令）"
-	level=warning msg="[zh_CN.po]"
-	level=warning msg="[zh_CN.po]    mismatched patterns: config.variables"
-	level=warning msg="[zh_CN.po]    >> msgid: checking config.variables (%d commands)"
-	level=warning msg="[zh_CN.po]    >> msgstr: 检查 配置.变量（%d 条命令）"
-	level=warning msg="[zh_CN.po]"
-	level=warning msg="[zh_CN.po]    mismatched patterns: --interactive, git rebase--interactive"
-	level=warning msg="[zh_CN.po]    >> msgid: git rebase--interactive [options]"
-	level=warning msg="[zh_CN.po]    >> msgstr: git rebase --interactive [参数]"
-	level=warning msg="[zh_CN.po]"
-	level=warning msg="[zh_CN.po]    mismatched patterns: git-credential--helper, git-credential-helper"
-	level=warning msg="[zh_CN.po]    >> msgid: git-credential--helper [options]"
-	level=warning msg="[zh_CN.po]    >> msgstr: git-credential-helper [参数]"
-	level=warning msg="[zh_CN.po]"
-	level=warning msg="[zh_CN.po]    mismatched patterns: log.graphColors, log.graphColorss"
-	level=warning msg="[zh_CN.po]    >> msgid: ignore invalid color %.*s in log.graphColors"
-	level=warning msg="[zh_CN.po]    >> msgstr: 忽略 log.graphColorss 中无效的颜色 %.*s"
-	level=warning msg="[zh_CN.po]"
-	level=warning msg="[zh_CN.po]    mismatched patterns: color.blame.repeatedLines, color.blame.repeatedlines"
-	level=warning msg="[zh_CN.po]    >> msgid: invalid color %s in color.blame.repeatedLines"
-	level=warning msg="[zh_CN.po]    >> msgstr: color.blame.repeatedlines 中无效的颜色值 %s"
-	level=warning msg="[zh_CN.po]"
+	ℹ️ Syntax check with msgfmt
+	 INFO [zh_CN.po] 9 translated messages.
+	⚠️ msgid/msgstr pattern check
+	 WARNING [zh_CN.po] mismatched patterns: CHERRY_PICK_HEAD, CHERRY_PICK_HEADS
+	 WARNING [zh_CN.po] >> msgid: CHERRY_PICK_HEAD exists
+	 WARNING [zh_CN.po] >> msgstr: 已存在 CHERRY_PICK_HEADS
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: config_variable
+	 WARNING [zh_CN.po] >> msgid: check settings of config_variable
+	 WARNING [zh_CN.po] >> msgstr: 检查配置变量的设置
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: config.variables
+	 WARNING [zh_CN.po] >> msgid: checking config.variables (one command)
+	 WARNING [zh_CN.po] >> msgstr: 检查 配置.变量（一条命令）
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: config.variables
+	 WARNING [zh_CN.po] >> msgid: checking config.variables (%d commands)
+	 WARNING [zh_CN.po] >> msgstr: 检查 配置.变量（%d 条命令）
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: --interactive, git rebase--interactive
+	 WARNING [zh_CN.po] >> msgid: git rebase--interactive [options]
+	 WARNING [zh_CN.po] >> msgstr: git rebase --interactive [参数]
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: git-credential--helper, git-credential-helper
+	 WARNING [zh_CN.po] >> msgid: git-credential--helper [options]
+	 WARNING [zh_CN.po] >> msgstr: git-credential-helper [参数]
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: log.graphColors, log.graphColorss
+	 WARNING [zh_CN.po] >> msgid: ignore invalid color %.*s in log.graphColors
+	 WARNING [zh_CN.po] >> msgstr: 忽略 log.graphColorss 中无效的颜色 %.*s
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: color.blame.repeatedLines, color.blame.repeatedlines
+	 WARNING [zh_CN.po] >> msgid: invalid color %s in color.blame.repeatedLines
+	 WARNING [zh_CN.po] >> msgstr: color.blame.repeatedlines 中无效的颜色值 %s
+	 WARNING [zh_CN.po]
 	EOF
 	test_cmp expect actual
 '
@@ -217,21 +217,21 @@ test_expect_success "check typos of mismatched options" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	------------------------------------------------------------------------------
-	level=info msg="[zh_CN.po]    3 translated messages."
-	------------------------------------------------------------------------------
-	level=warning msg="[zh_CN.po]    mismatched patterns: --3way"
-	level=warning msg="[zh_CN.po]    >> msgid: --reject and --3way cannot be used together."
-	level=warning msg="[zh_CN.po]    >> msgstr: --reject 和 -3way 不能同时使用。"
-	level=warning msg="[zh_CN.po]"
-	level=warning msg="[zh_CN.po]    mismatched patterns: --word-diff-regex, --word-diff-regex=<...>"
-	level=warning msg="[zh_CN.po]    >> msgid: equivalent to --word-diff=color --word-diff-regex=<regex>"
-	level=warning msg="[zh_CN.po]    >> msgstr: 相当于 --word-diff=color --word-diff-regex=正则"
-	level=warning msg="[zh_CN.po]"
-	level=warning msg="[zh_CN.po]    mismatched patterns: --intent-to-add, --intent-to-addd"
-	level=warning msg="[zh_CN.po]    >> msgid: mark new files with `git add --intent-to-add`"
-	level=warning msg="[zh_CN.po]    >> msgstr: 使用命令 `git add --intent-to-addd` 标记新增文件"
-	level=warning msg="[zh_CN.po]"
+	ℹ️ Syntax check with msgfmt
+	 INFO [zh_CN.po] 3 translated messages.
+	⚠️ msgid/msgstr pattern check
+	 WARNING [zh_CN.po] mismatched patterns: --3way
+	 WARNING [zh_CN.po] >> msgid: --reject and --3way cannot be used together.
+	 WARNING [zh_CN.po] >> msgstr: --reject 和 -3way 不能同时使用。
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: --word-diff-regex, --word-diff-regex=<...>
+	 WARNING [zh_CN.po] >> msgid: equivalent to --word-diff=color --word-diff-regex=<regex>
+	 WARNING [zh_CN.po] >> msgstr: 相当于 --word-diff=color --word-diff-regex=正则
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: --intent-to-add, --intent-to-addd
+	 WARNING [zh_CN.po] >> msgid: mark new files with `git add --intent-to-add`
+	 WARNING [zh_CN.po] >> msgstr: 使用命令 `git add --intent-to-addd` 标记新增文件
+	 WARNING [zh_CN.po]
 	EOF
 
 	test_cmp expect actual

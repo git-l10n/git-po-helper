@@ -31,19 +31,19 @@ test_expect_success "zh_CN.po: has file-locations (no --report-file-location opt
 '
 
 cat >expect <<-\EOF
-------------------------------------------------------------------------------
-level=info msg="[zh_CN.po]    5282 translated messages."
-------------------------------------------------------------------------------
-level=error msg="[zh_CN.po]    mismatched patterns: refs/remotes/"
-level=error msg="[zh_CN.po]    >> msgid: Note: A branch outside the refs/remotes/ hierarchy was not removed;"
-level=error msg="[zh_CN.po]    to delete it, use:"
-level=error msg="[zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一个分支未被移除。要删除它，使用："
-level=error msg="[zh_CN.po]"
-level=error msg="[zh_CN.po]    mismatched patterns: refs/remotes/"
-level=error msg="[zh_CN.po]    >> msgid: Note: Some branches outside the refs/remotes/ hierarchy were not removed;"
-level=error msg="[zh_CN.po]    to delete them, use:"
-level=error msg="[zh_CN.po]    >> msgstr: 注意：ref/remotes 层级之外的一些分支未被移除。要删除它们，使用："
-level=error msg="[zh_CN.po]"
+ℹ️ Syntax check with msgfmt
+ INFO [zh_CN.po] 5282 translated messages.
+❌ msgid/msgstr pattern check
+ ERROR [zh_CN.po] mismatched patterns: refs/remotes/
+ ERROR [zh_CN.po] >> msgid: Note: A branch outside the refs/remotes/ hierarchy was not removed;
+ ERROR [zh_CN.po] to delete it, use:
+ ERROR [zh_CN.po] >> msgstr: 注意：ref/remotes 层级之外的一个分支未被移除。要删除它，使用：
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] mismatched patterns: refs/remotes/
+ ERROR [zh_CN.po] >> msgid: Note: Some branches outside the refs/remotes/ hierarchy were not removed;
+ ERROR [zh_CN.po] to delete them, use:
+ ERROR [zh_CN.po] >> msgstr: 注意：ref/remotes 层级之外的一些分支未被移除。要删除它们，使用：
+ ERROR [zh_CN.po]
 ERROR: check-po command failed
 EOF
 

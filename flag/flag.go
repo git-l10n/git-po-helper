@@ -65,19 +65,25 @@ func ReportTypos() int {
 	}
 }
 
+// AllowObsoleteEntries returns true when obsolete entries should be allowed
+// (e.g. after msgmerge in update flow, which creates obsolete entries by design).
+func AllowObsoleteEntries() bool {
+	return viper.GetBool("check--allow-obsolete")
+}
+
 // ReportFileLocations returns way to display typos (none, warn, error).
 func ReportFileLocations() int {
 	var value = ""
 
-	if GitHubActionEvent() != "" {
-		return ReportIssueError
-	}
 	if v := viper.GetString("check--report-file-locations"); v != "" {
 		value = v
 	} else if v := viper.GetString("check-po--report-file-locations"); v != "" {
 		value = v
 	} else if v := viper.GetString("check-commits--report-file-locations"); v != "" {
 		value = v
+	}
+	if value == "" && GitHubActionEvent() != "" {
+		return ReportIssueError
 	}
 	switch value {
 	case "none":

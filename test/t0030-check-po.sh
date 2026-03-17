@@ -17,13 +17,13 @@ test_expect_success "setup" '
 '
 
 cat >expect <<-\EOF
-------------------------------------------------------------------------------
-level=error msg="[zh_CN.po]    po/zh_CN.po:25: end-of-line within string"
-level=error msg="[zh_CN.po]    msgfmt: found 1 fatal error"
-level=error msg="[zh_CN.po]    fail to check po: exit status 1"
-------------------------------------------------------------------------------
-level=error msg="[zh_CN.po]    fail to compile po/zh_CN.po: exit status 1"
-level=error msg="[zh_CN.po]    fail to generate mofile"
+❌ Syntax check with msgfmt
+ ERROR [zh_CN.po] po/zh_CN.po:25: end-of-line within string
+ ERROR [zh_CN.po] msgfmt: found 1 fatal error
+ ERROR [zh_CN.po] fail to check po: exit status 1
+❌ msgid/msgstr pattern check
+ ERROR [zh_CN.po] fail to compile po/zh_CN.po: exit status 1
+ ERROR [zh_CN.po] fail to generate mofile
 ERROR: check-po command failed
 EOF
 
@@ -84,18 +84,15 @@ test_expect_success "update zh_CN successfully" '
 	#: remote.c:407
 	msgid "more than one uploadpack given, using the first"
 	msgstr "提供了一个以上的 uploadpack，使用第一个"
-
-	msgid "po-helper test: not a real l10n message: xyz"
-	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz"
 	EOF
 
 	git -C workdir $HELPER update $POT_FILE zh_CN
 '
 
 cat >expect <<-\EOF
-------------------------------------------------------------------------------
-level=info msg="[zh_CN.po]    2 translated messages, 5102 untranslated messages."
-------------------------------------------------------------------------------
+ℹ️ Syntax check with msgfmt
+ INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
+⚠️ Incomplete translations found
 EOF
 
 test_expect_success "check update of zh_CN.po" '
@@ -106,18 +103,18 @@ test_expect_success "check update of zh_CN.po" '
 '
 
 cat >expect <<-\EOF
-------------------------------------------------------------------------------
-level=info msg="[zh_CN.po]    2 translated messages, 5102 untranslated messages."
-------------------------------------------------------------------------------
-level=info msg="[zh_CN.po (core)]    2 translated messages, 479 untranslated messages."
-------------------------------------------------------------------------------
-level=warning msg="[zh_CN.po]    5102 untranslated string(s) in your 'po/XX.po'"
-level=warning msg="[zh_CN.po]"
-level=warning msg="[zh_CN.po]     > po/XX.po:18: this message is untranslated"
-level=warning msg="[zh_CN.po]     > po/XX.po:22: this message is untranslated"
-level=warning msg="[zh_CN.po]     > po/XX.po:26: this message is untranslated"
-level=warning msg="[zh_CN.po]     > ..."
-level=warning msg="[zh_CN.po]"
+ℹ️ Syntax check with msgfmt
+ INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
+ℹ️ Core PO vs git-core.pot
+ INFO [zh_CN.po… 2 translated messages, 479 untranslated messages.
+⚠️ Incomplete translations found
+ WARNING [zh_CN.po] 5102 untranslated string(s) in your 'po/XX.po'
+ WARNING [zh_CN.po]
+ WARNING [zh_CN.po] > po/XX.po:18: this message is untranslated
+ WARNING [zh_CN.po] > po/XX.po:22: this message is untranslated
+ WARNING [zh_CN.po] > po/XX.po:26: this message is untranslated
+ WARNING [zh_CN.po] > ...
+ WARNING [zh_CN.po]
 EOF
 
 test_expect_success "check core update of zh_CN.po" '

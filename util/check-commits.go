@@ -75,12 +75,13 @@ func checkCommitChanges(commit string, notL10nChanges, l10nChanges []string) (ok
 	brk = false
 
 	defer func() {
+		const title = "Changes outside po/"
 		if len(warns) > 0 {
-			reportResultMessages(warns, "", log.WarnLevel)
+			ReportSection(title, true, log.WarnLevel, "", warns...)
 		}
 		if len(errs) > 0 {
 			ok = false
-			reportResultMessages(errs, "", log.ErrorLevel)
+			ReportSection(title, false, log.InfoLevel, "", errs...)
 		}
 	}()
 

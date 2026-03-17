@@ -20,11 +20,12 @@ func CheckCorePoFile(locale, poFile string) bool {
 	)
 
 	defer func() {
+		const coreTitle = "Core PO vs git-core.pot"
 		if len(infos) > 0 {
-			reportResultMessages(infos, prompt, log.InfoLevel)
+			ReportSection(coreTitle, true, log.InfoLevel, prompt, infos...)
 		}
 		if len(errs) > 0 {
-			reportResultMessages(errs, prompt, log.ErrorLevel)
+			ReportSection(coreTitle, false, log.InfoLevel, prompt, errs...)
 		}
 	}()
 

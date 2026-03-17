@@ -91,6 +91,7 @@ level=warning msg="[zh_CN.po@rev]    >> msgid: exit code $res from $command is <
 level=warning msg="[zh_CN.po@rev]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
 level=warning msg="[zh_CN.po@rev]"
 ------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 level=info msg="checking commits: 1 passed."
 EOF
@@ -115,6 +116,7 @@ level=error msg="[zh_CN.po@rev]    mismatched patterns: $command, $res"
 level=error msg="[zh_CN.po@rev]    >> msgid: exit code $res from $command is < 0 or >= 128"
 level=error msg="[zh_CN.po@rev]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
 level=error msg="[zh_CN.po@rev]"
+------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 level=info msg="checking commits: 0 passed, 1 failed."
@@ -157,6 +159,7 @@ level=warning msg="[zh_CN.po@rev]    mismatched patterns: $command, $res"
 level=warning msg="[zh_CN.po@rev]    >> msgid: exit code $res from $command is < 0 or >= 128"
 level=warning msg="[zh_CN.po@rev]    >> msgstr: 命令的退出码res 应该 < 0 或 >= 128"
 level=warning msg="[zh_CN.po@rev]"
+------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
 level=warning msg="commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different"
 level=info msg="checking commits: 1 passed, 1 failed."

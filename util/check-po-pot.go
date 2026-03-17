@@ -21,6 +21,7 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 	var (
 		ok         bool
 		poTemplate string
+		errs       []string
 	)
 
 	// We can disable this check using "--pot-file=no".
@@ -51,9 +52,8 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 				File:     fileName,
 			}
 			if err := CheckoutTmpfile(&tmpFile); err != nil || tmpFile.Tmpfile == "" {
-				showHorizontalLine()
-				log.Errorf("commit %s: fail to checkout %s of revision %s: %s",
-					AbbrevCommit(commit), tmpFile.File, tmpFile.Revision, err)
+				errs = append(errs, fmt.Sprintf("commit %s: fail to checkout %s of revision %s: %s",
+					AbbrevCommit(commit), tmpFile.File, tmpFile.Revision, err))
 				ok = false
 				continue
 			}
@@ -65,11 +65,11 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 		} else {
 			prompt = fmt.Sprintf("[%s]", filepath.Base(poFile))
 		}
-
 		// Check po file with pot file for missing translations.
 		msgs, ret := checkUnfinishedPoFile(poFile, poTemplate)
-		if len(msgs) > 0 {
-			ReportWarnAndErrors(msgs, prompt, ret)
+		errs = append(errs, msgs...)
+		if len(errs) > 0 {
+			ReportSection("Incomplete translations found", ret, log.WarnLevel, prompt, errs...)
 		}
 		ok = ok && ret
 	}
