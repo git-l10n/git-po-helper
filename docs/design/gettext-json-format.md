@@ -130,18 +130,15 @@ When writing PO, emit `msgctxt context\n` before `msgid` when the field is prese
 
 ### 7.2 Obsolete entry comment prefix
 
-In PO, **all lines** of an obsolete entry start with `#`, including comment lines (e.g. `#~ #:`, `#~ #,` — see gettext-format.md Section 9). The current implementation stores comment lines without the `#~ ` prefix and does not add it when writing PO.
+In PO, **all lines** of an obsolete entry start with `#`, including comment lines (e.g. `#~ #:`, `#~ #,` — see gettext-format.md Section 9).
 
-**Extension (either):**
-
-- **Option A:** When `obsolete` is true, writers prepend `#~ ` to each line in `comments` when emitting PO, so that `#: file.c` in `comments` is written as `#~ #: file.c`.
-- **Option B:** Add an optional per-entry flag or store comment lines with an explicit prefix so that round-trip preserves `#~ #:` vs `#:` for obsolete entries.
-
-Implementing Option A in the writer (and ensuring the PO parser fills `comments` with the content without the `#~ ` prefix when parsing) yields correct PO output for obsolete entries whose comments were `#~ #:`, `#~ #,`, etc.
+**Implemented (Phase 4, Option A):** The parser stores comment lines of obsolete entries **without** the `#~ ` prefix (e.g. `#: file.c` in `comments`). When emitting PO from an entry (no RawLines), the writer prepends `#~ ` to each line in `comments` when `obsolete` is true, so output is `#~ #: file.c`. Round-trip via RawLines preserves the original lines unchanged.
 
 ### 7.3 Future PO format evolution
 
-If PO adds **`#=`** flag lines (gettext-format.md Section 8), a future extension could add a way to represent those in JSON (e.g. a separate array of flag lines or a dedicated field) so that they can be round-tripped.
+**`#=`** flag lines (gettext-format.md Section 8, June 2025) are supported: they are stored in `comments[]` and round-tripped like `#,` lines.
+
+**Workflow vs sticky (2027+):** From 2027-01-01 the PO format may distinguish `#,` = workflow flags and `#=` = sticky flags (or the opposite). The current implementation keeps all flag lines in `entries[].comments[]`; a future extension may add separate fields (e.g. `workflow_flags`, `sticky_flags`) once the format is finalized, so that unknown sticky flags are preserved and not dropped.
 
 ---
 
@@ -158,7 +155,7 @@ If PO adds **`#=`** flag lines (gettext-format.md Section 8), a future extension
 | Entry: `# `, `#.`, `#:`, `#,` | `entries[].comments[]` | One line per element; fuzzy can be in `fuzzy` instead of `#,` only. |
 | Entry: `#| msgid` previous     | `entries[].msgid_previous` | |
 | Entry: `#, fuzzy`              | `entries[].fuzzy`      | Also reflected in `comments` unless stripped. |
-| Obsolete: `#~` / `#~|` lines   | `entries[].obsolete`, `msgid_previous` | Comment lines in obsolete: stored without `#~ `; see Section 7.2 for extension. |
+| Obsolete: `#~` / `#~|` lines   | `entries[].obsolete`, `msgid_previous`, `msgctxt_previous` | Comment lines in obsolete: stored without `#~ `; writer prepends `#~ ` (7.2). |
 | Entry: `msgctxt`               | `entries[].msgctxt`, `msgctxt_previous` | Section 7.1. |
 
 This document and the implementation in `util/gettext_json.go` / `util/gettext.go` are the reference for the gettext JSON schema and PO↔JSON behavior.

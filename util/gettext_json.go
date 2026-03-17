@@ -756,6 +756,10 @@ func WriteGettextJSONToPO(j *GettextJSON, w io.Writer, noHeader, addTrailingNewl
 // writeGettextEntryToPO writes a single GettextEntry as PO content (used by noHeader path).
 func writeGettextEntryToPO(w io.Writer, entry GettextEntry) error {
 	wroteFuzzyFlag := false
+	commentPrefix := ""
+	if entry.Obsolete {
+		commentPrefix = "#~ " // gettext-json-format 7.2 Option A: prepend #~ to comment lines when emitting obsolete entries
+	}
 	for _, c := range entry.Comments {
 		trimmed := strings.TrimSpace(c)
 		if strings.HasPrefix(trimmed, "#,") {
@@ -763,11 +767,11 @@ func writeGettextEntryToPO(w io.Writer, entry GettextEntry) error {
 			if entry.Fuzzy {
 				wroteFuzzyFlag = true
 			}
-			if _, err := io.WriteString(w, line+"\n"); err != nil {
+			if _, err := io.WriteString(w, commentPrefix+line+"\n"); err != nil {
 				return err
 			}
 		} else {
-			if _, err := io.WriteString(w, c); err != nil {
+			if _, err := io.WriteString(w, commentPrefix+c); err != nil {
 				return err
 			}
 			if !strings.HasSuffix(c, "\n") {

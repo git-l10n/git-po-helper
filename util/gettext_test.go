@@ -156,6 +156,33 @@ msgid_plural "%d items"
 msgstr[0] "%d 项"
 msgstr[1] "%d 项"
 `,
+	// Phase 4: obsolete with #~ #: and #~ #, (7.2 Option A round-trip via RawLines)
+	`msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Active"
+msgstr "活跃"
+
+#~ #: branch.c builtin/branch.c
+#~ #, fuzzy
+#~ msgid "See 'git help check-ref-format'"
+#~ msgstr "查阅 'man git check-ref-format'"
+`,
+	// Phase 4: obsolete with #~| msgctxt and #~| msgid (MsgCtxtPrevious round-trip)
+	`msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Active"
+msgstr "活跃"
+
+#~| msgctxt "OldMenu"
+#~| msgid "Old source"
+#~ msgctxt "Menu"
+#~ msgid "Obsolete"
+#~ msgstr "已废弃"
+`,
 }
 
 func TestParsePoEntriesRoundTripBytes(t *testing.T) {
@@ -318,6 +345,57 @@ func TestParsePoEntriesObsolete(t *testing.T) {
 	}
 	if entries[1].MsgID != "Obsolete" || !entries[1].Obsolete {
 		t.Errorf("entry 1: got MsgID=%q Obsolete=%v", entries[1].MsgID, entries[1].Obsolete)
+	}
+}
+
+func TestParsePoEntriesObsoleteComment72(t *testing.T) {
+	// gettext-json-format 7.2 Option A: obsolete comment lines stored without "#~ " prefix; writer prepends "#~ " when emitting.
+	po := `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Active"
+msgstr "活跃"
+
+#~ #: branch.c builtin/branch.c
+#~ #, fuzzy
+#~ msgid "Obsolete"
+#~ msgstr "已废弃"
+`
+	entries, _, err := ParsePoEntries([]byte(po))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(entries))
+	}
+	ob := entries[1]
+	if !ob.Obsolete || ob.MsgID != "Obsolete" {
+		t.Fatalf("entry 1: Obsolete=%v MsgID=%q", ob.Obsolete, ob.MsgID)
+	}
+	// Comments must be stored without "#~ " prefix (7.2 Option A).
+	if len(ob.Comments) != 2 {
+		t.Fatalf("expected 2 comment lines, got %d", len(ob.Comments))
+	}
+	if ob.Comments[0] != "#: branch.c builtin/branch.c" {
+		t.Errorf("Comments[0]: got %q", ob.Comments[0])
+	}
+	if ob.Comments[1] != "#, fuzzy" {
+		t.Errorf("Comments[1]: got %q", ob.Comments[1])
+	}
+	// Build from entry (no RawLines) must emit "#~ " before each comment line.
+	obNoRaw := *ob
+	obNoRaw.RawLines = nil
+	var buf bytes.Buffer
+	if err := writeGettextEntryToPO(&buf, obNoRaw); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "#~ #: branch.c") {
+		t.Errorf("output should contain #~ #: branch.c, got:\n%s", out)
+	}
+	if !strings.Contains(out, "#~ #, fuzzy") {
+		t.Errorf("output should contain #~ #, fuzzy, got:\n%s", out)
 	}
 }
 

@@ -342,6 +342,8 @@ type poParseState struct {
 	inMsgidPlural      bool
 	currentPluralIndex int
 	inObsolete         bool
+	// obsoleteCommentStripPrefix: when true, the current line was "#~ "+comment; store comment without "#~ " in Comments (7.2 Option A).
+	obsoleteCommentStripPrefix bool
 }
 
 // finishCurrentEntry writes the current entry's collected msgid/msgstr into
@@ -413,6 +415,7 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
+		st.obsoleteCommentStripPrefix = false
 
 		// Obsolete entry format: #~ msgid, #~ msgstr, #~| msgid (check first, before header/comment)
 		if strings.HasPrefix(trimmed, "#~ ") {
@@ -439,6 +442,10 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 				}
 				st.entryLines = append(st.entryLines, line)
 				continue
+			}
+			// For obsolete comment lines (#~ #:, #~ #,, etc.), store content without "#~ " (gettext-json-format 7.2 Option A).
+			if strings.HasPrefix(restTrimmed, "#") {
+				st.obsoleteCommentStripPrefix = true
 			}
 			trimmed = rest
 		} else if strings.HasPrefix(trimmed, "#~| ") {
@@ -539,7 +546,11 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 				st.currentEntry = &GettextEntry{}
 				st.entryLines = nil
 			}
-			st.currentEntry.Comments = append(st.currentEntry.Comments, line)
+			if st.obsoleteCommentStripPrefix {
+				st.currentEntry.Comments = append(st.currentEntry.Comments, trimmed)
+			} else {
+				st.currentEntry.Comments = append(st.currentEntry.Comments, line)
+			}
 			st.entryLines = append(st.entryLines, line)
 
 		case poLineMsgctxt:
