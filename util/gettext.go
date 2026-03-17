@@ -240,345 +240,368 @@ func strDeQuote(s string) string {
 	return s
 }
 
+// poLineKind is the syntactic kind of a PO line (after trimming).
+// Used to dispatch parsing and to add new formats (e.g. msgctxt, #=) in one place.
+type poLineKind int
+
+const (
+	poLineBlank poLineKind = iota
+	poLineComment
+	poLineFlagHashComma    // #,
+	poLineFlagHashEq       // #= (sticky flags)
+	poLineCommentRef       // #: reference (file:line)
+	poLineCommentExtracted // #. extracted
+	poLineCommentPrev      // #| previous untranslated
+	poLineObsoletePrefix   // #~
+	poLineObsoletePrev     // #~|
+	poLineMsgid
+	poLineMsgidPlural
+	poLineMsgstr
+	poLineMsgstrN
+	poLineQuotedString
+	poLineUnknown
+)
+
+// classifyPoLine returns the kind of line for trimmed (TrimSpace of original).
+// Caller handles #~ / #~| and passes the rest as trimmed when appropriate.
+func classifyPoLine(trimmed string) poLineKind {
+	if trimmed == "" {
+		return poLineBlank
+	}
+	if strings.HasPrefix(trimmed, "#~ ") {
+		return poLineObsoletePrefix
+	}
+	if strings.HasPrefix(trimmed, "#~| ") {
+		return poLineObsoletePrev
+	}
+	if strings.HasPrefix(trimmed, "msgid ") {
+		return poLineMsgid
+	}
+	if strings.HasPrefix(trimmed, "msgid_plural ") {
+		return poLineMsgidPlural
+	}
+	if strings.HasPrefix(trimmed, "msgstr[") {
+		return poLineMsgstrN
+	}
+	if strings.HasPrefix(trimmed, "msgstr ") {
+		return poLineMsgstr
+	}
+	if strings.HasPrefix(trimmed, `"`) {
+		return poLineQuotedString
+	}
+	if strings.HasPrefix(trimmed, "#,") {
+		return poLineFlagHashComma
+	}
+	if strings.HasPrefix(trimmed, "#=") {
+		return poLineFlagHashEq
+	}
+	if strings.HasPrefix(trimmed, "#:") {
+		return poLineCommentRef
+	}
+	if strings.HasPrefix(trimmed, "#.") {
+		return poLineCommentExtracted
+	}
+	if strings.HasPrefix(trimmed, "#|") {
+		return poLineCommentPrev
+	}
+	if strings.HasPrefix(trimmed, "#") {
+		return poLineComment
+	}
+	return poLineUnknown
+}
+
+// poParseState holds mutable state during ParsePoEntries.
+// Centralizing state makes finishCurrentEntry and startNewEntry consistent.
+type poParseState struct {
+	inHeader           bool
+	hasSeenHeaderBlock bool
+	headerLines        []string
+
+	currentEntry       *GettextEntry
+	entryLines         []string
+	msgidValue         strings.Builder
+	msgstrValue        strings.Builder
+	msgidPluralValue   strings.Builder
+	msgstrPluralValues []strings.Builder
+	inMsgid            bool
+	inMsgstr           bool
+	inMsgidPlural      bool
+	currentPluralIndex int
+	inObsolete         bool
+}
+
+// finishCurrentEntry writes the current entry's collected msgid/msgstr into
+// currentEntry, sets RawLines/Fuzzy/Obsolete, and appends to entries if the
+// entry has content. Call before starting a new entry or on blank line.
+func finishCurrentEntry(st *poParseState, entries *[]*GettextEntry) {
+	if st.currentEntry == nil {
+		return
+	}
+	if st.msgidValue.Len() == 0 && st.msgstrValue.Len() == 0 {
+		return
+	}
+	st.currentEntry.MsgID = poParsedToPoFormat(st.msgidValue.String())
+	if st.msgidPluralValue.Len() > 0 {
+		st.currentEntry.MsgIDPlural = poParsedToPoFormat(st.msgidPluralValue.String())
+		st.currentEntry.MsgStr = make([]string, len(st.msgstrPluralValues))
+		for i, b := range st.msgstrPluralValues {
+			st.currentEntry.MsgStr[i] = poParsedToPoFormat(b.String())
+		}
+	} else {
+		st.currentEntry.MsgStr = []string{poParsedToPoFormat(st.msgstrValue.String())}
+	}
+	st.currentEntry.RawLines = st.entryLines
+	st.currentEntry.Fuzzy = entryHasFuzzyFlag(st.currentEntry.Comments)
+	st.currentEntry.Obsolete = st.inObsolete
+	*entries = append(*entries, st.currentEntry)
+}
+
+// resetEntryContent resets only the string builders and inMsgid/inMsgstr flags.
+// Use when keeping currentEntry and entryLines (e.g. entry had only comments).
+func resetEntryContent(st *poParseState) {
+	st.msgidValue.Reset()
+	st.msgstrValue.Reset()
+	st.msgidPluralValue.Reset()
+	st.msgstrPluralValues = nil
+	st.inMsgid = true
+	st.inMsgstr = false
+	st.inMsgidPlural = false
+	st.currentPluralIndex = -1
+}
+
+// startNewEntry resets entry-related state for a new entry. If the current
+// entry had content it was already appended by finishCurrentEntry. Reuses or
+// allocates currentEntry and resets string builders and flags.
+func startNewEntry(st *poParseState) {
+	st.currentEntry = &GettextEntry{}
+	st.entryLines = nil
+	resetEntryContent(st)
+}
+
 // ParsePoEntries parses PO file entries and returns entries and header.
 // The header includes comments, the empty msgid/msgstr block, and any continuation lines.
 // Entries are 1-based for content (header entry with empty msgid is not included).
 func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err error) {
 	lines := strings.Split(string(data), "\n")
-	var currentEntry *GettextEntry
-	var inHeader = true
-	var hasSeenHeaderBlock bool // true after we've seen msgid "" (the header block)
-	var headerLines []string
-	var entryLines []string
-	var msgidValue strings.Builder
-	var msgstrValue strings.Builder
-	var msgidPluralValue strings.Builder
-	var msgstrPluralValues []strings.Builder
-	var inMsgid, inMsgstr, inMsgidPlural bool
-	var currentPluralIndex int = -1
-	var inObsolete bool
+	st := &poParseState{
+		inHeader:           true,
+		hasSeenHeaderBlock: false,
+		headerLines:        nil,
+		currentPluralIndex: -1,
+	}
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
 		// Obsolete entry format: #~ msgid, #~ msgstr, #~| msgid (check first, before header/comment)
 		if strings.HasPrefix(trimmed, "#~ ") {
-			rest := trimmed[3:] // "#~ " = 3 chars
-			// Only set inObsolete for continuation lines; #~ msgid starts new entry, save previous first
-			if strings.HasPrefix(strings.TrimSpace(rest), `"`) || strings.HasPrefix(strings.TrimSpace(rest), "msgstr") {
-				inObsolete = true
+			rest := trimmed[3:]
+			restTrimmed := strings.TrimSpace(rest)
+			if strings.HasPrefix(restTrimmed, `"`) || strings.HasPrefix(restTrimmed, "msgstr") {
+				st.inObsolete = true
 			}
-			if strings.HasPrefix(strings.TrimSpace(rest), `"`) && (inMsgid || inMsgstr || inMsgidPlural) {
-				value := strDeQuote(strings.TrimSpace(rest))
-				if inMsgid {
-					msgidValue.WriteString(value)
-				} else if inMsgidPlural {
-					msgidPluralValue.WriteString(value)
-				} else if inMsgstr {
-					if currentPluralIndex >= 0 {
-						msgstrPluralValues[currentPluralIndex].WriteString(value)
+			if strings.HasPrefix(restTrimmed, `"`) && (st.inMsgid || st.inMsgstr || st.inMsgidPlural) {
+				value := strDeQuote(restTrimmed)
+				if st.inMsgid {
+					st.msgidValue.WriteString(value)
+				} else if st.inMsgidPlural {
+					st.msgidPluralValue.WriteString(value)
+				} else if st.inMsgstr {
+					if st.currentPluralIndex >= 0 {
+						st.msgstrPluralValues[st.currentPluralIndex].WriteString(value)
 					} else {
-						msgstrValue.WriteString(value)
+						st.msgstrValue.WriteString(value)
 					}
 				}
-				entryLines = append(entryLines, line)
+				st.entryLines = append(st.entryLines, line)
 				continue
 			}
 			trimmed = rest
 		} else if strings.HasPrefix(trimmed, "#~| ") {
-			rest := trimmed[4:] // "#~| " = 4 chars
+			rest := trimmed[4:]
 			if strings.HasPrefix(rest, "msgid ") {
 				value := strings.TrimPrefix(rest, "msgid ")
 				value = strings.TrimSpace(value)
 				value = strDeQuote(value)
-				if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
-					currentEntry.MsgID = poParsedToPoFormat(msgidValue.String())
-					if msgidPluralValue.Len() > 0 {
-						currentEntry.MsgIDPlural = poParsedToPoFormat(msgidPluralValue.String())
-						currentEntry.MsgStr = make([]string, len(msgstrPluralValues))
-						for i, b := range msgstrPluralValues {
-							currentEntry.MsgStr[i] = poParsedToPoFormat(b.String())
-						}
-					} else {
-						currentEntry.MsgStr = []string{poParsedToPoFormat(msgstrValue.String())}
-					}
-					currentEntry.RawLines = entryLines
-					currentEntry.Fuzzy = entryHasFuzzyFlag(currentEntry.Comments)
-					currentEntry.Obsolete = inObsolete
-					entries = append(entries, currentEntry)
+				finishCurrentEntry(st, &entries)
+				if st.currentEntry == nil || st.msgidValue.Len() > 0 || st.msgstrValue.Len() > 0 {
+					startNewEntry(st)
+				} else {
+					resetEntryContent(st)
 				}
-				if currentEntry == nil || msgidValue.Len() > 0 || msgstrValue.Len() > 0 {
-					currentEntry = &GettextEntry{}
-					entryLines = []string{}
-					msgidValue.Reset()
-					msgstrValue.Reset()
-					msgidPluralValue.Reset()
-					msgstrPluralValues = []strings.Builder{}
-				}
-				currentEntry.MsgIDPrevious = poParsedToPoFormat(value)
-				currentEntry.Obsolete = true
-				inObsolete = true
-				entryLines = append(entryLines, line)
+				st.currentEntry.MsgIDPrevious = poParsedToPoFormat(value)
+				st.currentEntry.Obsolete = true
+				st.inObsolete = true
+				st.entryLines = append(st.entryLines, line)
 				continue
 			}
 		}
 
-		// Check for header (empty msgid entry)
-		if !hasSeenHeaderBlock && strings.HasPrefix(trimmed, "msgid ") {
+		// Header: first msgid "" starts the header block
+		if !st.hasSeenHeaderBlock && strings.HasPrefix(trimmed, "msgid ") {
 			value := strings.TrimPrefix(trimmed, "msgid ")
 			value = strings.TrimSpace(value)
 			value = strDeQuote(value)
 			if value == "" {
-				// This is the header entry (msgid "" block)
-				hasSeenHeaderBlock = true
-				headerLines = append(headerLines, line)
-				entryLines = append(entryLines, line)
-				// Continue to collect header
+				st.hasSeenHeaderBlock = true
+				st.headerLines = append(st.headerLines, line)
+				st.entryLines = append(st.entryLines, line)
 				continue
 			}
 		}
 
-		// Collect header lines (including continuation lines after msgstr "")
-		if inHeader {
-			// Check for header msgstr (empty msgstr after empty msgid)
+		// Collect header lines until we leave the header
+		if st.inHeader {
 			if strings.HasPrefix(trimmed, "msgstr ") {
 				value := strings.TrimPrefix(trimmed, "msgstr ")
 				value = strings.TrimSpace(value)
 				value = strDeQuote(value)
-				if msgidValue.Len() == 0 && value == "" {
-					// This is the header msgstr line
-					headerLines = append(headerLines, line)
-					// Continue collecting header (including continuation lines starting with ")
-					// Header ends when we encounter an empty line or a new msgid entry
+				if st.msgidValue.Len() == 0 && value == "" {
+					st.headerLines = append(st.headerLines, line)
 					continue
 				}
 			}
-
-			// Check if this is a continuation line of header msgstr (starts with ")
-			// Only collect as header if we're still in header mode and haven't started parsing an entry
-			// Also check that we're not in the middle of parsing a msgid or msgstr (which would indicate an entry)
 			if strings.HasPrefix(trimmed, `"`) {
-				// If we're already parsing an entry (currentEntry exists or inMsgid/inMsgstr is set),
-				// this continuation line belongs to the entry, not the header
-				if currentEntry != nil || inMsgid || inMsgstr || inMsgidPlural {
-					// This is a continuation line of an entry, not header
-					// Don't process it here, let it be handled by entry parsing logic below
+				if st.currentEntry != nil || st.inMsgid || st.inMsgstr || st.inMsgidPlural {
+					// Continuation of an entry, not header; fall through to entry parsing
 				} else {
-					// For header continuation lines, keep the quotes
-					headerLines = append(headerLines, trimmed)
+					st.headerLines = append(st.headerLines, trimmed)
 					continue
 				}
 			}
-			// Check if this is an empty line
 			if trimmed == "" {
-				if !hasSeenHeaderBlock {
-					// Blank line in comment block (before msgid "") - keep in header
-					headerLines = append(headerLines, line)
+				if !st.hasSeenHeaderBlock {
+					st.headerLines = append(st.headerLines, line)
 					continue
 				}
-				// Blank line after msgid ""/msgstr "" block - end of header
-				inHeader = false
-				msgidValue.Reset()
-				msgstrValue.Reset()
+				st.inHeader = false
+				st.msgidValue.Reset()
+				st.msgstrValue.Reset()
 				continue
 			}
-			// Check if this is a new msgid entry - end of header
 			if strings.HasPrefix(trimmed, "msgid ") {
-				value := strings.TrimPrefix(trimmed, "msgid ")
-				value = strings.TrimSpace(value)
-				value = strDeQuote(value)
-				if value != "" {
-					// This is a real entry, not header
-					inHeader = false
-					msgidValue.Reset()
-					msgstrValue.Reset()
-					// Don't continue, let it be processed as a normal entry
-				} else {
-					// This is a duplicate empty msgid after header - this should not happen
-					// in a valid PO file, but if it does, end the header and start a new entry
-					inHeader = false
-					msgidValue.Reset()
-					msgstrValue.Reset()
-					// Don't continue, let it be processed as a normal entry
-				}
+				st.inHeader = false
+				st.msgidValue.Reset()
+				st.msgstrValue.Reset()
+				// Fall through to entry parsing with this msgid line
 			} else {
-				// Other header lines (comments, etc.)
-				headerLines = append(headerLines, line)
+				st.headerLines = append(st.headerLines, line)
 				continue
 			}
 		}
 
-		// Parse entry
-		if strings.HasPrefix(trimmed, "#") {
-			// Comment line
-			if currentEntry == nil {
-				currentEntry = &GettextEntry{}
-				entryLines = []string{}
+		// Entry parsing: dispatch by line kind
+		kind := classifyPoLine(trimmed)
+		switch kind {
+		case poLineComment, poLineFlagHashComma, poLineFlagHashEq, poLineCommentRef, poLineCommentExtracted, poLineCommentPrev:
+			if st.currentEntry == nil {
+				st.currentEntry = &GettextEntry{}
+				st.entryLines = nil
 			}
-			currentEntry.Comments = append(currentEntry.Comments, line)
-			entryLines = append(entryLines, line)
-		} else if strings.HasPrefix(trimmed, "msgid ") {
-			// Start of new entry (or obsolete #~ msgid)
-			// Save previous entry if we have one and it has content
-			if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
-				currentEntry.MsgID = poParsedToPoFormat(msgidValue.String())
-				if msgidPluralValue.Len() > 0 {
-					currentEntry.MsgIDPlural = poParsedToPoFormat(msgidPluralValue.String())
-					currentEntry.MsgStr = make([]string, len(msgstrPluralValues))
-					for i, b := range msgstrPluralValues {
-						currentEntry.MsgStr[i] = poParsedToPoFormat(b.String())
-					}
-				} else {
-					currentEntry.MsgStr = []string{poParsedToPoFormat(msgstrValue.String())}
-				}
-				currentEntry.RawLines = entryLines
-				currentEntry.Fuzzy = entryHasFuzzyFlag(currentEntry.Comments)
-				currentEntry.Obsolete = inObsolete
-				entries = append(entries, currentEntry)
-			}
-			// Start new entry (or continue existing entry if it only has comments)
-			if currentEntry == nil {
-				currentEntry = &GettextEntry{}
-				entryLines = []string{}
-			} else if msgidValue.Len() > 0 || msgstrValue.Len() > 0 {
-				currentEntry = &GettextEntry{}
-				entryLines = []string{}
-			}
-			// If this line came from #~ msgid, mark the new entry as obsolete
-			if strings.HasPrefix(strings.TrimSpace(line), "#~ ") {
-				inObsolete = true
-			}
-			// If currentEntry has comments but no msgid/msgstr, keep it and continue
-			// entryLines already contains the comments, so we don't reset it
-			msgidValue.Reset()
-			msgstrValue.Reset()
-			msgidPluralValue.Reset()
-			msgstrPluralValues = []strings.Builder{}
-			inMsgid = true
-			inMsgstr = false
-			inMsgidPlural = false
-			currentPluralIndex = -1
+			st.currentEntry.Comments = append(st.currentEntry.Comments, line)
+			st.entryLines = append(st.entryLines, line)
 
+		case poLineMsgid:
+			finishCurrentEntry(st, &entries)
+			if st.currentEntry == nil || st.msgidValue.Len() > 0 || st.msgstrValue.Len() > 0 {
+				startNewEntry(st)
+			} else {
+				resetEntryContent(st)
+			}
+			if strings.HasPrefix(strings.TrimSpace(line), "#~ ") {
+				st.inObsolete = true
+			}
 			value := strings.TrimPrefix(trimmed, "msgid ")
 			value = strings.TrimSpace(value)
 			value = strDeQuote(value)
-			msgidValue.WriteString(value)
-			entryLines = append(entryLines, line)
-		} else if strings.HasPrefix(trimmed, "msgid_plural ") {
-			inMsgid = false
-			inMsgidPlural = true
+			st.msgidValue.WriteString(value)
+			st.entryLines = append(st.entryLines, line)
+
+		case poLineMsgidPlural:
+			st.inMsgid = false
+			st.inMsgidPlural = true
 			value := strings.TrimPrefix(trimmed, "msgid_plural ")
 			value = strings.TrimSpace(value)
 			value = strDeQuote(value)
-			msgidPluralValue.WriteString(value)
-			entryLines = append(entryLines, line)
-		} else if strings.HasPrefix(trimmed, "msgstr[") {
-			// Plural form
-			inMsgid = false
-			inMsgidPlural = false
-			inMsgstr = true
-			// Extract index
+			st.msgidPluralValue.WriteString(value)
+			st.entryLines = append(st.entryLines, line)
+
+		case poLineMsgstrN:
+			st.inMsgid = false
+			st.inMsgidPlural = false
+			st.inMsgstr = true
 			idxStr := strings.TrimPrefix(trimmed, "msgstr[")
 			idxStr = strings.Split(idxStr, "]")[0]
 			var idx int
 			_, _ = fmt.Sscanf(idxStr, "%d", &idx)
-			// Extend slice if needed
-			for len(msgstrPluralValues) <= idx {
-				msgstrPluralValues = append(msgstrPluralValues, strings.Builder{})
+			for len(st.msgstrPluralValues) <= idx {
+				st.msgstrPluralValues = append(st.msgstrPluralValues, strings.Builder{})
 			}
-			currentPluralIndex = idx
+			st.currentPluralIndex = idx
 			value := strings.TrimPrefix(trimmed, fmt.Sprintf("msgstr[%d] ", idx))
 			value = strings.TrimSpace(value)
 			value = strDeQuote(value)
-			msgstrPluralValues[idx].WriteString(value)
-			entryLines = append(entryLines, line)
-		} else if strings.HasPrefix(trimmed, "msgstr ") {
-			inMsgid = false
-			inMsgidPlural = false
-			inMsgstr = true
+			st.msgstrPluralValues[idx].WriteString(value)
+			st.entryLines = append(st.entryLines, line)
+
+		case poLineMsgstr:
+			st.inMsgid = false
+			st.inMsgidPlural = false
+			st.inMsgstr = true
 			value := strings.TrimPrefix(trimmed, "msgstr ")
 			value = strings.TrimSpace(value)
 			value = strDeQuote(value)
-			msgstrValue.WriteString(value)
-			entryLines = append(entryLines, line)
-		} else if strings.HasPrefix(trimmed, `"`) && (inMsgid || inMsgstr || inMsgidPlural) {
-			// Continuation line
-			value := strDeQuote(trimmed)
-			if inMsgid {
-				msgidValue.WriteString(value)
-			} else if inMsgidPlural {
-				msgidPluralValue.WriteString(value)
-			} else if inMsgstr {
-				if currentPluralIndex >= 0 {
-					msgstrPluralValues[currentPluralIndex].WriteString(value)
-				} else {
-					msgstrValue.WriteString(value)
-				}
-			}
-			entryLines = append(entryLines, line)
-		} else if trimmed == "" {
-			// Empty line - end of entry (only if we have a current entry)
-			// For entries with msgid starting with empty string, we need to check
-			// if we have collected any continuation lines (msgidValue.Len() > 0)
-			// or if we have a complete entry with msgstr
-			if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
-				currentEntry.MsgID = poParsedToPoFormat(msgidValue.String())
-				if msgidPluralValue.Len() > 0 {
-					currentEntry.MsgIDPlural = poParsedToPoFormat(msgidPluralValue.String())
-					currentEntry.MsgStr = make([]string, len(msgstrPluralValues))
-					for i, b := range msgstrPluralValues {
-						currentEntry.MsgStr[i] = poParsedToPoFormat(b.String())
+			st.msgstrValue.WriteString(value)
+			st.entryLines = append(st.entryLines, line)
+
+		case poLineQuotedString:
+			if st.inMsgid || st.inMsgstr || st.inMsgidPlural {
+				value := strDeQuote(trimmed)
+				if st.inMsgid {
+					st.msgidValue.WriteString(value)
+				} else if st.inMsgidPlural {
+					st.msgidPluralValue.WriteString(value)
+				} else if st.inMsgstr {
+					if st.currentPluralIndex >= 0 {
+						st.msgstrPluralValues[st.currentPluralIndex].WriteString(value)
+					} else {
+						st.msgstrValue.WriteString(value)
 					}
-				} else {
-					currentEntry.MsgStr = []string{poParsedToPoFormat(msgstrValue.String())}
 				}
-				currentEntry.RawLines = entryLines
-				currentEntry.Fuzzy = entryHasFuzzyFlag(currentEntry.Comments)
-				currentEntry.Obsolete = inObsolete
-				entries = append(entries, currentEntry)
+				st.entryLines = append(st.entryLines, line)
+			} else {
+				if st.currentEntry != nil {
+					st.entryLines = append(st.entryLines, line)
+				} else if !st.inHeader {
+					st.entryLines = append(st.entryLines, line)
+				}
 			}
-			currentEntry = nil
-			entryLines = []string{}
-			msgidValue.Reset()
-			msgstrValue.Reset()
-			msgidPluralValue.Reset()
-			msgstrPluralValues = []strings.Builder{}
-			inMsgid = false
-			inMsgstr = false
-			inMsgidPlural = false
-			currentPluralIndex = -1
-			inObsolete = false
-		} else {
-			// Other lines (continuation, etc.)
-			if currentEntry != nil {
-				entryLines = append(entryLines, line)
-			} else if !inHeader {
-				// If we're not in header and not in an entry, this might be a continuation
-				// of a previous entry or a new entry starting
-				entryLines = append(entryLines, line)
+
+		case poLineBlank:
+			finishCurrentEntry(st, &entries)
+			st.currentEntry = nil
+			st.entryLines = nil
+			st.msgidValue.Reset()
+			st.msgstrValue.Reset()
+			st.msgidPluralValue.Reset()
+			st.msgstrPluralValues = nil
+			st.inMsgid = false
+			st.inMsgstr = false
+			st.inMsgidPlural = false
+			st.currentPluralIndex = -1
+			st.inObsolete = false
+
+		default:
+			if st.currentEntry != nil {
+				st.entryLines = append(st.entryLines, line)
+			} else if !st.inHeader {
+				st.entryLines = append(st.entryLines, line)
 			}
 		}
 	}
 
-	// Handle last entry
-	if currentEntry != nil && (msgidValue.Len() > 0 || msgstrValue.Len() > 0) {
-		currentEntry.MsgID = poParsedToPoFormat(msgidValue.String())
-		if msgidPluralValue.Len() > 0 {
-			currentEntry.MsgIDPlural = poParsedToPoFormat(msgidPluralValue.String())
-			currentEntry.MsgStr = make([]string, len(msgstrPluralValues))
-			for i, b := range msgstrPluralValues {
-				currentEntry.MsgStr[i] = poParsedToPoFormat(b.String())
-			}
-		} else {
-			currentEntry.MsgStr = []string{poParsedToPoFormat(msgstrValue.String())}
-		}
-		currentEntry.RawLines = entryLines
-		currentEntry.Fuzzy = entryHasFuzzyFlag(currentEntry.Comments)
-		currentEntry.Obsolete = inObsolete
-		entries = append(entries, currentEntry)
-	}
-
-	return entries, headerLines, nil
+	finishCurrentEntry(st, &entries)
+	return entries, st.headerLines, nil
 }
 
 // entryHasFuzzyFlag returns true if any comment in the entry has the fuzzy flag.
