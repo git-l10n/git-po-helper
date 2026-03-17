@@ -7,7 +7,7 @@ import (
 	"os/exec"
 )
 
-func checkPoSyntax(poFile string) ([]string, bool) {
+func checkPoWithMsgfmt(poFile string) ([]string, bool) {
 	var errs []string
 
 	if !Exist(poFile) {

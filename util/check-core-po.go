@@ -84,7 +84,7 @@ func CheckCorePoFile(locale, poFile string) bool {
 	}
 
 	// Run msgfmt to check syntax of a .po file
-	msgs, ret := checkPoSyntax(tmpPoFile)
+	msgs, ret := checkPoWithMsgfmt(tmpPoFile)
 	for _, msg := range msgs {
 		if !ret {
 			errs = append(errs, msg)

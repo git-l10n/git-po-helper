@@ -109,18 +109,25 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 		errs []string
 	)
 
-	locale = strings.TrimSuffix(filepath.Base(locale), ".po")
-	_, err := GetPrettyLocaleName(locale)
-	if err != nil {
-		log.Error(err)
-		return false
-	}
 	if prompt == "" {
 		prompt = fmt.Sprintf("[%s]", locale+".po")
 	}
 
 	if !Exist(poFile) {
 		log.Errorf(`%s\tfail to check "%s", does not exist`, prompt, poFile)
+		return false
+	}
+
+	// Run msgfmt to check syntax of a .po file
+	errs, ok = checkPoWithMsgfmt(poFile)
+	ReportInfoAndErrors(errs, prompt, ok)
+	ret = ret && ok
+
+	// Get pretty locale name, and validate locale name.
+	locale = strings.TrimSuffix(filepath.Base(locale), ".po")
+	_, err := GetPrettyLocaleName(locale)
+	if err != nil {
+		log.Error(err)
 		return false
 	}
 
@@ -150,11 +157,6 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 
 	// Compatibility checks: msgctxt (gettext 0.15+), #~| and #~ msgctxt (gettext 0.14+).
 	errs, ok = checkPoCompatibility(po)
-	ReportInfoAndErrors(errs, prompt, ok)
-	ret = ret && ok
-
-	// Run msgfmt to check syntax of a .po file
-	errs, ok = checkPoSyntax(poFile)
 	ReportInfoAndErrors(errs, prompt, ok)
 	ret = ret && ok
 
