@@ -907,6 +907,201 @@ msgstr "活跃"
 				}
 			},
 		},
+		{
+			name: "blank lines between location comments and msgid are ignored, comments stay with entry",
+			poContent: `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: file.c:100
+
+#: other.c:50
+
+msgid "Hello"
+msgstr "你好"
+
+msgid "World"
+msgstr "世界"
+`,
+			expectedHeader: []string{
+				`msgid ""`,
+				`msgstr ""`,
+				`"Content-Type: text/plain; charset=UTF-8\n"`,
+			},
+			expectedCount: 2,
+			validateEntry: func(t *testing.T, entries []*GettextEntry) {
+				if len(entries) != 2 {
+					t.Fatalf("expected 2 entries, got %d", len(entries))
+				}
+				expectedComments := []string{"#: file.c:100", "#: other.c:50"}
+				if len(entries[0].Comments) != len(expectedComments) {
+					t.Errorf("expected %d comments for first entry, got %d", len(expectedComments), len(entries[0].Comments))
+				} else {
+					for i, expected := range expectedComments {
+						if entries[0].Comments[i] != expected {
+							t.Errorf("comment %d: expected %q, got %q", i, expected, entries[0].Comments[i])
+						}
+					}
+				}
+				if entries[0].MsgID != "Hello" || entries[0].MsgStrSingle() != "你好" {
+					t.Errorf("first entry: expected MsgID=Hello MsgStr=你好, got MsgID=%q MsgStr=%q", entries[0].MsgID, entries[0].MsgStrSingle())
+				}
+				if entries[1].MsgID != "World" || entries[1].MsgStrSingle() != "世界" {
+					t.Errorf("second entry: expected MsgID=World MsgStr=世界, got MsgID=%q MsgStr=%q", entries[1].MsgID, entries[1].MsgStrSingle())
+				}
+			},
+		},
+		{
+			name: "blank lines between msgid and msgstr are ignored",
+			poContent: `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Key"
+
+msgstr "值"
+
+msgid "Another"
+
+msgstr "另一个"
+`,
+			expectedHeader: []string{
+				`msgid ""`,
+				`msgstr ""`,
+				`"Content-Type: text/plain; charset=UTF-8\n"`,
+			},
+			expectedCount: 2,
+			validateEntry: func(t *testing.T, entries []*GettextEntry) {
+				if len(entries) != 2 {
+					t.Fatalf("expected 2 entries, got %d", len(entries))
+				}
+				if entries[0].MsgID != "Key" || entries[0].MsgStrSingle() != "值" {
+					t.Errorf("first entry: expected MsgID=Key MsgStr=值, got MsgID=%q MsgStr=%q", entries[0].MsgID, entries[0].MsgStrSingle())
+				}
+				if entries[1].MsgID != "Another" || entries[1].MsgStrSingle() != "另一个" {
+					t.Errorf("second entry: expected MsgID=Another MsgStr=另一个, got MsgID=%q MsgStr=%q", entries[1].MsgID, entries[1].MsgStrSingle())
+				}
+			},
+		},
+		{
+			name: "BuildPoContent omits meaningless blank lines (comments-msgid and msgid-msgstr)",
+			poContent: `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: a.c
+
+msgid "One"
+
+msgstr "一"
+`,
+			expectedHeader: []string{
+				`msgid ""`,
+				`msgstr ""`,
+				`"Content-Type: text/plain; charset=UTF-8\n"`,
+			},
+			expectedCount: 1,
+			validateEntry: func(t *testing.T, entries []*GettextEntry) {
+				if len(entries) != 1 {
+					t.Fatalf("expected 1 entry, got %d", len(entries))
+				}
+				written := BuildPoContent([]string{`msgid ""`, `msgstr ""`, `"Content-Type: text/plain; charset=UTF-8\n"`}, entries)
+				// Output must not contain two consecutive blank lines inside the entry (no "\n\n\n")
+				if strings.Contains(string(written), "\n\n\n") {
+					t.Errorf("BuildPoContent should not output consecutive blank lines inside entry, got:\n%s", string(written))
+				}
+				// Re-parse and verify same content
+				entries2, _, err := ParsePoEntries(written)
+				if err != nil {
+					t.Fatalf("ParsePoEntries of built content: %v", err)
+				}
+				if len(entries2) != 1 {
+					t.Fatalf("re-parsed entry count: expected 1, got %d", len(entries2))
+				}
+				if entries2[0].MsgID != entries[0].MsgID || entries2[0].MsgStrSingle() != entries[0].MsgStrSingle() {
+					t.Errorf("round-trip mismatch: got MsgID=%q MsgStr=%q", entries2[0].MsgID, entries2[0].MsgStrSingle())
+				}
+			},
+		},
+		{
+			name: "blank line between every part: comment, msgid, msgstr, and between entries",
+			poContent: `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: foo.c
+
+msgid "First"
+
+msgstr "第一个"
+
+#: bar.c
+
+msgid "Second"
+
+msgstr "第二个"
+`,
+			expectedHeader: []string{
+				`msgid ""`,
+				`msgstr ""`,
+				`"Content-Type: text/plain; charset=UTF-8\n"`,
+			},
+			expectedCount: 2,
+			validateEntry: func(t *testing.T, entries []*GettextEntry) {
+				if len(entries) != 2 {
+					t.Fatalf("expected 2 entries, got %d", len(entries))
+				}
+				if len(entries[0].Comments) != 1 || entries[0].Comments[0] != "#: foo.c" {
+					t.Errorf("entry 0 comments: expected [#: foo.c], got %v", entries[0].Comments)
+				}
+				if entries[0].MsgID != "First" || entries[0].MsgStrSingle() != "第一个" {
+					t.Errorf("entry 0: expected MsgID=First MsgStr=第一个, got MsgID=%q MsgStr=%q", entries[0].MsgID, entries[0].MsgStrSingle())
+				}
+				if len(entries[1].Comments) != 1 || entries[1].Comments[0] != "#: bar.c" {
+					t.Errorf("entry 1 comments: expected [#: bar.c], got %v", entries[1].Comments)
+				}
+				if entries[1].MsgID != "Second" || entries[1].MsgStrSingle() != "第二个" {
+					t.Errorf("entry 1: expected MsgID=Second MsgStr=第二个, got MsgID=%q MsgStr=%q", entries[1].MsgID, entries[1].MsgStrSingle())
+				}
+			},
+		},
+		{
+			name: "no blank lines: comments, msgid, msgstr and next entry back-to-back",
+			poContent: `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: a.c
+msgid "Alpha"
+msgstr "甲"
+#: b.c
+msgid "Beta"
+msgstr "乙"
+`,
+			expectedHeader: []string{
+				`msgid ""`,
+				`msgstr ""`,
+				`"Content-Type: text/plain; charset=UTF-8\n"`,
+			},
+			expectedCount: 2,
+			validateEntry: func(t *testing.T, entries []*GettextEntry) {
+				if len(entries) != 2 {
+					t.Fatalf("expected 2 entries, got %d", len(entries))
+				}
+				if len(entries[0].Comments) != 1 || entries[0].Comments[0] != "#: a.c" {
+					t.Errorf("entry 0 comments: expected [#: a.c], got %v", entries[0].Comments)
+				}
+				if entries[0].MsgID != "Alpha" || entries[0].MsgStrSingle() != "甲" {
+					t.Errorf("entry 0: expected MsgID=Alpha MsgStr=甲, got MsgID=%q MsgStr=%q", entries[0].MsgID, entries[0].MsgStrSingle())
+				}
+				if len(entries[1].Comments) != 1 || entries[1].Comments[0] != "#: b.c" {
+					t.Errorf("entry 1 comments: expected [#: b.c], got %v", entries[1].Comments)
+				}
+				if entries[1].MsgID != "Beta" || entries[1].MsgStrSingle() != "乙" {
+					t.Errorf("entry 1: expected MsgID=Beta MsgStr=乙, got MsgID=%q MsgStr=%q", entries[1].MsgID, entries[1].MsgStrSingle())
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {

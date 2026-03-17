@@ -344,6 +344,8 @@ type poParseState struct {
 	inObsolete         bool
 	// obsoleteCommentStripPrefix: when true, the current line was "#~ "+comment; store comment without "#~ " in Comments (7.2 Option A).
 	obsoleteCommentStripPrefix bool
+	// hasSeenMsgstr is set when we have seen at least one "msgstr " or "msgstr[n]" line for the current entry (used to not finish on blank between msgid and msgstr).
+	hasSeenMsgstr bool
 }
 
 // finishCurrentEntry writes the current entry's collected msgid/msgstr into
@@ -390,6 +392,7 @@ func resetEntryContent(st *poParseState) {
 	st.inMsgstr = false
 	st.inMsgidPlural = false
 	st.currentPluralIndex = -1
+	st.hasSeenMsgstr = false
 }
 
 // startNewEntry resets entry-related state for a new entry. If the current
@@ -542,6 +545,11 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 		kind := classifyPoLine(trimmed)
 		switch kind {
 		case poLineComment, poLineFlagHashComma, poLineFlagHashEq, poLineCommentRef, poLineCommentExtracted, poLineCommentPrev:
+			// When there is no blank line between entries, a comment starts a new entry if the current one is complete.
+			if st.currentEntry != nil && st.msgidValue.Len() > 0 && st.hasSeenMsgstr {
+				finishCurrentEntry(st, &entries)
+				startNewEntry(st)
+			}
 			if st.currentEntry == nil {
 				st.currentEntry = &GettextEntry{}
 				st.entryLines = nil
@@ -612,6 +620,7 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			st.inMsgid = false
 			st.inMsgidPlural = false
 			st.inMsgstr = true
+			st.hasSeenMsgstr = true
 			idxStr := strings.TrimPrefix(trimmed, "msgstr[")
 			idxStr = strings.Split(idxStr, "]")[0]
 			var idx int
@@ -630,6 +639,7 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			st.inMsgid = false
 			st.inMsgidPlural = false
 			st.inMsgstr = true
+			st.hasSeenMsgstr = true
 			value := strings.TrimPrefix(trimmed, "msgstr ")
 			value = strings.TrimSpace(value)
 			value = strDeQuote(value)
@@ -662,6 +672,16 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			}
 
 		case poLineBlank:
+			// Ignore meaningless blank lines: between comments and msgid, or between msgid and msgstr.
+			// Do not finish the entry and do not add the blank to entryLines so BuildPoContent won't output it.
+			if st.currentEntry != nil && st.msgidValue.Len() == 0 {
+				// Comments only (no msgid yet); keep comments with the following msgid.
+				continue
+			}
+			if st.currentEntry != nil && st.msgidValue.Len() > 0 && !st.hasSeenMsgstr {
+				// Have msgid but no msgstr line yet; blank between msgid and msgstr.
+				continue
+			}
 			finishCurrentEntry(st, &entries)
 			st.currentEntry = nil
 			st.entryLines = nil
@@ -677,6 +697,7 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			st.inMsgidPlural = false
 			st.currentPluralIndex = -1
 			st.inObsolete = false
+			st.hasSeenMsgstr = false
 
 		default:
 			if st.currentEntry != nil {
