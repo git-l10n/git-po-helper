@@ -189,11 +189,11 @@ func TestParsePoEntriesRoundTripBytes(t *testing.T) {
 	for i, poContent := range poRoundTripExamples {
 		t.Run(string(rune('a'+i)), func(t *testing.T) {
 			original := []byte(poContent)
-			entries, header, err := ParsePoEntries(original)
+			po, err := ParsePoEntries(original)
 			if err != nil {
 				t.Fatalf("ParsePoEntries failed: %v", err)
 			}
-			written := BuildPoContent(header, entries)
+			written := BuildPoContent(po.HeaderLines(), po.EntriesPtr())
 			if !bytes.Equal(original, written) {
 				diff := bytesDiff(original, written)
 				t.Errorf("round-trip mismatch:\n%s", diff)
@@ -218,10 +218,11 @@ msgstr "模糊 %s"
 msgid "Normal"
 msgstr "正常"
 `
-	entries, _, err := ParsePoEntries([]byte(poContent))
+	po, err := ParsePoEntries([]byte(poContent))
 	if err != nil {
 		t.Fatalf("ParsePoEntries failed: %v", err)
 	}
+	entries := po.EntriesPtr()
 	if len(entries) != 3 {
 		t.Fatalf("expected 3 entries, got %d", len(entries))
 	}
@@ -251,13 +252,14 @@ msgstr "格式 %s"
 msgid "Fuzzy no-wrap"
 msgstr "模糊不换行"
 `
-	entries, header, err := ParsePoEntries([]byte(po))
+	parsed, err := ParsePoEntries([]byte(po))
 	if err != nil {
 		t.Fatalf("ParsePoEntries failed: %v", err)
 	}
-	if len(header) == 0 {
+	if len(parsed.HeaderLines()) == 0 {
 		t.Fatal("expected header")
 	}
+	entries := parsed.EntriesPtr()
 	if len(entries) != 2 {
 		t.Fatalf("expected 2 entries, got %d", len(entries))
 	}
@@ -297,11 +299,12 @@ msgstr "模糊不换行"
 		t.Errorf("entry 1: expected Fuzzy=true from #, fuzzy")
 	}
 	// Round-trip: build back and parse again; #= lines must still be present.
-	written := BuildPoContent(header, entries)
-	entries2, _, err := ParsePoEntries(written)
+	written := BuildPoContent(parsed.HeaderLines(), entries)
+	po2, err := ParsePoEntries(written)
 	if err != nil {
 		t.Fatalf("second ParsePoEntries failed: %v", err)
 	}
+	entries2 := po2.EntriesPtr()
 	if len(entries2) != 2 {
 		t.Fatalf("after round-trip expected 2 entries, got %d", len(entries2))
 	}
@@ -333,10 +336,11 @@ func TestParsePoEntriesObsolete(t *testing.T) {
 		"#~ msgid \"Obsolete\"\n" +
 		"#~ msgstr \"已废弃\"\n" +
 		"\n"
-	entries, _, err := ParsePoEntries([]byte(po))
+	parsed, err := ParsePoEntries([]byte(po))
 	if err != nil {
 		t.Fatal(err)
 	}
+	entries := parsed.EntriesPtr()
 	if len(entries) != 2 {
 		t.Fatalf("expected 2 entries, got %d", len(entries))
 	}
@@ -362,10 +366,11 @@ msgstr "活跃"
 #~ msgid "Obsolete"
 #~ msgstr "已废弃"
 `
-	entries, _, err := ParsePoEntries([]byte(po))
+	parsedPO, err := ParsePoEntries([]byte(po))
 	if err != nil {
 		t.Fatal(err)
 	}
+	entries := parsedPO.EntriesPtr()
 	if len(entries) != 2 {
 		t.Fatalf("expected 2 entries, got %d", len(entries))
 	}
@@ -411,10 +416,11 @@ func TestParsePoEntriesObsoleteHashTildePipe(t *testing.T) {
 		"#~ msgid \"Obsolete\"\n" +
 		"#~ msgstr \"已废弃\"\n" +
 		"\n"
-	entries, _, err := ParsePoEntries([]byte(po))
+	parsedPO, err := ParsePoEntries([]byte(po))
 	if err != nil {
 		t.Fatal(err)
 	}
+	entries := parsedPO.EntriesPtr()
 	if len(entries) != 2 {
 		t.Fatalf("expected 2 entries, got %d", len(entries))
 	}
@@ -1011,10 +1017,11 @@ msgstr "一"
 					t.Errorf("BuildPoContent should not output consecutive blank lines inside entry, got:\n%s", string(written))
 				}
 				// Re-parse and verify same content
-				entries2, _, err := ParsePoEntries(written)
+				po2, err := ParsePoEntries(written)
 				if err != nil {
 					t.Fatalf("ParsePoEntries of built content: %v", err)
 				}
+				entries2 := po2.EntriesPtr()
 				if len(entries2) != 1 {
 					t.Fatalf("re-parsed entry count: expected 1, got %d", len(entries2))
 				}
@@ -1106,10 +1113,12 @@ msgstr "乙"
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			entries, header, err := ParsePoEntries([]byte(tt.poContent))
+			po, err := ParsePoEntries([]byte(tt.poContent))
 			if err != nil {
 				t.Fatalf("ParsePoEntries failed: %v", err)
 			}
+			header := po.HeaderLines()
+			entries := po.EntriesPtr()
 
 			if tt.name == "empty file" {
 				if len(header) > 1 {

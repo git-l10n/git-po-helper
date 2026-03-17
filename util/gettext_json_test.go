@@ -305,14 +305,14 @@ msgstr ""
 msgid "Hello"
 msgstr "你好"
 `
-	entries, header, err := ParsePoEntries([]byte(poContent))
+	po, err := ParsePoEntries([]byte(poContent))
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
-	if len(entries) != 1 {
-		t.Fatalf("expected 1 entry, got %d", len(entries))
+	if len(po.Entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(po.Entries))
 	}
-	comment, meta, err := SplitHeader(header)
+	comment, meta, err := SplitHeader(po.HeaderLines())
 	if err != nil {
 		t.Fatalf("SplitHeader: %v", err)
 	}
@@ -325,7 +325,7 @@ msgstr "你好"
 		t.Errorf("header_meta: got %q", meta)
 	}
 	var buf bytes.Buffer
-	err = BuildGettextJSON(comment, meta, entries, &buf)
+	err = BuildGettextJSON(comment, meta, po.EntriesPtr(), &buf)
 	if err != nil {
 		t.Fatalf("BuildGettextJSON: %v", err)
 	}
@@ -367,14 +367,14 @@ func TestWriteGettextJSONToPO_Example2RoundTrip(t *testing.T) {
 		t.Fatalf("WriteGettextJSONToPO: %v", err)
 	}
 	poBytes := poBuf.Bytes()
-	entries, header, err := ParsePoEntries(poBytes)
+	po, err := ParsePoEntries(poBytes)
 	if err != nil {
 		t.Fatalf("ParsePoEntries of converted PO: %v", err)
 	}
-	if len(entries) != 1 {
-		t.Fatalf("expected 1 entry after round-trip, got %d", len(entries))
+	if len(po.Entries) != 1 {
+		t.Fatalf("expected 1 entry after round-trip, got %d", len(po.Entries))
 	}
-	e := entries[0]
+	e := &po.Entries[0]
 	wantMsgid := "Line one\\nLine two\\twith tab, padding for line 2."
 	wantMsgstr := "第一行\\n第二行\\t带制表符, 第二行的填充。"
 	if e.MsgID != wantMsgid {
@@ -383,9 +383,9 @@ func TestWriteGettextJSONToPO_Example2RoundTrip(t *testing.T) {
 	if e.MsgStrSingle() != wantMsgstr {
 		t.Errorf("msgstr round-trip: got %q", e.MsgStrSingle())
 	}
-	headerComment, headerMeta, _ := SplitHeader(header)
+	headerComment, headerMeta, _ := SplitHeader(po.HeaderLines())
 	var jsonBuf bytes.Buffer
-	if err := BuildGettextJSON(headerComment, headerMeta, entries, &jsonBuf); err != nil {
+	if err := BuildGettextJSON(headerComment, headerMeta, po.EntriesPtr(), &jsonBuf); err != nil {
 		t.Fatalf("BuildGettextJSON: %v", err)
 	}
 	var j2 GettextJSON
@@ -421,10 +421,11 @@ func TestWriteGettextJSONToPO_Example3PluralRoundTrip(t *testing.T) {
 	if err := WriteGettextJSONToPO(j, &poBuf, false, false); err != nil {
 		t.Fatalf("WriteGettextJSONToPO: %v", err)
 	}
-	entries, _, err := ParsePoEntries(poBuf.Bytes())
+	po, err := ParsePoEntries(poBuf.Bytes())
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
+	entries := po.EntriesPtr()
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(entries))
 	}
@@ -450,10 +451,11 @@ func TestWriteGettextJSONToPO_SpecialChars(t *testing.T) {
 	if err := WriteGettextJSONToPO(j, &buf, false, false); err != nil {
 		t.Fatalf("WriteGettextJSONToPO: %v", err)
 	}
-	entries, _, err := ParsePoEntries(buf.Bytes())
+	po, err := ParsePoEntries(buf.Bytes())
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
+	entries := po.EntriesPtr()
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(entries))
 	}
@@ -494,10 +496,11 @@ func TestEscapeChars_JSONInputWithNewlineTab(t *testing.T) {
 	if err := WriteGettextJSONToPO(j, &poBuf, false, false); err != nil {
 		t.Fatalf("WriteGettextJSONToPO: %v", err)
 	}
-	entries, _, err := ParsePoEntries(poBuf.Bytes())
+	po, err := ParsePoEntries(poBuf.Bytes())
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
+	entries := po.EntriesPtr()
 	if entries[0].MsgID != wantMsgid || entries[0].MsgStrSingle() != wantMsgstr {
 		t.Errorf("after PO round-trip: msgid=%q msgstr=%q", entries[0].MsgID, entries[0].MsgStr)
 	}
@@ -517,10 +520,11 @@ msgstr ""
 "引号 \" 反斜杠 \\ 制表符\t 换行\n"
 "回车\r 结束。"
 `
-	entries, header, err := ParsePoEntries([]byte(poContent))
+	po, err := ParsePoEntries([]byte(poContent))
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
+	entries := po.EntriesPtr()
 	// PO format: \" = backslash+quote, \\ = backslash+backslash, \t \n \r as literal
 	wantMsgid := `Quote \" and backslash \\ and tab\t and newline\nand carriage return\r end.`
 	wantMsgstr := `引号 \" 反斜杠 \\ 制表符\t 换行\n回车\r 结束。`
@@ -530,7 +534,7 @@ msgstr ""
 	if entries[0].MsgStrSingle() != wantMsgstr {
 		t.Errorf("MsgStr: got %q, want %q", entries[0].MsgStr, wantMsgstr)
 	}
-	headerComment, headerMeta, _ := SplitHeader(header)
+	headerComment, headerMeta, _ := SplitHeader(po.HeaderLines())
 	var jsonBuf bytes.Buffer
 	if err := BuildGettextJSON(headerComment, headerMeta, entries, &jsonBuf); err != nil {
 		t.Fatalf("BuildGettextJSON: %v", err)
@@ -546,10 +550,11 @@ msgstr ""
 	if err := WriteGettextJSONToPO(j, &poBuf, false, false); err != nil {
 		t.Fatalf("WriteGettextJSONToPO: %v", err)
 	}
-	entries2, _, err := ParsePoEntries(poBuf.Bytes())
+	po2, err := ParsePoEntries(poBuf.Bytes())
 	if err != nil {
 		t.Fatalf("ParsePoEntries (second): %v", err)
 	}
+	entries2 := po2.EntriesPtr()
 	if entries2[0].MsgID != wantMsgid || entries2[0].MsgStrSingle() != wantMsgstr {
 		t.Errorf("after full round-trip: msgid=%q msgstr=%q", entries2[0].MsgID, entries2[0].MsgStr)
 	}
@@ -577,11 +582,11 @@ func TestEscapeChars_HeaderMetaWithNewlines(t *testing.T) {
 	if err := WriteGettextJSONToPO(j, &poBuf, false, false); err != nil {
 		t.Fatalf("WriteGettextJSONToPO: %v", err)
 	}
-	_, header, err := ParsePoEntries(poBuf.Bytes())
+	po, err := ParsePoEntries(poBuf.Bytes())
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
-	_, meta, _ := SplitHeader(header)
+	_, meta, _ := SplitHeader(po.HeaderLines())
 	if meta != wantMeta {
 		t.Errorf("header_meta after round-trip: got %q, want %q", meta, wantMeta)
 	}
@@ -652,16 +657,16 @@ msgstr ""
 "第一行\n"
 "第二行\t带制表符, 第二行的填充。"
 `
-	entries, header, err := ParsePoEntries([]byte(poContent))
+	po, err := ParsePoEntries([]byte(poContent))
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
-	headerComment, headerMeta, err := SplitHeader(header)
+	headerComment, headerMeta, err := SplitHeader(po.HeaderLines())
 	if err != nil {
 		t.Fatalf("SplitHeader: %v", err)
 	}
 	var json1Buf bytes.Buffer
-	if err := BuildGettextJSON(headerComment, headerMeta, entries, &json1Buf); err != nil {
+	if err := BuildGettextJSON(headerComment, headerMeta, po.EntriesPtr(), &json1Buf); err != nil {
 		t.Fatalf("BuildGettextJSON: %v", err)
 	}
 	j1, err := ParseGettextJSONBytes(json1Buf.Bytes())
@@ -672,13 +677,13 @@ msgstr ""
 	if err := WriteGettextJSONToPO(j1, &poBuf, false, false); err != nil {
 		t.Fatalf("WriteGettextJSONToPO: %v", err)
 	}
-	entries2, header2, err := ParsePoEntries(poBuf.Bytes())
+	po2, err := ParsePoEntries(poBuf.Bytes())
 	if err != nil {
 		t.Fatalf("ParsePoEntries (second): %v", err)
 	}
-	headerComment2, headerMeta2, _ := SplitHeader(header2)
+	headerComment2, headerMeta2, _ := SplitHeader(po2.HeaderLines())
 	var json2Buf bytes.Buffer
-	if err := BuildGettextJSON(headerComment2, headerMeta2, entries2, &json2Buf); err != nil {
+	if err := BuildGettextJSON(headerComment2, headerMeta2, po2.EntriesPtr(), &json2Buf); err != nil {
 		t.Fatalf("BuildGettextJSON (second): %v", err)
 	}
 	j2, err := ParseGettextJSONBytes(json2Buf.Bytes())
@@ -707,13 +712,13 @@ msgid_plural "%d files"
 msgstr[0] "一个文件"
 msgstr[1] "%d 个文件"
 `
-	entries, header, err := ParsePoEntries([]byte(poContent))
+	po, err := ParsePoEntries([]byte(poContent))
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
-	headerComment, headerMeta, _ := SplitHeader(header)
+	headerComment, headerMeta, _ := SplitHeader(po.HeaderLines())
 	var jsonBuf bytes.Buffer
-	if err := BuildGettextJSON(headerComment, headerMeta, entries, &jsonBuf); err != nil {
+	if err := BuildGettextJSON(headerComment, headerMeta, po.EntriesPtr(), &jsonBuf); err != nil {
 		t.Fatalf("BuildGettextJSON: %v", err)
 	}
 	j, _ := ParseGettextJSONBytes(jsonBuf.Bytes())
@@ -721,10 +726,11 @@ msgstr[1] "%d 个文件"
 	if err := WriteGettextJSONToPO(j, &poBuf, false, false); err != nil {
 		t.Fatalf("WriteGettextJSONToPO: %v", err)
 	}
-	entries2, _, err := ParsePoEntries(poBuf.Bytes())
+	po2, err := ParsePoEntries(poBuf.Bytes())
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
+	entries2 := po2.EntriesPtr()
 	if len(entries2) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(entries2))
 	}
@@ -745,14 +751,14 @@ func TestWriteGettextJSONToPO_EmptyEntries(t *testing.T) {
 	if err := WriteGettextJSONToPO(j, &buf, false, false); err != nil {
 		t.Fatalf("WriteGettextJSONToPO: %v", err)
 	}
-	entries, header, err := ParsePoEntries(buf.Bytes())
+	po, err := ParsePoEntries(buf.Bytes())
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
-	if len(entries) != 0 {
-		t.Errorf("expected 0 entries, got %d", len(entries))
+	if len(po.Entries) != 0 {
+		t.Errorf("expected 0 entries, got %d", len(po.Entries))
 	}
-	comment, meta, _ := SplitHeader(header)
+	comment, meta, _ := SplitHeader(po.HeaderLines())
 	if comment != "# empty\n" || meta != "Project-Id-Version: git\\n" {
 		t.Errorf("header: comment=%q meta=%q", comment, meta)
 	}
@@ -769,15 +775,14 @@ msgstr "活跃"
 #~ msgid "Obsolete"
 #~ msgstr "已废弃"
 `
-	entries, header, err := ParsePoEntries([]byte(po))
+	parsedPO, err := ParsePoEntries([]byte(po))
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
-	if len(entries) != 2 {
-		t.Fatalf("expected 2 entries, got %d", len(entries))
+	if len(parsedPO.Entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(parsedPO.Entries))
 	}
-	headerComment, headerMeta, _ := SplitHeader(header)
-	j := GettextJSONFromEntries(headerComment, headerMeta, entries)
+	j := GettextJSONFromGettextPO(parsedPO)
 	if j.Entries[0].Obsolete || !j.Entries[1].Obsolete {
 		t.Errorf("Obsolete flags: entry0=%v entry1=%v", j.Entries[0].Obsolete, j.Entries[1].Obsolete)
 	}
@@ -785,10 +790,11 @@ msgstr "活跃"
 	if err := WriteGettextJSONToPO(j, &poBuf, false, false); err != nil {
 		t.Fatalf("WriteGettextJSONToPO: %v", err)
 	}
-	entries2, _, err := ParsePoEntries(poBuf.Bytes())
+	po2, err := ParsePoEntries(poBuf.Bytes())
 	if err != nil {
 		t.Fatalf("ParsePoEntries round-trip: %v", err)
 	}
+	entries2 := po2.EntriesPtr()
 	if len(entries2) != 2 {
 		t.Fatalf("round-trip: expected 2 entries, got %d", len(entries2))
 	}
@@ -815,18 +821,17 @@ msgstr "活跃"
 #~ msgid "Obsolete"
 #~ msgstr "已废弃"
 `
-	entries, header, err := ParsePoEntries([]byte(po))
+	parsedPO, err := ParsePoEntries([]byte(po))
 	if err != nil {
 		t.Fatalf("ParsePoEntries: %v", err)
 	}
-	if len(entries) != 2 {
-		t.Fatalf("expected 2 entries, got %d", len(entries))
+	if len(parsedPO.Entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(parsedPO.Entries))
 	}
-	if entries[1].MsgIDPrevious != "Old source" {
-		t.Errorf("MsgIDPrevious: got %q", entries[1].MsgIDPrevious)
+	if parsedPO.Entries[1].MsgIDPrevious != "Old source" {
+		t.Errorf("MsgIDPrevious: got %q", parsedPO.Entries[1].MsgIDPrevious)
 	}
-	headerComment, headerMeta, _ := SplitHeader(header)
-	j := GettextJSONFromEntries(headerComment, headerMeta, entries)
+	j := GettextJSONFromGettextPO(parsedPO)
 	if j.Entries[1].MsgIDPrevious != "Old source" {
 		t.Errorf("JSON MsgIDPrevious: got %q", j.Entries[1].MsgIDPrevious)
 	}
@@ -837,12 +842,12 @@ msgstr "活跃"
 	if !strings.Contains(poBuf.String(), "#~| msgid \"Old source\"") {
 		t.Errorf("output should contain #~| msgid format: %s", poBuf.String())
 	}
-	entries2, _, err := ParsePoEntries(poBuf.Bytes())
+	po2, err := ParsePoEntries(poBuf.Bytes())
 	if err != nil {
 		t.Fatalf("ParsePoEntries round-trip: %v", err)
 	}
-	if entries2[1].MsgIDPrevious != "Old source" {
-		t.Errorf("round-trip MsgIDPrevious: got %q", entries2[1].MsgIDPrevious)
+	if po2.Entries[1].MsgIDPrevious != "Old source" {
+		t.Errorf("round-trip MsgIDPrevious: got %q", po2.Entries[1].MsgIDPrevious)
 	}
 }
 
@@ -869,15 +874,15 @@ func TestSelectGettextJSONFromFile_JSONInputToPO(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SelectGettextJSONFromFile: %v", err)
 	}
-	entries, _, err := ParsePoEntries(buf.Bytes())
+	po, err := ParsePoEntries(buf.Bytes())
 	if err != nil {
 		t.Fatalf("ParsePoEntries of PO output: %v", err)
 	}
-	if len(entries) != 1 {
-		t.Fatalf("expected 1 entry, got %d", len(entries))
+	if len(po.Entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(po.Entries))
 	}
-	if entries[0].MsgID != "Line one" || entries[0].MsgStrSingle() != "第一行" {
-		t.Errorf("entry: msgid=%q msgstr=%q", entries[0].MsgID, entries[0].MsgStr)
+	if po.Entries[0].MsgID != "Line one" || po.Entries[0].MsgStrSingle() != "第一行" {
+		t.Errorf("entry: msgid=%q msgstr=%q", po.Entries[0].MsgID, po.Entries[0].MsgStr)
 	}
 }
 
@@ -1223,12 +1228,11 @@ msgstr ""
 msgid "Fuzzy only"
 msgstr ""
 `
-	entries, header, err := ParsePoEntries([]byte(poStandalone))
+	po, err := ParsePoEntries([]byte(poStandalone))
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, headerMeta, _ := SplitHeader(header)
-	j := GettextJSONFromEntries("", headerMeta, entries)
+	j := GettextJSONFromGettextPO(po)
 	if len(j.Entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(j.Entries))
 	}
@@ -1257,12 +1261,11 @@ msgstr ""
 msgid "Fuzzy and c-format"
 msgstr ""
 `
-	entries2, header2, err := ParsePoEntries([]byte(poMerged))
+	po2, err := ParsePoEntries([]byte(poMerged))
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, headerMeta2, _ := SplitHeader(header2)
-	j2 := GettextJSONFromEntries("", headerMeta2, entries2)
+	j2 := GettextJSONFromGettextPO(po2)
 	if len(j2.Entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(j2.Entries))
 	}

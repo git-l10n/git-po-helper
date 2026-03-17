@@ -78,6 +78,134 @@ func (e *GettextEntry) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("gettext entry msgstr: want string or array of strings")
 }
 
+// GettextPO holds a parsed PO file: header as one entry and content entries.
+type GettextPO struct {
+	HeaderEntry GettextEntry   `json:"header_entry"`
+	Entries     []GettextEntry `json:"entries"`
+}
+
+// isSemanticComment returns true for gettext semantic comment kinds (see docs/design/gettext-format.md):
+// #. (extracted), #: (reference), #, (flags), #= (sticky flags), #| (previous untranslated).
+// Normal comments are "# " (translator) or "#" alone. Uses classifyPoLine for a single source of truth.
+func isSemanticComment(trimmed string) bool {
+	kind := classifyPoLine(trimmed)
+	return kind == poLineFlagHashComma || kind == poLineFlagHashEq ||
+		kind == poLineCommentRef || kind == poLineCommentExtracted || kind == poLineCommentPrev
+}
+
+// HeaderComments returns header comment lines excluding semantic comments (#., #:, #,, #=, #|).
+// Only translator comments ("# " or "#" alone) and other non-semantic "#" lines are returned.
+func (po *GettextPO) HeaderComments() []string {
+	if po == nil {
+		return nil
+	}
+	var out []string
+	for _, c := range po.HeaderEntry.Comments {
+		trimmed := strings.TrimSpace(c)
+		if isSemanticComment(trimmed) {
+			break
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
+// Meta returns the header msgstr decoded and split by newline.
+func (po *GettextPO) Meta() []string {
+	if po == nil || len(po.HeaderEntry.MsgStr) == 0 {
+		return nil
+	}
+	decoded := poUnescape(po.HeaderEntry.MsgStr[0])
+	if decoded == "" {
+		return nil
+	}
+	return strings.Split(decoded, "\n")
+}
+
+// HeaderLines returns the header as raw lines for BuildPoContent.
+// Only adds msgid ""/msgstr "" and meta when the header had that block (MsgStr set).
+func (po *GettextPO) HeaderLines() []string {
+	if po == nil {
+		return nil
+	}
+	var out []string
+	out = append(out, po.HeaderEntry.Comments...)
+	if len(po.HeaderEntry.MsgStr) == 0 {
+		return out
+	}
+	out = append(out, `msgid ""`)
+	out = append(out, `msgstr ""`)
+	meta := po.HeaderEntry.MsgStrSingle()
+	if meta != "" {
+		parts := strings.Split(meta, "\\n")
+		for i, p := range parts {
+			if i < len(parts)-1 {
+				out = append(out, `"`+p+`\n"`)
+			} else if p != "" {
+				out = append(out, `"`+p+`"`)
+			}
+		}
+	}
+	return out
+}
+
+// EntriesPtr returns pointers to Entries for APIs that take []*GettextEntry.
+func (po *GettextPO) EntriesPtr() []*GettextEntry {
+	if po == nil {
+		return nil
+	}
+	out := make([]*GettextEntry, len(po.Entries))
+	for i := range po.Entries {
+		out[i] = &po.Entries[i]
+	}
+	return out
+}
+
+// BuildHeaderEntryFromLines builds a GettextEntry from raw header lines.
+func BuildHeaderEntryFromLines(header []string) GettextEntry {
+	e := GettextEntry{}
+	if len(header) == 0 {
+		return e
+	}
+	var commentLines []string
+	var i int
+	for i = 0; i < len(header); i++ {
+		trimmed := strings.TrimSpace(header[i])
+		if strings.HasPrefix(trimmed, "msgid ") {
+			value := strings.TrimPrefix(trimmed, "msgid ")
+			value = strings.TrimSpace(value)
+			value = strDeQuote(value)
+			if value == "" {
+				break
+			}
+		}
+		commentLines = append(commentLines, header[i])
+	}
+	e.Comments = commentLines
+	if i >= len(header) {
+		return e
+	}
+	var msgstrLines []string
+	for i++; i < len(header); i++ {
+		trimmed := strings.TrimSpace(header[i])
+		if strings.HasPrefix(trimmed, "msgstr ") {
+			value := strings.TrimPrefix(trimmed, "msgstr ")
+			value = strings.TrimSpace(value)
+			value = strDeQuote(value)
+			msgstrLines = append(msgstrLines, value)
+		} else if strings.HasPrefix(trimmed, `"`) {
+			value := strDeQuote(trimmed)
+			msgstrLines = append(msgstrLines, value)
+		} else {
+			break
+		}
+	}
+	if len(msgstrLines) > 0 {
+		e.MsgStr = []string{strings.Join(msgstrLines, "")}
+	}
+	return e
+}
+
 // commentHasFuzzyFlag returns true if the line is a flag comment (e.g. "#, fuzzy" or "#, fuzzy, c-format")
 // that includes the "fuzzy" flag.
 func commentHasFuzzyFlag(line string) bool {
@@ -404,11 +532,12 @@ func startNewEntry(st *poParseState) {
 	resetEntryContent(st)
 }
 
-// ParsePoEntries parses PO file entries and returns entries and header.
+// ParsePoEntries parses a PO file and returns a GettextPO (header as one entry + content entries).
 // The header includes comments, the empty msgid/msgstr block, and any continuation lines.
-// Entries are 1-based for content (header entry with empty msgid is not included).
-func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err error) {
+// Content entries are 1-based (header entry with empty msgid is not in Entries).
+func ParsePoEntries(data []byte) (*GettextPO, error) {
 	lines := strings.Split(string(data), "\n")
+	var entries []*GettextEntry
 	st := &poParseState{
 		inHeader:           true,
 		hasSeenHeaderBlock: false,
@@ -709,7 +838,12 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 	}
 
 	finishCurrentEntry(st, &entries)
-	return entries, st.headerLines, nil
+	headerEntry := BuildHeaderEntryFromLines(st.headerLines)
+	entriesVal := make([]GettextEntry, len(entries))
+	for i, e := range entries {
+		entriesVal[i] = *e
+	}
+	return &GettextPO{HeaderEntry: headerEntry, Entries: entriesVal}, nil
 }
 
 // entryHasFuzzyFlag returns true if any comment in the entry has the fuzzy flag.
@@ -883,7 +1017,7 @@ func MsgSelect(poFile, rangeSpec string, w io.Writer, noHeader bool, filter *Ent
 		return fmt.Errorf("failed to read %s: %w", poFile, err)
 	}
 
-	entries, header, err := ParsePoEntries(data)
+	po, err := ParsePoEntries(data)
 	if err != nil {
 		return fmt.Errorf("failed to parse %s: %w", poFile, err)
 	}
@@ -894,11 +1028,7 @@ func MsgSelect(poFile, rangeSpec string, w io.Writer, noHeader bool, filter *Ent
 	}
 
 	// Filter by state first
-	entriesSlice := make([]GettextEntry, len(entries))
-	for i, e := range entries {
-		entriesSlice[i] = *e
-	}
-	filtered := FilterGettextEntries(entriesSlice, f)
+	filtered := FilterGettextEntries(po.Entries, f)
 	maxEntry := len(filtered)
 	indices, err := ParseEntryRange(rangeSpec, maxEntry)
 	if err != nil {
@@ -920,7 +1050,7 @@ func MsgSelect(poFile, rangeSpec string, w io.Writer, noHeader bool, filter *Ent
 
 	// Write header (unless skipped)
 	if !noHeader {
-		for _, line := range header {
+		for _, line := range po.HeaderLines() {
 			if _, err := io.WriteString(w, line); err != nil {
 				return err
 			}
@@ -962,22 +1092,16 @@ func WriteGettextJSONFromPOFile(poFile, rangeSpec string, w io.Writer, filter *E
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", poFile, err)
 	}
-	entries, header, err := ParsePoEntries(data)
+	po, err := ParsePoEntries(data)
 	if err != nil {
 		return fmt.Errorf("failed to parse %s: %w", poFile, err)
 	}
-	headerComment, headerMeta, err := SplitHeader(header)
-	if err != nil {
-		return fmt.Errorf("split header: %w", err)
-	}
+	j := GettextJSONFromGettextPO(po)
 	f := DefaultFilter()
 	if filter != nil {
 		f = *filter
 	}
-	entriesSlice := make([]GettextEntry, len(entries))
-	for i, e := range entries {
-		entriesSlice[i] = *e
-	}
+	entriesSlice := j.Entries
 	filtered := FilterGettextEntries(entriesSlice, f)
 	maxEntry := len(filtered)
 	indices, err := ParseEntryRange(rangeSpec, maxEntry)
@@ -990,5 +1114,5 @@ func WriteGettextJSONFromPOFile(poFile, rangeSpec string, w io.Writer, filter *E
 			selected = append(selected, &filtered[idx-1])
 		}
 	}
-	return BuildGettextJSON(headerComment, headerMeta, selected, w)
+	return BuildGettextJSON(j.HeaderComment, j.HeaderMeta, selected, w)
 }

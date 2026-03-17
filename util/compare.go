@@ -240,13 +240,13 @@ func PoCompare(src, dest []byte, noHeader bool) (DiffStat, []string, []*GettextE
 	stat, reviewEntries := CompareGettextEntries(oldJ, newJ, false)
 	entries := GettextEntriesWithRawLines(reviewEntries)
 
-	_, newHeader, err := ParsePoEntries(dest)
+	destPO, err := ParsePoEntries(dest)
 	if err != nil {
 		return DiffStat{}, nil, nil, fmt.Errorf("failed to parse dest header: %w", err)
 	}
-	header := newHeader
-	if noHeader {
-		header = nil
+	var header []string
+	if !noHeader {
+		header = destPO.HeaderLines()
 	}
 	return stat, header, entries, nil
 }

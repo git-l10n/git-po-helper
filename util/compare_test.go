@@ -363,10 +363,12 @@ msgstr "世界"
 	}
 
 	data := BuildPoContent(header, entries)
-	parsedEntries, parsedHeader, err := ParsePoEntries(data)
+	parsedPO, err := ParsePoEntries(data)
 	if err != nil {
 		t.Fatalf("ParsePoEntries of output failed: %v", err)
 	}
+	parsedEntries := parsedPO.EntriesPtr()
+	parsedHeader := parsedPO.HeaderLines()
 	if len(parsedEntries) != 1 {
 		t.Errorf("expected 1 entry in review output, got %d", len(parsedEntries))
 	}

@@ -55,53 +55,63 @@ func poEscape(s string) string {
 	return b.String()
 }
 
-// SplitHeader splits header lines from ParsePoEntries into header_comment and header_meta.
-// headerComment is lines before the first "msgid "" (after trim), joined with "\n".
-// headerMeta is the decoded msgstr value of the header entry (unescaped).
+// SplitHeader splits header lines into header_comment and header_meta (uses BuildHeaderEntryFromLines).
 func SplitHeader(header []string) (headerComment, headerMeta string, err error) {
-	if len(header) == 0 {
-		return "", "", nil
+	he := BuildHeaderEntryFromLines(header)
+	if len(he.Comments) > 0 {
+		headerComment = strings.Join(he.Comments, "\n") + "\n"
 	}
-	var commentLines []string
-	var i int
-	for i = 0; i < len(header); i++ {
-		trimmed := strings.TrimSpace(header[i])
-		if strings.HasPrefix(trimmed, "msgid ") {
-			value := strings.TrimPrefix(trimmed, "msgid ")
-			value = strings.TrimSpace(value)
-			value = strDeQuote(value)
-			if value == "" {
-				break
+	headerMeta = he.MsgStrSingle()
+	return headerComment, headerMeta, nil
+}
+
+// GettextJSONFromGettextPO builds GettextJSON from GettextPO (strips fuzzy from comments).
+func GettextJSONFromGettextPO(po *GettextPO) *GettextJSON {
+	if po == nil {
+		return &GettextJSON{Entries: []GettextEntry{}}
+	}
+	headerComment := strings.Join(po.HeaderEntry.Comments, "\n")
+	if len(po.HeaderEntry.Comments) > 0 {
+		headerComment += "\n"
+	}
+	headerMeta := po.HeaderEntry.MsgStrSingle()
+	entriesForJSON := make([]GettextEntry, 0, len(po.Entries))
+	for _, e := range po.Entries {
+		ent := e
+		ent.Comments = nil
+		for _, c := range e.Comments {
+			if stripped := StripFuzzyFromCommentLine(c); stripped != "" {
+				ent.Comments = append(ent.Comments, stripped)
 			}
 		}
-		commentLines = append(commentLines, header[i])
-	}
-	if len(commentLines) > 0 {
-		headerComment = strings.Join(commentLines, "\n") + "\n"
-	}
-	if i >= len(header) {
-		return headerComment, "", nil
-	}
-	// Collect msgstr "" and continuation lines for header_meta
-	var msgstrLines []string
-	for i++; i < len(header); i++ {
-		trimmed := strings.TrimSpace(header[i])
-		if strings.HasPrefix(trimmed, "msgstr ") {
-			value := strings.TrimPrefix(trimmed, "msgstr ")
-			value = strings.TrimSpace(value)
-			value = strDeQuote(value)
-			msgstrLines = append(msgstrLines, value)
-		} else if strings.HasPrefix(trimmed, `"`) {
-			value := strDeQuote(trimmed)
-			msgstrLines = append(msgstrLines, value)
-		} else {
-			break
+		if ent.Comments == nil {
+			ent.Comments = []string{}
 		}
+		entriesForJSON = append(entriesForJSON, ent)
 	}
-	if len(msgstrLines) > 0 {
-		headerMeta = strings.Join(msgstrLines, "")
+	return &GettextJSON{
+		HeaderComment: headerComment,
+		HeaderMeta:    headerMeta,
+		Entries:       entriesForJSON,
 	}
-	return headerComment, headerMeta, nil
+}
+
+// GettextPOFromGettextJSON builds GettextPO from GettextJSON.
+func GettextPOFromGettextJSON(j *GettextJSON) *GettextPO {
+	if j == nil {
+		return &GettextPO{Entries: []GettextEntry{}}
+	}
+	var commentLines []string
+	if j.HeaderComment != "" {
+		commentLines = strings.Split(strings.TrimSuffix(j.HeaderComment, "\n"), "\n")
+	}
+	headerEntry := GettextEntry{
+		Comments: commentLines,
+		MsgStr:   []string{j.HeaderMeta},
+	}
+	entriesCopy := make([]GettextEntry, len(j.Entries))
+	copy(entriesCopy, j.Entries)
+	return &GettextPO{HeaderEntry: headerEntry, Entries: entriesCopy}
 }
 
 // GettextEntriesWithRawLines converts GettextEntry slice to []*GettextEntry with RawLines
@@ -454,15 +464,11 @@ func LoadFileToGettextJSON(data []byte, path string) (*GettextJSON, error) {
 		return ParseGettextJSONBytesForCompare(data, path)
 	}
 	// PO/POT
-	entries, header, err := ParsePoEntries(data)
+	po, err := ParsePoEntries(data)
 	if err != nil {
 		return nil, fmt.Errorf("parse PO %s: %w", path, err)
 	}
-	headerComment, headerMeta, err := SplitHeader(header)
-	if err != nil {
-		return nil, fmt.Errorf("split header %s: %w", path, err)
-	}
-	return GettextJSONFromEntries(headerComment, headerMeta, entries), nil
+	return GettextJSONFromGettextPO(po), nil
 }
 
 // GettextJSONFromEntries builds GettextJSON from header and entries (strips fuzzy from comments).
