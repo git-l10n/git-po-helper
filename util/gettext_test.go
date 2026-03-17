@@ -128,6 +128,34 @@ msgctxt ""
 msgid "Empty context"
 msgstr "空上下文"
 `,
+	// Phase 3: #= flag lines (gettext format evolution, June 2025)
+	`msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#= c-format
+msgid "One %s"
+msgstr "一个 %s"
+
+msgid "No flags"
+msgstr "无标志"
+`,
+	`msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#, fuzzy
+#= no-wrap
+msgid "Fuzzy no-wrap"
+msgstr "模糊不换行"
+
+#, c-format
+#= range: 0..1
+msgid "%d item"
+msgid_plural "%d items"
+msgstr[0] "%d 项"
+msgstr[1] "%d 项"
+`,
 }
 
 func TestParsePoEntriesRoundTripBytes(t *testing.T) {
@@ -178,6 +206,92 @@ msgstr "正常"
 	}
 	if entries[2].Fuzzy {
 		t.Errorf("entry 2 (Normal): expected Fuzzy=false, got true")
+	}
+}
+
+func TestParsePoEntriesHashEq(t *testing.T) {
+	// Phase 3: #= flag lines (gettext format evolution, June 2025) are stored in Comments and preserved.
+	po := `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#= c-format
+msgid "Format %s"
+msgstr "格式 %s"
+
+#, fuzzy
+#= no-wrap
+msgid "Fuzzy no-wrap"
+msgstr "模糊不换行"
+`
+	entries, header, err := ParsePoEntries([]byte(po))
+	if err != nil {
+		t.Fatalf("ParsePoEntries failed: %v", err)
+	}
+	if len(header) == 0 {
+		t.Fatal("expected header")
+	}
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(entries))
+	}
+	// First entry: only #= line; must be in Comments and not set Fuzzy from #=.
+	hasHashEq := false
+	for _, c := range entries[0].Comments {
+		if strings.HasPrefix(strings.TrimSpace(c), "#=") {
+			hasHashEq = true
+			break
+		}
+	}
+	if !hasHashEq {
+		t.Errorf("entry 0: expected a comment line starting with #= in Comments, got %q", entries[0].Comments)
+	}
+	if entries[0].Fuzzy {
+		t.Errorf("entry 0: #= line must not set Fuzzy; fuzzy is only from #,")
+	}
+	if entries[0].MsgID != "Format %s" {
+		t.Errorf("entry 0: MsgID = %q", entries[0].MsgID)
+	}
+	// Second entry: #, fuzzy and #= no-wrap; both preserved.
+	hasHashComma := false
+	hasHashEq2 := false
+	for _, c := range entries[1].Comments {
+		trimmed := strings.TrimSpace(c)
+		if strings.HasPrefix(trimmed, "#,") {
+			hasHashComma = true
+		}
+		if strings.HasPrefix(trimmed, "#=") {
+			hasHashEq2 = true
+		}
+	}
+	if !hasHashComma || !hasHashEq2 {
+		t.Errorf("entry 1: expected both #, and #= in Comments, got %q", entries[1].Comments)
+	}
+	if !entries[1].Fuzzy {
+		t.Errorf("entry 1: expected Fuzzy=true from #, fuzzy")
+	}
+	// Round-trip: build back and parse again; #= lines must still be present.
+	written := BuildPoContent(header, entries)
+	entries2, _, err := ParsePoEntries(written)
+	if err != nil {
+		t.Fatalf("second ParsePoEntries failed: %v", err)
+	}
+	if len(entries2) != 2 {
+		t.Fatalf("after round-trip expected 2 entries, got %d", len(entries2))
+	}
+	for i, e := range entries2 {
+		var hasEq bool
+		for _, c := range e.Comments {
+			if strings.HasPrefix(strings.TrimSpace(c), "#=") {
+				hasEq = true
+				break
+			}
+		}
+		if i == 0 && !hasEq {
+			t.Errorf("after round-trip entry 0: #= line lost")
+		}
+		if i == 1 && !hasEq {
+			t.Errorf("after round-trip entry 1: #= line lost")
+		}
 	}
 }
 
