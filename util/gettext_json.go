@@ -194,6 +194,14 @@ func parseGettextJSONWithGjson(data []byte, err error) *GettextJSON {
 			MsgIDPrevious: r.Get("msgid_previous").String(),
 			Comments:      []string{},
 		}
+		if r.Get("msgctxt").Exists() {
+			s := r.Get("msgctxt").String()
+			ent.MsgCtxt = &s
+		}
+		if r.Get("msgctxt_previous").Exists() {
+			s := r.Get("msgctxt_previous").String()
+			ent.MsgCtxtPrevious = &s
+		}
 		if r.Get("msgid_plural").Exists() {
 			ent.MsgIDPlural = r.Get("msgid_plural").String()
 		}
@@ -237,7 +245,7 @@ func ParseGettextJSON(r io.Reader) (*GettextJSON, error) {
 }
 
 // convertGettextJSONToPoFormat converts JSON-decoded strings (newline, tab) to PO format
-// for header_meta, msgid/msgid_plural/msgid_previous, msgstr forms, and comment lines.
+// for header_meta, msgid/msgid_plural/msgid_previous, msgctxt, msgstr forms, and comment lines.
 func convertGettextJSONToPoFormat(j *GettextJSON) {
 	if j == nil {
 		return
@@ -249,6 +257,14 @@ func convertGettextJSONToPoFormat(j *GettextJSON) {
 		e.MsgID = jsonDecodedToPoFormat(e.MsgID)
 		e.MsgIDPlural = jsonDecodedToPoFormat(e.MsgIDPlural)
 		e.MsgIDPrevious = jsonDecodedToPoFormat(e.MsgIDPrevious)
+		if e.MsgCtxt != nil {
+			s := jsonDecodedToPoFormat(*e.MsgCtxt)
+			e.MsgCtxt = &s
+		}
+		if e.MsgCtxtPrevious != nil {
+			s := jsonDecodedToPoFormat(*e.MsgCtxtPrevious)
+			e.MsgCtxtPrevious = &s
+		}
 		for k := range e.MsgStr {
 			e.MsgStr[k] = jsonDecodedToPoFormat(e.MsgStr[k])
 		}
@@ -329,12 +345,16 @@ func EntryRangeForJSON(spec string, maxEntry int) ([]int, error) {
 	return ParseEntryRange(spec, maxEntry)
 }
 
-// entryKey returns a key for deduplication: same key means same logical entry (msgid + msgid_plural).
+// entryKey returns a key for deduplication: same key means same logical entry (msgctxt + msgid + msgid_plural).
 func entryKey(e GettextEntry) string {
-	if e.MsgIDPlural != "" {
-		return e.MsgID + "\x00" + e.MsgIDPlural
+	ctxt := ""
+	if e.MsgCtxt != nil {
+		ctxt = *e.MsgCtxt
 	}
-	return e.MsgID + "\x00"
+	if e.MsgIDPlural != "" {
+		return ctxt + "\x00" + e.MsgID + "\x00" + e.MsgIDPlural
+	}
+	return ctxt + "\x00" + e.MsgID + "\x00"
 }
 
 // MergeGettextJSON merges multiple GettextJSON sources. Header is taken from the first source.
@@ -681,8 +701,18 @@ func WriteGettextJSONToPO(j *GettextJSON, w io.Writer, noHeader, addTrailingNewl
 		if entry.Obsolete {
 			prefix = "#~ "
 		}
+		if entry.Obsolete && entry.MsgCtxtPrevious != nil {
+			if err := writePoStringWithPrefix(w, "#~| ", "msgctxt", *entry.MsgCtxtPrevious); err != nil {
+				return err
+			}
+		}
 		if entry.Obsolete && entry.MsgIDPrevious != "" {
 			if err := writePoStringWithPrefix(w, "#~| ", "msgid", entry.MsgIDPrevious); err != nil {
+				return err
+			}
+		}
+		if entry.MsgCtxt != nil {
+			if err := writePoStringWithPrefix(w, prefix, "msgctxt", *entry.MsgCtxt); err != nil {
 				return err
 			}
 		}
@@ -756,8 +786,18 @@ func writeGettextEntryToPO(w io.Writer, entry GettextEntry) error {
 	if entry.Obsolete {
 		prefix = "#~ "
 	}
+	if entry.Obsolete && entry.MsgCtxtPrevious != nil {
+		if err := writePoStringWithPrefix(w, "#~| ", "msgctxt", *entry.MsgCtxtPrevious); err != nil {
+			return err
+		}
+	}
 	if entry.Obsolete && entry.MsgIDPrevious != "" {
 		if err := writePoStringWithPrefix(w, "#~| ", "msgid", entry.MsgIDPrevious); err != nil {
+			return err
+		}
+	}
+	if entry.MsgCtxt != nil {
+		if err := writePoStringWithPrefix(w, prefix, "msgctxt", *entry.MsgCtxt); err != nil {
 			return err
 		}
 	}

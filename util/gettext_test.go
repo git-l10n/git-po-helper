@@ -105,6 +105,29 @@ msgstr "模糊"
 msgid "Fuzzy %s"
 msgstr "模糊 %s"
 `,
+	`msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgctxt "Menu"
+msgid "File"
+msgstr "文件"
+
+msgctxt "Menu"
+msgid "Edit"
+msgstr "编辑"
+`,
+	`msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "No context"
+msgstr "无上下文"
+
+msgctxt ""
+msgid "Empty context"
+msgstr "空上下文"
+`,
 }
 
 func TestParsePoEntriesRoundTripBytes(t *testing.T) {
@@ -597,6 +620,101 @@ msgstr "活跃"
 				}
 			},
 		},
+		{
+			name: "PO file with msgctxt (context)",
+			poContent: `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "No context"
+msgstr "无上下文"
+
+msgctxt "Menu"
+msgid "File"
+msgstr "文件"
+
+msgctxt "Menu"
+msgid "Edit"
+msgstr "编辑"
+
+msgctxt ""
+msgid "Empty context"
+msgstr "空上下文"
+`,
+			expectedHeader: []string{
+				`msgid ""`,
+				`msgstr ""`,
+				`"Content-Type: text/plain; charset=UTF-8\n"`,
+			},
+			expectedCount: 4,
+			validateEntry: func(t *testing.T, entries []*GettextEntry) {
+				if len(entries) != 4 {
+					t.Fatalf("expected 4 entries, got %d", len(entries))
+				}
+				if entries[0].MsgCtxt != nil {
+					t.Errorf("entry 0: expected no msgctxt, got %q", *entries[0].MsgCtxt)
+				}
+				if entries[0].MsgID != "No context" || entries[0].MsgStrSingle() != "无上下文" {
+					t.Errorf("entry 0: got MsgID=%q MsgStr=%q", entries[0].MsgID, entries[0].MsgStrSingle())
+				}
+				if entries[1].MsgCtxt == nil || *entries[1].MsgCtxt != "Menu" {
+					t.Errorf("entry 1: expected msgctxt 'Menu', got %v", entries[1].MsgCtxt)
+				}
+				if entries[1].MsgID != "File" || entries[1].MsgStrSingle() != "文件" {
+					t.Errorf("entry 1: got MsgID=%q MsgStr=%q", entries[1].MsgID, entries[1].MsgStrSingle())
+				}
+				if entries[2].MsgCtxt == nil || *entries[2].MsgCtxt != "Menu" {
+					t.Errorf("entry 2: expected msgctxt 'Menu', got %v", entries[2].MsgCtxt)
+				}
+				if entries[2].MsgID != "Edit" || entries[2].MsgStrSingle() != "编辑" {
+					t.Errorf("entry 2: got MsgID=%q MsgStr=%q", entries[2].MsgID, entries[2].MsgStrSingle())
+				}
+				if entries[3].MsgCtxt == nil {
+					t.Errorf("entry 3: expected msgctxt present (empty string)")
+				} else if *entries[3].MsgCtxt != "" {
+					t.Errorf("entry 3: expected empty msgctxt, got %q", *entries[3].MsgCtxt)
+				}
+				if entries[3].MsgID != "Empty context" || entries[3].MsgStrSingle() != "空上下文" {
+					t.Errorf("entry 3: got MsgID=%q MsgStr=%q", entries[3].MsgID, entries[3].MsgStrSingle())
+				}
+			},
+		},
+		{
+			name: "PO file with obsolete entry and #~| msgctxt",
+			poContent: `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Active"
+msgstr "活跃"
+
+#~| msgctxt "OldMenu"
+#~| msgid "Old source"
+#~ msgctxt "Menu"
+#~ msgid "Obsolete"
+#~ msgstr "已废弃"
+`,
+			expectedHeader: []string{
+				`msgid ""`,
+				`msgstr ""`,
+				`"Content-Type: text/plain; charset=UTF-8\n"`,
+			},
+			expectedCount: 2,
+			validateEntry: func(t *testing.T, entries []*GettextEntry) {
+				if len(entries) != 2 {
+					t.Fatalf("expected 2 entries, got %d", len(entries))
+				}
+				if entries[1].MsgCtxt == nil || *entries[1].MsgCtxt != "Menu" {
+					t.Errorf("entry 1 msgctxt: got %v", entries[1].MsgCtxt)
+				}
+				if entries[1].MsgCtxtPrevious == nil || *entries[1].MsgCtxtPrevious != "OldMenu" {
+					t.Errorf("entry 1 msgctxt_previous: got %v", entries[1].MsgCtxtPrevious)
+				}
+				if entries[1].MsgID != "Obsolete" || entries[1].MsgIDPrevious != "Old source" || !entries[1].Obsolete {
+					t.Errorf("entry 1: MsgID=%q MsgIDPrevious=%q Obsolete=%v", entries[1].MsgID, entries[1].MsgIDPrevious, entries[1].Obsolete)
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -748,8 +866,8 @@ func TestParseEntryRange(t *testing.T) {
 		{"-3", 10, []int{1, 2, 3}, false},
 		{"50-", 100, buildRange(50, 100), false}, // N-: from N to last
 		{"8-", 10, []int{8, 9, 10}, false},
-		{"-", 10, nil, true}, // Invalid: both empty
-		{"~3", 10, []int{8, 9, 10}, false},  // ~N: last N entries
+		{"-", 10, nil, true},               // Invalid: both empty
+		{"~3", 10, []int{8, 9, 10}, false}, // ~N: last N entries
 		{"~5", 10, []int{6, 7, 8, 9, 10}, false},
 		{"~10", 10, []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, false},
 		{"~15", 10, []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, false}, // N > maxEntry: all

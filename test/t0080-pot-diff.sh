@@ -21,8 +21,10 @@ test_expect_success "diff old version of po/git.pot" '
 	grep -v "^#" <out |
 		sed -e "s#from .* for git vN.N.N#from **** for git vN.N.N#" >actual &&
 
+	# Compare uses msgctxt+msgid as key; if POT differs by msgctxt in some
+	# entries between versions, "changed" can become "new" + "removed".
 	cat >expect <<-\EOF &&
-		395 new, 2 changed, 573 removed
+		397 new, 575 removed
 	EOF
 	test_cmp expect actual
 '
@@ -38,8 +40,10 @@ test_expect_success "diff new version of po/git.pot" '
 	grep -v "^#" <out |
 		sed -e "s#from .* for git vN.N.N#from **** for git vN.N.N#" >actual &&
 
+	# Compare uses msgctxt+msgid as key; if POT differs by msgctxt in some
+	# entries between versions, "changed" can become "new" + "removed".
 	cat >expect <<-\EOF &&
-		573 new, 2 changed, 395 removed
+		575 new, 397 removed
 	EOF
 	test_cmp expect actual
 '

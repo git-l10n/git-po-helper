@@ -118,7 +118,7 @@ To align completely with [gettext-format.md](gettext-format.md) (including conte
 
 ### 7.1 Context (msgctxt)
 
-PO entries can have **msgctxt** (gettext-format.md Section 5). The current implementation does **not** include `msgctxt` in GettextEntry.
+PO entries can have **msgctxt** (gettext-format.md Section 5). The implementation includes optional `msgctxt` and `msgctxt_previous` in GettextEntry (Phase 2).
 
 **Extension:** Add an optional field to each entry:
 
@@ -159,6 +159,6 @@ If PO adds **`#=`** flag lines (gettext-format.md Section 8), a future extension
 | Entry: `#| msgid` previous     | `entries[].msgid_previous` | |
 | Entry: `#, fuzzy`              | `entries[].fuzzy`      | Also reflected in `comments` unless stripped. |
 | Obsolete: `#~` / `#~|` lines   | `entries[].obsolete`, `msgid_previous` | Comment lines in obsolete: stored without `#~ `; see Section 7.2 for extension. |
-| Entry: `msgctxt`               | (not yet)              | Section 7.1. |
+| Entry: `msgctxt`               | `entries[].msgctxt`, `msgctxt_previous` | Section 7.1. |
 
 This document and the implementation in `util/gettext_json.go` / `util/gettext.go` are the reference for the gettext JSON schema and PO↔JSON behavior.

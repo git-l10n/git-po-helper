@@ -17,6 +17,12 @@ func GettextEntriesEqual(e1, e2 *GettextEntry) bool {
 	if e1.Obsolete != e2.Obsolete {
 		return false
 	}
+	if !equalMsgCtxtPtr(e1.MsgCtxt, e2.MsgCtxt) {
+		return false
+	}
+	if !equalMsgCtxtPtr(e1.MsgCtxtPrevious, e2.MsgCtxtPrevious) {
+		return false
+	}
 	if e1.MsgID != e2.MsgID {
 		return false
 	}
@@ -31,6 +37,16 @@ func GettextEntriesEqual(e1, e2 *GettextEntry) bool {
 	return e1.MsgIDPlural == e2.MsgIDPlural
 }
 
+func equalMsgCtxtPtr(a, b *string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
 // CompareGettextEntries compares old and new GettextJSON. Returns DiffStat and
 // review entries (new or changed in new compared to old). Skips obsolete entries.
 // When msgidOnly is true, entries with the same msgid (and msgid_plural for plurals)
@@ -38,35 +54,32 @@ func GettextEntriesEqual(e1, e2 *GettextEntry) bool {
 func CompareGettextEntries(oldJ, newJ *GettextJSON, msgidOnly bool) (DiffStat, []GettextEntry) {
 	oldEntries := filterObsolete(oldJ.Entries)
 	newEntries := filterObsolete(newJ.Entries)
-	sort.Slice(oldEntries, func(i, j int) bool { return oldEntries[i].MsgID < oldEntries[j].MsgID })
-	sort.Slice(newEntries, func(i, j int) bool { return newEntries[i].MsgID < newEntries[j].MsgID })
+	sort.Slice(oldEntries, func(i, j int) bool { return entryKey(oldEntries[i]) < entryKey(oldEntries[j]) })
+	sort.Slice(newEntries, func(i, j int) bool { return entryKey(newEntries[i]) < entryKey(newEntries[j]) })
 
 	var stat DiffStat
 	var reviewEntries []GettextEntry
 	i, j := 0, 0
 	for i < len(oldEntries) && j < len(newEntries) {
-		cmp := strings.Compare(oldEntries[i].MsgID, newEntries[j].MsgID)
+		cmp := strings.Compare(entryKey(oldEntries[i]), entryKey(newEntries[j]))
 		if cmp < 0 {
 			stat.Deleted++
 			i++
+			continue
 		} else if cmp > 0 {
 			stat.Added++
 			reviewEntries = append(reviewEntries, newEntries[j])
 			j++
-		} else {
-			equal := false
-			if msgidOnly {
-				equal = oldEntries[i].MsgIDPlural == newEntries[j].MsgIDPlural
-			} else {
-				equal = GettextEntriesEqual(&oldEntries[i], &newEntries[j])
-			}
-			if !equal {
+			continue
+		} else if !msgidOnly {
+			// Translation changed, fuzzy status or other fields changed
+			if !GettextEntriesEqual(&oldEntries[i], &newEntries[j]) {
 				stat.Changed++
 				reviewEntries = append(reviewEntries, newEntries[j])
 			}
-			i++
-			j++
 		}
+		i++
+		j++
 	}
 	for i < len(oldEntries) {
 		stat.Deleted++

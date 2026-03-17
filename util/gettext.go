@@ -14,15 +14,18 @@ import (
 // MsgID, MsgStr (forms), MsgIDPlural use PO string format (escape sequences like \n, \t
 // stored as literal backslash+char, not decoded). MsgStr holds one element for singular
 // msgstr, multiple for msgstr[0], msgstr[1], ... RawLines preserves exact PO format for round-trip.
+// MsgCtxt and MsgCtxtPrevious are optional; nil means the line was absent (distinct from empty string).
 type GettextEntry struct {
-	MsgID         string   `json:"msgid"`
-	MsgStr        []string `json:"msgstr,omitempty"` // Always a JSON array; one element = singular, multiple = msgstr[0..]
-	MsgIDPlural   string   `json:"msgid_plural,omitempty"`
-	Comments      []string `json:"comments,omitempty"`
-	Fuzzy         bool     `json:"fuzzy"`
-	Obsolete      bool     `json:"obsolete,omitempty"`       // True for #~ obsolete entries
-	MsgIDPrevious string   `json:"msgid_previous,omitempty"` // For #~| format (gettext 0.19.8+)
-	RawLines      []string `json:"-"`                        // Original PO lines for round-trip; empty when built from JSON
+	MsgID           string   `json:"msgid"`
+	MsgStr          []string `json:"msgstr,omitempty"` // Always a JSON array; one element = singular, multiple = msgstr[0..]
+	MsgIDPlural     string   `json:"msgid_plural,omitempty"`
+	MsgCtxt         *string  `json:"msgctxt,omitempty"`          // Context (gettext §5); nil = absent, *"" = empty context
+	MsgCtxtPrevious *string  `json:"msgctxt_previous,omitempty"` // #~| msgctxt for obsolete entries
+	Comments        []string `json:"comments,omitempty"`
+	Fuzzy           bool     `json:"fuzzy"`
+	Obsolete        bool     `json:"obsolete,omitempty"`       // True for #~ obsolete entries
+	MsgIDPrevious   string   `json:"msgid_previous,omitempty"` // For #~| format (gettext 0.19.8+)
+	RawLines        []string `json:"-"`                        // Original PO lines for round-trip; empty when built from JSON
 }
 
 // MsgStrSingle returns the first translation form, or "" if none (singular msgstr or msgstr[0]).
@@ -37,19 +40,23 @@ func (e *GettextEntry) MsgStrSingle() string {
 // of strings (singular or plural forms), normalizing to MsgStr []string.
 func (e *GettextEntry) UnmarshalJSON(data []byte) error {
 	var aux struct {
-		MsgID         string          `json:"msgid"`
-		MsgStrRaw     json.RawMessage `json:"msgstr"`
-		MsgIDPlural   string          `json:"msgid_plural,omitempty"`
-		Comments      []string        `json:"comments,omitempty"`
-		Fuzzy         bool            `json:"fuzzy"`
-		Obsolete      bool            `json:"obsolete,omitempty"`
-		MsgIDPrevious string          `json:"msgid_previous,omitempty"`
+		MsgID           string          `json:"msgid"`
+		MsgStrRaw       json.RawMessage `json:"msgstr"`
+		MsgIDPlural     string          `json:"msgid_plural,omitempty"`
+		MsgCtxt         *string         `json:"msgctxt,omitempty"`
+		MsgCtxtPrevious *string         `json:"msgctxt_previous,omitempty"`
+		Comments        []string        `json:"comments,omitempty"`
+		Fuzzy           bool            `json:"fuzzy"`
+		Obsolete        bool            `json:"obsolete,omitempty"`
+		MsgIDPrevious   string          `json:"msgid_previous,omitempty"`
 	}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
 	e.MsgID = aux.MsgID
 	e.MsgIDPlural = aux.MsgIDPlural
+	e.MsgCtxt = aux.MsgCtxt
+	e.MsgCtxtPrevious = aux.MsgCtxtPrevious
 	e.Comments = aux.Comments
 	e.Fuzzy = aux.Fuzzy
 	e.Obsolete = aux.Obsolete
@@ -254,6 +261,7 @@ const (
 	poLineCommentPrev      // #| previous untranslated
 	poLineObsoletePrefix   // #~
 	poLineObsoletePrev     // #~|
+	poLineMsgctxt
 	poLineMsgid
 	poLineMsgidPlural
 	poLineMsgstr
@@ -273,6 +281,9 @@ func classifyPoLine(trimmed string) poLineKind {
 	}
 	if strings.HasPrefix(trimmed, "#~| ") {
 		return poLineObsoletePrev
+	}
+	if strings.HasPrefix(trimmed, "msgctxt ") {
+		return poLineMsgctxt
 	}
 	if strings.HasPrefix(trimmed, "msgid ") {
 		return poLineMsgid
@@ -319,10 +330,13 @@ type poParseState struct {
 
 	currentEntry       *GettextEntry
 	entryLines         []string
+	msgctxtValue       strings.Builder
 	msgidValue         strings.Builder
 	msgstrValue        strings.Builder
 	msgidPluralValue   strings.Builder
 	msgstrPluralValues []strings.Builder
+	hasMsgctxt         bool
+	inMsgctxt          bool
 	inMsgid            bool
 	inMsgstr           bool
 	inMsgidPlural      bool
@@ -339,6 +353,10 @@ func finishCurrentEntry(st *poParseState, entries *[]*GettextEntry) {
 	}
 	if st.msgidValue.Len() == 0 && st.msgstrValue.Len() == 0 {
 		return
+	}
+	if st.hasMsgctxt {
+		s := poParsedToPoFormat(st.msgctxtValue.String())
+		st.currentEntry.MsgCtxt = &s
 	}
 	st.currentEntry.MsgID = poParsedToPoFormat(st.msgidValue.String())
 	if st.msgidPluralValue.Len() > 0 {
@@ -359,10 +377,13 @@ func finishCurrentEntry(st *poParseState, entries *[]*GettextEntry) {
 // resetEntryContent resets only the string builders and inMsgid/inMsgstr flags.
 // Use when keeping currentEntry and entryLines (e.g. entry had only comments).
 func resetEntryContent(st *poParseState) {
+	st.msgctxtValue.Reset()
 	st.msgidValue.Reset()
 	st.msgstrValue.Reset()
 	st.msgidPluralValue.Reset()
 	st.msgstrPluralValues = nil
+	st.hasMsgctxt = false
+	st.inMsgctxt = false
 	st.inMsgid = true
 	st.inMsgstr = false
 	st.inMsgidPlural = false
@@ -397,12 +418,15 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 		if strings.HasPrefix(trimmed, "#~ ") {
 			rest := trimmed[3:]
 			restTrimmed := strings.TrimSpace(rest)
+			// Set inObsolete only for continuation or msgstr (current entry content), not for msgid/msgctxt which start a new entry.
 			if strings.HasPrefix(restTrimmed, `"`) || strings.HasPrefix(restTrimmed, "msgstr") {
 				st.inObsolete = true
 			}
-			if strings.HasPrefix(restTrimmed, `"`) && (st.inMsgid || st.inMsgstr || st.inMsgidPlural) {
+			if strings.HasPrefix(restTrimmed, `"`) && (st.inMsgctxt || st.inMsgid || st.inMsgstr || st.inMsgidPlural) {
 				value := strDeQuote(restTrimmed)
-				if st.inMsgid {
+				if st.inMsgctxt {
+					st.msgctxtValue.WriteString(value)
+				} else if st.inMsgid {
 					st.msgidValue.WriteString(value)
 				} else if st.inMsgidPlural {
 					st.msgidPluralValue.WriteString(value)
@@ -419,6 +443,23 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			trimmed = rest
 		} else if strings.HasPrefix(trimmed, "#~| ") {
 			rest := trimmed[4:]
+			if strings.HasPrefix(rest, "msgctxt ") {
+				value := strings.TrimPrefix(rest, "msgctxt ")
+				value = strings.TrimSpace(value)
+				value = strDeQuote(value)
+				finishCurrentEntry(st, &entries)
+				if st.currentEntry == nil || st.msgidValue.Len() > 0 || st.msgstrValue.Len() > 0 {
+					startNewEntry(st)
+				} else {
+					resetEntryContent(st)
+				}
+				s := poParsedToPoFormat(value)
+				st.currentEntry.MsgCtxtPrevious = &s
+				st.currentEntry.Obsolete = true
+				st.inObsolete = true
+				st.entryLines = append(st.entryLines, line)
+				continue
+			}
 			if strings.HasPrefix(rest, "msgid ") {
 				value := strings.TrimPrefix(rest, "msgid ")
 				value = strings.TrimSpace(value)
@@ -501,16 +542,46 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			st.currentEntry.Comments = append(st.currentEntry.Comments, line)
 			st.entryLines = append(st.entryLines, line)
 
+		case poLineMsgctxt:
+			if st.currentEntry == nil {
+				st.currentEntry = &GettextEntry{}
+				st.entryLines = nil
+			}
+			if strings.HasPrefix(strings.TrimSpace(line), "#~ ") {
+				st.inObsolete = true
+			}
+			st.inMsgid = false
+			st.inMsgidPlural = false
+			st.inMsgstr = false
+			st.inMsgctxt = true
+			st.hasMsgctxt = true
+			value := strings.TrimPrefix(trimmed, "msgctxt ")
+			value = strings.TrimSpace(value)
+			value = strDeQuote(value)
+			st.msgctxtValue.WriteString(value)
+			st.entryLines = append(st.entryLines, line)
+
 		case poLineMsgid:
 			finishCurrentEntry(st, &entries)
 			if st.currentEntry == nil || st.msgidValue.Len() > 0 || st.msgstrValue.Len() > 0 {
 				startNewEntry(st)
 			} else {
-				resetEntryContent(st)
+				// Keep same entry (had only comments and/or msgctxt); reset only msgid/msgstr/plural state.
+				st.msgidValue.Reset()
+				st.msgstrValue.Reset()
+				st.msgidPluralValue.Reset()
+				st.msgstrPluralValues = nil
+				st.inMsgid = true
+				st.inMsgstr = false
+				st.inMsgidPlural = false
+				st.currentPluralIndex = -1
+				// Preserve st.msgctxtValue and st.hasMsgctxt so finishCurrentEntry will set MsgCtxt.
 			}
 			if strings.HasPrefix(strings.TrimSpace(line), "#~ ") {
 				st.inObsolete = true
 			}
+			st.inMsgctxt = false
+			st.inMsgid = true
 			value := strings.TrimPrefix(trimmed, "msgid ")
 			value = strings.TrimSpace(value)
 			value = strDeQuote(value)
@@ -555,9 +626,11 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			st.entryLines = append(st.entryLines, line)
 
 		case poLineQuotedString:
-			if st.inMsgid || st.inMsgstr || st.inMsgidPlural {
+			if st.inMsgctxt || st.inMsgid || st.inMsgstr || st.inMsgidPlural {
 				value := strDeQuote(trimmed)
-				if st.inMsgid {
+				if st.inMsgctxt {
+					st.msgctxtValue.WriteString(value)
+				} else if st.inMsgid {
 					st.msgidValue.WriteString(value)
 				} else if st.inMsgidPlural {
 					st.msgidPluralValue.WriteString(value)
@@ -581,10 +654,13 @@ func ParsePoEntries(data []byte) (entries []*GettextEntry, header []string, err 
 			finishCurrentEntry(st, &entries)
 			st.currentEntry = nil
 			st.entryLines = nil
+			st.msgctxtValue.Reset()
 			st.msgidValue.Reset()
 			st.msgstrValue.Reset()
 			st.msgidPluralValue.Reset()
 			st.msgstrPluralValues = nil
+			st.hasMsgctxt = false
+			st.inMsgctxt = false
 			st.inMsgid = false
 			st.inMsgstr = false
 			st.inMsgidPlural = false

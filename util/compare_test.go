@@ -11,6 +11,8 @@ msgstr ""
 
 `
 
+func strPtr(s string) *string { return &s }
+
 // TestPoCompare_Added tests PoCompare when dest has new entries.
 func TestPoCompare_Added(t *testing.T) {
 	srcContent := poHeader + `msgid "Hello"
@@ -444,6 +446,18 @@ func TestGettextEntriesEqual(t *testing.T) {
 			e1:   &GettextEntry{MsgID: "a", MsgStr: []string{"x"}, Fuzzy: false},
 			e2:   &GettextEntry{MsgID: "a", MsgStr: []string{"x"}, Fuzzy: true},
 			want: false,
+		},
+		{
+			name: "different MsgCtxt",
+			e1:   &GettextEntry{MsgID: "a", MsgStr: []string{"x"}},
+			e2:   &GettextEntry{MsgID: "a", MsgStr: []string{"x"}, MsgCtxt: strPtr("ctx")},
+			want: false,
+		},
+		{
+			name: "same MsgCtxt",
+			e1:   &GettextEntry{MsgID: "a", MsgStr: []string{"x"}, MsgCtxt: strPtr("ctx")},
+			e2:   &GettextEntry{MsgID: "a", MsgStr: []string{"x"}, MsgCtxt: strPtr("ctx")},
+			want: true,
 		},
 	}
 	for _, tt := range tests {
