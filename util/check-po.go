@@ -82,6 +82,20 @@ func checkPoCompatibility(po *GettextPO) ([]string, bool) {
 	return nil, true
 }
 
+// checkPoNoObsoleteEntries reports error if any entry has Obsolete=true.
+func checkPoNoObsoleteEntries(po *GettextPO) ([]string, bool) {
+	var count int
+	for _, e := range po.Entries {
+		if e.Obsolete {
+			count++
+		}
+	}
+	if count > 0 {
+		return []string{fmt.Sprintf("you have %d obsolete entries, please remove them", count)}, false
+	}
+	return nil, true
+}
+
 // CheckPoFile checks syntax of "po/xx.po".
 func CheckPoFile(locale, poFile string) bool {
 	return CheckPoFileWithPrompt(locale, poFile, "")
@@ -141,6 +155,11 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 
 	// Run msgfmt to check syntax of a .po file
 	errs, ok = checkPoSyntax(poFile)
+	ReportInfoAndErrors(errs, prompt, ok)
+	ret = ret && ok
+
+	// No obsolete entries allowed.
+	errs, ok = checkPoNoObsoleteEntries(po)
 	ReportInfoAndErrors(errs, prompt, ok)
 	ret = ret && ok
 

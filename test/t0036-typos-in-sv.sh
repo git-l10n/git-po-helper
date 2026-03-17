@@ -15,7 +15,7 @@ test_expect_success "checkout po-2.31.1" '
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=error msg="[sv.po]    5104 translated messages."
-level=error msg="[sv.po]    too many obsolete entries (475) in comments, please remove them"
+level=error msg="[sv.po]    you have 475 obsolete entries, please remove them"
 ------------------------------------------------------------------------------
 level=warning msg="[sv.po]    mismatched patterns: --chmod, --chmod-parametern"
 level=warning msg="[sv.po]    >> msgid: --chmod param '%s' must be either -x or +x"
@@ -134,7 +134,7 @@ test_expect_success "check typos in sv.po" '
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=error msg="[sv.po]    5282 translated messages."
-level=error msg="[sv.po]    too many obsolete entries (768) in comments, please remove them"
+level=error msg="[sv.po]    you have 768 obsolete entries, please remove them"
 ------------------------------------------------------------------------------
 level=error msg="[sv.po]    mismatched patterns: refs/{heads,tags}/-prefix"
 level=error msg="[sv.po]    >> msgid: The destination you provided is not a full refname (i.e.,"

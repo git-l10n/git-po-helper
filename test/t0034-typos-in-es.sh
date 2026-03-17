@@ -15,7 +15,7 @@ test_expect_success "checkout po-2.31.1" '
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=error msg="[es.po]    5104 translated messages."
-level=error msg="[es.po]    too many obsolete entries (235) in comments, please remove them"
+level=error msg="[es.po]    you have 235 obsolete entries, please remove them"
 ------------------------------------------------------------------------------
 level=warning msg="[es.po]    mismatched patterns: herramienta.cmd"
 level=warning msg="[es.po]    >> msgid: '%s': path for unsupported man viewer."
@@ -166,7 +166,7 @@ test_expect_success "check typos in es.po of git 2.31.1" '
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=error msg="[es.po]    5210 translated messages."
-level=error msg="[es.po]    too many obsolete entries (125) in comments, please remove them"
+level=error msg="[es.po]    you have 125 obsolete entries, please remove them"
 ------------------------------------------------------------------------------
 level=error msg="[es.po]    mismatched patterns: refs/remotes/<...>/HEAD, refs/remotos/<...>/HEAD"
 level=error msg="[es.po]    >> msgid: delete refs/remotes/<name>/HEAD"

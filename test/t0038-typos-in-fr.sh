@@ -19,7 +19,7 @@ test_expect_success "still has typos in master branch" '
 	cat >expect <<-EOF &&
 		------------------------------------------------------------------------------
 		level=error msg="[fr.po]    5282 translated messages."
-		level=error msg="[fr.po]    too many obsolete entries (178) in comments, please remove them"
+		level=error msg="[fr.po]    you have 178 obsolete entries, please remove them"
 		------------------------------------------------------------------------------
 		level=error msg="[fr.po]    mismatched patterns: refs/"
 		level=error msg="[fr.po]    >> msgid: The destination you provided is not a full refname (i.e.,"

@@ -15,7 +15,7 @@ test_expect_success "checkout po-2.31.1" '
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=error msg="[vi.po]    5104 translated messages."
-level=error msg="[vi.po]    too many obsolete entries (466) in comments, please remove them"
+level=error msg="[vi.po]    you have 466 obsolete entries, please remove them"
 ------------------------------------------------------------------------------
 level=warning msg="[vi.po]    mismatched patterns: --quiet"
 level=warning msg="[vi.po]    >> msgid: "

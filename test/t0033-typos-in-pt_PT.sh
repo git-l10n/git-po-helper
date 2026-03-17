@@ -15,7 +15,7 @@ test_expect_success "checkout po-2.31.1" '
 cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=error msg="[pt_PT.po]    2876 translated messages, 1320 fuzzy translations, 842 untranslated messages."
-level=error msg="[pt_PT.po]    too many obsolete entries (225) in comments, please remove them"
+level=error msg="[pt_PT.po]    you have 225 obsolete entries, please remove them"
 ------------------------------------------------------------------------------
 level=warning msg="[pt_PT.po]    mismatched patterns: --contains, --no-contains"
 level=warning msg="[pt_PT.po]    >> msgid: --no-contains option is only allowed in list mode"

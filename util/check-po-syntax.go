@@ -5,40 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 )
-
-func checkPoCommentEntries(poFile string) ([]string, bool) {
-	var (
-		errs            []string
-		ok              = true
-		msgCount        = 0
-		commentMsgCount = 0
-	)
-
-	f, err := os.Open(poFile)
-	if err != nil {
-		errs = append(errs, err.Error())
-		return errs, false
-	}
-	defer f.Close()
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "msgid ") {
-			msgCount++
-		} else if strings.HasPrefix(line, "#~ msgid ") {
-			commentMsgCount++
-		}
-	}
-	if 100*commentMsgCount/msgCount > 1 {
-		ok = false
-		errs = append(errs, fmt.Sprintf(
-			"too many obsolete entries (%d) in comments, please remove them",
-			commentMsgCount))
-	}
-	return errs, ok
-}
 
 func checkPoSyntax(poFile string) ([]string, bool) {
 	var errs []string
@@ -83,11 +50,6 @@ func checkPoSyntax(poFile string) ([]string, bool) {
 		return errs, false
 	}
 	errs = append(errs, msgs...)
-
-	if msgs, ok := checkPoCommentEntries(poFile); !ok {
-		errs = append(errs, msgs...)
-		return errs, false
-	}
 
 	return errs, true
 }

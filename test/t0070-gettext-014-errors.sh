@@ -59,8 +59,9 @@ cat >expect <<-\EOF
 ------------------------------------------------------------------------------
 level=error msg="[fr.po]    entry 3 (msgid \"invalid --stat value: %s\"): #~| format not supported by gettext 0.14"
 ------------------------------------------------------------------------------
-level=error msg="[fr.po]    2 translated messages."
-level=error msg="[fr.po]    too many obsolete entries (3) in comments, please remove them"
+level=info msg="[fr.po]    2 translated messages."
+------------------------------------------------------------------------------
+level=error msg="[fr.po]    you have 3 obsolete entries, please remove them"
 ERROR: check-po command failed
 EOF
 
