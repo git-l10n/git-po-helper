@@ -161,3 +161,95 @@ msgstr "你好"
 		t.Error("CheckPoFileWithPrompt expected to fail for location comment with line number, got ok")
 	}
 }
+
+func TestCheckPoCompatibility(t *testing.T) {
+	menu := "Menu"
+	tests := []struct {
+		name    string
+		entries []GettextEntry
+		wantErr bool
+		wantMsg string
+	}{
+		{
+			name: "no compatibility issues",
+			entries: []GettextEntry{
+				{MsgID: "Hello", MsgStr: []string{"你好"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "msgctxt not supported by gettext below 0.15",
+			entries: []GettextEntry{
+				{MsgID: "File", MsgStr: []string{"文件"}, MsgCtxt: &menu},
+			},
+			wantErr: true,
+			wantMsg: "msgctxt not supported by gettext below 0.15",
+		},
+		{
+			name: "#~| format not supported by gettext 0.14",
+			entries: []GettextEntry{
+				{MsgID: "Old", MsgStr: []string{"旧"}, MsgIDPrevious: "Previous"},
+			},
+			wantErr: true,
+			wantMsg: "#~| format not supported by gettext 0.14",
+		},
+		{
+			name: "#~| msgctxt not supported",
+			entries: []GettextEntry{
+				{MsgID: "X", MsgStr: []string{"X"}, MsgCtxtPrevious: &menu},
+			},
+			wantErr: true,
+			wantMsg: "#~| format not supported by gettext 0.14",
+		},
+		{
+			name: "#~ msgctxt (obsolete with context) not supported by gettext 0.14",
+			entries: []GettextEntry{
+				{MsgID: "File", MsgStr: []string{"文件"}, MsgCtxt: &menu, Obsolete: true},
+			},
+			wantErr: true,
+			wantMsg: "#~ msgctxt (obsolete with context) not supported by gettext 0.14",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			po := &GettextPO{
+				HeaderEntry: GettextEntry{MsgStr: []string{"Content-Type: text/plain; charset=UTF-8\n"}},
+				Entries:     tt.entries,
+			}
+			errs, ok := checkPoCompatibility(po)
+			if ok == tt.wantErr {
+				t.Errorf("checkPoCompatibility() ok = %v, want %v", ok, !tt.wantErr)
+			}
+			if tt.wantErr && tt.wantMsg != "" {
+				if len(errs) == 0 || !strings.Contains(errs[0], tt.wantMsg) {
+					t.Errorf("checkPoCompatibility() errs = %v, want containing %q", errs, tt.wantMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestCheckPoFileWithPrompt_Compatibility(t *testing.T) {
+	tmpDir := t.TempDir()
+	poPath := filepath.Join(tmpDir, "zh_CN.po")
+	// PO with msgctxt - should fail compatibility check
+	poContent := `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgctxt "Menu"
+msgid "File"
+msgstr "文件"
+`
+	if err := os.WriteFile(poPath, []byte(poContent), 0644); err != nil {
+		t.Fatalf("write temp po: %v", err)
+	}
+
+	viper.Set("check-po--report-file-locations", "none")
+	defer viper.Set("check-po--report-file-locations", "")
+
+	ok := CheckPoFileWithPrompt("zh_CN", poPath, "[zh_CN.po]")
+	if ok {
+		t.Error("CheckPoFileWithPrompt expected to fail for msgctxt (gettext < 0.15), got ok")
+	}
+}

@@ -57,6 +57,31 @@ func checkPoLocationCommentsNoLineNumbers(po *GettextPO) ([]string, bool) {
 	return errs, true
 }
 
+// checkPoCompatibility reports gettext version compatibility issues:
+// - msgctxt: gettext below 0.15 does not support
+// - #~| (MsgCtxtPrevious, MsgIDPrevious): gettext 0.14 does not support
+// - #~ msgctxt (obsolete with context): gettext 0.14 does not support
+func checkPoCompatibility(po *GettextPO) ([]string, bool) {
+	for i, e := range po.Entries {
+		msgid := e.MsgID
+		if len(msgid) > 30 {
+			msgid = msgid[:27] + "..."
+		}
+		entryDesc := fmt.Sprintf("entry %d (msgid %q)", i+1, msgid)
+
+		if e.MsgCtxt != nil && !e.Obsolete {
+			return []string{fmt.Sprintf("%s: msgctxt not supported by gettext below 0.15", entryDesc)}, false
+		}
+		if e.MsgCtxtPrevious != nil || e.MsgIDPrevious != "" {
+			return []string{fmt.Sprintf("%s: #~| format not supported by gettext 0.14", entryDesc)}, false
+		}
+		if e.Obsolete && e.MsgCtxt != nil {
+			return []string{fmt.Sprintf("%s: #~ msgctxt (obsolete with context) not supported by gettext 0.14", entryDesc)}, false
+		}
+	}
+	return nil, true
+}
+
 // CheckPoFile checks syntax of "po/xx.po".
 func CheckPoFile(locale, poFile string) bool {
 	return CheckPoFileWithPrompt(locale, poFile, "")
@@ -108,6 +133,11 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 		ReportInfoAndErrors(errs, prompt, ok)
 		ret = ret && ok
 	}
+
+	// Compatibility checks: msgctxt (gettext 0.15+), #~| and #~ msgctxt (gettext 0.14+).
+	errs, ok = checkPoCompatibility(po)
+	ReportInfoAndErrors(errs, prompt, ok)
+	ret = ret && ok
 
 	// Run msgfmt to check syntax of a .po file
 	errs, ok = checkPoSyntax(poFile)
