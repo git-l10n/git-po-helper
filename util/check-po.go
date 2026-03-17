@@ -10,6 +10,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// checkPoMetaNewlines reads meta line by line and reports abnormal newline sequences.
+// Abnormal: literal "\\n" (backslash+n) in decoded meta, which may indicate double-escape or corruption.
+func checkPoMetaNewlines(po *GettextPO) ([]string, bool) {
+	var errs []string
+	for i, line := range po.Meta() {
+		if strings.Contains(line, `\n`) {
+			errs = append(errs, fmt.Sprintf("header meta line %d contains literal \\\\n (abnormal; use real newline or proper PO escape): %q", i+1, line))
+		}
+	}
+	return errs, len(errs) == 0
+}
+
 // CheckPoFile checks syntax of "po/xx.po".
 func CheckPoFile(locale, poFile string) bool {
 	return CheckPoFileWithPrompt(locale, poFile, "")
@@ -37,6 +49,22 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 		log.Errorf(`%s\tfail to check "%s", does not exist`, prompt, poFile)
 		return false
 	}
+
+	poData, err := os.ReadFile(poFile)
+	if err != nil {
+		log.Errorf(`%s\tfail to read %q: %v`, prompt, poFile, err)
+		return false
+	}
+	po, err := ParsePoEntries(poData)
+	if err != nil {
+		log.Errorf(`%s\tfail to parse %q: %v`, prompt, poFile, err)
+		return false
+	}
+
+	// Check header meta for abnormal newline sequences (e.g. literal \n).
+	errs, ok = checkPoMetaNewlines(po)
+	ReportInfoAndErrors(errs, prompt, ok)
+	ret = ret && ok
 
 	// Run msgfmt to check syntax of a .po file
 	errs, ok = checkPoSyntax(poFile)
