@@ -165,8 +165,8 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	ReportInfoAndErrors(errs, prompt, ok)
 	ret = ret && ok
 
-	// No file locations in "po/XX.po".
-	errs, ok = checkPoNoFileLocations(poFile)
+	// Format check: use driver return from git-check-attr to format PO file
+	errs, ok = checkPoFilterFormat(poFile)
 	ReportInfoAndErrors(errs, prompt, ok)
 	ret = ret && ok
 
