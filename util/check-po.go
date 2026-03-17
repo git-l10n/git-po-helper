@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/flag"
@@ -20,6 +21,40 @@ func checkPoMetaNewlines(po *GettextPO) ([]string, bool) {
 		}
 	}
 	return errs, len(errs) == 0
+}
+
+// locationLineNumPattern matches a reference that contains a line number (e.g. file.c:116 or file.c:116,5).
+var locationLineNumPattern = regexp.MustCompile(`:\d+`)
+
+// checkPoLocationCommentsNoLineNumbers scans each entry's comments for location comments (#:)
+// and reports any that contain line numbers. Per Git l10n convention, location comments should
+// not include line numbers (use --add-location=file or --no-location).
+func checkPoLocationCommentsNoLineNumbers(po *GettextPO) ([]string, bool) {
+	var errs []string
+
+	for i, e := range po.Entries {
+		msgid := e.MsgID
+		if len(msgid) > 30 {
+			msgid = msgid[:27] + "..."
+		}
+		entryDesc := fmt.Sprintf("entry %d (msgid %q)", i+1, msgid)
+		for _, c := range e.Comments {
+			trimmed := strings.TrimSpace(c)
+			if !strings.HasPrefix(trimmed, "#:") {
+				continue
+			}
+			content := strings.TrimPrefix(trimmed, "#:")
+			content = strings.TrimSpace(content)
+			for _, ref := range strings.Fields(content) {
+				if locationLineNumPattern.MatchString(ref) {
+					errs = append(errs, fmt.Sprintf("%s: location comment contains line number (use file-only or remove): %q", entryDesc, ref))
+					return errs, false
+				}
+			}
+		}
+	}
+
+	return errs, true
 }
 
 // CheckPoFile checks syntax of "po/xx.po".
@@ -65,6 +100,14 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	errs, ok = checkPoMetaNewlines(po)
 	ReportInfoAndErrors(errs, prompt, ok)
 	ret = ret && ok
+
+	// Check that location comments (#:) do not contain line numbers.
+	if flag.ReportFileLocations() != flag.ReportIssueNone {
+		errs, ok = checkPoLocationCommentsNoLineNumbers(po)
+		ok = ok || flag.ReportFileLocations() == flag.ReportIssueWarn
+		ReportInfoAndErrors(errs, prompt, ok)
+		ret = ret && ok
+	}
 
 	// Run msgfmt to check syntax of a .po file
 	errs, ok = checkPoSyntax(poFile)

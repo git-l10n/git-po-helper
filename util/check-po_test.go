@@ -3,7 +3,10 @@ package util
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/spf13/viper"
 )
 
 func TestCheckPoMetaNewlines(t *testing.T) {
@@ -67,5 +70,94 @@ func TestCheckPoFileWithPrompt_MetaNewlines(t *testing.T) {
 	ok := CheckPoFileWithPrompt("zh_CN", poPath, "[zh_CN.po]")
 	if ok {
 		t.Error("CheckPoFileWithPrompt expected to fail for meta with literal \\n, got ok")
+	}
+}
+
+func TestCheckPoLocationCommentsNoLineNumbers(t *testing.T) {
+	tests := []struct {
+		name    string
+		entries []GettextEntry
+		wantErr bool
+		wantMsg string
+	}{
+		{
+			name: "no location comments",
+			entries: []GettextEntry{
+				{MsgID: "Hello", MsgStr: []string{"你好"}, Comments: []string{"#. extracted comment"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "file-only location (no line number)",
+			entries: []GettextEntry{
+				{MsgID: "Hello", MsgStr: []string{"你好"}, Comments: []string{"#: path/to/file.c"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "location with line number",
+			entries: []GettextEntry{
+				{MsgID: "Hello", MsgStr: []string{"你好"}, Comments: []string{"#: path/to/file.c:116"}},
+			},
+			wantErr: true,
+			wantMsg: "file.c:116",
+		},
+		{
+			name: "location with line and column",
+			entries: []GettextEntry{
+				{MsgID: "World", MsgStr: []string{"世界"}, Comments: []string{"#: foo.c:123,5"}},
+			},
+			wantErr: true,
+			wantMsg: "foo.c:123,5",
+		},
+		{
+			name: "multiple refs one has line number",
+			entries: []GettextEntry{
+				{MsgID: "X", MsgStr: []string{"X"}, Comments: []string{"#: a.c b.c:50"}},
+			},
+			wantErr: true,
+			wantMsg: "b.c:50",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			po := &GettextPO{
+				HeaderEntry: GettextEntry{MsgStr: []string{"Content-Type: text/plain; charset=UTF-8\n"}},
+				Entries:     tt.entries,
+			}
+			errs, ok := checkPoLocationCommentsNoLineNumbers(po)
+			if ok == tt.wantErr {
+				t.Errorf("checkPoLocationCommentsNoLineNumbers() ok = %v, want %v", ok, !tt.wantErr)
+			}
+			if tt.wantErr && tt.wantMsg != "" {
+				if len(errs) == 0 || !strings.Contains(errs[0], tt.wantMsg) {
+					t.Errorf("checkPoLocationCommentsNoLineNumbers() errs = %v, want containing %q", errs, tt.wantMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestCheckPoFileWithPrompt_LocationCommentsNoLineNumbers(t *testing.T) {
+	tmpDir := t.TempDir()
+	poPath := filepath.Join(tmpDir, "zh_CN.po")
+	poContent := `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: path/to/file.c:116
+msgid "Hello"
+msgstr "你好"
+`
+	if err := os.WriteFile(poPath, []byte(poContent), 0644); err != nil {
+		t.Fatalf("write temp po: %v", err)
+	}
+
+	viper.Set("check-po--report-file-locations", "error")
+	defer viper.Set("check-po--report-file-locations", "")
+
+	ok := CheckPoFileWithPrompt("zh_CN", poPath, "[zh_CN.po]")
+	if ok {
+		t.Error("CheckPoFileWithPrompt expected to fail for location comment with line number, got ok")
 	}
 }
