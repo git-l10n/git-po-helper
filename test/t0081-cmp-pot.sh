@@ -54,12 +54,12 @@ cat >expect <<-\EOF
  ERROR [ko.po] 삭제하려면 다음을 사용하십시오:
  ERROR [ko.po]
  ERROR [ko.po] mismatched patterns: refs/remotes/<...>/HEAD
- ERROR [ko.po] >> msgid: delete refs/remotes/<name>/HEAD
- ERROR [ko.po] >> msgstr: 레퍼런스/리모트/<이름>/HEAD 값을 삭제합니다
- ERROR [ko.po]
- ERROR [ko.po] mismatched patterns: refs/remotes/<...>/HEAD
  ERROR [ko.po] >> msgid: set refs/remotes/<name>/HEAD according to remote
  ERROR [ko.po] >> msgstr: 레퍼런스/리모트/<이름>/HEAD 값을 리모트에 맞게 설정합니다
+ ERROR [ko.po]
+ ERROR [ko.po] mismatched patterns: refs/remotes/<...>/HEAD
+ ERROR [ko.po] >> msgid: delete refs/remotes/<name>/HEAD
+ ERROR [ko.po] >> msgstr: 레퍼런스/리모트/<이름>/HEAD 값을 삭제합니다
  ERROR [ko.po]
 ❌ Incomplete translations found
  ERROR [ko.po] 2244 new string(s) in 'po/git.pot', but not in your 'po/XX.po'

@@ -46,13 +46,13 @@ test_expect_success "mismatched shell variables" '
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po] 2 translated messages.
 	⚠️ msgid/msgstr pattern check
-	 WARNING [zh_CN.po] mismatched patterns: $branch, $remote_name, $sm_path, sm_path
-	 WARNING [zh_CN.po] >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}
-	 WARNING [zh_CN.po] >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本
-	 WARNING [zh_CN.po]
 	 WARNING [zh_CN.po] mismatched patterns: $command, $res
 	 WARNING [zh_CN.po] >> msgid: exit code $res from $command is < 0 or >= 128
 	 WARNING [zh_CN.po] >> msgstr: 命令的退出码res 应该 < 0 或 >= 128
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: $branch, $remote_name, $sm_path, sm_path
+	 WARNING [zh_CN.po] >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}
+	 WARNING [zh_CN.po] >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本
 	 WARNING [zh_CN.po]
 	EOF
 
@@ -151,13 +151,21 @@ test_expect_success "check typos of mismatched constant strings" '
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po] 9 translated messages.
 	⚠️ msgid/msgstr pattern check
-	 WARNING [zh_CN.po] mismatched patterns: CHERRY_PICK_HEAD, CHERRY_PICK_HEADS
-	 WARNING [zh_CN.po] >> msgid: CHERRY_PICK_HEAD exists
-	 WARNING [zh_CN.po] >> msgstr: 已存在 CHERRY_PICK_HEADS
+	 WARNING [zh_CN.po] mismatched patterns: log.graphColors, log.graphColorss
+	 WARNING [zh_CN.po] >> msgid: ignore invalid color %.*s in log.graphColors
+	 WARNING [zh_CN.po] >> msgstr: 忽略 log.graphColorss 中无效的颜色 %.*s
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: color.blame.repeatedLines, color.blame.repeatedlines
+	 WARNING [zh_CN.po] >> msgid: invalid color %s in color.blame.repeatedLines
+	 WARNING [zh_CN.po] >> msgstr: color.blame.repeatedlines 中无效的颜色值 %s
 	 WARNING [zh_CN.po]
 	 WARNING [zh_CN.po] mismatched patterns: config_variable
 	 WARNING [zh_CN.po] >> msgid: check settings of config_variable
 	 WARNING [zh_CN.po] >> msgstr: 检查配置变量的设置
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: CHERRY_PICK_HEAD, CHERRY_PICK_HEADS
+	 WARNING [zh_CN.po] >> msgid: CHERRY_PICK_HEAD exists
+	 WARNING [zh_CN.po] >> msgstr: 已存在 CHERRY_PICK_HEADS
 	 WARNING [zh_CN.po]
 	 WARNING [zh_CN.po] mismatched patterns: config.variables
 	 WARNING [zh_CN.po] >> msgid: checking config.variables (one command)
@@ -174,14 +182,6 @@ test_expect_success "check typos of mismatched constant strings" '
 	 WARNING [zh_CN.po] mismatched patterns: git-credential--helper, git-credential-helper
 	 WARNING [zh_CN.po] >> msgid: git-credential--helper [options]
 	 WARNING [zh_CN.po] >> msgstr: git-credential-helper [参数]
-	 WARNING [zh_CN.po]
-	 WARNING [zh_CN.po] mismatched patterns: log.graphColors, log.graphColorss
-	 WARNING [zh_CN.po] >> msgid: ignore invalid color %.*s in log.graphColors
-	 WARNING [zh_CN.po] >> msgstr: 忽略 log.graphColorss 中无效的颜色 %.*s
-	 WARNING [zh_CN.po]
-	 WARNING [zh_CN.po] mismatched patterns: color.blame.repeatedLines, color.blame.repeatedlines
-	 WARNING [zh_CN.po] >> msgid: invalid color %s in color.blame.repeatedLines
-	 WARNING [zh_CN.po] >> msgstr: color.blame.repeatedlines 中无效的颜色值 %s
 	 WARNING [zh_CN.po]
 	EOF
 	test_cmp expect actual
@@ -224,13 +224,13 @@ test_expect_success "check typos of mismatched options" '
 	 WARNING [zh_CN.po] >> msgid: --reject and --3way cannot be used together.
 	 WARNING [zh_CN.po] >> msgstr: --reject 和 -3way 不能同时使用。
 	 WARNING [zh_CN.po]
-	 WARNING [zh_CN.po] mismatched patterns: --word-diff-regex, --word-diff-regex=<...>
-	 WARNING [zh_CN.po] >> msgid: equivalent to --word-diff=color --word-diff-regex=<regex>
-	 WARNING [zh_CN.po] >> msgstr: 相当于 --word-diff=color --word-diff-regex=正则
-	 WARNING [zh_CN.po]
 	 WARNING [zh_CN.po] mismatched patterns: --intent-to-add, --intent-to-addd
 	 WARNING [zh_CN.po] >> msgid: mark new files with `git add --intent-to-add`
 	 WARNING [zh_CN.po] >> msgstr: 使用命令 `git add --intent-to-addd` 标记新增文件
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] mismatched patterns: --word-diff-regex, --word-diff-regex=<...>
+	 WARNING [zh_CN.po] >> msgid: equivalent to --word-diff=color --word-diff-regex=<regex>
+	 WARNING [zh_CN.po] >> msgstr: 相当于 --word-diff=color --word-diff-regex=正则
 	 WARNING [zh_CN.po]
 	EOF
 

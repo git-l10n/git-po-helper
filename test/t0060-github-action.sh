@@ -35,9 +35,6 @@ cat >expect <<-\EOF
  ERROR [zh_CN.po] See:
  ERROR [zh_CN.po]
  ERROR [zh_CN.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
-❌ msgid/msgstr pattern check
- ERROR [zh_CN.po] fail to compile po/zh_CN.po: exit status 1
- ERROR [zh_CN.po] fail to generate mofile
 ❌ Incomplete translations found
  ERROR [zh_CN.po] 5102 new string(s) in 'po/git.pot', but not in your 'po/XX.po'
  ERROR [zh_CN.po]

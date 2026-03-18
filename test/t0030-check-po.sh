@@ -52,9 +52,6 @@ test_expect_success "bad syntax of zh_CN.po" '
 	 ERROR [zh_CN.po] po/zh_CN.po:25: end-of-line within string
 	 ERROR [zh_CN.po] msgfmt: found 1 fatal error
 	 ERROR [zh_CN.po] fail to check po: exit status 1
-	❌ msgid/msgstr pattern check
-	 ERROR [zh_CN.po] fail to compile po/zh_CN.po: exit status 1
-	 ERROR [zh_CN.po] fail to generate mofile
 	❌ Incomplete translations found
 	 ERROR [zh_CN.po] 5102 new string(s) in ${SQ}po/git.pot${SQ}, but not in your ${SQ}po/XX.po${SQ}
 	 ERROR [zh_CN.po]

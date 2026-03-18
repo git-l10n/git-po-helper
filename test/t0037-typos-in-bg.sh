@@ -12,282 +12,14 @@ test_expect_success "checkout po-2.31.1" '
 	git -C workdir checkout po-2.31.1
 '
 
-cat >expect <<-\EOF
-	ℹ️ Syntax check with msgfmt
-	 INFO [bg.po] 5104 translated messages.
-	⚠️ msgid/msgstr pattern check
-	 WARNING [bg.po] mismatched patterns: $HOME
-	 WARNING [bg.po] >> msgid: $HOME not set
-	 WARNING [bg.po] >> msgstr: променливата „HOME“ не е зададена
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --abort
-	 WARNING [bg.po] >> msgid: --abort but leave index and working tree alone
-	 WARNING [bg.po] >> msgstr: преустановяване без промяна на индекса и работното дърво
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --contains
-	 WARNING [bg.po] >> msgid: --contains option is only allowed in list mode
-	 WARNING [bg.po] >> msgstr: Опцията „-contains“ изисква режим на списък.
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: extensions.partialClone, extensions.partialclone
-	 WARNING [bg.po] >> msgid: --filter can only be used with the remote configured in extensions.partialclone
-	 WARNING [bg.po] >> msgstr: опцията „--filter“ може да се ползва само с отдалеченото хранилище указано в настройката „extensions.partialClone“
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --no-contains
-	 WARNING [bg.po] >> msgid: --no-contains option is only allowed in list mode
-	 WARNING [bg.po] >> msgstr: Опцията „-contains“ изисква режим на списък.
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --cached, --no-index
-	 WARNING [bg.po] >> msgid: --no-index or --untracked cannot be used with revs
-	 WARNING [bg.po] >> msgstr: опциите „--cached“ и „--untracked“ са несъвместими с версии.
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --points-at
-	 WARNING [bg.po] >> msgid: --points-at option is only allowed in list mode
-	 WARNING [bg.po] >> msgstr: Опцията „-points-at“ изисква режим на списък.
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --reflog, --track
-	 WARNING [bg.po] >> msgid: --reflog option needs one branch name
-	 WARNING [bg.po] >> msgstr: опцията „--track“ изисква точно едно име на клон
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --stdin
-	 WARNING [bg.po] >> msgid: --stdin and --merge-base are mutually exclusive
-	 WARNING [bg.po] >> msgstr: опциите „-stdin“ и „--merge-base“ са несъвместими
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --rfc
-	 WARNING [bg.po] >> msgid: --subject-prefix/--rfc and -k are mutually exclusive
-	 WARNING [bg.po] >> msgstr: опциите „--subject-prefix“/„-rfc“ и „-k“ са несъвместими
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --name-only, --only-input
-	 WARNING [bg.po] >> msgid: --trailer with --only-input does not make sense
-	 WARNING [bg.po] >> msgstr: опцията „--trailer“ е несъвместима с „--name-only“
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --worktre, --worktree
-	 WARNING [bg.po] >> msgid: --worktree cannot be used with multiple working trees unless the config
-	 WARNING [bg.po] extension worktreeConfig is enabled. Please read "CONFIGURATION FILE"
-	 WARNING [bg.po] section in "git help worktree" for details
-	 WARNING [bg.po] >> msgstr: опцията „--worktre“ не приема множество работни дървета, преди
-	 WARNING [bg.po] включването на разширението в настройките „worktreeConfig“. За
-	 WARNING [bg.po] повече информация вижте раздела „CONFIGURATION FILE“ в
-	 WARNING [bg.po] „git help worktree“
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --no-commit
-	 WARNING [bg.po] >> msgid: Automatic merge went well; stopped before committing as requested
-	 WARNING [bg.po]
-	 WARNING [bg.po] >> msgstr: Автоматичното сливане завърши успешно. Самото подаване не е извършено, защото бе зададена опцията „--no-commit“.
-	 WARNING [bg.po]
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: $BRANCH, $br
-	 WARNING [bg.po] >> msgid: Git normally never creates a ref that ends with 40 hex characters
-	 WARNING [bg.po] because it will be ignored when you just specify 40-hex. These refs
-	 WARNING [bg.po] may be created by mistake. For example,
-	 WARNING [bg.po]
-	 WARNING [bg.po] git switch -c $br $(git rev-parse ...)
-	 WARNING [bg.po]
-	 WARNING [bg.po] where "$br" is somehow empty and a 40-hex ref is created. Please
-	 WARNING [bg.po] examine these refs and maybe delete them. Turn this message off by
-	 WARNING [bg.po] running "git config advice.objectNameWarning false"
-	 WARNING [bg.po] >> msgstr: При нормална работа Git никога не създава указатели, които завършват
-	 WARNING [bg.po] с 40 шестнадесетични знака, защото стандартно те ще бъдат прескачани.
-	 WARNING [bg.po] Възможно е такива указатели да са създадени случайно. Например:
-	 WARNING [bg.po]
-	 WARNING [bg.po] git switch -c $BRANCH $(git rev-parse …)
-	 WARNING [bg.po]
-	 WARNING [bg.po] където стойността на променливата на средата BRANCH е празна, при което
-	 WARNING [bg.po] се създава подобен указател. Прегледайте тези указатели и ги изтрийте.
-	 WARNING [bg.po] За да изключите това съобщение, изпълнете:
-	 WARNING [bg.po]
-	 WARNING [bg.po] git config advice.objectNameWarning false
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: refs/heads, refs/heads/
-	 WARNING [bg.po] >> msgid: HEAD (%s) points outside of refs/heads/
-	 WARNING [bg.po] >> msgstr: „HEAD“ (%s) сочи извън директорията „refs/heads“
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: git-am
-	 WARNING [bg.po] >> msgid: It looks like 'git am' is in progress. Cannot rebase.
-	 WARNING [bg.po] >> msgstr: Изглежда, че сега се прилагат кръпки чрез командата „git-am“. Не може да пребазирате в момента.
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --no-ff
-	 WARNING [bg.po] >> msgid: Non-fast-forward commit does not make sense into an empty head
-	 WARNING [bg.po] >> msgstr: Понеже върхът е без история, всички сливания са превъртания, не може да се извърши същинско сливане изисквано от опцията „--no-ff“
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --filter, --stdout
-	 WARNING [bg.po] >> msgid: cannot use --filter without --stdout
-	 WARNING [bg.po] >> msgstr: опцията „-filter“ изисква „-stdout“
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: dimmed_zebra
-	 WARNING [bg.po] >> msgid: color moved setting must be one of 'no', 'default', 'blocks', 'zebra', 'dimmed-zebra', 'plain'
-	 WARNING [bg.po] >> msgstr: настройката за цвят за преместване трябва да е една от: „no“ (без), „default“ (стандартно), „blocks“ (парчета), „zebra“ (райе), „dimmed_zebra“ (тъмно райе), „plain“ (обикновено)
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: conclude_pack, vger.kernel.org
-	 WARNING [bg.po] >> msgid: confusion beyond insanity
-	 WARNING [bg.po] >> msgstr: фатална грешка във функцията „conclude_pack“. Това е грешка в Git, докладвайте я на разработчиците, като пратите е-писмо на адрес: „git@vger.kernel.org“.
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: vger.kernel.org
-	 WARNING [bg.po] >> msgid: confusion beyond insanity in parse_pack_objects()
-	 WARNING [bg.po] >> msgstr: фатална грешка във функцията „parse_pack_objects“. Това е грешка в Git, докладвайте я на разработчиците, като пратите е-писмо на адрес: „git@vger.kernel.org“.
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --bare
-	 WARNING [bg.po] >> msgid: create a mirror repository (implies bare)
-	 WARNING [bg.po] >> msgstr: създаване на хранилище-огледало (включва опцията „--bare“ за голо хранилище)
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: credential-cache--daemon
-	 WARNING [bg.po] >> msgid: credential-cache--daemon unavailable; no unix socket support
-	 WARNING [bg.po] >> msgstr: демонът за кеша с идентификациите е недостъпен — липсва поддръжка на гнезда на unix
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: %%(trailers:key=), %%(trailers:КЛЮЧ=)
-	 WARNING [bg.po] >> msgid: expected %%(trailers:key=<value>)
-	 WARNING [bg.po] >> msgstr: очаква се %%(trailers:КЛЮЧ=СТОЙНОСТ)
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --quit, --skip
-	 WARNING [bg.po] >> msgid: git am [<options>] (--continue | --skip | --abort)
-	 WARNING [bg.po] >> msgstr: git am [ОПЦИЯ…] (--continue | --quit | --abort)
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --bisect-next, --bisect-replay
-	 WARNING [bg.po] >> msgid: git bisect--helper --bisect-replay <filename>
-	 WARNING [bg.po] >> msgstr: git bisect--helper --bisect-next ИМЕ_НА_ФАЙЛ
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --bisect-reset, --bisect-skip
-	 WARNING [bg.po] >> msgid: git bisect--helper --bisect-skip [(<rev>|<range>)...]
-	 WARNING [bg.po] >> msgstr: git bisect--helper --bisect-reset [(ВЕРСИЯ|ДИАПАЗОН)…]
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --bisect-reset, --bisect-state
-	 WARNING [bg.po] >> msgid: git bisect--helper --bisect-state (bad|new) [<rev>]
-	 WARNING [bg.po] >> msgstr: git bisect--helper --bisect-reset (ЛОШО) [ВЕРСИЯ]
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --bisect-reset, --bisect-state
-	 WARNING [bg.po] >> msgid: git bisect--helper --bisect-state (good|old) [<rev>...]
-	 WARNING [bg.po] >> msgstr: git bisect--helper --bisect-reset (ДОБРО) [ВЕРСИЯ…]
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: _git_rev
-	 WARNING [bg.po] >> msgid: git bundle create [<options>] <file> <git-rev-list args>
-	 WARNING [bg.po] >> msgstr: git bundle create [ОПЦИЯ…] ФАЙЛ АРГУМЕНТ_ЗА_git_rev-list…
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: git upload-pack, git upload-repack
-	 WARNING [bg.po] >> msgid: git upload-pack [<options>] <dir>
-	 WARNING [bg.po] >> msgstr: git upload-repack [ОПЦИЯ…] ДИРЕКТОРИЯ
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: git verify-commit, git verify-tag
-	 WARNING [bg.po] >> msgid: git verify-commit [-v | --verbose] <commit>...
-	 WARNING [bg.po] >> msgstr: git verify-tag [-v | --verbose] ПОДАВАНЕ…
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --force
-	 WARNING [bg.po] >> msgid: helper %s does not support 'force'
-	 WARNING [bg.po] >> msgstr: насрещната помощна програма не поддържа „%s“ поддържа опцията „--force“
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: crlf_action
-	 WARNING [bg.po] >> msgid: illegal crlf_action %d
-	 WARNING [bg.po] >> msgstr: неправилно действие за край на ред: %d
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: s.merge
-	 WARNING [bg.po] >> msgid: invalid branch.%s.merge; cannot rebase onto > 1 branch
-	 WARNING [bg.po] >> msgstr: неправилен клон за сливане „%s“. Невъзможно е да пребазирате върху повече от 1 клон
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: run_command
-	 WARNING [bg.po] >> msgid: run_command returned non-zero status for %s
-	 WARNING [bg.po] .
-	 WARNING [bg.po] >> msgstr: изпълнената команда завърши с ненулев изход за „%s“
-	 WARNING [bg.po] .
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: run_command
-	 WARNING [bg.po] >> msgid: run_command returned non-zero status while recursing in the nested submodules of %s
-	 WARNING [bg.po] .
-	 WARNING [bg.po] >> msgstr: изпълнената команда завърши с ненулев изход при обхождане на подмодулите, вложени в „%s“
-	 WARNING [bg.po] .
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --raw, --stat
-	 WARNING [bg.po] >> msgid: synonym for '-p --raw'
-	 WARNING [bg.po] >> msgstr: псевдоним на „-p --stat“
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --dirstat=<...>,, --dirstat=files,param1,param2...
-	 WARNING [bg.po] >> msgid: synonym for --dirstat=files,param1,param2...
-	 WARNING [bg.po] >> msgstr: псевдоним на „--dirstat=ФАЙЛОВЕ,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2,…“
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: git cherry-pick
-	 WARNING [bg.po] >> msgid: try "git revert (--continue | %s--abort | --quit)"
-	 WARNING [bg.po] >> msgstr: използвайте „git cherry-pick (--continue | %s--abort | --quit)“
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: lazy_dir
-	 WARNING [bg.po] >> msgid: unable to create lazy_dir thread: %s
-	 WARNING [bg.po] >> msgstr: не може да се създаде нишка за директории: %s
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: lazy_name
-	 WARNING [bg.po] >> msgid: unable to create lazy_name thread: %s
-	 WARNING [bg.po] >> msgstr: не може да се създаде нишка за имена: %s
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: load_cache_entries
-	 WARNING [bg.po] >> msgid: unable to create load_cache_entries thread: %s
-	 WARNING [bg.po] >> msgstr: не може да се създаде нишка за зареждане на обектите от кеша: %s
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: load_index_extensions
-	 WARNING [bg.po] >> msgid: unable to create load_index_extensions thread: %s
-	 WARNING [bg.po] >> msgstr: не може да се създаде нишка за зареждане на разширенията на индекса: %s
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: lazy_name
-	 WARNING [bg.po] >> msgid: unable to join lazy_name thread: %s
-	 WARNING [bg.po] >> msgstr: не може да се изчака нишка за имена: %s
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: load_cache_entries
-	 WARNING [bg.po] >> msgid: unable to join load_cache_entries thread: %s
-	 WARNING [bg.po] >> msgstr: не може да се изчака нишка за зареждане на обектите от кеша: %s
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: load_index_extensions
-	 WARNING [bg.po] >> msgid: unable to join load_index_extensions thread: %s
-	 WARNING [bg.po] >> msgstr: не може да се създаде нишка за зареждане на разширенията на индекса: %s
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: new_index
-	 WARNING [bg.po] >> msgid: unable to write new_index file
-	 WARNING [bg.po] >> msgstr: новият индекс не може да бъде записан
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --patch
-	 WARNING [bg.po] >> msgid: unknown --patch mode: %s
-	 WARNING [bg.po] >> msgstr: неизвестна стратегия за прилагане на кръпка: „%s“
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: --mirror
-	 WARNING [bg.po] >> msgid: unknown mirror argument: %s
-	 WARNING [bg.po] >> msgstr: неправилна стойност за „--mirror“: %s
-	 WARNING [bg.po]
-	 WARNING [bg.po] mismatched patterns: update_ref
-	 WARNING [bg.po] >> msgid: update_ref failed for ref '%s': %s
-	 WARNING [bg.po] >> msgstr: неуспешно обновяване на указателя „%s“: %s
-	 WARNING [bg.po]
-EOF
 
 test_expect_success "check typos in bg.po" '
 	git -C workdir $HELPER check-po $POT_NO po/bg.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
+	cp "$TEST_DIRECTORY/t0037-typos-in-bg.expect" expect &&
 	test_cmp expect actual
 '
 
-cat >expect <<-EOF &&
-------------------------------------------------------------------------------
-level=info msg="[bg.po]    5195 translated messages."
-------------------------------------------------------------------------------
-level=error msg="[bg.po]    mismatched patterns: refs/heads, refs/heads/"
-level=error msg="[bg.po]    >> msgid: HEAD (%s) points outside of refs/heads/"
-level=error msg="[bg.po]    >> msgstr: „HEAD“ (%s) сочи извън директорията „refs/heads“"
-level=error msg="[bg.po]"
-level=error msg="[bg.po]    mismatched patterns: --bare"
-level=error msg="[bg.po]    >> msgid: create a mirror repository (implies bare)"
-level=error msg="[bg.po]    >> msgstr: създаване на хранилище-огледало (включва опцията „--bare“ за голо хранилище)"
-level=error msg="[bg.po]"
-level=error msg="[bg.po]    mismatched patterns: _git_rev"
-level=error msg="[bg.po]    >> msgid: git bundle create [<options>] <file> <git-rev-list args>"
-level=error msg="[bg.po]    >> msgstr: git bundle create [ОПЦИЯ…] ФАЙЛ АРГУМЕНТ_ЗА_git_rev-list…"
-level=error msg="[bg.po]"
-level=error msg="[bg.po]    mismatched patterns: --force"
-level=error msg="[bg.po]    >> msgid: helper %s does not support 'force'"
-level=error msg="[bg.po]    >> msgstr: насрещната помощна програма „%s“ не поддържа опцията „--force“"
-level=error msg="[bg.po]"
-level=error msg="[bg.po]    mismatched patterns: --dirstat=<...>,, --dirstat=files,param1,param2..."
-level=error msg="[bg.po]    >> msgid: synonym for --dirstat=files,param1,param2..."
-level=error msg="[bg.po]    >> msgstr: псевдоним на „--dirstat=ФАЙЛ…,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2,…“"
-level=error msg="[bg.po]"
-level=error msg="[bg.po]    mismatched patterns: --mirror"
-level=error msg="[bg.po]    >> msgid: unknown mirror argument: %s"
-level=error msg="[bg.po]    >> msgstr: неправилна стойност за „--mirror“: %s"
-level=error msg="[bg.po]"
-------------------------------------------------------------------------------
-ERROR: check-po command failed
-EOF
 
 test_expect_success "still has typos in master branch" '
 	git -C workdir checkout master &&
@@ -298,25 +30,25 @@ test_expect_success "still has typos in master branch" '
 	ℹ️ Syntax check with msgfmt
 	 INFO [bg.po] 5195 translated messages.
 	❌ msgid/msgstr pattern check
-	 ERROR [bg.po] mismatched patterns: refs/heads, refs/heads/
-	 ERROR [bg.po] >> msgid: HEAD (%s) points outside of refs/heads/
-	 ERROR [bg.po] >> msgstr: „HEAD“ (%s) сочи извън директорията „refs/heads“
-	 ERROR [bg.po]
-	 ERROR [bg.po] mismatched patterns: --bare
-	 ERROR [bg.po] >> msgid: create a mirror repository (implies bare)
-	 ERROR [bg.po] >> msgstr: създаване на хранилище-огледало (включва опцията „--bare“ за голо хранилище)
-	 ERROR [bg.po]
-	 ERROR [bg.po] mismatched patterns: _git_rev
-	 ERROR [bg.po] >> msgid: git bundle create [<options>] <file> <git-rev-list args>
-	 ERROR [bg.po] >> msgstr: git bundle create [ОПЦИЯ…] ФАЙЛ АРГУМЕНТ_ЗА_git_rev-list…
+	 ERROR [bg.po] mismatched patterns: --dirstat=<...>,, --dirstat=files,param1,param2...
+	 ERROR [bg.po] >> msgid: synonym for --dirstat=files,param1,param2...
+	 ERROR [bg.po] >> msgstr: псевдоним на „--dirstat=ФАЙЛ…,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2,…“
 	 ERROR [bg.po]
 	 ERROR [bg.po] mismatched patterns: --force
 	 ERROR [bg.po] >> msgid: helper %s does not support '\''force'\''
 	 ERROR [bg.po] >> msgstr: насрещната помощна програма „%s“ не поддържа опцията „--force“
 	 ERROR [bg.po]
-	 ERROR [bg.po] mismatched patterns: --dirstat=<...>,, --dirstat=files,param1,param2...
-	 ERROR [bg.po] >> msgid: synonym for --dirstat=files,param1,param2...
-	 ERROR [bg.po] >> msgstr: псевдоним на „--dirstat=ФАЙЛ…,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2,…“
+	 ERROR [bg.po] mismatched patterns: refs/heads, refs/heads/
+	 ERROR [bg.po] >> msgid: HEAD (%s) points outside of refs/heads/
+	 ERROR [bg.po] >> msgstr: „HEAD“ (%s) сочи извън директорията „refs/heads“
+	 ERROR [bg.po]
+	 ERROR [bg.po] mismatched patterns: _git_rev
+	 ERROR [bg.po] >> msgid: git bundle create [<options>] <file> <git-rev-list args>
+	 ERROR [bg.po] >> msgstr: git bundle create [ОПЦИЯ…] ФАЙЛ АРГУМЕНТ_ЗА_git_rev-list…
+	 ERROR [bg.po]
+	 ERROR [bg.po] mismatched patterns: --bare
+	 ERROR [bg.po] >> msgid: create a mirror repository (implies bare)
+	 ERROR [bg.po] >> msgstr: създаване на хранилище-огледало (включва опцията „--bare“ за голо хранилище)
 	 ERROR [bg.po]
 	 ERROR [bg.po] mismatched patterns: --mirror
 	 ERROR [bg.po] >> msgid: unknown mirror argument: %s

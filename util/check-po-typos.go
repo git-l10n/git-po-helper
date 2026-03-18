@@ -2,9 +2,7 @@ package util
 
 import (
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 	"regexp"
 	"sort"
 	"strings"
@@ -13,78 +11,63 @@ import (
 
 	"github.com/git-l10n/git-po-helper/dict"
 	"github.com/git-l10n/git-po-helper/flag"
-	"github.com/gorilla/i18n/gettext"
 )
 
 type CheckPoEntryFunc func(string, string, string) ([]string, bool)
 
 // checkEntriesInPoFile returns a list of messages, and a boolean which
 // indicates whether the messages are errors (false) or warnings (true).
+// Uses util/gettext.go ParsePoEntries to load and parse the PO file.
 func checkEntriesInPoFile(locale, poFile string, fn CheckPoEntryFunc) (msgs []string, ok bool) {
 	ok = true
 
-	// Compile mo-file from po-file
-	moFile, err := os.CreateTemp("", "mofile")
+	data, err := os.ReadFile(poFile)
 	if err != nil {
-		msgs = append(msgs, err.Error())
-		return
-	}
-	defer os.Remove(moFile.Name())
-	moFile.Close()
-	cmd := exec.Command("msgfmt",
-		"-o",
-		moFile.Name(),
-		poFile)
-	err = cmd.Run()
-	if err != nil {
-		// There may be some non-fatal errors in the po-file.
-		// But if the generated mo-file is empty, a fatal error occurs.
-		msgs = append(msgs, fmt.Sprintf("fail to compile %s: %s", poFile, err))
-	}
-
-	f, err := os.Open(moFile.Name())
-	if err != nil {
-		msgs = append(msgs, "fail to generate mofile")
+		msgs = append(msgs, fmt.Sprintf("fail to read %s: %s", poFile, err))
 		return msgs, false
 	}
-	// Fail to compile the po-file if the generated mo-file is empty.
-	fi, err := f.Stat()
-	if err != nil || fi.Size() == 0 {
-		msgs = append(msgs, "fail to generate mofile")
+
+	po, err := ParsePoEntries(data)
+	if err != nil {
+		msgs = append(msgs, fmt.Sprintf("fail to parse %s: %s", poFile, err))
 		return msgs, false
 	}
-	defer f.Close()
 
-	iter := gettext.ReadMo(f)
-	for {
-		entry, err := iter.Next()
-		if err != nil {
-			if err != io.EOF {
-				msgs = append(msgs, fmt.Sprintf("fail to iterator: %s", err))
-			}
-			break
+	for _, entry := range po.Entries {
+		if entry.Obsolete {
+			continue
 		}
-		if len(entry.StrPlural) == 0 {
-			output, ignoreError := fn(locale, string(entry.Id), string(entry.Str))
+		if len(entry.MsgStr) == 0 {
+			// Singular entry with empty msgstr (untranslated)
+			output, ignoreError := fn(locale, poUnescape(entry.MsgID), "")
 			msgs = append(msgs, output...)
 			if !ignoreError {
 				ok = false
 			}
-		} else {
-			for i := range entry.StrPlural {
-				if i == 0 {
-					output, ignoreError := fn(locale, string(entry.Id), string(entry.StrPlural[i]))
-					msgs = append(msgs, output...)
-					if !ignoreError {
-						ok = false
-					}
-				} else {
-					output, ignoreError := fn(locale, string(entry.IdPlural), string(entry.StrPlural[i]))
-					msgs = append(msgs, output...)
-					if !ignoreError {
-						ok = false
-					}
-				}
+			continue
+		}
+		if len(entry.MsgStr) == 1 {
+			// Singular entry
+			output, ignoreError := fn(locale, poUnescape(entry.MsgID), poUnescape(entry.MsgStr[0]))
+			msgs = append(msgs, output...)
+			if !ignoreError {
+				ok = false
+			}
+			continue
+		}
+		// Plural entry
+		for i := range entry.MsgStr {
+			var msgID, msgStr string
+			if i == 0 {
+				msgID = poUnescape(entry.MsgID)
+			} else {
+				msgID = poUnescape(entry.MsgIDPlural)
+			}
+			msgStr = poUnescape(entry.MsgStr[i])
+			output, ignoreError := fn(locale, msgID, msgStr)
+			msgs = append(msgs, output...)
+			if !ignoreError {
+				ok = false
 			}
 		}
 	}

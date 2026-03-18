@@ -62,13 +62,13 @@ test_expect_success "check-commits show typos" '
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po@rev] 2 translated messages.
 	⚠️ msgid/msgstr pattern check
-	 WARNING [zh_CN.po@rev] mismatched patterns: $branch, $remote_name, $sm_path, sm_path
-	 WARNING [zh_CN.po@rev] >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}
-	 WARNING [zh_CN.po@rev] >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本
-	 WARNING [zh_CN.po@rev]
 	 WARNING [zh_CN.po@rev] mismatched patterns: $command, $res
 	 WARNING [zh_CN.po@rev] >> msgid: exit code $res from $command is < 0 or >= 128
 	 WARNING [zh_CN.po@rev] >> msgstr: 命令的退出码res 应该 < 0 或 >= 128
+	 WARNING [zh_CN.po@rev]
+	 WARNING [zh_CN.po@rev] mismatched patterns: $branch, $remote_name, $sm_path, sm_path
+	 WARNING [zh_CN.po@rev] >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}
+	 WARNING [zh_CN.po@rev] >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本
 	 WARNING [zh_CN.po@rev]
 	⚠️ Author and committer
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
@@ -87,13 +87,13 @@ test_expect_success "check-commits show typos (--typos=error)" '
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po@rev] 2 translated messages.
 	❌ msgid/msgstr pattern check
-	 ERROR [zh_CN.po@rev] mismatched patterns: $branch, $remote_name, $sm_path, sm_path
-	 ERROR [zh_CN.po@rev] >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}
-	 ERROR [zh_CN.po@rev] >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本
-	 ERROR [zh_CN.po@rev]
 	 ERROR [zh_CN.po@rev] mismatched patterns: $command, $res
 	 ERROR [zh_CN.po@rev] >> msgid: exit code $res from $command is < 0 or >= 128
 	 ERROR [zh_CN.po@rev] >> msgstr: 命令的退出码res 应该 < 0 或 >= 128
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] mismatched patterns: $branch, $remote_name, $sm_path, sm_path
+	 ERROR [zh_CN.po@rev] >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}
+	 ERROR [zh_CN.po@rev] >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本
 	 ERROR [zh_CN.po@rev]
 	⚠️ Author and committer
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
@@ -128,13 +128,13 @@ test_expect_success "check-commits show typos and TEAMS file" '
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po@rev] 2 translated messages.
 	⚠️ msgid/msgstr pattern check
-	 WARNING [zh_CN.po@rev] mismatched patterns: $branch, $remote_name, $sm_path, sm_path
-	 WARNING [zh_CN.po@rev] >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}
-	 WARNING [zh_CN.po@rev] >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本
-	 WARNING [zh_CN.po@rev]
 	 WARNING [zh_CN.po@rev] mismatched patterns: $command, $res
 	 WARNING [zh_CN.po@rev] >> msgid: exit code $res from $command is < 0 or >= 128
 	 WARNING [zh_CN.po@rev] >> msgstr: 命令的退出码res 应该 < 0 或 >= 128
+	 WARNING [zh_CN.po@rev]
+	 WARNING [zh_CN.po@rev] mismatched patterns: $branch, $remote_name, $sm_path, sm_path
+	 WARNING [zh_CN.po@rev] >> msgid: Unable to find current ${remote_name}/${branch} revision in submodule path ${sm_path}
+	 WARNING [zh_CN.po@rev] >> msgstr: 无法在子模块路径 sm_path 中找到当前的 远程/分支 版本
 	 WARNING [zh_CN.po@rev]
 	⚠️ Author and committer
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different

@@ -1,0 +1,933 @@
+ℹ️ Syntax check with msgfmt
+ INFO [pt_PT.po] 2876 translated messages, 1320 fuzzy translations, 842 untranslated messages.
+❌ Obsolete #~ entries
+ ERROR [pt_PT.po] you have 225 obsolete entries, please remove them
+⚠️ msgid/msgstr pattern check
+ WARNING [pt_PT.po] mismatched patterns: --add-file, --fixup, --remote, --squash
+ WARNING [pt_PT.po] >> msgid: Options --add-file and --remote cannot be used together
+ WARNING [pt_PT.po] >> msgstr: As opções --squash e --fixup não podem ser usadas juntas
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --deepen
+ WARNING [pt_PT.po] >> msgid: server doesn't support feature '%s'
+ WARNING [pt_PT.po] >> msgstr: O servidor não suporta --deepen
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --signed
+ WARNING [pt_PT.po] >> msgid: ssh variant 'simple' does not support setting port
+ WARNING [pt_PT.po] >> msgstr: o recetor não suporta publicação com --signed
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --no-index
+ WARNING [pt_PT.po] >> msgid: git diff --no-index [<options>] <path> <path>
+ WARNING [pt_PT.po] >> msgstr: git worktree add [<opções>] <caminho> [<ramo>]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --detach, --find-object
+ WARNING [pt_PT.po] >> msgid: -G, -S and --find-object are mutually exclusive
+ WARNING [pt_PT.po] >> msgstr: -b, -B e --detach são mutuamente exclusivos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --stat
+ WARNING [pt_PT.po] >> msgid: invalid --stat value: %s
+ WARNING [pt_PT.po] >> msgstr: valor de cor inválido: %.*s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --color-moved
+ WARNING [pt_PT.po] >> msgid: bad --color-moved argument: %s
+ WARNING [pt_PT.po] >> msgstr: argumento não reconhecido: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --color-moved-ws
+ WARNING [pt_PT.po] >> msgid: invalid mode '%s' in --color-moved-ws
+ WARNING [pt_PT.po] >> msgstr: objeto inválido '%s' fornecido.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --raw, --stat
+ WARNING [pt_PT.po] >> msgid: synonym for '-p --raw'
+ WARNING [pt_PT.po] >> msgstr: (sinónimo de --stat)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --stat
+ WARNING [pt_PT.po] >> msgid: machine friendly --stat
+ WARNING [pt_PT.po] >> msgstr: saída inteligível por máquina
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --dirstat=cumulative, --files-with-matches
+ WARNING [pt_PT.po] >> msgid: synonym for --dirstat=cumulative
+ WARNING [pt_PT.po] >> msgstr: sinónimo de --files-with-matches
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: GIT_DIR
+ WARNING [pt_PT.po] >> msgid: could not set GIT_DIR to '%s'
+ WARNING [pt_PT.po] >> msgstr: não foi possível definir '%s' como '%s'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --deepen
+ WARNING [pt_PT.po] >> msgid: Server does not support this repository's object format
+ WARNING [pt_PT.po] >> msgstr: O servidor não suporta --deepen
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $command
+ WARNING [pt_PT.po] >> msgid: External commands
+ WARNING [pt_PT.po] >> msgstr: a executar $command
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --pretty
+ WARNING [pt_PT.po] >> msgid: unable to parse sparse filter data in %s
+ WARNING [pt_PT.po] >> msgstr: não foi possível analisar o formato de --pretty
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: add_cacheinfo, addinfo_cache
+ WARNING [pt_PT.po] >> msgid: add_cacheinfo failed for path '%s'; merge aborting.
+ WARNING [pt_PT.po] >> msgstr: addinfo_cache falhou no caminho '%s'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: add_cacheinfo, addinfo_cache
+ WARNING [pt_PT.po] >> msgid: add_cacheinfo failed to refresh for path '%s'; merge aborting.
+ WARNING [pt_PT.po] >> msgstr: addinfo_cache falhou no caminho '%s'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $sm_path
+ WARNING [pt_PT.po] >> msgid: Failed to merge submodule %s (not checked out)
+ WARNING [pt_PT.po] >> msgstr: Falha ao registar o submódulo '$sm_path'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $sm_path
+ WARNING [pt_PT.po] >> msgid: Failed to merge submodule %s (commits not present)
+ WARNING [pt_PT.po] >> msgstr: Falha ao registar o submódulo '$sm_path'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $sha1
+ WARNING [pt_PT.po] >> msgid: Fast-forwarding submodule %s
+ WARNING [pt_PT.po] >> msgstr: Avanço-rápido para $sha1
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $sm_path
+ WARNING [pt_PT.po] >> msgid: Failed to merge submodule %s (not fast-forward)
+ WARNING [pt_PT.po] >> msgstr: Falha ao registar o submódulo '$sm_path'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: lazy_dir
+ WARNING [pt_PT.po] >> msgid: unable to create lazy_dir thread: %s
+ WARNING [pt_PT.po] >> msgstr: não foi possível criar thread: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: lazy_name
+ WARNING [pt_PT.po] >> msgid: unable to create lazy_name thread: %s
+ WARNING [pt_PT.po] >> msgstr: não foi possível criar thread: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: lazy_name
+ WARNING [pt_PT.po] >> msgid: unable to join lazy_name thread: %s
+ WARNING [pt_PT.po] >> msgstr: não foi possível criar thread: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --abbrev=0, --long
+ WARNING [pt_PT.po] >> msgid: %s is incompatible with %s
+ WARNING [pt_PT.po] >> msgstr: --long é incompatível com --abbrev=0
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --dirty
+ WARNING [pt_PT.po] >> msgid: %s : incompatible with something else
+ WARNING [pt_PT.po] >> msgstr: --dirty é incompatível com commits ou semelhantes
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --confirm
+ WARNING [pt_PT.po] >> msgid: unknown non-ascii option in string: `%s'
+ WARNING [pt_PT.po] >> msgstr: Definidição --confirm desconhecida: '%s'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: load_cache_entries
+ WARNING [pt_PT.po] >> msgid: unable to create load_cache_entries thread: %s
+ WARNING [pt_PT.po] >> msgstr: não foi possível criar thread: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: load_cache_entries
+ WARNING [pt_PT.po] >> msgid: unable to join load_cache_entries thread: %s
+ WARNING [pt_PT.po] >> msgstr: não foi possível criar thread: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: load_index_extensions
+ WARNING [pt_PT.po] >> msgid: unable to create load_index_extensions thread: %s
+ WARNING [pt_PT.po] >> msgstr: não foi possível criar thread: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: load_index_extensions
+ WARNING [pt_PT.po] >> msgid: unable to join load_index_extensions thread: %s
+ WARNING [pt_PT.po] >> msgstr: não foi possível criar thread: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --abort
+ WARNING [pt_PT.po] >> msgid: You can fix this with 'git rebase --edit-todo' and then run 'git rebase --continue'.
+ WARNING [pt_PT.po] Or you can abort the rebase with 'git rebase --abort'.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] >> msgstr: Pode corrí-lo com 'git rebase --edit-todo' e depois executar 'git rebase --continue'.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $check_level
+ WARNING [pt_PT.po] >> msgid: unrecognized setting %s for option rebase.missingCommitsCheck. Ignoring.
+ WARNING [pt_PT.po] >> msgstr: Definição $check_level desconhecida da opção rebase.missingCommitsCheck. Ignorado.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --continue
+ WARNING [pt_PT.po] >> msgid:
+ WARNING [pt_PT.po] Commands:
+ WARNING [pt_PT.po] p, pick <commit> = use commit
+ WARNING [pt_PT.po] r, reword <commit> = use commit, but edit the commit message
+ WARNING [pt_PT.po] e, edit <commit> = use commit, but stop for amending
+ WARNING [pt_PT.po] s, squash <commit> = use commit, but meld into previous commit
+ WARNING [pt_PT.po] f, fixup <commit> = like "squash", but discard this commit's log message
+ WARNING [pt_PT.po] x, exec <command> = run command (the rest of the line) using shell
+ WARNING [pt_PT.po] b, break = stop here (continue rebase later with 'git rebase --continue')
+ WARNING [pt_PT.po] d, drop <commit> = remove commit
+ WARNING [pt_PT.po] l, label <label> = label current HEAD with a name
+ WARNING [pt_PT.po] t, reset <label> = reset HEAD to a label
+ WARNING [pt_PT.po] m, merge [-C <commit> | -c <commit>] <label> [# <oneline>]
+ WARNING [pt_PT.po] . create a merge commit using the original merge commit's
+ WARNING [pt_PT.po] . message (or the oneline, if no original merge commit was
+ WARNING [pt_PT.po] . specified). Use -c <commit> to reword the commit message.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] These lines can be re-ordered; they are executed from top to bottom.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] >> msgstr:
+ WARNING [pt_PT.po] Comandos:
+ WARNING [pt_PT.po] p, pick = usar commit
+ WARNING [pt_PT.po] r, reword = usar commit, mas editar a mensagem de commit
+ WARNING [pt_PT.po] e, edit = usar commit, mas parar para emendar
+ WARNING [pt_PT.po] s, squash = usar commit, mas fundir com o commit anterior
+ WARNING [pt_PT.po] f, fixup = como "squash", mas descartar a mensagem deste commit
+ WARNING [pt_PT.po] x, exec = executar o comando (o resto da linha) usando a shell
+ WARNING [pt_PT.po] d, drop = remover commit
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] Estas linhas pode ser reordenadas; são executadas de cima para baixo.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $shortonto, $shortrevisions, $todocount
+ WARNING [pt_PT.po] >> msgid: Rebase %s onto %s (%d command)
+ WARNING [pt_PT.po] >> msgstr: Rebase $shortrevisions sobre $shortonto ($todocount comando)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $shortonto, $shortrevisions, $todocount
+ WARNING [pt_PT.po] >> msgid: Rebase %s onto %s (%d commands)
+ WARNING [pt_PT.po] >> msgstr: Rebase $shortrevisions sobre $shortonto ($todocount comandos)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: %%(objecttype), %%(subject)
+ WARNING [pt_PT.po] >> msgid: %%(objecttype) does not take arguments
+ WARNING [pt_PT.po] >> msgstr: %%(subject) não leva argumentos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: %%(objectname), %%(objectsize)
+ WARNING [pt_PT.po] >> msgid: unrecognized %%(objectsize) argument: %s
+ WARNING [pt_PT.po] >> msgstr: argumento de %%(objectname) não reconhecido: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: %%(deltabase), %%(trailers)
+ WARNING [pt_PT.po] >> msgid: %%(deltabase) does not take arguments
+ WARNING [pt_PT.po] >> msgstr: %%(trailers) não leva argumentos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: %%(objectname), %%(subject)
+ WARNING [pt_PT.po] >> msgid: unrecognized %%(subject) argument: %s
+ WARNING [pt_PT.po] >> msgstr: argumento de %%(objectname) não reconhecido: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: %%(trailers)
+ WARNING [pt_PT.po] >> msgid: unknown %%(trailers) argument: %s
+ WARNING [pt_PT.po] >> msgstr: argumento de mirror desconhecido: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: %%(%s)
+ WARNING [pt_PT.po] >> msgid: positive value expected '%s' in %%(%s)
+ WARNING [pt_PT.po] >> msgstr: valor positivo esperado contents:lines=%s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: %%(%s)
+ WARNING [pt_PT.po] >> msgid: unrecognized argument '%s' in %%(%s)
+ WARNING [pt_PT.po] >> msgstr: argumento não reconhecido: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: %%(algn), %%(align)
+ WARNING [pt_PT.po] >> msgid: positive width expected with the %%(align) atom
+ WARNING [pt_PT.po] >> msgstr: largura positiva esperada com o átomo %%(algn)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: update_ref
+ WARNING [pt_PT.po] >> msgid: update_ref failed for ref '%s': %s
+ WARNING [pt_PT.po] >> msgstr: falha ao abrir '%s': %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --diff-merges
+ WARNING [pt_PT.po] >> msgid: unknown value for --diff-merges: %s
+ WARNING [pt_PT.po] >> msgstr: valor desconhecido '%s' da chave '%s'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: %%(body)
+ WARNING [pt_PT.po] >> msgid: %s does not accept arguments: '%s'
+ WARNING [pt_PT.po] >> msgstr: %%(body) não leva argumentos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --abort, git cherry-pick, s--abort
+ WARNING [pt_PT.po] >> msgid: try "git revert (--continue | %s--abort | --quit)"
+ WARNING [pt_PT.po] >> msgstr: tente "git cherry-pick (--continue | --quit |--abort)"
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --abort, s--abort
+ WARNING [pt_PT.po] >> msgid: try "git cherry-pick (--continue | %s--abort | --quit)"
+ WARNING [pt_PT.po] >> msgstr: tente "git cherry-pick (--continue | --quit |--abort)"
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --hard
+ WARNING [pt_PT.po] >> msgid: could not reset --hard
+ WARNING [pt_PT.po] >> msgstr: não foi possível ler orig-head
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: submodule.fetchJobs, submodule.fetchjobs
+ WARNING [pt_PT.po] >> msgid: negative values not allowed for submodule.fetchjobs
+ WARNING [pt_PT.po] >> msgstr: não é permitido valores negativos em submodule.fetchJobs
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --ignore-submodules, --submodule
+ WARNING [pt_PT.po] >> msgid: bad --ignore-submodules argument: %s
+ WARNING [pt_PT.po] >> msgstr: Falha ao analisar parâmetro da opção --submodule: '%s'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --not, --remotes, git rev-list
+ WARNING [pt_PT.po] >> msgid: Could not run 'git rev-list <commits> --not --remotes -n 1' command in submodule %s
+ WARNING [pt_PT.po] >> msgstr: não foi possível executar 'git status' no submódulo '%s'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --porcelain=2
+ WARNING [pt_PT.po] >> msgid: Could not run 'git status --porcelain=2' in submodule %s
+ WARNING [pt_PT.po] >> msgstr: não foi possível executar 'git status' no submódulo '%s'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --porcelain=2
+ WARNING [pt_PT.po] >> msgid: 'git status --porcelain=2' failed in submodule %s
+ WARNING [pt_PT.po] >> msgstr: não foi possível executar 'git status' no submódulo '%s'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --recurse-submodules
+ WARNING [pt_PT.po] >> msgid: operation not supported by protocol
+ WARNING [pt_PT.po] >> msgstr: opção não suportada com --recurse-submodules.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --deepen
+ WARNING [pt_PT.po] >> msgid: helper %s does not support dry-run
+ WARNING [pt_PT.po] >> msgstr: O servidor não suporta --deepen
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --shallow-since, --signed
+ WARNING [pt_PT.po] >> msgid: helper %s does not support --signed
+ WARNING [pt_PT.po] >> msgstr: O servidor não suporta --shallow-since
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --signed, --signed=if
+ WARNING [pt_PT.po] >> msgid: helper %s does not support --signed=if-asked
+ WARNING [pt_PT.po] >> msgstr: o recetor não suporta publicação com --signed
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --atomic, --shallow-since
+ WARNING [pt_PT.po] >> msgid: helper %s does not support --atomic
+ WARNING [pt_PT.po] >> msgstr: O servidor não suporta --shallow-since
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --shallow-since
+ WARNING [pt_PT.po] >> msgid: helper %s does not support --%s
+ WARNING [pt_PT.po] >> msgstr: O servidor não suporta --shallow-since
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --deepen
+ WARNING [pt_PT.po] >> msgid: helper %s does not support 'force'
+ WARNING [pt_PT.po] >> msgstr: O servidor não suporta --deepen
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: transport.color
+ WARNING [pt_PT.po] >> msgid: could not parse transport.color.* config
+ WARNING [pt_PT.po] >> msgstr: não foi possível analisar o autor do script
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $sm_path
+ WARNING [pt_PT.po] >> msgid: failed to push all needed submodules
+ WARNING [pt_PT.po] >> msgstr: Falha ao adicionar o submódulo '$sm_path'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --staged
+ WARNING [pt_PT.po] >> msgid: (use "git restore --staged <file>..." to unstage)
+ WARNING [pt_PT.po] >> msgstr: (use "git reset %s <ficheiro>..." para despreparar)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --source, --staged
+ WARNING [pt_PT.po] >> msgid: (use "git restore --source=%s --staged <file>..." to unstage)
+ WARNING [pt_PT.po] >> msgstr: (use "git reset %s <ficheiro>..." para despreparar)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git cherry-pick
+ WARNING [pt_PT.po] >> msgid: (use "git cherry-pick --skip" to skip this patch)
+ WARNING [pt_PT.po] >> msgstr: (use "git am --skip" para ignorar este patch)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --stdin
+ WARNING [pt_PT.po] >> msgid: adding embedded git repository: %s
+ WARNING [pt_PT.po] >> msgstr: --stdin requer um repositório git
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect, --first-parent, --interactive, --patch, --pathspec-from-file
+ WARNING [pt_PT.po] >> msgid: --pathspec-from-file is incompatible with --interactive/--patch
+ WARNING [pt_PT.po] >> msgstr: --first-parent é incompatível com --bisect
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect, --edit, --first-parent, --pathspec-from-file
+ WARNING [pt_PT.po] >> msgid: --pathspec-from-file is incompatible with --edit
+ WARNING [pt_PT.po] >> msgstr: --first-parent é incompatível com --bisect
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --patch, --pathspec-from-file
+ WARNING [pt_PT.po] >> msgid: --pathspec-from-file is incompatible with pathspec arguments
+ WARNING [pt_PT.po] >> msgstr: --patch é incompatível com --{hard,mixed,soft}
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --patch-format, --show-current-patch
+ WARNING [pt_PT.po] >> msgid: Invalid value for --show-current-patch: %s
+ WARNING [pt_PT.po] >> msgstr: Valor inválido de --patch-format: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect, --first-parent, --show-current-patch
+ WARNING [pt_PT.po] >> msgid: --show-current-patch=%s is incompatible with --show-current-patch=%s
+ WARNING [pt_PT.po] >> msgstr: --first-parent é incompatível com --bisect
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git-mailsplit
+ WARNING [pt_PT.po] >> msgid: pass --keep-cr flag to git-mailsplit for mbox format
+ WARNING [pt_PT.po] >> msgstr: passar a opção --keep-cr ao gitmailsplit para formato de mbox
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect-reset, --next-all
+ WARNING [pt_PT.po] >> msgid: git bisect--helper --bisect-reset [<commit>]
+ WARNING [pt_PT.po] >> msgstr: git bisect--helper --next-all [--no-checkout]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect-next, --next-all
+ WARNING [pt_PT.po] >> msgid: git bisect--helper --bisect-next
+ WARNING [pt_PT.po] >> msgstr: git bisect--helper --next-all [--no-checkout]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect-auto-next, --next-all
+ WARNING [pt_PT.po] >> msgid: git bisect--helper --bisect-auto-next
+ WARNING [pt_PT.po] >> msgstr: git bisect--helper --next-all [--no-checkout]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect-state, --next-all
+ WARNING [pt_PT.po] >> msgid: git bisect--helper --bisect-state (bad|new) [<rev>]
+ WARNING [pt_PT.po] >> msgstr: git bisect--helper --next-all [--no-checkout]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect-state, --next-all
+ WARNING [pt_PT.po] >> msgid: git bisect--helper --bisect-state (good|old) [<rev>...]
+ WARNING [pt_PT.po] >> msgstr: git bisect--helper --next-all [--no-checkout]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $term
+ WARNING [pt_PT.po] >> msgid: can't use the builtin command '%s' as a term
+ WARNING [pt_PT.po] >> msgstr: não é possível usar o comando '$term' como um termo
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $term
+ WARNING [pt_PT.po] >> msgid: can't change the meaning of the term '%s'
+ WARNING [pt_PT.po] >> msgstr: não é possível alterar o significado do termo '$term'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $state
+ WARNING [pt_PT.po] >> msgid: Bad bisect_write argument: %s
+ WARNING [pt_PT.po] >> msgstr: Argumento de bisect_write incorreto: $state
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $TERM_BAD, $TERM_GOOD
+ WARNING [pt_PT.po] >> msgid: Invalid command: you're currently in a %s/%s bisect
+ WARNING [pt_PT.po] >> msgstr: Comando inválido: está-se a bissetar usando os termos $TERM_BAD/$TERM_GOOD.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $bad_syn, $good_syn
+ WARNING [pt_PT.po] >> msgid: You need to give me at least one %s and %s revision.
+ WARNING [pt_PT.po] You can use "git bisect %s" and "git bisect %s" for that.
+ WARNING [pt_PT.po] >> msgstr: Deve indicar pelo menos uma revisão $bad_syn e uma revisão $good_syn.
+ WARNING [pt_PT.po] (Pode usar "git bisect $bad_syn" e "git bisect $good_syn" para esse fim.)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $bad_syn, $good_syn
+ WARNING [pt_PT.po] >> msgid: You need to start by "git bisect start".
+ WARNING [pt_PT.po] You then need to give me at least one %s and %s revision.
+ WARNING [pt_PT.po] You can use "git bisect %s" and "git bisect %s" for that.
+ WARNING [pt_PT.po] >> msgstr: Deve começar por executar "git bisect start".
+ WARNING [pt_PT.po] Indique pelo menos uma revisão $good_syn e uma revisão $bad_syn.
+ WARNING [pt_PT.po] (Pode usar "git bisect $bad_syn" e "git bisect $good_syn" para esse fim.)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $TERM_BAD
+ WARNING [pt_PT.po] >> msgid: bisecting only with a %s commit
+ WARNING [pt_PT.po] >> msgstr: Aviso: a bissetar só com um commit $TERM_BAD.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $term
+ WARNING [pt_PT.po] >> msgid: '' is not a valid term
+ WARNING [pt_PT.po] >> msgstr: '$term' não é um termo válido
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $arg
+ WARNING [pt_PT.po] >> msgid: '%s' does not appear to be a valid revision
+ WARNING [pt_PT.po] >> msgstr: '$arg' não parecer ser uma revisão válida
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $start_head
+ WARNING [pt_PT.po] >> msgid: checking out '%s' failed. Try 'git bisect start <valid-branch>'.
+ WARNING [pt_PT.po] >> msgstr: Falha ao extrair '$start_head'. Tente 'git bisect reset <ramo-válido>'.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect-state, bisect_state
+ WARNING [pt_PT.po] >> msgid: Please call `--bisect-state` with at least one argument
+ WARNING [pt_PT.po] >> msgstr: Invoque 'bisect_state' com pelo menos um argumento.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $TERM_BAD
+ WARNING [pt_PT.po] >> msgid: 'git bisect %s' can take only one argument.
+ WARNING [pt_PT.po] >> msgstr: 'git bisect $TERM_BAD' só leva um argumento.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $arg
+ WARNING [pt_PT.po] >> msgid: Bad rev input: %s
+ WARNING [pt_PT.po] >> msgstr: Revisão incorreta na entrada: $arg
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect-write
+ WARNING [pt_PT.po] >> msgid: --bisect-write requires either 4 or 5 arguments
+ WARNING [pt_PT.po] >> msgstr: :strip= requer um inteiro positivo como argumento
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect-terms
+ WARNING [pt_PT.po] >> msgid: --bisect-terms requires 0 or 1 argument
+ WARNING [pt_PT.po] >> msgstr: :strip= requer um inteiro positivo como argumento
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect-next, --continue
+ WARNING [pt_PT.po] >> msgid: --bisect-next requires 0 arguments
+ WARNING [pt_PT.po] >> msgstr: --continue não leva argumentos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect-auto-next, --continue
+ WARNING [pt_PT.po] >> msgid: --bisect-auto-next requires 0 arguments
+ WARNING [pt_PT.po] >> msgstr: --continue não leva argumentos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: color.blame.repeatedLines, log.graphColors
+ WARNING [pt_PT.po] >> msgid: invalid color '%s' in color.blame.repeatedLines
+ WARNING [pt_PT.po] >> msgstr: ignorar cor inválida '%.*s' em log.graphColors
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: blame.coloring
+ WARNING [pt_PT.po] >> msgid: invalid value for blame.coloring
+ WARNING [pt_PT.po] >> msgstr: valor inválido de %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: refs/heads, refs/heads/
+ WARNING [pt_PT.po] >> msgid: HEAD (%s) points outside of refs/heads/
+ WARNING [pt_PT.po] >> msgstr: HEAD não encontrada em refs/heads!
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --orphan, --overlay
+ WARNING [pt_PT.po] >> msgid: -p and --overlay are mutually exclusive
+ WARNING [pt_PT.po] >> msgstr: -b, -B e --orphan são mutuamente exclusivos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect, --detach, --first-parent, --pathspec-from-file
+ WARNING [pt_PT.po] >> msgid: --pathspec-from-file is incompatible with --detach
+ WARNING [pt_PT.po] >> msgstr: --first-parent é incompatível com --bisect
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect, --first-parent, --patch, --pathspec-from-file
+ WARNING [pt_PT.po] >> msgid: --pathspec-from-file is incompatible with --patch
+ WARNING [pt_PT.po] >> msgstr: --first-parent é incompatível com --bisect
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --source=HEAD
+ WARNING [pt_PT.po] >> msgid: Clone succeeded, but checkout failed.
+ WARNING [pt_PT.po] You can inspect what was checked out with 'git status'
+ WARNING [pt_PT.po] and retry with 'git restore --source=HEAD :/'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] >> msgstr: Clonado com sucesso, mas a extração falhou.
+ WARNING [pt_PT.po] Pode inspecionar o que foi extraído com 'git status'
+ WARNING [pt_PT.po] e repetir a extração com 'git checkout -f HEAD'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --depth, --filter
+ WARNING [pt_PT.po] >> msgid: --filter is ignored in local clones; use file:// instead.
+ WARNING [pt_PT.po] >> msgstr: --depth é ignorado em clones locais; use file:// .
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --split
+ WARNING [pt_PT.po] >> msgid: unrecognized --split argument, %s
+ WARNING [pt_PT.po] >> msgstr: argumento não reconhecido: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git commit-tree
+ WARNING [pt_PT.po] >> msgid: git commit-tree: failed to open '%s'
+ WARNING [pt_PT.po] >> msgstr: falha ao abrir '%s'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git commit-tree, git write-tree
+ WARNING [pt_PT.po] >> msgid: git commit-tree: failed to read '%s'
+ WARNING [pt_PT.po] >> msgstr: git write-tree falhou ao escrever uma árvore
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git commit-tree, git write-tree
+ WARNING [pt_PT.po] >> msgid: git commit-tree: failed to close '%s'
+ WARNING [pt_PT.po] >> msgstr: git write-tree falhou ao escrever uma árvore
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git commit-tree, git write-tree
+ WARNING [pt_PT.po] >> msgid: git commit-tree: failed to read
+ WARNING [pt_PT.po] >> msgstr: git write-tree falhou ao escrever uma árvore
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --skip
+ WARNING [pt_PT.po] >> msgid: Otherwise, please use 'git rebase --skip'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] >> msgstr: Caso contrário, use 'git reset'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --skip, git cherry-pick
+ WARNING [pt_PT.po] >> msgid: Otherwise, please use 'git cherry-pick --skip'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] >> msgstr: Caso contrário, use 'git reset'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --pathspec-from-file
+ WARNING [pt_PT.po] >> msgid: --pathspec-from-file with -a does not make sense
+ WARNING [pt_PT.po] >> msgstr: Indicar caminhos com -a não faz sentido.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --fixup
+ WARNING [pt_PT.po] >> msgid: Option -m cannot be combined with -c/-C/-F.
+ WARNING [pt_PT.po] >> msgstr: A opção -m não pode ser combinada com -c/C/-F/--fixup.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --staged
+ WARNING [pt_PT.po] >> msgid: repository has been updated, but unable to write
+ WARNING [pt_PT.po] new_index file. Check that disk is not full and quota is
+ WARNING [pt_PT.po] not exceeded, and then "git restore --staged :/" to recover.
+ WARNING [pt_PT.po] >> msgstr: O repositório foi atualizado, mas não foi possível escrever
+ WARNING [pt_PT.po] o ficheiro new_index. Verifique se o disco não está cheio
+ WARNING [pt_PT.po] e que a quota não foi excedida e execute "git reset HEAD" para recuperar.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --type
+ WARNING [pt_PT.po] >> msgid: unrecognized --type argument, %s
+ WARNING [pt_PT.po] >> msgstr: argumento não reconhecido: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --int
+ WARNING [pt_PT.po] >> msgid: value is --bool or string
+ WARNING [pt_PT.po] >> msgstr: o valor é --bool ou --int
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --deepen
+ WARNING [pt_PT.po] >> msgid: writing to stdin is not supported
+ WARNING [pt_PT.po] >> msgstr: Não é suportada profundidade negativa em --deepen
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --cached, --local
+ WARNING [pt_PT.po] >> msgid: --local can only be used inside a git repository
+ WARNING [pt_PT.po] >> msgstr: --cached fora de um repositório
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --blob, --cached
+ WARNING [pt_PT.po] >> msgid: --blob can only be used inside a git repository
+ WARNING [pt_PT.po] >> msgstr: --cached fora de um repositório
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --worktree
+ WARNING [pt_PT.po] >> msgid: --worktree can only be used inside a git repository
+ WARNING [pt_PT.po] >> msgstr: '%s' não é reconhecido como um repositório git
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --deepen
+ WARNING [pt_PT.po] >> msgid: editing stdin is not supported
+ WARNING [pt_PT.po] >> msgstr: Não é suportada profundidade negativa em --deepen
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --deepen
+ WARNING [pt_PT.po] >> msgid: editing blobs is not supported
+ WARNING [pt_PT.po] >> msgstr: Não é suportada profundidade negativa em --deepen
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --merge-base, --orphan, --stdin
+ WARNING [pt_PT.po] >> msgid: --stdin and --merge-base are mutually exclusive
+ WARNING [pt_PT.po] >> msgstr: -b, -B e --orphan são mutuamente exclusivos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --dir-diff, --dirty, --no-index
+ WARNING [pt_PT.po] >> msgid: --dir-diff is incompatible with --no-index
+ WARNING [pt_PT.po] >> msgstr: --dirty é incompatível com commits ou semelhantes
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --detach, --extcmd, --gui, --tool
+ WARNING [pt_PT.po] >> msgid: --gui, --tool and --extcmd are mutually exclusive
+ WARNING [pt_PT.po] >> msgstr: -b, -B e --detach são mutuamente exclusivos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --anonymize, --anonymize-map, --name-only
+ WARNING [pt_PT.po] >> msgid: --anonymize-map without --anonymize does not make sense
+ WARNING [pt_PT.po] >> msgstr: --name-only não faz sentido
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: FETCH_HEAD
+ WARNING [pt_PT.po] >> msgid: write fetched references to the FETCH_HEAD file
+ WARNING [pt_PT.po] >> msgstr: escrever o arquivo para este ficheiro
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --auto
+ WARNING [pt_PT.po] >> msgid: run 'maintenance --auto' after fetching
+ WARNING [pt_PT.po] >> msgstr: eliminar remotos depois de obter
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: fetch.ouput, fetch.output
+ WARNING [pt_PT.po] >> msgid: configuration fetch.output contains invalid value %s
+ WARNING [pt_PT.po] >> msgstr: a configuração fetch.ouput contém o valor inválido %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --exec, --remote, --stdin
+ WARNING [pt_PT.po] >> msgid: --stdin can only be used when fetching from one remote
+ WARNING [pt_PT.po] >> msgstr: A opção --exec só pode ser usada em conjunto com --remote
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: %%(color:<...>)
+ WARNING [pt_PT.po] >> msgid: respect format colors
+ WARNING [pt_PT.po] >> msgstr: formato esperado: %%(color:<cor>)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: gc.logexpiry
+ WARNING [pt_PT.po] >> msgid: failed to parse prune expiry value %s
+ WARNING [pt_PT.po] >> msgstr: falha ao analisar o valor %s de gc.logexpiry
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --schedule
+ WARNING [pt_PT.po] >> msgid: unrecognized --schedule argument '%s'
+ WARNING [pt_PT.po] >> msgstr: argumento não reconhecido: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git pack-objects
+ WARNING [pt_PT.po] >> msgid: failed to start 'git pack-objects' process
+ WARNING [pt_PT.po] >> msgstr: Não foi possível lançar pack-objects
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git pack-objects
+ WARNING [pt_PT.po] >> msgid: failed to finish 'git pack-objects' process
+ WARNING [pt_PT.po] >> msgstr: Não foi possível lançar pack-objects
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git multi-pack-index
+ WARNING [pt_PT.po] >> msgid: 'git multi-pack-index repack' failed
+ WARNING [pt_PT.po] >> msgstr: falha ao ler o ficheiro de comando '%s'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --untracked
+ WARNING [pt_PT.po] >> msgid: --untracked not supported with --recurse-submodules
+ WARNING [pt_PT.po] >> msgstr: opção não suportada com --recurse-submodules.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --threads
+ WARNING [pt_PT.po] >> msgid: no threads support, ignoring --threads
+ WARNING [pt_PT.po] >> msgstr: sem suporte de threads, %s ignorado
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: s.mergeoptions
+ WARNING [pt_PT.po] >> msgid: bad alias.%s string: %s
+ WARNING [pt_PT.po] >> msgstr: Valor de branch.%s.mergeoptions incorreto: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --fix-thin, --object-format
+ WARNING [pt_PT.po] >> msgid: --object-format cannot be used with --stdin
+ WARNING [pt_PT.po] >> msgstr: --fix-thin não pode ser usado sem --stdin
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bare, --deepen, --depth, --separate-git-dir
+ WARNING [pt_PT.po] >> msgid: --separate-git-dir and --bare are mutually exclusive
+ WARNING [pt_PT.po] >> msgstr: --deepen e --depth são mutuamente exclusivos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect, --first-parent, --separate-git-dir
+ WARNING [pt_PT.po] >> msgid: --separate-git-dir incompatible with bare repository
+ WARNING [pt_PT.po] >> msgstr: --first-parent é incompatível com --bisect
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --name-only, --only-input, --trailer
+ WARNING [pt_PT.po] >> msgid: --trailer with --only-input does not make sense
+ WARNING [pt_PT.po] >> msgstr: --name-only não faz sentido
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --detach, --output, --output-directory, --stdout
+ WARNING [pt_PT.po] >> msgid: --stdout, --output, and --output-directory are mutually exclusive
+ WARNING [pt_PT.po] >> msgstr: -b, -B e --detach são mutuamente exclusivos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --abort
+ WARNING [pt_PT.po] >> msgid: --abort but leave index and working tree alone
+ WARNING [pt_PT.po] >> msgstr: repor HEAD, índice e árvore de trabalho
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --abort, --quit
+ WARNING [pt_PT.po] >> msgid: --quit expects no arguments
+ WARNING [pt_PT.po] >> msgstr: --abort não leva argumentos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --commit, --no-ff
+ WARNING [pt_PT.po] >> msgid: You cannot combine --squash with --commit.
+ WARNING [pt_PT.po] >> msgstr: Não é possível combinar --squash e --no-ff.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --missing
+ WARNING [pt_PT.po] >> msgid: invalid value for --missing
+ WARNING [pt_PT.po] >> msgstr: valor inválido de %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --fix-thin, --stdin, --thin
+ WARNING [pt_PT.po] >> msgid: --thin cannot be used to build an indexable pack
+ WARNING [pt_PT.po] >> msgstr: --fix-thin não pode ser usado sem --stdin
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --unpack-unreachable
+ WARNING [pt_PT.po] >> msgid: --keep-unreachable and --unpack-unreachable are incompatible
+ WARNING [pt_PT.po] >> msgstr: --keep-unreachable e -A são incompatíveis
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --filter, --stdout
+ WARNING [pt_PT.po] >> msgid: cannot use --filter without --stdout
+ WARNING [pt_PT.po] >> msgstr: não é possível usar -a com -d
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --help
+ WARNING [pt_PT.po] >> msgid: Updates were rejected because the tip of the remote-tracking
+ WARNING [pt_PT.po] branch has been updated since the last checkout. You may want
+ WARNING [pt_PT.po] to integrate those changes locally (e.g., 'git pull ...')
+ WARNING [pt_PT.po] before forcing an update.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] >> msgstr: As atualizações foram rejeitadas porque a ponta do ramo atual está atrasada
+ WARNING [pt_PT.po] em relação ao homólogo remoto. Integre as alterações remotas (e.g.
+ WARNING [pt_PT.po] 'git pull ...') antes de publicar de novo.
+ WARNING [pt_PT.po] Consulte 'Note about fast-forwards' em 'git push --help' para obter detalhes.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git range-diff
+ WARNING [pt_PT.po] >> msgid: git range-diff [<options>] <old-tip>...<new-tip>
+ WARNING [pt_PT.po] >> msgstr: git merge [<opções>] [<commit>...]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git range-diff
+ WARNING [pt_PT.po] >> msgid: git range-diff [<options>] <base> <old-tip> <new-tip>
+ WARNING [pt_PT.po] >> msgstr: git mv [<opções>] <origem>... <destino>
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --edit-todo
+ WARNING [pt_PT.po] >> msgid: git rebase --continue | --abort | --skip | --edit-todo
+ WARNING [pt_PT.po] >> msgstr: git am [<opções>] (--continue | --skip | --abort)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git rebase--helper, git rebase--interactive
+ WARNING [pt_PT.po] >> msgid: git rebase--interactive [<options>]
+ WARNING [pt_PT.po] >> msgstr: git rebase--helper [<opções>]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --files-with-matches, --reset-author-date
+ WARNING [pt_PT.po] >> msgid: synonym of --reset-author-date
+ WARNING [pt_PT.po] >> msgstr: sinónimo de --files-with-matches
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git-apply
+ WARNING [pt_PT.po] >> msgid: passed to 'git apply'
+ WARNING [pt_PT.po] >> msgstr: transmitir ao git-apply
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --abort
+ WARNING [pt_PT.po] >> msgid: abort and check out the original branch
+ WARNING [pt_PT.po] >> msgstr: (use "git rebase --abort" para restaurar o ramo original)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --edit-todo
+ WARNING [pt_PT.po] >> msgid: edit the todo list during an interactive rebase
+ WARNING [pt_PT.po] >> msgstr: A ação --edit-todo só pode ser usada durante um rebase interativo.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git merge-base
+ WARNING [pt_PT.po] >> msgid: use 'merge-base --fork-point' to refine upstream
+ WARNING [pt_PT.po] >> msgstr: git merge-base --fork-point <referência> [<commit>]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git-am
+ WARNING [pt_PT.po] >> msgid: It looks like 'git am' is in progress. Cannot rebase.
+ WARNING [pt_PT.po] >> msgstr: Parece que o git-am está em curso. Não é possível efetuar rebase.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --keep-base, --no-ff, --onto, --squash
+ WARNING [pt_PT.po] >> msgid: cannot combine '--keep-base' with '--onto'
+ WARNING [pt_PT.po] >> msgstr: Não é possível combinar --squash e --no-ff.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --keep-base, --no-ff, --root, --squash
+ WARNING [pt_PT.po] >> msgid: cannot combine '--keep-base' with '--root'
+ WARNING [pt_PT.po] >> msgstr: Não é possível combinar --squash e --no-ff.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --fork-point, --no-ff, --root, --squash
+ WARNING [pt_PT.po] >> msgid: cannot combine '--root' with '--fork-point'
+ WARNING [pt_PT.po] >> msgstr: Não é possível combinar --squash e --no-ff.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $head_name
+ WARNING [pt_PT.po] >> msgid: could not move back to %s
+ WARNING [pt_PT.po] >> msgstr: Não foi possível voltar para $head_name
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --patch
+ WARNING [pt_PT.po] >> msgid: Unknown mode: %s
+ WARNING [pt_PT.po] >> msgstr: Mode de --patch desconhecido: %s
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $onto_name
+ WARNING [pt_PT.po] >> msgid: Does not point to a valid commit '%s'
+ WARNING [pt_PT.po] >> msgstr: Não aponta para um commit válido: $onto_name
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $branch_name
+ WARNING [pt_PT.po] >> msgid: HEAD is up to date, rebase forced.
+ WARNING [pt_PT.po] >> msgstr: O ramo atual $branch_name está atualizado, rebase forçado.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --no-write-bitmap-index
+ WARNING [pt_PT.po] >> msgid: Incremental repacks are incompatible with bitmap indexes. Use
+ WARNING [pt_PT.po] --no-write-bitmap-index or disable the pack.writebitmaps configuration.
+ WARNING [pt_PT.po] >> msgstr: Repacks incrementais são incompatíveis com bitmap indexes. Usa
+ WARNING [pt_PT.po] --no-write-bitmap-índex ou desative a configuração pack.writebitmaps.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --delta-islands, --local
+ WARNING [pt_PT.po] >> msgid: pass --delta-islands to git-pack-objects
+ WARNING [pt_PT.po] >> msgstr: passar --local ao git-pack-objects
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --convert-graft-file, --edit
+ WARNING [pt_PT.po] >> msgid: git replace [-f] --convert-graft-file
+ WARNING [pt_PT.po] >> msgstr: git replace [-f] --edit <objeto>
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --fix-thin, --format, --stdin
+ WARNING [pt_PT.po] >> msgid: --format cannot be used when not listing
+ WARNING [pt_PT.po] >> msgstr: --fix-thin não pode ser usado sem --stdin
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --stdin
+ WARNING [pt_PT.po] >> msgid: -f only makes sense when writing a replacement
+ WARNING [pt_PT.po] >> msgstr: -z só faz sentido com --stdin
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --edit, --raw, --stdin
+ WARNING [pt_PT.po] >> msgid: --raw only makes sense with --edit
+ WARNING [pt_PT.po] >> msgstr: -z só faz sentido com --stdin
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --continue, --convert-graft-file
+ WARNING [pt_PT.po] >> msgid: --convert-graft-file takes no argument
+ WARNING [pt_PT.po] >> msgstr: --continue não leva argumentos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --bisect, --first-parent, --objects
+ WARNING [pt_PT.po] >> msgid: marked counting is incompatible with --objects
+ WARNING [pt_PT.po] >> msgstr: --first-parent é incompatível com --bisect
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --pretty=short
+ WARNING [pt_PT.po] >> msgid: git log --pretty=short | git shortlog [<options>]
+ WARNING [pt_PT.po] >> msgstr: git worktree list [<opções>]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --list, git sparse-checkout
+ WARNING [pt_PT.po] >> msgid: git sparse-checkout list
+ WARNING [pt_PT.po] >> msgstr: git archive --list
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git sparse-checkout
+ WARNING [pt_PT.po] >> msgid: git sparse-checkout disable
+ WARNING [pt_PT.po] >> msgstr: ignorar a aplicação do filtro de extração esparsa
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $args
+ WARNING [pt_PT.po] >> msgid: '%s' is not a stash-like commit
+ WARNING [pt_PT.po] >> msgstr: '$args' não é um commit semelhante a pilha
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $REV
+ WARNING [pt_PT.po] >> msgid: Too many revisions specified:%s
+ WARNING [pt_PT.po] >> msgstr: Demasiadas revisões especificadas: $REV
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $REV, $s
+ WARNING [pt_PT.po] >> msgid: Dropped %s (%s)
+ WARNING [pt_PT.po] >> msgstr: A descartar ${REV} ($s)
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $REV
+ WARNING [pt_PT.po] >> msgid: %s: Could not drop stash entry
+ WARNING [pt_PT.po] >> msgstr: ${REV}: Não foi possível descartar elemento da pilha
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $args
+ WARNING [pt_PT.po] >> msgid: '%s' is not a stash reference
+ WARNING [pt_PT.po] >> msgstr: '$args' não é uma referência de pilha
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $ref_stash, $w_commit
+ WARNING [pt_PT.po] >> msgid: Cannot update %s with %s
+ WARNING [pt_PT.po] >> msgstr: Não é possível atualizar $ref_stash com $w_commit
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $stash_msg
+ WARNING [pt_PT.po] >> msgid: Saved working directory and index state %s
+ WARNING [pt_PT.po] >> msgstr: Diretório de trabalho e estado do índice $stash_msg guardados
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git submodule--helper, update_clone
+ WARNING [pt_PT.po] >> msgid: git submodule status [--quiet] [--cached] [--recursive] [<path>...]
+ WARNING [pt_PT.po] >> msgstr: git submodule--helper update_clone [--prefix=<caminho>] [<caminho>...]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --cached, --deepen, --depth, --files
+ WARNING [pt_PT.po] >> msgid: --cached and --files are mutually exclusive
+ WARNING [pt_PT.po] >> msgstr: --deepen e --depth são mutuamente exclusivos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $displaypath
+ WARNING [pt_PT.po] >> msgid: Submodule work tree '%s' contains local modifications; use '-f' to discard them
+ WARNING [pt_PT.po] >> msgstr: A árvore de trabalho do submódulo '$displaypath' contém alterações locais; use '-f' para as descartar
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $displaypath
+ WARNING [pt_PT.po] >> msgid: could not create empty submodule directory %s
+ WARNING [pt_PT.po] >> msgstr: Não foi possível criar o diretório vazio do submódulo '$displaypath'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: update_clone
+ WARNING [pt_PT.po] >> msgid: git submodule--helper update-clone [--prefix=<path>] [<path>...]
+ WARNING [pt_PT.po] >> msgstr: git submodule--helper update_clone [--prefix=<caminho>] [<caminho>...]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git-dir, git-dirs
+ WARNING [pt_PT.po] >> msgid: git submodule--helper absorb-git-dirs [<options>] [<path>...]
+ WARNING [pt_PT.po] >> msgstr: git submodule--helper embed-git-dir [<caminho>...]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --unset
+ WARNING [pt_PT.po] >> msgid: git submodule--helper config --unset <name>
+ WARNING [pt_PT.po] >> msgstr: git submodule--helper init [<caminho>]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --check-writeable
+ WARNING [pt_PT.po] >> msgid: git submodule--helper config --check-writeable
+ WARNING [pt_PT.po] >> msgstr: git submodule--helper init [<caminho>]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --default
+ WARNING [pt_PT.po] >> msgid: git submodule--helper set-branch [-q|--quiet] (-d|--default) <path>
+ WARNING [pt_PT.po] >> msgstr: git submodule--helper list [--prefix=<caminho>] [<caminho>...]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --branch
+ WARNING [pt_PT.po] >> msgid: git submodule--helper set-branch [-q|--quiet] (-b|--branch) <branch> <path>
+ WARNING [pt_PT.po] >> msgstr: git submodule--helper list [--prefix=<caminho>] [<caminho>...]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --branch, --default
+ WARNING [pt_PT.po] >> msgid: --branch or --default required
+ WARNING [pt_PT.po] >> msgstr: nome do ramo é obrigatório
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --branch, --deepen, --default, --depth
+ WARNING [pt_PT.po] >> msgid: --branch and --default are mutually exclusive
+ WARNING [pt_PT.po] >> msgstr: --deepen e --depth são mutuamente exclusivos
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --contains, --no-contains
+ WARNING [pt_PT.po] >> msgid: --no-contains option is only allowed in list mode
+ WARNING [pt_PT.po] >> msgstr: a opção --contains só é permitida no modo lista
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: core.fsmonitor, core.splitIndex
+ WARNING [pt_PT.po] >> msgid: core.fsmonitor is unset; set it if you really want to enable fsmonitor
+ WARNING [pt_PT.po] >> msgstr: core.splitIndex está definida como false; remova ou altere-a se pretende mesmo ativar índice separado
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: core.fsmonitor, core.splitIndex
+ WARNING [pt_PT.po] >> msgid: core.fsmonitor is set; remove it if you really want to disable fsmonitor
+ WARNING [pt_PT.po] >> msgstr: core.splitIndex está definida como true; remova ou altere-a se pretende mesmo desativar índice separado
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git-branch, git-pull
+ WARNING [pt_PT.po] >> msgid: set up tracking mode (see git-branch(1))
+ WARNING [pt_PT.po] >> msgstr: configurar modo de seguimento (consulte git-pull(1))
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --edit-todo
+ WARNING [pt_PT.po] >> msgid: --[no-]track can only be used if a new branch is created
+ WARNING [pt_PT.po] >> msgstr: A ação --edit-todo só pode ser usada durante um rebase interativo.
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git rebase--helper
+ WARNING [pt_PT.po] >> msgid: test-tool serve-v2 [<options>]
+ WARNING [pt_PT.po] >> msgstr: git rebase--helper [<opções>]
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: CURLSSLOPT_NO_REVOKE
+ WARNING [pt_PT.po] >> msgid: CURLSSLOPT_NO_REVOKE not supported with cURL < 7.44.0
+ WARNING [pt_PT.po] >> msgstr: Não é suportado afixar chaves públicas com cURL < 7.44.0
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $head_name
+ WARNING [pt_PT.po] >> msgid: Could not set SSL backend to '%s': already set
+ WARNING [pt_PT.po] >> msgstr: Não foi possível voltar para $head_name
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $rest
+ WARNING [pt_PT.po] >> msgid: Authentication failed for '%s'
+ WARNING [pt_PT.po] >> msgstr: Falha ao executar: $rest
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: git-http-push
+ WARNING [pt_PT.po] >> msgid: git-http-push failed
+ WARNING [pt_PT.po] >> msgstr: falha ao executar o comando stash
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --pathspec-from-file
+ WARNING [pt_PT.po] >> msgid: with --pathspec-from-file, pathspec elements are separated with NUL character
+ WARNING [pt_PT.po] >> msgstr: os caminhos estão separados por caracteres NUL
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: --cached
+ WARNING [pt_PT.po] >> msgid: Pack unpacked objects in a repository
+ WARNING [pt_PT.po] >> msgstr: --cached fora de um repositório
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: bisect_state
+ WARNING [pt_PT.po] >> msgid: bisect run failed:
+ WARNING [pt_PT.po] 'bisect-state $state' exited with error code $res
+ WARNING [pt_PT.po] >> msgstr: bisseção impossível:
+ WARNING [pt_PT.po] 'bisect_state $state' retornou código $res de erro
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $sm_path
+ WARNING [pt_PT.po] >> msgid: '$sm_path' does not have a commit checked out
+ WARNING [pt_PT.po] >> msgstr: o caminho '%s' não tem a versão deles
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $sha1
+ WARNING [pt_PT.po] >> msgid: Unable to fetch in submodule path '$displaypath'; trying to directly fetch $sha1:
+ WARNING [pt_PT.po] >> msgstr: Não é possível obter no caminho de submódulo '$displaypath'
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $n
+ WARNING [pt_PT.po] >> msgid: This is the commit message #${n}:
+ WARNING [pt_PT.po] >> msgstr: Esta é a mensagem de commit nº${n}:
+ WARNING [pt_PT.po]
+ WARNING [pt_PT.po] mismatched patterns: $n
+ WARNING [pt_PT.po] >> msgid: The commit message #${n} will be skipped:
+ WARNING [pt_PT.po] >> msgstr: A mensagem de commit nº${n} será ignorada:
+ WARNING [pt_PT.po]
+ERROR: check-po command failed
