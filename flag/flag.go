@@ -2,9 +2,6 @@
 package flag
 
 import (
-	"strings"
-
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -30,8 +27,13 @@ func Force() bool {
 }
 
 // GitHubActionEvent returns option "--github-action-event".
+// When not set, also checks GITHUB_ACTIONS env (set by GitHub Actions to "true"),
+// so --pot-file defaults to "download" when running in CI without explicit flag.
 func GitHubActionEvent() string {
-	return viper.GetString("github-action-event")
+	if v := viper.GetString("github-action-event"); v != "" {
+		return v
+	}
+	return ""
 }
 
 // NoGPG returns option "--no-gpg".
@@ -97,72 +99,14 @@ func ReportFileLocations() int {
 	}
 }
 
-const (
-	PotFileFlagNone = iota
-	PotFileFlagLocation
-	PotFileFlagUpdate
-	PotFileFlagDownload
-)
-
-// getPotFileOpt returns the --pot-file value (defined on root command).
-func getPotFileOpt() string {
-	if viper.IsSet("pot-file") {
-		return viper.GetString("pot-file")
-	}
-	return "auto"
+// IsPotFileSet returns true when --pot-file was explicitly set by user.
+func IsPotFileSet() bool {
+	return viper.IsSet("pot-file")
 }
 
-// GetPotFileLocation returns option "--pot-file".
-func GetPotFileLocation() string {
-	value := getPotFileOpt()
-
-	switch GetPotFileFlag() {
-	case PotFileFlagNone:
-		log.Fatalf("unknown location for opt: %s", value)
-	case PotFileFlagUpdate:
-		value = "po/git.pot"
-	case PotFileFlagLocation:
-		fallthrough
-	default:
-	}
-	return value
-}
-
-// GetPotFileFlag returns option "--pot-file".
-func GetPotFileFlag() int {
-	var (
-		ret int
-		opt = strings.ToLower(getPotFileOpt())
-	)
-
-	if opt == "" {
-		opt = "auto"
-	}
-
-	// Handle "auto" value
-	if opt == "auto" {
-		if GitHubActionEvent() != "" {
-			opt = "download"
-		} else {
-			opt = "build"
-		}
-	}
-
-	switch opt {
-	case "no", "false":
-		ret = PotFileFlagNone
-	case "build", "make", "update":
-		ret = PotFileFlagUpdate
-	case "download":
-		ret = PotFileFlagDownload
-	default:
-		if strings.Contains(opt, "/") {
-			ret = PotFileFlagLocation
-		} else {
-			log.Fatalf("unknown value for --pot-file: %s", opt)
-		}
-	}
-	return ret
+// GetPotFileRaw returns the raw --pot-file value.
+func GetPotFileRaw() string {
+	return viper.GetString("pot-file")
 }
 
 // Core returns option "--core".

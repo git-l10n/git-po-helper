@@ -407,11 +407,20 @@ func checkCommits(commits ...string) bool {
 	}
 
 	// We can disable this check using "--pot-file=no".
-	if flag.GetPotFileFlag() != flag.PotFileFlagNone {
-		poFiles := []string{}
-		for file := range poMaps {
-			poFiles = append(poFiles, file)
+	poFiles := []string{}
+	potAction := DefaultPotActionUndefined
+	for file := range poMaps {
+		poFiles = append(poFiles, file)
+		if potAction == DefaultPotActionUndefined {
+			projectName := getProjectNameFromPoFile(file, tipCommit)
+			if projectName == "" {
+				continue
+			}
+			cfg := GetProjectPotConfig(projectName, file)
+			potAction = cfg.GetEffectiveAction()
 		}
+	}
+	if len(poFiles) > 0 && potAction != DefaultPotActionNo {
 		if ok := CheckUnfinishedPoFiles(tipCommit, poFiles); !ok {
 			return false
 		}

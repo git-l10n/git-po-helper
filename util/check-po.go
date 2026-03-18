@@ -177,8 +177,16 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	ReportSection("msgid/msgstr pattern check", ok, log.WarnLevel, prompt, errs...)
 	ret = ret && ok
 
+	// Check that Project-Id-Version defines a project name.
+	projectName := po.GetProject()
+	if projectName == "" {
+		ReportSection("Project name", false, log.InfoLevel, prompt,
+			"project name is not defined in PO file")
+		ret = false
+	}
+
 	// Check incomplete translations (can be disabled with "--pot-file=no").
-	if !CheckUnfinishedPoFile("HEAD", poFile) {
+	if !CheckUnfinishedPoFile("HEAD", projectName, poFile) {
 		ret = false
 	}
 

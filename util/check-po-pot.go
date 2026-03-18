@@ -5,9 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
-	"github.com/git-l10n/git-po-helper/flag"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -15,48 +13,23 @@ var (
 	PotFileURL = "https://github.com/git-l10n/pot-changes/raw/pot/master/po/git.pot"
 )
 
-var potTemplateCache struct {
-	once sync.Once
-	path string
-	ok   bool
-}
-
-func getPotTemplateForCheck() (string, bool) {
-	potTemplateCache.once.Do(func() {
-		if flag.GetPotFileFlag() == flag.PotFileFlagNone {
-			potTemplateCache.ok = true
-			return
-		}
-		path, ok := UpdatePotFile()
-		if !ok {
-			potTemplateCache.ok = false
-			return
-		}
-		potTemplateCache.path = path
-		potTemplateCache.ok = true
-	})
-	if !potTemplateCache.ok {
-		return "", false
-	}
-	if potTemplateCache.path != "" {
-		return potTemplateCache.path, true
-	}
-	return flag.GetPotFileLocation(), true
-}
-
 // CheckUnfinishedPoFile checks a single po file for incomplete translations.
 // When commit is "HEAD" or empty, uses the file from disk; otherwise checkouts
-// the file from the given commit.
-func CheckUnfinishedPoFile(commit, poFile string) bool {
-	if flag.GetPotFileFlag() == flag.PotFileFlagNone {
+// the file from the given commit. projectName is from Project-Id-Version meta.
+func CheckUnfinishedPoFile(commit, projectName, poFile string) bool {
+	cfg := GetProjectPotConfig(projectName, poFile)
+	action := cfg.GetEffectiveAction()
+	if action == DefaultPotActionNo {
 		return true
 	}
-	poTemplate, ok := getPotTemplateForCheck()
-	if !ok {
+	poTemplate, err := cfg.AcquirePotFile(projectName, poFile)
+	if err != nil {
+		log.Error(err)
 		return false
 	}
 	if poTemplate == "" {
-		poTemplate = flag.GetPotFileLocation()
+		log.Warnf("no pot file found for project %s and po file %s", projectName, poFile)
+		return true
 	}
 
 	prompt := ""
@@ -82,7 +55,7 @@ func CheckUnfinishedPoFile(commit, poFile string) bool {
 		prompt = fmt.Sprintf("[%s]", filepath.Base(poFile))
 	}
 
-	msgs, ret := checkUnfinishedPoFile(fileToCheck, poTemplate)
+	msgs, ret := checkUnfinishedPoFile(fileToCheck, poTemplate, projectName, poFile)
 	if len(msgs) > 0 {
 		ReportSection("Incomplete translations found", ret, log.WarnLevel, prompt, msgs...)
 	}
@@ -91,12 +64,38 @@ func CheckUnfinishedPoFile(commit, poFile string) bool {
 
 func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 	ok := true
+	projectName := ""
+	if len(poFiles) > 0 {
+		projectName = getProjectNameFromPoFile(poFiles[0], commit)
+	}
 	for _, poFile := range poFiles {
-		if !CheckUnfinishedPoFile(commit, poFile) {
+		if !CheckUnfinishedPoFile(commit, projectName, poFile) {
 			ok = false
 		}
 	}
 	return ok
+}
+
+// getProjectNameFromPoFile reads Project-Id-Version from a PO file.
+func getProjectNameFromPoFile(poFile, commit string) string {
+	fileToRead := poFile
+	if commit != "" && commit != "HEAD" {
+		tmpFile := FileRevision{Revision: commit, File: poFile}
+		if err := CheckoutTmpfile(&tmpFile); err != nil || tmpFile.Tmpfile == "" {
+			return ""
+		}
+		fileToRead = tmpFile.Tmpfile
+		defer os.Remove(tmpFile.Tmpfile)
+	}
+	data, err := os.ReadFile(fileToRead)
+	if err != nil {
+		return ""
+	}
+	po, err := ParsePoEntries(data)
+	if err != nil {
+		return ""
+	}
+	return po.GetProject()
 }
 
 const maxMsgidSampleLen = 30
@@ -112,7 +111,7 @@ func truncateMsgid(msgid string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
+func checkUnfinishedPoFile(fileToCheck, poTemplate, projectName, poFilePath string) ([]string, bool) {
 	var errs []string
 	ok := true
 
@@ -121,7 +120,7 @@ func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
 		errs = append(errs, fmt.Sprintf("failed to read POT file: %v", err))
 		return errs, false
 	}
-	poData, err := os.ReadFile(poFile)
+	poData, err := os.ReadFile(fileToCheck)
 	if err != nil {
 		errs = append(errs, fmt.Sprintf("failed to read PO file: %v", err))
 		return errs, false
@@ -132,7 +131,7 @@ func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
 		errs = append(errs, fmt.Sprintf("failed to parse POT file: %v", err))
 		return errs, false
 	}
-	poJ, err := LoadFileToGettextJSON(poData, poFile)
+	poJ, err := LoadFileToGettextJSON(poData, fileToCheck)
 	if err != nil {
 		errs = append(errs, fmt.Sprintf("failed to parse PO file: %v", err))
 		return errs, false
@@ -192,22 +191,28 @@ func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
 	}
 
 	if len(missingEntries) > 0 {
-		switch flag.GetPotFileFlag() {
-		case flag.PotFileFlagLocation:
+		cfg := GetProjectPotConfig(projectName, poFilePath)
+		action := cfg.GetEffectiveAction()
+		downloadURL := PotFileURL
+		if cfg.DownloadURL != "" {
+			downloadURL = cfg.DownloadURL
+		}
+		switch action {
+		case DefaultPotActionUseIfExist:
 			fallthrough
-		case flag.PotFileFlagUpdate:
+		case DefaultPotActionBuild:
 			errs = append(errs,
 				"Please run \"git-po-helper update PO-FILE\" to update your po file,",
 				"and translate the new strings in it.",
 				"")
 
-		case flag.PotFileFlagDownload:
+		case DefaultPotActionDownload:
 			fallthrough
 		default:
 			errs = append(errs,
 				fmt.Sprintf(
 					"You can download the latest POT file from:\n\n\t%s\n",
-					PotFileURL),
+					downloadURL),
 				"Please rebase your branch to the latest upstream branch,",
 				"run \"git-po-helper update PO-FILE\" to update your po file,",
 				"and translate the new strings in it.",
