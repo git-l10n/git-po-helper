@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/git-l10n/git-po-helper/flag"
 	log "github.com/sirupsen/logrus"
@@ -14,61 +15,86 @@ var (
 	PotFileURL = "https://github.com/git-l10n/pot-changes/raw/pot/master/po/git.pot"
 )
 
-func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
-	var (
-		ok         bool
-		poTemplate string
-		errs       []string
-	)
+var potTemplateCache struct {
+	once sync.Once
+	path string
+	ok   bool
+}
 
-	// We can disable this check using "--pot-file=no".
+func getPotTemplateForCheck() (string, bool) {
+	potTemplateCache.once.Do(func() {
+		if flag.GetPotFileFlag() == flag.PotFileFlagNone {
+			potTemplateCache.ok = true
+			return
+		}
+		path, ok := UpdatePotFile()
+		if !ok {
+			potTemplateCache.ok = false
+			return
+		}
+		potTemplateCache.path = path
+		potTemplateCache.ok = true
+	})
+	if !potTemplateCache.ok {
+		return "", false
+	}
+	if potTemplateCache.path != "" {
+		return potTemplateCache.path, true
+	}
+	return flag.GetPotFileLocation(), true
+}
+
+// CheckUnfinishedPoFile checks a single po file for incomplete translations.
+// When commit is "HEAD" or empty, uses the file from disk; otherwise checkouts
+// the file from the given commit.
+func CheckUnfinishedPoFile(commit, poFile string) bool {
 	if flag.GetPotFileFlag() == flag.PotFileFlagNone {
 		return true
 	}
-
-	// Update pot file.
-	if poTemplate, ok = UpdatePotFile(); !ok {
+	poTemplate, ok := getPotTemplateForCheck()
+	if !ok {
 		return false
 	}
 	if poTemplate == "" {
 		poTemplate = flag.GetPotFileLocation()
-	} else {
-		defer os.Remove(poTemplate)
 	}
 
-	// Check po file with pot file.
-	for _, fileName := range poFiles {
-		prompt := ""
-		poFile := fileName
-		locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
+	prompt := ""
+	fileToCheck := poFile
+	locale := strings.TrimSuffix(filepath.Base(poFile), ".po")
 
-		// Checkout po files from revision <commit>.
-		if commit != "" && commit != "HEAD" {
-			tmpFile := FileRevision{
-				Revision: commit,
-				File:     fileName,
-			}
-			if err := CheckoutTmpfile(&tmpFile); err != nil || tmpFile.Tmpfile == "" {
-				errs = append(errs, fmt.Sprintf("commit %s: fail to checkout %s of revision %s: %s",
+	if commit != "" && commit != "HEAD" {
+		tmpFile := FileRevision{
+			Revision: commit,
+			File:     poFile,
+		}
+		if err := CheckoutTmpfile(&tmpFile); err != nil || tmpFile.Tmpfile == "" {
+			ReportSection("Incomplete translations found", false, log.WarnLevel,
+				fmt.Sprintf("[%s@%s]", locale+".po", AbbrevCommit(commit)),
+				fmt.Sprintf("commit %s: fail to checkout %s of revision %s: %s",
 					AbbrevCommit(commit), tmpFile.File, tmpFile.Revision, err))
-				ok = false
-				continue
-			}
-			defer os.Remove(tmpFile.Tmpfile)
-			poFile = tmpFile.Tmpfile
-			prompt = fmt.Sprintf("[%s@%s]",
-				locale+".po",
-				AbbrevCommit(commit))
-		} else {
-			prompt = fmt.Sprintf("[%s]", filepath.Base(poFile))
+			return false
 		}
-		// Check po file with pot file for missing translations.
-		msgs, ret := checkUnfinishedPoFile(poFile, poTemplate)
-		errs = append(errs, msgs...)
-		if len(errs) > 0 {
-			ReportSection("Incomplete translations found", ret, log.WarnLevel, prompt, errs...)
+		defer os.Remove(tmpFile.Tmpfile)
+		fileToCheck = tmpFile.Tmpfile
+		prompt = fmt.Sprintf("[%s@%s]", locale+".po", AbbrevCommit(commit))
+	} else {
+		prompt = fmt.Sprintf("[%s]", filepath.Base(poFile))
+	}
+
+	msgs, ret := checkUnfinishedPoFile(fileToCheck, poTemplate)
+	if len(msgs) > 0 {
+		ReportSection("Incomplete translations found", ret, log.WarnLevel, prompt, msgs...)
+	}
+	return ret
+}
+
+func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
+	ok := true
+	for _, poFile := range poFiles {
+		if !CheckUnfinishedPoFile(commit, poFile) {
+			ok = false
 		}
-		ok = ok && ret
 	}
 	return ok
 }
@@ -120,7 +146,8 @@ func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
 		potKeys[entryKey(e)] = true
 	}
 
-	fuzzyEntries, untranslatedEntries, obsoleteEntries := GetEntriesByState(poJ, potKeys)
+	fuzzyEntries, untranslatedEntries, _ := GetEntriesByState(poJ, potKeys)
+	// Obsolete (#~) entries are checked by checkPoNoObsoleteEntries in check-po.go.
 
 	appendSamples := func(entries []GettextEntry, prefix string, addErr func(string)) {
 		for i, e := range entries {
@@ -154,16 +181,13 @@ func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
 		appendSamples(untranslatedEntries, "po/XX.po:", addErr)
 		errs = append(errs, "")
 	}
-	obsoleteCount := len(unusedEntries) + len(obsoleteEntries)
-	if obsoleteCount > 0 {
+	// unusedEntries: non-obsolete entries in PO that are not in POT (custom/unused).
+	// #~ obsolete entries are checked by checkPoNoObsoleteEntries.
+	if len(unusedEntries) > 0 {
 		ok = false
-		errs = append(errs, fmt.Sprintf("%d obsolete string(s) in your 'po/XX.po', which must be removed", obsoleteCount))
+		errs = append(errs, fmt.Sprintf("%d obsolete string(s) in your 'po/XX.po', which must be removed", len(unusedEntries)))
 		errs = append(errs, "")
-		// Combine samples from unused + obsolete, max 3 total
-		allObsolete := make([]GettextEntry, 0, len(unusedEntries)+len(obsoleteEntries))
-		allObsolete = append(allObsolete, unusedEntries...)
-		allObsolete = append(allObsolete, obsoleteEntries...)
-		appendSamples(allObsolete, "po/XX.po:", addErr)
+		appendSamples(unusedEntries, "po/XX.po:", addErr)
 		errs = append(errs, "")
 	}
 

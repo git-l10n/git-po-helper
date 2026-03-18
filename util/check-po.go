@@ -177,6 +177,11 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	ReportSection("msgid/msgstr pattern check", ok, log.WarnLevel, prompt, errs...)
 	ret = ret && ok
 
+	// Check incomplete translations (can be disabled with "--pot-file=no").
+	if !CheckUnfinishedPoFile("HEAD", poFile) {
+		ret = false
+	}
+
 	return ret
 }
 
@@ -184,10 +189,7 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 // Args must be non-empty. Each arg is either a directory (scan for *.po in it, no recursion)
 // or a file (must have .po extension). All found/listed .po files are checked.
 func CmdCheckPo(args ...string) bool {
-	var (
-		ret     = true
-		poFiles []string
-	)
+	ret := true
 
 	if len(args) == 0 {
 		log.Errorf("no arguments given; specify .po files or directories containing them")
@@ -241,7 +243,6 @@ func CmdCheckPo(args ...string) bool {
 	}
 
 	for _, item := range toCheck {
-		poFiles = append(poFiles, item.poFile)
 		if !CheckPoFile(item.locale, item.poFile) {
 			ret = false
 		}
@@ -250,11 +251,6 @@ func CmdCheckPo(args ...string) bool {
 				ret = false
 			}
 		}
-	}
-
-	// We can disable this check using "--pot-file=no".
-	if flag.GetPotFileFlag() != flag.PotFileFlagNone {
-		ret = CheckUnfinishedPoFiles("HEAD", poFiles) && ret
 	}
 	return ret
 }

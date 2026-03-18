@@ -93,6 +93,14 @@ test_expect_success "update zh_CN (--add-location=file)" '
 	INFO run msgmerge for "Chinese - China": msgmerge --add-location=file -o - po/zh_CN.po po/git.pot
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
+	⚠️ Incomplete translations found
+	 WARNING [zh_CN.po] 5102 untranslated string(s) in your PO file
+	 WARNING [zh_CN.po]
+	 WARNING [zh_CN.po] > PO file:Huh (%s)?
+	 WARNING [zh_CN.po] > PO file:could not read index
+	 WARNING [zh_CN.po] > PO file:binary
+	 WARNING [zh_CN.po] > ...
+	 WARNING [zh_CN.po]
 	EOF
 
 	cat >workdir/po/zh_CN.po <<-\EOF &&
@@ -141,8 +149,6 @@ test_expect_success "check update of zh_CN.po" '
 cat >expect <<-\EOF
 ℹ️ Syntax check with msgfmt
  INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
-ℹ️ Core PO vs git-core.pot
- INFO [zh_CN.po (core)] 2 translated messages, 479 untranslated messages.
 ⚠️ Incomplete translations found
  WARNING [zh_CN.po] 5102 untranslated string(s) in your 'po/XX.po'
  WARNING [zh_CN.po]
@@ -151,6 +157,8 @@ cat >expect <<-\EOF
  WARNING [zh_CN.po] > po/XX.po:binary
  WARNING [zh_CN.po] > ...
  WARNING [zh_CN.po]
+ℹ️ Core PO vs git-core.pot
+ INFO [zh_CN.po (core)] 2 translated messages, 479 untranslated messages.
 EOF
 
 test_expect_success "check core update of zh_CN.po" '
