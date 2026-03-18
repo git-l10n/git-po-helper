@@ -173,7 +173,7 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	ret = ret && ok
 
 	// Check possible typos in a .po file.
-	errs, ok = checkTyposInPoFile(locale, poFile)
+	errs, ok = checkTyposInPo(locale, po)
 	ReportSection("msgid/msgstr pattern check", ok, log.WarnLevel, prompt, errs...)
 	ret = ret && ok
 

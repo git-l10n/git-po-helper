@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -15,23 +14,10 @@ import (
 
 type CheckPoEntryFunc func(string, string, string) ([]string, bool)
 
-// checkEntriesInPoFile returns a list of messages, and a boolean which
-// indicates whether the messages are errors (false) or warnings (true).
-// Uses util/gettext.go ParsePoEntries to load and parse the PO file.
-func checkEntriesInPoFile(locale, poFile string, fn CheckPoEntryFunc) (msgs []string, ok bool) {
+// checkEntriesInPo iterates over po.Entries and applies fn to each translatable
+// entry. Returns a list of messages and a boolean (false = errors, true = ok).
+func checkEntriesInPo(locale string, po *GettextPO, fn CheckPoEntryFunc) (msgs []string, ok bool) {
 	ok = true
-
-	data, err := os.ReadFile(poFile)
-	if err != nil {
-		msgs = append(msgs, fmt.Sprintf("fail to read %s: %s", poFile, err))
-		return msgs, false
-	}
-
-	po, err := ParsePoEntries(data)
-	if err != nil {
-		msgs = append(msgs, fmt.Sprintf("fail to parse %s: %s", poFile, err))
-		return msgs, false
-	}
 
 	for _, entry := range po.Entries {
 		if entry.Obsolete {
@@ -75,8 +61,9 @@ func checkEntriesInPoFile(locale, poFile string, fn CheckPoEntryFunc) (msgs []st
 	return msgs, ok
 }
 
-func checkTyposInPoFile(locale, poFile string) ([]string, bool) {
-	return checkEntriesInPoFile(locale, poFile, checkTyposInPoEntry)
+// checkTyposInPo checks typos using the already-parsed po object.
+func checkTyposInPo(locale string, po *GettextPO) ([]string, bool) {
+	return checkEntriesInPo(locale, po, checkTyposInPoEntry)
 }
 
 /*
