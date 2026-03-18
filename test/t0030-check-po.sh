@@ -53,18 +53,18 @@ test_expect_success "bad syntax of zh_CN.po" '
 	 ERROR [zh_CN.po] msgfmt: found 1 fatal error
 	 ERROR [zh_CN.po] fail to check po: exit status 1
 	❌ Incomplete translations found
-	 ERROR [zh_CN.po] 5102 new string(s) in ${SQ}po/git.pot${SQ}, but not in your ${SQ}po/XX.po${SQ}
+	 ERROR [zh_CN.po] 5102 new string(s) in POT file, but not in your PO file
 	 ERROR [zh_CN.po]
-	 ERROR [zh_CN.po] > po/git.pot: %-*s forces to %-*s (%s)
-	 ERROR [zh_CN.po] > po/git.pot: %-*s forces to %s
-	 ERROR [zh_CN.po] > po/git.pot: %-*s pushes to %-*s (%s)
+	 ERROR [zh_CN.po] > POT file: %-*s forces to %-*s (%s)
+	 ERROR [zh_CN.po] > POT file: %-*s forces to %s
+	 ERROR [zh_CN.po] > POT file: %-*s pushes to %-*s (%s)
 	 ERROR [zh_CN.po] > ...
 	 ERROR [zh_CN.po]
-	 ERROR [zh_CN.po] 1 obsolete string(s) in your ${SQ}po/XX.po${SQ}, which must be removed
+	 ERROR [zh_CN.po] 1 obsolete string(s) in your PO file, which must be removed
 	 ERROR [zh_CN.po]
-	 ERROR [zh_CN.po] > po/XX.po:po-helper test: not a real l10...
+	 ERROR [zh_CN.po] > PO file:po-helper test: not a real l10...
 	 ERROR [zh_CN.po]
-	 ERROR [zh_CN.po] Please run "git-po-helper update po/XX.po" to update your po file,
+	 ERROR [zh_CN.po] Please run "git-po-helper update PO-FILE" to update your po file,
 	 ERROR [zh_CN.po] and translate the new strings in it.
 	 ERROR [zh_CN.po]
 	ERROR: check-po command failed
@@ -123,11 +123,11 @@ test_expect_success "check core update of zh_CN.po" '
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
 	⚠️ Incomplete translations found
-	 WARNING [zh_CN.po] 5102 untranslated string(s) in your ${SQ}po/XX.po${SQ}
+	 WARNING [zh_CN.po] 5102 untranslated string(s) in your PO file
 	 WARNING [zh_CN.po]
-	 WARNING [zh_CN.po] > po/XX.po:Huh (%s)?
-	 WARNING [zh_CN.po] > po/XX.po:could not read index
-	 WARNING [zh_CN.po] > po/XX.po:binary
+	 WARNING [zh_CN.po] > PO file:Huh (%s)?
+	 WARNING [zh_CN.po] > PO file:could not read index
+	 WARNING [zh_CN.po] > PO file:binary
 	 WARNING [zh_CN.po] > ...
 	 WARNING [zh_CN.po]
 	ℹ️ Core PO vs git-core.pot

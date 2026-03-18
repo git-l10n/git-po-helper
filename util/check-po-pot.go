@@ -164,30 +164,30 @@ func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
 
 	if len(missingEntries) > 0 {
 		ok = false
-		errs = append(errs, fmt.Sprintf("%d new string(s) in 'po/git.pot', but not in your 'po/XX.po'", len(missingEntries)))
+		errs = append(errs, fmt.Sprintf("%d new string(s) in POT file, but not in your PO file", len(missingEntries)))
 		errs = append(errs, "")
-		appendSamples(missingEntries, "po/git.pot:", addErr)
+		appendSamples(missingEntries, "POT file:", addErr)
 		errs = append(errs, "")
 	}
 	if len(fuzzyEntries) > 0 {
-		errs = append(errs, fmt.Sprintf("%d fuzzy string(s) in your 'po/XX.po'", len(fuzzyEntries)))
+		errs = append(errs, fmt.Sprintf("%d fuzzy string(s) in your PO file", len(fuzzyEntries)))
 		errs = append(errs, "")
-		appendSamples(fuzzyEntries, "po/XX.po:", addErr)
+		appendSamples(fuzzyEntries, "PO file:", addErr)
 		errs = append(errs, "")
 	}
 	if len(untranslatedEntries) > 0 {
-		errs = append(errs, fmt.Sprintf("%d untranslated string(s) in your 'po/XX.po'", len(untranslatedEntries)))
+		errs = append(errs, fmt.Sprintf("%d untranslated string(s) in your PO file", len(untranslatedEntries)))
 		errs = append(errs, "")
-		appendSamples(untranslatedEntries, "po/XX.po:", addErr)
+		appendSamples(untranslatedEntries, "PO file:", addErr)
 		errs = append(errs, "")
 	}
 	// unusedEntries: non-obsolete entries in PO that are not in POT (custom/unused).
 	// #~ obsolete entries are checked by checkPoNoObsoleteEntries.
 	if len(unusedEntries) > 0 {
 		ok = false
-		errs = append(errs, fmt.Sprintf("%d obsolete string(s) in your 'po/XX.po', which must be removed", len(unusedEntries)))
+		errs = append(errs, fmt.Sprintf("%d obsolete string(s) in your PO file, which must be removed", len(unusedEntries)))
 		errs = append(errs, "")
-		appendSamples(unusedEntries, "po/XX.po:", addErr)
+		appendSamples(unusedEntries, "PO file:", addErr)
 		errs = append(errs, "")
 	}
 
@@ -197,7 +197,7 @@ func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
 			fallthrough
 		case flag.PotFileFlagUpdate:
 			errs = append(errs,
-				"Please run \"git-po-helper update po/XX.po\" to update your po file,",
+				"Please run \"git-po-helper update PO-FILE\" to update your po file,",
 				"and translate the new strings in it.",
 				"")
 
@@ -206,10 +206,10 @@ func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
 		default:
 			errs = append(errs,
 				fmt.Sprintf(
-					"You can download the latest \"po/git.pot\" file from:\n\n\t%s\n",
+					"You can download the latest POT file from:\n\n\t%s\n",
 					PotFileURL),
 				"Please rebase your branch to the latest upstream branch,",
-				"run \"git-po-helper update po/XX.po\" to update your po file,",
+				"run \"git-po-helper update PO-FILE\" to update your po file,",
 				"and translate the new strings in it.",
 				"")
 		}

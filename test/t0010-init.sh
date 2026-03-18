@@ -76,7 +76,7 @@ test_expect_success "init --core en_GB" '
 	Notes for core po file:
 
 	    To contribute a new l10n translation for Git, make a full
-	    translation is not a piece of cake.  A small part of "po/git.pot"
+	    translation is not a piece of cake.  A small part of POT file
 	    is marked and saved in "po/git-core.pot".
 
 	    The new generated po file for locale "en_GB" is stored in
