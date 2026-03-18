@@ -1,12 +1,9 @@
 package util
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/flag"
@@ -76,102 +73,101 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 	return ok
 }
 
-func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
-	const (
-		kindMissing = iota
-		kindFuzzy
-		kindUntrans
-		kindUnused
-	)
-	var (
-		errs       []string
-		ok         = true
-		patternMap = make(map[int]*regexp.Regexp)
-		countMap   = make(map[int]int)
-		msgMap     = make(map[int][]string)
-	)
+const maxMsgidSampleLen = 30
+const maxSamples = 3
 
-	patternMap[kindMissing] = regexp.MustCompile(`[0-9]+: this message is used but not defined in .*`)
-	patternMap[kindFuzzy] = regexp.MustCompile(`[0-9]+: this message needs to be reviewed by the translator`)
-	patternMap[kindUntrans] = regexp.MustCompile(`[0-9]+: this message is untranslated`)
-	patternMap[kindUnused] = regexp.MustCompile(`[0-9]+: warning: this message is not used`)
-	countMap[kindMissing] = 0
-	countMap[kindFuzzy] = 0
-	countMap[kindUntrans] = 0
-	countMap[kindUnused] = 0
-	msgMap[kindMissing] = make([]string, 0)
-	msgMap[kindFuzzy] = make([]string, 0)
-	msgMap[kindUntrans] = make([]string, 0)
-	msgMap[kindUnused] = make([]string, 0)
-
-	// Run msgcmp to find untranslated missing entries in pot file.
-	cmd := exec.Command("msgcmp", "-N", poFile, poTemplate)
-	cmd.Env = append(os.Environ(), "LC_ALL=C")
-	stderr, err := cmd.StderrPipe()
-	if err == nil {
-		err = cmd.Start()
+func truncateMsgid(msgid string, maxLen int) string {
+	// Sanitize: replace newlines and tabs so output is one line
+	s := strings.ReplaceAll(msgid, "\n", " ")
+	s = strings.ReplaceAll(s, "\t", " ")
+	if len(s) <= maxLen {
+		return s
 	}
+	return s[:maxLen] + "..."
+}
+
+func checkUnfinishedPoFile(poFile, poTemplate string) ([]string, bool) {
+	var errs []string
+	ok := true
+
+	potData, err := os.ReadFile(poTemplate)
 	if err != nil {
-		errs = append(errs, err.Error())
+		errs = append(errs, fmt.Sprintf("failed to read POT file: %v", err))
 		return errs, false
 	}
-	scanner := bufio.NewScanner(stderr)
+	poData, err := os.ReadFile(poFile)
+	if err != nil {
+		errs = append(errs, fmt.Sprintf("failed to read PO file: %v", err))
+		return errs, false
+	}
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		for _, kind := range []int{kindMissing, kindFuzzy, kindUntrans, kindUnused} {
-			m := patternMap[kind].FindStringSubmatch(line)
-			if len(m) > 0 {
-				if countMap[kind] < 3 {
-					if kind == kindMissing {
-						msgMap[kind] = append(msgMap[kind], "po/git.pot:"+m[0])
-					} else {
-						msgMap[kind] = append(msgMap[kind], "po/XX.po:"+m[0])
-					}
-				} else if countMap[kind] == 3 {
-					msgMap[kind] = append(msgMap[kind], "...")
-				}
-				countMap[kind]++
+	potJ, err := LoadFileToGettextJSON(potData, poTemplate)
+	if err != nil {
+		errs = append(errs, fmt.Sprintf("failed to parse POT file: %v", err))
+		return errs, false
+	}
+	poJ, err := LoadFileToGettextJSON(poData, poFile)
+	if err != nil {
+		errs = append(errs, fmt.Sprintf("failed to parse PO file: %v", err))
+		return errs, false
+	}
+
+	// POT=old, PO=new: Deleted=Missing (in POT not in PO), Added=Unused (in PO not in POT)
+	_, unusedEntries, missingEntries := CompareGettextEntriesWithDeleted(potJ, poJ, true)
+
+	potKeys := make(map[string]bool)
+	for _, e := range filterObsolete(potJ.Entries) {
+		potKeys[entryKey(e)] = true
+	}
+
+	fuzzyEntries, untranslatedEntries, obsoleteEntries := GetEntriesByState(poJ, potKeys)
+
+	appendSamples := func(entries []GettextEntry, prefix string, addErr func(string)) {
+		for i, e := range entries {
+			if i >= maxSamples {
+				addErr("  > ...")
 				break
 			}
+			sample := truncateMsgid(e.MsgID, maxMsgidSampleLen)
+			addErr("  > " + prefix + sample)
 		}
 	}
-	countMap[kindUnused] = countMap[kindUnused] - countMap[kindFuzzy] - countMap[kindUntrans]
 
-	for _, kind := range []int{kindMissing, kindFuzzy, kindUntrans, kindUnused} {
-		if countMap[kind] == 0 {
-			continue
-		}
-		switch kind {
-		case kindMissing:
-			errs = append(errs, fmt.Sprintf(
-				"%d new string(s) in 'po/git.pot', but not in your 'po/XX.po'",
-				countMap[kind]))
-		case kindFuzzy:
-			errs = append(errs, fmt.Sprintf(
-				"%d fuzzy string(s) in your 'po/XX.po'",
-				countMap[kind]))
-		case kindUntrans:
-			errs = append(errs, fmt.Sprintf(
-				"%d untranslated string(s) in your 'po/XX.po'",
-				countMap[kind]))
-		case kindUnused:
-			errs = append(errs, fmt.Sprintf(
-				"%d obsolete string(s) in your 'po/XX.po', which must be removed",
-				countMap[kind]))
-		}
+	addErr := func(s string) { errs = append(errs, s) }
+
+	if len(missingEntries) > 0 {
+		ok = false
+		errs = append(errs, fmt.Sprintf("%d new string(s) in 'po/git.pot', but not in your 'po/XX.po'", len(missingEntries)))
 		errs = append(errs, "")
-		for _, line := range msgMap[kind] {
-			errs = append(errs, fmt.Sprintf("  > %s", line))
-		}
+		appendSamples(missingEntries, "po/git.pot:", addErr)
 		errs = append(errs, "")
 	}
-	if countMap[kindUnused] > 0 {
-		ok = false
+	if len(fuzzyEntries) > 0 {
+		errs = append(errs, fmt.Sprintf("%d fuzzy string(s) in your 'po/XX.po'", len(fuzzyEntries)))
+		errs = append(errs, "")
+		appendSamples(fuzzyEntries, "po/XX.po:", addErr)
+		errs = append(errs, "")
 	}
-	if countMap[kindMissing] > 0 {
+	if len(untranslatedEntries) > 0 {
+		errs = append(errs, fmt.Sprintf("%d untranslated string(s) in your 'po/XX.po'", len(untranslatedEntries)))
+		errs = append(errs, "")
+		appendSamples(untranslatedEntries, "po/XX.po:", addErr)
+		errs = append(errs, "")
+	}
+	obsoleteCount := len(unusedEntries) + len(obsoleteEntries)
+	if obsoleteCount > 0 {
 		ok = false
+		errs = append(errs, fmt.Sprintf("%d obsolete string(s) in your 'po/XX.po', which must be removed", obsoleteCount))
+		errs = append(errs, "")
+		// Combine samples from unused + obsolete, max 3 total
+		allObsolete := make([]GettextEntry, 0, len(unusedEntries)+len(obsoleteEntries))
+		allObsolete = append(allObsolete, unusedEntries...)
+		allObsolete = append(allObsolete, obsoleteEntries...)
+		appendSamples(allObsolete, "po/XX.po:", addErr)
+		errs = append(errs, "")
+	}
 
+	if len(missingEntries) > 0 {
 		switch flag.GetPotFileFlag() {
 		case flag.PotFileFlagLocation:
 			fallthrough

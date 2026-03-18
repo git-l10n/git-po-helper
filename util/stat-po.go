@@ -110,6 +110,44 @@ func FormatMsgfmtStatistics(stats *PoStats) string {
 	return strings.Join(parts, ", ") + ".\n"
 }
 
+// GetEntriesByState returns PO entries by state: fuzzy, untranslated, obsolete.
+// When potKeys is non-nil, fuzzy and untranslated are limited to entries whose
+// key exists in potKeys (i.e. present in the POT template). Obsolete entries
+// are always returned regardless of potKeys.
+func GetEntriesByState(poJ *GettextJSON, potKeys map[string]bool) (fuzzy, untranslated, obsolete []GettextEntry) {
+	if poJ == nil {
+		return nil, nil, nil
+	}
+	for _, e := range poJ.Entries {
+		if e.MsgID == "" {
+			continue
+		}
+		k := entryKey(e)
+		if e.Obsolete {
+			obsolete = append(obsolete, e)
+			continue
+		}
+		if potKeys != nil && !potKeys[k] {
+			continue
+		}
+		if e.Fuzzy {
+			fuzzy = append(fuzzy, e)
+			continue
+		}
+		hasTranslation := false
+		for _, s := range e.MsgStr {
+			if s != "" {
+				hasTranslation = true
+				break
+			}
+		}
+		if !hasTranslation {
+			untranslated = append(untranslated, e)
+		}
+	}
+	return fuzzy, untranslated, obsolete
+}
+
 // FormatStatLine formats stats in one line, similar to msgfmt --statistics,
 // but also includes same and obsolete. Only non-zero categories are shown.
 func FormatStatLine(stats *PoStats) string {

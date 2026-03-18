@@ -62,18 +62,18 @@ cat >expect <<-\EOF
  ERROR [ko.po] >> msgstr: 레퍼런스/리모트/<이름>/HEAD 값을 리모트에 맞게 설정합니다
  ERROR [ko.po]
 ❌ Incomplete translations found
- ERROR [ko.po] 2242 new string(s) in 'po/git.pot', but not in your 'po/XX.po'
+ ERROR [ko.po] 2244 new string(s) in 'po/git.pot', but not in your 'po/XX.po'
  ERROR [ko.po]
- ERROR [ko.po] > po/git.pot:24: this message is used but not defined in po/ko.po
- ERROR [ko.po] > po/git.pot:54: this message is used but not defined in po/ko.po
- ERROR [ko.po] > po/git.pot:84: this message is used but not defined in po/ko.po
+ ERROR [ko.po] > po/git.pot: %s\n
+ ERROR [ko.po] > po/git.pot: (run \"git cherry-pick --con...
+ ERROR [ko.po] > po/git.pot: (run \"git revert --continue...
  ERROR [ko.po] > ...
  ERROR [ko.po]
- ERROR [ko.po] 568 obsolete string(s) in your 'po/XX.po', which must be removed
+ ERROR [ko.po] 570 obsolete string(s) in your 'po/XX.po', which must be removed
  ERROR [ko.po]
- ERROR [ko.po] > po/XX.po:147: warning: this message is not used
- ERROR [ko.po] > po/XX.po:172: warning: this message is not used
- ERROR [ko.po] > po/XX.po:176: warning: this message is not used
+ ERROR [ko.po] > po/XX.po: (use \"git checkout -- <file...
+ ERROR [ko.po] > po/XX.po: (use \"git reset %s <file>.....
+ ERROR [ko.po] > po/XX.po: Warn: $display_name doesn't ...
  ERROR [ko.po] > ...
  ERROR [ko.po]
  ERROR [ko.po] Please run "git-po-helper update po/XX.po" to update your po file,

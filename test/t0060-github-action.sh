@@ -18,27 +18,41 @@ test_expect_success "setup" '
 '
 
 cat >expect <<-\EOF
-------------------------------------------------------------------------------
-ERROR [zh_CN.po]    po/zh_CN.po:25: end-of-line within string
-ERROR [zh_CN.po]    msgfmt: found 1 fatal error
-ERROR [zh_CN.po]    fail to check po: exit status 1
-------------------------------------------------------------------------------
-ERROR [zh_CN.po]    entry 1 (msgid "more than one receivepack g..."): location comment contains line number (use file-only or remove): "remote.c:399"
-------------------------------------------------------------------------------
-ERROR [zh_CN.po]    No filter attribute set for XX.po. This will introduce location newlines into the
-ERROR [zh_CN.po]    repository and cause repository bloat.
-ERROR [zh_CN.po]
-ERROR [zh_CN.po]    Please configure the filter attribute for XX.po, for example:
-ERROR [zh_CN.po]
-ERROR [zh_CN.po]     .gitattributes: *.po filter=gettext-no-location
-ERROR [zh_CN.po]
-ERROR [zh_CN.po]    See:
-ERROR [zh_CN.po]
-ERROR [zh_CN.po]     https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
-------------------------------------------------------------------------------
-ERROR [zh_CN.po]    fail to compile po/zh_CN.po: exit status 1
-ERROR [zh_CN.po]    fail to generate mofile
-------------------------------------------------------------------------------
+❌ Syntax check with msgfmt
+ ERROR [zh_CN.po] po/zh_CN.po:25: end-of-line within string
+ ERROR [zh_CN.po] msgfmt: found 1 fatal error
+ ERROR [zh_CN.po] fail to check po: exit status 1
+❌ Location comments (#:)
+ ERROR [zh_CN.po] entry 1 (msgid "more than one receivepack g..."): location comment contains line number (use file-only or remove): "remote.c:399"
+❌ PO filter (.gitattributes)
+ ERROR [zh_CN.po] No filter attribute set for XX.po. This will introduce location newlines into the
+ ERROR [zh_CN.po] repository and cause repository bloat.
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] Please configure the filter attribute for XX.po, for example:
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] .gitattributes: *.po filter=gettext-no-location
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] See:
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+❌ msgid/msgstr pattern check
+ ERROR [zh_CN.po] fail to compile po/zh_CN.po: exit status 1
+ ERROR [zh_CN.po] fail to generate mofile
+❌ Incomplete translations found
+ ERROR [zh_CN.po] 5102 new string(s) in 'po/git.pot', but not in your 'po/XX.po'
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] > po/git.pot: %-*s forces to %-*s (%s)
+ ERROR [zh_CN.po] > po/git.pot: %-*s forces to %s
+ ERROR [zh_CN.po] > po/git.pot: %-*s pushes to %-*s (%s)
+ ERROR [zh_CN.po] > ...
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] 1 obsolete string(s) in your 'po/XX.po', which must be removed
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] > po/XX.po:po-helper test: not a real l10...
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] Please run "git-po-helper update po/XX.po" to update your po file,
+ ERROR [zh_CN.po] and translate the new strings in it.
+ ERROR [zh_CN.po]
 ERROR: check-po command failed
 EOF
 
@@ -80,9 +94,8 @@ test_expect_success "bad syntax of zh_CN.po" '
 test_expect_success "update zh_CN (--add-location=file)" '
 	cat >expect <<-EOF &&
 	INFO run msgmerge for "Chinese - China": msgmerge --add-location=file -o - po/zh_CN.po po/git.pot
-	------------------------------------------------------------------------------
-	INFO [zh_CN.po]    2 translated messages, 5102 untranslated messages.
-	------------------------------------------------------------------------------
+	ℹ️ Syntax check with msgfmt
+	 INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
 	EOF
 
 	cat >workdir/po/zh_CN.po <<-\EOF &&
@@ -117,8 +130,8 @@ test_expect_success "update zh_CN (--add-location=file)" '
 
 test_expect_success "check update of zh_CN.po" '
 	cat >expect <<-\EOF &&
-	------------------------------------------------------------------------------
-	INFO [zh_CN.po]    2 translated messages, 5102 untranslated messages.
+	ℹ️ Syntax check with msgfmt
+	 INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
 	EOF
 
 	git -C workdir $HELPER \
@@ -129,21 +142,18 @@ test_expect_success "check update of zh_CN.po" '
 '
 
 cat >expect <<-\EOF
-------------------------------------------------------------------------------
-INFO [zh_CN.po]    2 translated messages, 5102 untranslated messages.
-------------------------------------------------------------------------------
-------------------------------------------------------------------------------
-INFO [zh_CN.po (core)]    2 translated messages, 479 untranslated messages.
-------------------------------------------------------------------------------
-------------------------------------------------------------------------------
-WARNING [zh_CN.po]    5102 untranslated string(s) in your 'po/XX.po'
-WARNING [zh_CN.po]
-WARNING [zh_CN.po]     > po/XX.po:18: this message is untranslated
-WARNING [zh_CN.po]     > po/XX.po:22: this message is untranslated
-WARNING [zh_CN.po]     > po/XX.po:26: this message is untranslated
-WARNING [zh_CN.po]     > ...
-WARNING [zh_CN.po]
-------------------------------------------------------------------------------
+ℹ️ Syntax check with msgfmt
+ INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
+ℹ️ Core PO vs git-core.pot
+ INFO [zh_CN.po (core)] 2 translated messages, 479 untranslated messages.
+⚠️ Incomplete translations found
+ WARNING [zh_CN.po] 5102 untranslated string(s) in your 'po/XX.po'
+ WARNING [zh_CN.po]
+ WARNING [zh_CN.po] > po/XX.po:Huh (%s)?
+ WARNING [zh_CN.po] > po/XX.po:could not read index
+ WARNING [zh_CN.po] > po/XX.po:binary
+ WARNING [zh_CN.po] > ...
+ WARNING [zh_CN.po]
 EOF
 
 test_expect_success "check core update of zh_CN.po" '
@@ -154,12 +164,12 @@ test_expect_success "check core update of zh_CN.po" '
 '
 
 cat >expect <<-\EOF
-------------------------------------------------------------------------------
-WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-------------------------------------------------------------------------------
-ERROR commit <OID>: subject ("Add files ...") does not have prefix "l10n:"
-------------------------------------------------------------------------------
-ERROR commit <OID>: empty body of the commit message, no s-o-b signature
+⚠️ Author and committer
+ WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
+❌ Commit subject
+ ERROR commit <OID>: subject ("Add files ...") does not have prefix "l10n:"
+❌ Commit message body
+ ERROR commit <OID>: empty body of the commit message, no s-o-b signature
 INFO checking commits: 0 passed, 1 failed.
 ERROR: check-commits command failed
 EOF
@@ -182,11 +192,11 @@ test_expect_success "create new non-l10n commit" '
 '
 
 cat >expect <<-\EOF
-------------------------------------------------------------------------------
-ERROR commit <OID>: found changes beyond "po/" directory:
-ERROR         A.txt
-ERROR
-ERROR commit <OID>: break because this commit is not for git-l10n
+❌ Changes outside po/
+ ERROR commit <OID>: found changes beyond "po/" directory:
+ ERROR         A.txt
+ ERROR
+ ERROR commit <OID>: break because this commit is not for git-l10n
 INFO checking commits: 0 passed, 1 failed, 1 skipped.
 ERROR: check-commits command failed
 EOF
@@ -217,11 +227,11 @@ test_expect_success "check-commits --github-action-event=pull_request_target" '
 '
 
 cat >expect <<-\EOF
-------------------------------------------------------------------------------
-WARNING commit <OID>: found changes beyond "po/" directory:
-WARNING         A.txt
-WARNING
-WARNING commit <OID>: break because this commit is not for git-l10n
+⚠️ Changes outside po/
+ WARNING commit <OID>: found changes beyond "po/" directory:
+ WARNING         A.txt
+ WARNING
+ WARNING commit <OID>: break because this commit is not for git-l10n
 INFO checking commits: 0 passed, 0 failed, 2 skipped.
 EOF
 

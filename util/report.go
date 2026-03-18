@@ -117,13 +117,10 @@ func formatPromptField(prompt string) string {
 	if prompt == "" {
 		return strings.Repeat(" ", reportPromptWidth)
 	}
-	if len(prompt) > reportPromptWidth {
-		if reportPromptWidth <= 1 {
-			return "…"
-		}
-		return prompt[:reportPromptWidth-1] + "…"
+	if len(prompt) < reportPromptWidth {
+		return prompt + strings.Repeat(" ", reportPromptWidth-len(prompt))
 	}
-	return prompt + strings.Repeat(" ", reportPromptWidth-len(prompt))
+	return prompt
 }
 
 func messageColumnPad() int {

@@ -52,6 +52,13 @@ func equalMsgCtxtPtr(a, b *string) bool {
 // When msgidOnly is true, entries with the same msgid (and msgid_plural for plurals)
 // are considered equal; msgstr and fuzzy changes are ignored.
 func CompareGettextEntries(oldJ, newJ *GettextJSON, msgidOnly bool) (DiffStat, []GettextEntry) {
+	stat, reviewEntries, _ := CompareGettextEntriesWithDeleted(oldJ, newJ, msgidOnly)
+	return stat, reviewEntries
+}
+
+// CompareGettextEntriesWithDeleted is like CompareGettextEntries but also returns
+// deleted entries (in old but not in new). Useful for POT vs PO completeness check.
+func CompareGettextEntriesWithDeleted(oldJ, newJ *GettextJSON, msgidOnly bool) (DiffStat, []GettextEntry, []GettextEntry) {
 	oldEntries := filterObsolete(oldJ.Entries)
 	newEntries := filterObsolete(newJ.Entries)
 	sort.Slice(oldEntries, func(i, j int) bool { return entryKey(oldEntries[i]) < entryKey(oldEntries[j]) })
@@ -59,11 +66,13 @@ func CompareGettextEntries(oldJ, newJ *GettextJSON, msgidOnly bool) (DiffStat, [
 
 	var stat DiffStat
 	var reviewEntries []GettextEntry
+	var deletedEntries []GettextEntry
 	i, j := 0, 0
 	for i < len(oldEntries) && j < len(newEntries) {
 		cmp := strings.Compare(entryKey(oldEntries[i]), entryKey(newEntries[j]))
 		if cmp < 0 {
 			stat.Deleted++
+			deletedEntries = append(deletedEntries, oldEntries[i])
 			i++
 			continue
 		} else if cmp > 0 {
@@ -83,6 +92,7 @@ func CompareGettextEntries(oldJ, newJ *GettextJSON, msgidOnly bool) (DiffStat, [
 	}
 	for i < len(oldEntries) {
 		stat.Deleted++
+		deletedEntries = append(deletedEntries, oldEntries[i])
 		i++
 	}
 	for j < len(newEntries) {
@@ -91,7 +101,7 @@ func CompareGettextEntries(oldJ, newJ *GettextJSON, msgidOnly bool) (DiffStat, [
 		j++
 	}
 	log.Debugf("review stats: deleted=%d, added=%d, changed=%d", stat.Deleted, stat.Added, stat.Changed)
-	return stat, reviewEntries
+	return stat, reviewEntries, deletedEntries
 }
 
 func filterObsolete(entries []GettextEntry) []GettextEntry {
