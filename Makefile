@@ -77,6 +77,10 @@ it: $(TARGET)
 	$(call message,Testing git-po-helper for integration tests)
 	@make -C test GIT_TEST_OPTS="--debug --verbose-log -x" prove
 
+gh-it: $(TARGET)
+	$(call message,Testing git-po-helper for integration tests)
+	@make -C test GIT_TEST_OPTS="--debug --verbose" DEFAULT_TEST_TARGET=test
+
 clean:
 	$(call message,Cleaning $(TARGET))
 	@rm -f $(TARGET)
@@ -85,4 +89,4 @@ clean:
 .PHONY: test clean
 .PHONY: go-gen
 .PHONY: FORCE
-.PHONY: ut it
+.PHONY: ut it gh-it
