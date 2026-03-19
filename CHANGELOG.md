@@ -2,6 +2,56 @@
 
 Changes of git-po-helper.
 
+## 0.8.1 (2026-03-19)
+
+### check-po and POT / CamelCase
+
+* refactor: remove check-pot subcommand; move CamelCase config check into check-po when input is .pot and Project is Git
+* refactor(check-pot): use parsed PO (po.Entries MsgID/MsgIDPlural) for CamelCase check instead of msgcat; drop os/exec dependency
+* refactor(check-pot): report CamelCase errors via ReportSection with entry line (L<n>), config variable name, and msgid excerpt; success line shows entries/variables counted
+* feat(check-po): accept .pot in addition to .po; for Git project .pot run CamelCase check (Documentation/config required)
+* fix(check-pot): error message reports total entries, config variables, and mismatched count
+
+### Configuration
+
+* feat(config): add top-level `config` command; remove show-config from agent-run/agent-test
+* feat(config): load POT project overrides from .git-po-helper.yaml (projects key; merge with built-in, ~/.git-po-helper.yaml, repo root)
+* refactor(config): rename agent.go to config.go for unified config (agent + POT project settings)
+* config: add settings for gitk project
+
+### gettext / PO format
+
+* gettext: introduce GettextPO; ParsePoEntries returns (*GettextPO, error) with HeaderEntry and Entries
+* gettext: add GetMeta and GetProject to GettextPO; ignore meaningless blank lines in PO parsing
+* feat(gettext): add msgctxt support (Phase 2); Phase 3 #= flag lines; Phase 4 MsgCtxtPrevious round-trip, 7.2 Option A
+* refactor(gettext): store previous msgctxt/msgid in comments only; remove RawLines, build PO from fields only
+* refactor(util): phase 1 PO parser refactor (classifyPoLine, poParseState) for gettext-format plan
+* docs: add gettext PO and gettext JSON format design documents
+
+### check-po (syntax, compatibility, locale, filter)
+
+* feat(check-po): gate gettext compatibility by MinGettextVersion (0.15+ msgctxt/#|/#~ msgctxt; 0.16+ #~|)
+* feat(check-po): add header meta newline validation; reject location comments with line numbers (--report-file-locations)
+* feat(check-po): add gettext version compatibility checks
+* fix(check-po): report correct entry line (EntryLocation) in compatibility and location errors
+* fix(check-po): require non-empty args; treat each arg as file or dir (no recursion), require .po extension
+* refactor(check-po): rename checkPoSyntax to checkPoWithMsgfmt; move obsolete check to po object; check-attr filter and format
+* refactor(check-po): check incomplete translations per file; use parsed po in checkTyposInPoFile
+* refactor(check-po): use ParsePoEntries and compare/stat-po in check-po-pot; user-friendly report format with section headers
+* refactor: remove multi-version gettext, use single msgfmt
+* refactor: rename po/XX.po to "PO file" in messages
+
+### POT file and project config
+
+* pot-file: refactor --pot-file via ProjectPotConfig (Init, effectiveAction, buildDir, potFilename)
+* UpdatePotFile and check-commits use GetProjectPotConfig and AcquirePotFile; GitHubActionEvent checks GITHUB_ACTIONS
+
+### Locale / helper
+
+* refactor(helper): GetPrettyLocaleName returns (string, []error) to report all locale validation errors
+* feat(helper): validate lang all lowercase and zone all uppercase for locale; collect multiple errors (invalid ISO 639/3166)
+* fix(helper): update check-po, check-core-po, init, update to handle []error and report each
+
 ## 0.8.0 (2026-03-14)
 
 ### Agent commands (agent-run, agent-test)
