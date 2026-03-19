@@ -69,7 +69,7 @@ cat >expect <<-\EOF
  WARNING [zh_CN.po@rev]
 ⚠️ Author and committer
  WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-level=info msg="checking commits: 1 passed."
+INFO: checking commits: 1 passed.
 EOF
 
 test_expect_success "check-commits show typos" '
@@ -92,7 +92,7 @@ cat >expect <<-\EOF
  ERROR [zh_CN.po@rev]
 ⚠️ Author and committer
  WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-level=info msg="checking commits: 0 passed, 1 failed."
+INFO: checking commits: 0 passed, 1 failed.
 ERROR: check-commits command failed
 EOF
 
@@ -134,7 +134,7 @@ cat >expect <<-\EOF
  WARNING [zh_CN.po@rev]
 ⚠️ Author and committer
  WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-level=info msg="checking commits: 1 passed, 1 failed."
+INFO: checking commits: 1 passed, 1 failed.
 ERROR: check-commits command failed
 EOF
 

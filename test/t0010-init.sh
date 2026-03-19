@@ -17,7 +17,7 @@ test_expect_success "fail to init: zh_CN.po already exist" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	level=error msg="\"po/zh_CN.po\" exists already"
+	ERROR: "po/zh_CN.po" exists already
 	ERROR: init command failed
 	EOF
 
@@ -52,7 +52,7 @@ test_expect_success "init with invalid locale" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	level=error msg="fail to init: invalid language code for \"xx\", see ISO 639 for valid codes"
+	ERROR: fail to init: invalid language code for "xx", see ISO 639 for valid codes
 	ERROR: init command failed
 	EOF
 
@@ -65,8 +65,8 @@ test_expect_success "init with invalid locale with incorrect capitalization" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	level=error msg="fail to init: language code \"ZH\" must be all lowercase"
-	level=error msg="fail to init: region/territory code \"cn\" must be all uppercase"
+	ERROR: fail to init: language code "ZH" must be all lowercase
+	ERROR: fail to init: region/territory code "cn" must be all uppercase
 	ERROR: init command failed
 	EOF
 
@@ -112,7 +112,7 @@ test_expect_success "init --core with invalid locale" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	level=error msg="fail to init: invalid language code for \"xx\", see ISO 639 for valid codes"
+	ERROR: fail to init: invalid language code for "xx", see ISO 639 for valid codes
 	ERROR: init command failed
 	EOF
 

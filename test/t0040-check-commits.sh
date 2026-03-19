@@ -39,7 +39,7 @@ test_expect_success "new commit with changes outside of po/" '
 	 ERROR
 	⚠️ Author and committer
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -73,11 +73,11 @@ test_expect_success "new commit with unsupported hidden meta fields" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
-	level=error msg="commit <OID>: unknown commit header: note: happy coding"
-	level=error msg="commit <OID>: unknown commit header: note: i am a hacker"
+	ERROR: commit <OID>: unknown commit header: note: happy coding
+	ERROR: commit <OID>: unknown commit header: note: i am a hacker
 	⚠️ Author and committer
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -140,7 +140,7 @@ test_expect_success "show errors of commit-date drift" '
 	❌ Author and committer
 	 ERROR commit <OID>: bad author date: date is in the future, XX from now
 	 ERROR commit <OID>: bad committer date: date is in the future, XX from now
-	level=info msg="checking commits: 0 passed, 2 failed."
+	INFO: checking commits: 0 passed, 2 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -157,7 +157,7 @@ test_expect_success "suppress errors of commit-date drift for github actions" '
 	❌ Author and committer
 	 ERROR commit <OID>: bad author date: date is in the future, XX from now
 	 ERROR commit <OID>: bad committer date: date is in the future, XX from now
-	INFO checking commits: 1 passed, 1 failed.
+	INFO: checking commits: 1 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -194,7 +194,7 @@ test_expect_success "new commit with bad email address" '
 	❌ Author and committer
 	 ERROR commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800
 	 ERROR commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 	test_cmp expect actual
@@ -206,11 +206,11 @@ test_expect_success "too many commits to check" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	level=warning msg="too many commits to check (5 > 1), check args or use option --force"
+	WARNING: too many commits to check (5 > 1), check args or use option --force
 	❌ Author and committer
 	 ERROR commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800
 	 ERROR commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -227,7 +227,7 @@ test_expect_success "too many commits to check" '
 	❌ Author and committer
 	 ERROR commit <OID>: bad format for author field: Jiang Xin <worldhello.net AT gmail.com> 1112911993 +0800
 	 ERROR commit <OID>: bad format for committer field: <worldhello.net@gmail.com> 1112911993 +0800
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -257,7 +257,7 @@ test_expect_success "long subject, exceed hard limit" '
 	 WARNING commit <OID>: subject length 74 > 72, about 98% commits have a subject less than 72 characters
 	❌ Commit subject
 	 ERROR commit <OID>: subject ("l10n: this ...") is too long: 74 > 72
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -285,7 +285,7 @@ test_expect_success "long subject, exceed soft limit" '
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	⚠️ Commit subject
 	 WARNING commit <OID>: subject length 58 > 50, about 63% commits have a subject less than 50 characters
-	level=info msg="checking commits: 1 passed."
+	INFO: checking commits: 1 passed.
 	EOF
 
 	test_cmp expect actual
@@ -311,7 +311,7 @@ test_expect_success "no empty line between subject and body" '
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	❌ Commit subject
 	 ERROR commit <OID>: no blank line between subject and body of commit message
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -339,7 +339,7 @@ test_expect_success "no l10n prefix in subject" '
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	❌ Commit subject
 	 ERROR commit <OID>: subject ("test: no ...") does not have prefix "l10n:"
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -367,7 +367,7 @@ test_expect_success "non-ascii characters in subject" '
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	❌ Commit subject
 	 ERROR commit <OID>: subject has non-ascii character "简"
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -395,7 +395,7 @@ test_expect_success "subject end with period" '
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	❌ Commit subject
 	 ERROR commit <OID>: subject should not end with period
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -424,7 +424,7 @@ test_expect_success "empty commit log" '
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	❌ Commit subject
 	 ERROR commit <OID>: do not have any commit message
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -450,7 +450,7 @@ test_expect_success "oneline commit message" '
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	❌ Commit message body
 	 ERROR commit <OID>: empty body of the commit message, no s-o-b signature
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -479,7 +479,7 @@ test_expect_success "no s-o-b signature (has body message, but no s-o-b)" '
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	❌ Commit message body
 	 ERROR commit <OID>: cannot find "Signed-off-by:" signature
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -510,7 +510,7 @@ test_expect_success "no s-o-b signature (has body message, no s-o-b, but has oth
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	❌ Commit message body
 	 ERROR commit <OID>: cannot find "Signed-off-by:" signature
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -594,7 +594,7 @@ test_expect_success "no s-o-b signature (tailing trash message)" '
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	❌ Commit message body
 	 ERROR commit <OID>: cannot find "Signed-off-by:" signature
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -625,7 +625,7 @@ test_expect_success "too long message in commit log body" '
 	❌ Commit message body
 	 ERROR commit <OID>: cannot find "Signed-off-by:" signature
 	 ERROR commit <OID>: line #3 ("Start body ...") is too long: 84 > 72
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -659,7 +659,7 @@ test_expect_success "merge commit with details" '
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	⚠️ Author and committer
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-	level=info msg="checking commits: 2 passed."
+	INFO: checking commits: 2 passed.
 	EOF
 
 	test_cmp expect actual
@@ -696,7 +696,7 @@ test_expect_success "merge commit subject not start with Merge and no details" '
 	 ERROR commit <OID>: empty body of the commit message, set merge.log=true
 	⚠️ Author and committer
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-	level=info msg="checking commits: 1 passed, 1 failed."
+	INFO: checking commits: 1 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -726,7 +726,7 @@ test_expect_success "utf-8 characters in commit log" '
 	cat >expect <<-EOF &&
 	⚠️ Author and committer
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-	level=info msg="checking commits: 1 passed."
+	INFO: checking commits: 1 passed.
 	EOF
 
 	test_cmp expect actual
@@ -758,7 +758,7 @@ test_expect_success "utf-8 characters in commit log with wrong encoding" '
 	❌ Commit log encoding
 	 ERROR commit <OID>: bad iso-8859-6 characters in: "<bad encoding chars>"
 	 ERROR     <iconv failure message>...
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -788,7 +788,7 @@ test_expect_success "gbk characters in commit log with proper encoding" '
 	cat >expect <<-EOF &&
 	⚠️ Author and committer
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-	level=info msg="checking commits: 1 passed."
+	INFO: checking commits: 1 passed.
 	EOF
 
 	test_cmp expect actual
@@ -821,7 +821,7 @@ test_expect_success "gbk characters in commit log with wrong encoding" '
 	❌ Commit log encoding
 	 ERROR commit <OID>: bad iso-8859-6 characters in: "<bad encoding chars>"
 	 ERROR     <iconv failure message>...
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -849,7 +849,7 @@ test_expect_success "bad utf-8 characters in commit log" '
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	❌ Commit log encoding
 	 ERROR commit <OID>: bad UTF-8 characters in: "<bad encoding chars>"
-	level=info msg="checking commits: 0 passed, 1 failed."
+	INFO: checking commits: 0 passed, 1 failed.
 	ERROR: check-commits command failed
 	EOF
 
@@ -862,7 +862,7 @@ test_expect_success "bad commit range" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-EOF &&
-	level=error msg="fail to run git-rev-list: exit status 128"
+	ERROR: fail to run git-rev-list: exit status 128
 	ERROR: check-commits command failed
 	EOF
 

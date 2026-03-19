@@ -90,7 +90,7 @@ test_expect_success "bad syntax of zh_CN.po" '
 
 test_expect_success "update zh_CN (--add-location=file)" '
 	cat >expect <<-EOF &&
-	INFO run msgmerge for "Chinese - China": msgmerge --add-location=file -o - po/zh_CN.po po/git.pot
+	INFO: run msgmerge for "Chinese - China": msgmerge --add-location=file -o - po/zh_CN.po po/git.pot
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
 	⚠️ Incomplete translations found
@@ -175,7 +175,7 @@ cat >expect <<-\EOF
  ERROR commit <OID>: subject ("Add files ...") does not have prefix "l10n:"
 ❌ Commit message body
  ERROR commit <OID>: empty body of the commit message, no s-o-b signature
-INFO checking commits: 0 passed, 1 failed.
+INFO: checking commits: 0 passed, 1 failed.
 ERROR: check-commits command failed
 EOF
 
@@ -202,7 +202,7 @@ cat >expect <<-\EOF
  ERROR         A.txt
  ERROR
  ERROR commit <OID>: break because this commit is not for git-l10n
-INFO checking commits: 0 passed, 1 failed, 1 skipped.
+INFO: checking commits: 0 passed, 1 failed, 1 skipped.
 ERROR: check-commits command failed
 EOF
 
@@ -237,7 +237,7 @@ cat >expect <<-\EOF
  WARNING         A.txt
  WARNING
  WARNING commit <OID>: break because this commit is not for git-l10n
-INFO checking commits: 0 passed, 0 failed, 2 skipped.
+INFO: checking commits: 0 passed, 0 failed, 2 skipped.
 EOF
 
 test_expect_success "check-commits --github-action-event=push" '

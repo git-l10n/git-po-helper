@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/git-l10n/git-po-helper/flag"
 	"github.com/git-l10n/git-po-helper/repository"
@@ -13,6 +14,14 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+// plainFormatter outputs "LEVEL: message" with no colors so tests and CI get stable output.
+type plainFormatter struct{}
+
+func (f *plainFormatter) Format(entry *log.Entry) ([]byte, error) {
+	level := strings.ToUpper(entry.Level.String())
+	return []byte(level + ": " + entry.Message + "\n"), nil
+}
 
 var rootCmd = rootCommand{}
 
@@ -61,13 +70,7 @@ type rootCommand struct {
 }
 
 func (v *rootCommand) initLog() {
-	f := new(log.TextFormatter)
-	f.DisableTimestamp = true
-	f.DisableLevelTruncation = true
-	if flag.GitHubActionEvent() != "" {
-		f.ForceColors = true
-	}
-	log.SetFormatter(f)
+	log.SetFormatter(&plainFormatter{})
 	verbose := flag.Verbose()
 	quiet := flag.Quiet()
 	if verbose == 1 {

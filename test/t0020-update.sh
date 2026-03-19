@@ -18,7 +18,7 @@ test_expect_success "update: zh_CN.po not exist" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	level=error msg="fail to update \"po/zh_CN.po\", does not exist"
+	ERROR: fail to update "po/zh_CN.po", does not exist
 	ERROR: update command failed
 	EOF
 
@@ -56,11 +56,12 @@ test_expect_success "fail to update zh_CN: bad syntax of zh_CN.po" '
 	test_must_fail git -C workdir $HELPER update --pot-file=po/git.pot \
 		zh_CN >out 2>&1 &&
 	grep "po/zh_CN.po:25: end-of-line within string" out >actual &&
-	grep "^level=error" out >>actual &&
+	grep "^ERROR:" out >>actual &&
 
 	cat >expect <<-\EOF &&
 	po/zh_CN.po:25: end-of-line within string
-	level=error msg="fail to read output for \"po/zh_CN.po\": exit status 1"
+	ERROR: fail to read output for "po/zh_CN.po": exit status 1
+	ERROR: update command failed
 	EOF
 
 	test_cmp expect actual

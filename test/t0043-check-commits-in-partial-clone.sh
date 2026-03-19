@@ -92,7 +92,7 @@ cat >expect <<-\EOF
  WARNING [zh_CN.po@rev]
 ⚠️ Author and committer
  WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-level=info msg="checking commits: 1 passed."
+INFO: checking commits: 1 passed.
 EOF
 
 test_expect_success "check-commits show typos" '
@@ -103,7 +103,7 @@ test_expect_success "check-commits show typos" '
 '
 
 cat >expect <<-\EOF
-level=info msg="no missing blobs of po/* in partial clone"
+INFO: no missing blobs of po/* in partial clone
 ℹ️ Syntax check with msgfmt
  INFO [zh_CN.po@rev] 2 translated messages.
 ❌ msgid/msgstr pattern check
@@ -117,7 +117,7 @@ level=info msg="no missing blobs of po/* in partial clone"
  ERROR [zh_CN.po@rev]
 ⚠️ Author and committer
  WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-level=info msg="checking commits: 0 passed, 1 failed."
+INFO: checking commits: 0 passed, 1 failed.
 ERROR: check-commits command failed
 EOF
 
@@ -159,7 +159,7 @@ cat >expect <<-\EOF
  WARNING [zh_CN.po@rev]
 ⚠️ Author and committer
  WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-level=info msg="checking commits: 1 passed, 1 failed."
+INFO: checking commits: 1 passed, 1 failed.
 ERROR: check-commits command failed
 EOF
 
