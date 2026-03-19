@@ -192,9 +192,13 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 
 	// Get pretty locale name, and validate locale name.
 	locale = strings.TrimSuffix(filepath.Base(locale), ".po")
-	_, err := GetPrettyLocaleName(locale)
-	if err != nil {
-		ReportSection("Locale name", false, log.InfoLevel, prompt, err.Error())
+	_, localeErrs := GetPrettyLocaleName(locale)
+	if len(localeErrs) > 0 {
+		msgs := make([]string, 0, len(localeErrs))
+		for _, e := range localeErrs {
+			msgs = append(msgs, e.Error())
+		}
+		ReportSection("Locale name", false, log.InfoLevel, prompt, msgs...)
 		ret = false
 	}
 

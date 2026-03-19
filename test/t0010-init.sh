@@ -52,7 +52,21 @@ test_expect_success "init with invalid locale" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	level=error msg="fail to init: invalid language code for locale \"xx\""
+	level=error msg="fail to init: invalid language code for \"xx\", see ISO 639 for valid codes"
+	ERROR: init command failed
+	EOF
+
+	test_cmp expect actual &&
+	test ! -f workdir/po/xx.po
+'
+
+test_expect_success "init with invalid locale with incorrect capitalization" '
+	test_must_fail git -C workdir $HELPER init ZH_cn >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+
+	cat >expect <<-\EOF &&
+	level=error msg="fail to init: language code \"ZH\" must be all lowercase"
+	level=error msg="fail to init: region/territory code \"cn\" must be all uppercase"
 	ERROR: init command failed
 	EOF
 
@@ -98,7 +112,7 @@ test_expect_success "init --core with invalid locale" '
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
-	level=error msg="fail to init: invalid language code for locale \"xx\""
+	level=error msg="fail to init: invalid language code for \"xx\", see ISO 639 for valid codes"
 	ERROR: init command failed
 	EOF
 

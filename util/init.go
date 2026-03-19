@@ -64,9 +64,11 @@ func CmdInit(fileName string, onlyCore bool) bool {
 	)
 
 	locale = strings.TrimSuffix(filepath.Base(fileName), ".po")
-	localeFullName, err = GetPrettyLocaleName(locale)
-	if err != nil {
-		log.Errorf("fail to init: %s", err)
+	localeFullName, localeErrs := GetPrettyLocaleName(locale)
+	if len(localeErrs) > 0 {
+		for _, e := range localeErrs {
+			log.Errorf("fail to init: %s", e)
+		}
 		return false
 	}
 	poFile = fmt.Sprintf("po/%s.po", locale)

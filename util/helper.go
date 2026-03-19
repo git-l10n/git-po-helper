@@ -39,26 +39,49 @@ func ShowExecError(err error) {
 }
 
 // GetPrettyLocaleName shows full language name and location
-func GetPrettyLocaleName(locale string) (string, error) {
+func GetPrettyLocaleName(locale string) (string, []error) {
 	var (
+		lang     string
+		zone     string
 		langName string
-		locName  string
+		zoneName string
+		errs     []error
 	)
 	items := strings.SplitN(locale, "_", 2)
-	langName = data.GetLanguageName(items[0])
-	if langName == "" {
-		return "", fmt.Errorf("invalid language code for locale \"%s\"", locale)
+	lang = items[0]
+	if len(items) > 1 {
+		zone = items[1]
 	}
-	if len(items) > 1 && items[1] != "" {
-		locName = data.GetLocationName(items[1])
-		if locName == "" {
-			return "", fmt.Errorf(`invalid country or location code for locale "%s"`, locale)
+	if lang != strings.ToLower(lang) {
+		errs = append(errs, fmt.Errorf(
+			`language code %q must be all lowercase`,
+			lang))
+		lang = strings.ToLower(lang)
+	}
+	if zone != "" && zone != strings.ToUpper(zone) {
+		errs = append(errs, fmt.Errorf(
+			`region/territory code %q must be all uppercase`,
+			zone))
+		zone = strings.ToUpper(zone)
+	}
+	langName = data.GetLanguageName(lang)
+	if langName == "" {
+		errs = append(errs, fmt.Errorf(
+			`invalid language code for "%s", see ISO 639 for valid codes`,
+			lang))
+	}
+	if zone != "" {
+		zoneName = data.GetLocationName(zone)
+		if zoneName == "" {
+			errs = append(errs, fmt.Errorf(
+				`invalid country or location code for "%s", see ISO 3166 for valid codes`,
+				zone))
 		}
 	}
-	if locName != "" {
-		return fmt.Sprintf("%s - %s", langName, locName), nil
+	if zoneName != "" {
+		return fmt.Sprintf("%s - %s", langName, zoneName), errs
 	}
-	return langName, nil
+	return langName, errs
 }
 
 // GetUserInput reads user input from stdin.

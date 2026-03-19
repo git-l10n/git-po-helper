@@ -52,8 +52,11 @@ func CmdUpdate(fileName string) bool {
 	)
 
 	locale = strings.TrimSuffix(filepath.Base(fileName), ".po")
-	if localeFullName, err = GetPrettyLocaleName(locale); err != nil {
-		log.Errorf("fail to get locale name: %s", err)
+	localeFullName, localeErrs := GetPrettyLocaleName(locale)
+	if len(localeErrs) > 0 {
+		for _, e := range localeErrs {
+			log.Errorf("fail to get locale name: %s", e)
+		}
 		return false
 	}
 	poFile = filepath.Join(PoDir, locale+".po")
