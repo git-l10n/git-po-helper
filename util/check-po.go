@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/git-l10n/git-po-helper/flag"
@@ -66,12 +67,45 @@ func checkPoLocationCommentsNoLineNumbers(po *GettextPO) ([]string, bool) {
 	return errs, true
 }
 
-// checkPoCompatibility reports gettext version compatibility issues:
-// - msgctxt: gettext below 0.15 does not support
-// - #| previous msgctxt: gettext below 0.15 does not support
-// - #~| (obsolete previous msgctxt/msgid/msgid_plural): gettext 0.14 does not support
-// - #~ msgctxt (obsolete with context): gettext 0.14 does not support
-func checkPoCompatibility(po *GettextPO) ([]string, bool) {
+// gettextVersionAtLeast returns true if minVersion >= required (e.g. "0.15" >= "0.15").
+// Invalid or empty minVersion is treated as "0" and thus not at least any required.
+func gettextVersionAtLeast(minVersion, required string) bool {
+	maj, min := parseGettextVersion(minVersion)
+	rMaj, rMin := parseGettextVersion(required)
+	if maj < rMaj {
+		return false
+	}
+	if maj > rMaj {
+		return true
+	}
+	return min >= rMin
+}
+
+func parseGettextVersion(s string) (major, minor int) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, 0
+	}
+	parts := strings.SplitN(s, ".", 2)
+	major, _ = strconv.Atoi(parts[0])
+	if len(parts) > 1 {
+		minor, _ = strconv.Atoi(parts[1])
+	}
+	return major, minor
+}
+
+// checkPoCompatibility reports gettext version compatibility issues based on minGettextVersion:
+// - 0.15+: msgctxt, previous-msgctxt (#| msgctxt / #| msgid), obsolete msgctxt (#~ msgctxt)
+// - 0.16+: obsolete-previous-msgid (#~| msgid), obsolete-previous-msgctxt (#~| msgctxt), obsolete-previous-plural (#~| msgid_plural)
+// If minGettextVersion is empty, returns no errors (caller skips the check).
+func checkPoCompatibility(po *GettextPO, minGettextVersion string) ([]string, bool) {
+	if minGettextVersion == "" {
+		return nil, true
+	}
+	need015 := gettextVersionAtLeast(minGettextVersion, "0.15")
+	need016 := gettextVersionAtLeast(minGettextVersion, "0.16")
+
+	var errs []string
 	for i, e := range po.Entries {
 		msgid := e.MsgID
 		if len(msgid) > 30 {
@@ -79,18 +113,38 @@ func checkPoCompatibility(po *GettextPO) ([]string, bool) {
 		}
 		entryDesc := entryDescWithLine(i+1, msgid, e.EntryLocation)
 
-		if e.MsgCtxt != nil && !e.Obsolete {
-			return []string{fmt.Sprintf("%s: msgctxt not supported by gettext below 0.15", entryDesc)}, false
+		if !need015 {
+			if e.MsgCtxt != nil {
+				if e.Obsolete {
+					errs = append(errs, fmt.Sprintf("%s: #~ msgctxt (obsolete with context) not supported by gettext below 0.15", entryDesc))
+				} else {
+					errs = append(errs, fmt.Sprintf("%s: msgctxt not supported by gettext below 0.15", entryDesc))
+				}
+				continue
+			}
+			if !e.IsObsolete() && e.HasPreviousMsgctxt() {
+				errs = append(errs, fmt.Sprintf("%s: previous msgctxt (#|) not supported by gettext below 0.15", entryDesc))
+				continue
+			}
 		}
-		if !e.IsObsolete() && e.HasPreviousMsgctxt() {
-			return []string{fmt.Sprintf("%s: previous msgctxt (#|) not supported by gettext below 0.15", entryDesc)}, false
+
+		if !need016 {
+			if e.IsObsolete() && e.HasPreviousMsgid() {
+				errs = append(errs, fmt.Sprintf("%s: #~| msgid (obsolete previous) not supported by gettext below 0.16", entryDesc))
+				continue
+			}
+			if e.IsObsolete() && e.HasPreviousMsgctxt() {
+				errs = append(errs, fmt.Sprintf("%s: #~| msgctxt (obsolete previous) not supported by gettext below 0.16", entryDesc))
+				continue
+			}
+			if e.IsObsolete() && e.HasPreviousMsgidPlural() {
+				errs = append(errs, fmt.Sprintf("%s: #~| msgid_plural (obsolete previous) not supported by gettext below 0.16", entryDesc))
+				continue
+			}
 		}
-		if e.IsObsolete() && (e.HasPreviousMsgctxt() || e.HasPreviousMsgid() || e.HasPreviousMsgidPlural()) {
-			return []string{fmt.Sprintf("%s: #~| format not supported by gettext 0.14", entryDesc)}, false
-		}
-		if e.Obsolete && e.MsgCtxt != nil {
-			return []string{fmt.Sprintf("%s: #~ msgctxt (obsolete with context) not supported by gettext 0.14", entryDesc)}, false
-		}
+	}
+	if len(errs) > 0 {
+		return errs, false
 	}
 	return nil, true
 }
@@ -168,10 +222,14 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 		ret = ret && ok
 	}
 
-	// Compatibility checks: msgctxt (gettext 0.15+), #~| and #~ msgctxt (gettext 0.14+).
-	errs, ok = checkPoCompatibility(po)
-	ReportSection("gettext compatibility", ok, log.InfoLevel, prompt, errs...)
-	ret = ret && ok
+	// Compatibility checks (only when project sets MinGettextVersion): 0.15+ msgctxt/#|/#~ msgctxt, 0.16+ #~|.
+	projectName := po.GetProject()
+	cfg := GetProjectPotConfig(projectName, poFile)
+	if cfg.MinGettextVersion != "" {
+		errs, ok = checkPoCompatibility(po, cfg.MinGettextVersion)
+		ReportSection("gettext compatibility", ok, log.InfoLevel, prompt, errs...)
+		ret = ret && ok
+	}
 
 	// No obsolete entries allowed (unless AllowObsoleteEntries, e.g. in update flow).
 	if !flag.AllowObsoleteEntries() {
@@ -191,7 +249,6 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 	ret = ret && ok
 
 	// Check that Project-Id-Version defines a project name.
-	projectName := po.GetProject()
 	if projectName == "" {
 		ReportSection("Project name", false, log.InfoLevel, prompt,
 			"project name is not defined in PO file")

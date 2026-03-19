@@ -60,6 +60,10 @@ type ProjectPotConfig struct {
 	// DefaultAction is the default --pot-file when "auto".
 	// Use GetEffectiveAction() to get the resolved value.
 	DefaultAction DefaultPotAction
+	// MinGettextVersion is the minimum gettext version required for this project (e.g. "0.14").
+	// When set, check-po runs gettext compatibility checks (0.15+: msgctxt, #|, #~ msgctxt; 0.16+: #~|).
+	// Empty means skip compatibility checks.
+	MinGettextVersion string
 
 	// actualPotFile is the path from --pot-file=path when user specifies an explicit file.
 	actualPotFile string
@@ -75,12 +79,13 @@ type ProjectPotConfig struct {
 
 var projectPotConfigs = []*ProjectPotConfig{
 	{
-		ProjectName:    "Git",
-		DownloadURL:    "https://github.com/git-l10n/pot-changes/raw/pot/master/po/git.pot",
-		BuildCmd:       []string{"make", "-j", "<job>", "pot"},
-		BuildDirRel:    "../",
-		PotFilenameRel: "git.pot",
-		DefaultAction:  DefaultPotActionAuto,
+		ProjectName:       "Git",
+		DownloadURL:       "https://github.com/git-l10n/pot-changes/raw/pot/master/po/git.pot",
+		BuildCmd:          []string{"make", "-j", "<job>", "pot"},
+		BuildDirRel:       "../",
+		PotFilenameRel:    "git.pot",
+		DefaultAction:     DefaultPotActionAuto,
+		MinGettextVersion: "0.14",
 	},
 }
 

@@ -165,49 +165,81 @@ msgstr "你好"
 func TestCheckPoCompatibility(t *testing.T) {
 	menu := "Menu"
 	tests := []struct {
-		name    string
-		entries []GettextEntry
-		wantErr bool
-		wantMsg string
+		name       string
+		minVersion string
+		entries    []GettextEntry
+		wantErr    bool
+		wantMsg    string
 	}{
 		{
-			name: "no compatibility issues",
-			entries: []GettextEntry{
-				{MsgID: "Hello", MsgStr: []string{"你好"}},
-			},
-			wantErr: false,
+			name:       "no compatibility issues",
+			minVersion: "0.16",
+			entries:    []GettextEntry{{MsgID: "Hello", MsgStr: []string{"你好"}}},
+			wantErr:    false,
 		},
 		{
-			name: "msgctxt not supported by gettext below 0.15",
+			name:       "empty minVersion skips check",
+			minVersion: "",
+			entries:    []GettextEntry{{MsgID: "File", MsgStr: []string{"文件"}, MsgCtxt: &menu}},
+			wantErr:    false,
+		},
+		{
+			name:       "msgctxt not supported below 0.15",
+			minVersion: "0.14",
+			entries:    []GettextEntry{{MsgID: "File", MsgStr: []string{"文件"}, MsgCtxt: &menu}},
+			wantErr:    true,
+			wantMsg:    "msgctxt not supported by gettext below 0.15",
+		},
+		{
+			name:       "msgctxt allowed with 0.15",
+			minVersion: "0.15",
+			entries:    []GettextEntry{{MsgID: "File", MsgStr: []string{"文件"}, MsgCtxt: &menu}},
+			wantErr:    false,
+		},
+		{
+			name:       "previous msgctxt (#|) not supported below 0.15",
+			minVersion: "0.14",
+			entries:    []GettextEntry{{MsgID: "Open", MsgStr: []string{"打开"}, Comments: []string{"#| msgctxt \"old context\"\n", "#| msgid \"Open\"\n"}}},
+			wantErr:    true,
+			wantMsg:    "previous msgctxt (#|) not supported by gettext below 0.15",
+		},
+		{
+			name:       "#~ msgctxt not supported below 0.15",
+			minVersion: "0.14",
+			entries:    []GettextEntry{{MsgID: "File", MsgStr: []string{"文件"}, MsgCtxt: &menu, Obsolete: true}},
+			wantErr:    true,
+			wantMsg:    "#~ msgctxt (obsolete with context) not supported by gettext below 0.15",
+		},
+		{
+			name:       "#~| msgid not supported below 0.16",
+			minVersion: "0.15",
+			entries:    []GettextEntry{{MsgID: "Old", MsgStr: []string{"旧"}, Obsolete: true, Comments: []string{"#~| msgid \"Previous\"\n"}}},
+			wantErr:    true,
+			wantMsg:    "#~| msgid (obsolete previous) not supported by gettext below 0.16",
+		},
+		{
+			name:       "#~| msgctxt not supported below 0.16",
+			minVersion: "0.15",
+			entries:    []GettextEntry{{MsgID: "X", MsgStr: []string{"X"}, Obsolete: true, Comments: []string{"#~| msgctxt \"Menu\"\n"}}},
+			wantErr:    true,
+			wantMsg:    "#~| msgctxt (obsolete previous) not supported by gettext below 0.16",
+		},
+		{
+			name:       "#~| msgid_plural not supported below 0.16",
+			minVersion: "0.15",
+			entries:    []GettextEntry{{MsgID: "doc", MsgIDPlural: "docs", MsgStr: []string{"文档", "文档"}, Obsolete: true, Comments: []string{"#~| msgid_plural \"files\"\n"}}},
+			wantErr:    true,
+			wantMsg:    "#~| msgid_plural (obsolete previous) not supported by gettext below 0.16",
+		},
+		{
+			name:       "all features allowed with 0.16",
+			minVersion: "0.16",
 			entries: []GettextEntry{
 				{MsgID: "File", MsgStr: []string{"文件"}, MsgCtxt: &menu},
-			},
-			wantErr: true,
-			wantMsg: "msgctxt not supported by gettext below 0.15",
-		},
-		{
-			name: "#~| format not supported by gettext 0.14",
-			entries: []GettextEntry{
 				{MsgID: "Old", MsgStr: []string{"旧"}, Obsolete: true, Comments: []string{"#~| msgid \"Previous\"\n"}},
-			},
-			wantErr: true,
-			wantMsg: "#~| format not supported by gettext 0.14",
-		},
-		{
-			name: "#~| msgctxt not supported",
-			entries: []GettextEntry{
 				{MsgID: "X", MsgStr: []string{"X"}, Obsolete: true, Comments: []string{"#~| msgctxt \"Menu\"\n"}},
 			},
-			wantErr: true,
-			wantMsg: "#~| format not supported by gettext 0.14",
-		},
-		{
-			name: "#~ msgctxt (obsolete with context) not supported by gettext 0.14",
-			entries: []GettextEntry{
-				{MsgID: "File", MsgStr: []string{"文件"}, MsgCtxt: &menu, Obsolete: true},
-			},
-			wantErr: true,
-			wantMsg: "#~ msgctxt (obsolete with context) not supported by gettext 0.14",
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -216,9 +248,9 @@ func TestCheckPoCompatibility(t *testing.T) {
 				HeaderEntry: GettextEntry{MsgStr: []string{"Content-Type: text/plain; charset=UTF-8\n"}},
 				Entries:     tt.entries,
 			}
-			errs, ok := checkPoCompatibility(po)
+			errs, ok := checkPoCompatibility(po, tt.minVersion)
 			if ok == tt.wantErr {
-				t.Errorf("checkPoCompatibility() ok = %v, want %v", ok, !tt.wantErr)
+				t.Errorf("checkPoCompatibility(_, %q) ok = %v, want %v", tt.minVersion, ok, !tt.wantErr)
 			}
 			if tt.wantErr && tt.wantMsg != "" {
 				if len(errs) == 0 || !strings.Contains(errs[0], tt.wantMsg) {
@@ -232,9 +264,10 @@ func TestCheckPoCompatibility(t *testing.T) {
 func TestCheckPoFileWithPrompt_Compatibility(t *testing.T) {
 	tmpDir := t.TempDir()
 	poPath := filepath.Join(tmpDir, "zh_CN.po")
-	// PO with msgctxt - should fail compatibility check
+	// PO with msgctxt - should fail when project sets MinGettextVersion (e.g. Git 0.14).
 	poContent := `msgid ""
 msgstr ""
+"Project-Id-Version: Git\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
 msgctxt "Menu"
@@ -250,6 +283,32 @@ msgstr "文件"
 
 	ok := CheckPoFileWithPrompt("zh_CN", poPath, "[zh_CN.po]")
 	if ok {
-		t.Error("CheckPoFileWithPrompt expected to fail for msgctxt (gettext < 0.15), got ok")
+		t.Error("CheckPoFileWithPrompt expected to fail for msgctxt (Git min 0.14 < 0.15), got ok")
+	}
+}
+
+func TestCheckPoFileWithPrompt_CompatibilitySkippedWhenNoMinVersion(t *testing.T) {
+	tmpDir := t.TempDir()
+	poPath := filepath.Join(tmpDir, "zh_CN.po")
+	// Project without MinGettextVersion: compatibility check is skipped, so msgctxt does not cause failure.
+	poContent := `msgid ""
+msgstr ""
+"Project-Id-Version: OtherProj 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgctxt "Menu"
+msgid "File"
+msgstr "文件"
+`
+	if err := os.WriteFile(poPath, []byte(poContent), 0644); err != nil {
+		t.Fatalf("write temp po: %v", err)
+	}
+
+	viper.Set("check-po--report-file-locations", "none")
+	defer viper.Set("check-po--report-file-locations", "")
+
+	ok := CheckPoFileWithPrompt("zh_CN", poPath, "[zh_CN.po]")
+	if !ok {
+		t.Error("CheckPoFileWithPrompt expected ok when project has no MinGettextVersion (compatibility skipped), got !ok")
 	}
 }
