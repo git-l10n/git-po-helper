@@ -118,6 +118,17 @@ type AgentEntry struct {
 	Kind string   `yaml:"kind"` // Agent kind: "claude", "gemini", "codex", "opencode", "echo", "qwen", "qoder"
 }
 
+// PotProjectEntry holds project-specific POT settings from YAML (key "projects").
+// ProjectName is provided by the map key; this struct is for per-project fields only.
+type PotProjectEntry struct {
+	DownloadURL       string   `yaml:"download_url"`
+	BuildCmd          []string `yaml:"build_cmd"`
+	BuildDirRel       string   `yaml:"build_dir_rel"`
+	PotFilenameRel    string   `yaml:"pot_filename_rel"`
+	DefaultAction     string   `yaml:"default_action"` // "auto", "no", "build", "download", "use_if_exist"
+	MinGettextVersion string   `yaml:"min_gettext_version"`
+}
+
 // getSystemLocale gets the system locale from environment variables.
 // It checks LC_ALL, LC_MESSAGES, LANG in order of priority.
 // Returns a locale string like "en_US" or "zh_CN", or "en_US" as fallback.
@@ -322,6 +333,33 @@ func loadConfigFromFile(configPath string) (*AgentConfig, error) {
 	}
 
 	return &config, nil
+}
+
+// fileProjectsSection is used to unmarshal only the "projects" key from a config file.
+type fileProjectsSection struct {
+	Projects map[string]PotProjectEntry `yaml:"projects"`
+}
+
+// LoadPotProjectsFromFile reads configPath and returns the "projects" section.
+// If the file does not exist, returns (nil, nil). If the file exists but has no
+// "projects" key or it is empty, returns (nil, nil). On parse error returns (nil, err).
+// Callers merge the returned map with built-in project configs (case-insensitive by name).
+func LoadPotProjectsFromFile(configPath string) (map[string]PotProjectEntry, error) {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+	var section fileProjectsSection
+	if err := yaml.Unmarshal(data, &section); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML config file: %w", err)
+	}
+	if len(section.Projects) == 0 {
+		return nil, nil
+	}
+	return section.Projects, nil
 }
 
 // mergeConfigs merges baseConfig and overlay. mergeAgents controls Agents behavior:

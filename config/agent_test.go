@@ -552,3 +552,95 @@ func TestLoadAgentConfig_CustomPath_MissingFile(t *testing.T) {
 		t.Fatal("LoadAgentConfig expected error for missing custom file")
 	}
 }
+
+func TestLoadPotProjectsFromFile_MissingFile(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "git-po-helper-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+	path := filepath.Join(tmpDir, "nonexistent.yaml")
+	m, err := LoadPotProjectsFromFile(path)
+	if err != nil {
+		t.Fatalf("LoadPotProjectsFromFile for missing file should return (nil, nil), got err: %v", err)
+	}
+	if m != nil {
+		t.Fatalf("LoadPotProjectsFromFile for missing file should return (nil, nil), got map with %d entries", len(m))
+	}
+}
+
+func TestLoadPotProjectsFromFile_NoProjectsKey(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "git-po-helper-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+	path := filepath.Join(tmpDir, "config.yaml")
+	if err := os.WriteFile(path, []byte("default_lang_code: en_US\n"), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	m, err := LoadPotProjectsFromFile(path)
+	if err != nil {
+		t.Fatalf("LoadPotProjectsFromFile for file without projects key: %v", err)
+	}
+	if m != nil {
+		t.Fatalf("expected nil map when projects key missing, got %d entries", len(m))
+	}
+}
+
+func TestLoadPotProjectsFromFile_ValidProjects(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "git-po-helper-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+	path := filepath.Join(tmpDir, "config.yaml")
+	yaml := `projects:
+  Git:
+    min_gettext_version: "0.16"
+  MyProject:
+    download_url: "https://example.com/po/my.pot"
+    build_cmd: ["make", "pot"]
+    default_action: "download"
+`
+	if err := os.WriteFile(path, []byte(yaml), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	m, err := LoadPotProjectsFromFile(path)
+	if err != nil {
+		t.Fatalf("LoadPotProjectsFromFile: %v", err)
+	}
+	if m == nil || len(m) != 2 {
+		t.Fatalf("expected 2 projects, got %v", m)
+	}
+	git, ok := m["Git"]
+	if !ok {
+		t.Fatal("expected Git project")
+	}
+	if git.MinGettextVersion != "0.16" {
+		t.Fatalf("Git min_gettext_version: got %q", git.MinGettextVersion)
+	}
+	mp, ok := m["MyProject"]
+	if !ok {
+		t.Fatal("expected MyProject")
+	}
+	if mp.DownloadURL != "https://example.com/po/my.pot" || mp.DefaultAction != "download" {
+		t.Fatalf("MyProject: got %+v", mp)
+	}
+}
+
+func TestLoadPotProjectsFromFile_InvalidYAML(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "git-po-helper-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+	path := filepath.Join(tmpDir, "bad.yaml")
+	if err := os.WriteFile(path, []byte("projects:\n  Git:\n    invalid: [unclosed"), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	_, err = LoadPotProjectsFromFile(path)
+	if err == nil {
+		t.Fatal("LoadPotProjectsFromFile expected error for invalid YAML")
+	}
+}

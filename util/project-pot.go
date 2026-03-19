@@ -8,8 +8,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 
+	"github.com/git-l10n/git-po-helper/config"
 	"github.com/git-l10n/git-po-helper/flag"
+	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -41,6 +44,25 @@ func (a DefaultPotAction) String() string {
 		return "use_if_exist"
 	default:
 		return "no"
+	}
+}
+
+// ParseDefaultPotAction converts a string (e.g. from YAML "default_action") to DefaultPotAction.
+func ParseDefaultPotAction(s string) DefaultPotAction {
+	opt := strings.ToLower(strings.TrimSpace(s))
+	switch opt {
+	case "auto":
+		return DefaultPotActionAuto
+	case "no", "false":
+		return DefaultPotActionNo
+	case "build", "make", "update":
+		return DefaultPotActionBuild
+	case "download":
+		return DefaultPotActionDownload
+	case "use_if_exist":
+		return DefaultPotActionUseIfExist
+	default:
+		return DefaultPotActionNo
 	}
 }
 
@@ -92,6 +114,125 @@ var projectPotConfigs = []*ProjectPotConfig{
 // defaultProjectPotConfig is the config for unknown projects.
 var defaultProjectPotConfig = &ProjectPotConfig{
 	DefaultAction: DefaultPotActionNo,
+}
+
+// cloneProjectPotConfig returns a copy of c with only exported fields copied (used when merging overlays).
+func cloneProjectPotConfig(c *ProjectPotConfig) *ProjectPotConfig {
+	clone := &ProjectPotConfig{
+		ProjectName:       c.ProjectName,
+		DownloadURL:       c.DownloadURL,
+		BuildDirRel:       c.BuildDirRel,
+		PotFilenameRel:    c.PotFilenameRel,
+		DefaultAction:     c.DefaultAction,
+		MinGettextVersion: c.MinGettextVersion,
+	}
+	if len(c.BuildCmd) > 0 {
+		clone.BuildCmd = make([]string, len(c.BuildCmd))
+		copy(clone.BuildCmd, c.BuildCmd)
+	}
+	return clone
+}
+
+// applyPotProjectEntry overlays non-zero fields from e onto c. name is the project name (map key).
+func applyPotProjectEntry(c *ProjectPotConfig, name string, e *config.PotProjectEntry) {
+	if e.DownloadURL != "" {
+		c.DownloadURL = e.DownloadURL
+	}
+	if len(e.BuildCmd) > 0 {
+		c.BuildCmd = e.BuildCmd
+	}
+	if e.BuildDirRel != "" {
+		c.BuildDirRel = e.BuildDirRel
+	}
+	if e.PotFilenameRel != "" {
+		c.PotFilenameRel = e.PotFilenameRel
+	}
+	if e.DefaultAction != "" {
+		c.DefaultAction = ParseDefaultPotAction(e.DefaultAction)
+	}
+	if e.MinGettextVersion != "" {
+		c.MinGettextVersion = e.MinGettextVersion
+	}
+	if name != "" {
+		c.ProjectName = name
+	}
+}
+
+// findProjectByName returns the config in slice with ProjectName equal to name (case-insensitive), or nil.
+func findProjectByName(slice []*ProjectPotConfig, name string) *ProjectPotConfig {
+	for _, c := range slice {
+		if strings.EqualFold(c.ProjectName, name) {
+			return c
+		}
+	}
+	return nil
+}
+
+// mergeProjectPotOverlays merges overlay maps onto a base list (by project name, case-insensitive).
+// Base entries are cloned so the built-in list is not mutated. New names from overlays are appended.
+func mergeProjectPotOverlays(base []*ProjectPotConfig, overlays []map[string]config.PotProjectEntry) []*ProjectPotConfig {
+	result := make([]*ProjectPotConfig, 0, len(base)+8)
+	for _, c := range base {
+		result = append(result, cloneProjectPotConfig(c))
+	}
+	for _, overlay := range overlays {
+		for name, entry := range overlay {
+			existing := findProjectByName(result, name)
+			if existing != nil {
+				applyPotProjectEntry(existing, existing.ProjectName, &entry)
+			} else {
+				newCfg := &ProjectPotConfig{ProjectName: name}
+				applyPotProjectEntry(newCfg, name, &entry)
+				if newCfg.DefaultAction == DefaultPotActionUndefined {
+					newCfg.DefaultAction = DefaultPotActionNo
+				}
+				result = append(result, newCfg)
+			}
+		}
+	}
+	return result
+}
+
+var (
+	cachedMergedProjectPotConfigs []*ProjectPotConfig
+	cachedMergedProjectPotOnce    sync.Once
+)
+
+// getMergedProjectPotConfigs returns built-in project configs merged with projects from config files.
+// Merge order: built-in, then ~/.git-po-helper.yaml, then repo .git-po-helper.yaml; or only --config file if set.
+func getMergedProjectPotConfigs() []*ProjectPotConfig {
+	cachedMergedProjectPotOnce.Do(func() {
+		overlays := []map[string]config.PotProjectEntry{}
+		customPath := flag.GetConfigFilePath()
+		if customPath != "" {
+			m, err := config.LoadPotProjectsFromFile(customPath)
+			if err != nil {
+				log.Warnf("load projects from %s: %v", customPath, err)
+			} else if m != nil {
+				overlays = append(overlays, m)
+			}
+		} else {
+			if homeDir, err := os.UserHomeDir(); err == nil {
+				path := filepath.Join(homeDir, config.GitPoHelperConfigFileName)
+				if m, err := config.LoadPotProjectsFromFile(path); err != nil {
+					log.Warnf("load projects from %s: %v", path, err)
+				} else if m != nil {
+					overlays = append(overlays, m)
+				}
+			}
+			if repository.Opened() {
+				workDir := repository.WorkDir()
+				path := filepath.Join(workDir, config.GitPoHelperConfigFileName)
+				if m, err := config.LoadPotProjectsFromFile(path); err != nil {
+					log.Warnf("load projects from %s: %v", path, err)
+				} else if m != nil {
+					overlays = append(overlays, m)
+				}
+			}
+		}
+		cachedMergedProjectPotConfigs = mergeProjectPotOverlays(projectPotConfigs, overlays)
+	})
+	return cachedMergedProjectPotConfigs
 }
 
 // Init initializes buildDir, potFilename and effectiveAction from poFile and flags.
@@ -284,16 +425,11 @@ func (c *ProjectPotConfig) AcquirePotFile(projectName string, poFile string) (st
 }
 
 // GetProjectPotConfig returns project config for projectName (case-insensitive match on ProjectName).
-// When poFile is non-empty, infers BuildDir and PotFilename relative to current directory.
-// Unknown projects get _default_ config (DefaultActionNo, empty other fields).
+// Uses merged config (built-in + projects from .git-po-helper.yaml). When poFile is non-empty,
+// infers BuildDir and PotFilename. Unknown projects get _default_ config (DefaultActionNo, empty other fields).
 func GetProjectPotConfig(projectName string, poFile string) *ProjectPotConfig {
-	var cfg *ProjectPotConfig
-	for _, c := range projectPotConfigs {
-		if strings.EqualFold(c.ProjectName, projectName) {
-			cfg = c
-			break
-		}
-	}
+	merged := getMergedProjectPotConfigs()
+	cfg := findProjectByName(merged, projectName)
 	if cfg == nil {
 		cfg = defaultProjectPotConfig
 	}

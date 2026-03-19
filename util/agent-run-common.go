@@ -21,7 +21,7 @@ import (
 // hint for missing or invalid git-po-helper.yaml.
 func LoadAgentConfigForCmd() (*config.AgentConfig, error) {
 	log.Debugf("loading agent configuration")
-	cfg, err := config.LoadAgentConfig(flag.AgentConfigFile())
+	cfg, err := config.LoadAgentConfig(flag.GetConfigFilePath())
 	if err != nil {
 		return nil, fmt.Errorf("failed to load agent configuration: %w\nHint: Ensure git-po-helper.yaml exists in repository root or user home directory", err)
 	}

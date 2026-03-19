@@ -129,8 +129,8 @@ func GettextUseMultipleVersions() bool {
 	return viper.GetBool("gettext-use-multiple-versions")
 }
 
-// AgentConfigFile returns option "--config" (custom agent config file path).
+// GetConfigFilePath returns option "--config" (custom agent config file path).
 // If non-empty, agent config is loaded only from this file.
-func AgentConfigFile() string {
+func GetConfigFilePath() string {
 	return viper.GetString("config")
 }
