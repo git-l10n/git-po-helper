@@ -3,7 +3,6 @@ package util
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -156,7 +155,7 @@ msgid_plural "%d items"
 msgstr[0] "%d 项"
 msgstr[1] "%d 项"
 `,
-	// Phase 4: obsolete with #~ #: and #~ #, (7.2 Option A round-trip via RawLines)
+	// Phase 4: obsolete with #~ #: and #~ #, (7.2 Option A round-trip via Comments)
 	`msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -194,9 +193,28 @@ func TestParsePoEntriesRoundTripBytes(t *testing.T) {
 				t.Fatalf("ParsePoEntries failed: %v", err)
 			}
 			written := BuildPoContent(po.HeaderLines(), po.EntriesPtr())
-			if !bytes.Equal(original, written) {
-				diff := bytesDiff(original, written)
-				t.Errorf("round-trip mismatch:\n%s", diff)
+			// Re-parse written output and compare semantically (content is built from fields, so formatting may differ).
+			po2, err := ParsePoEntries(written)
+			if err != nil {
+				t.Fatalf("ParsePoEntries(written) failed: %v", err)
+			}
+			if len(po2.Entries) != len(po.Entries) {
+				t.Errorf("round-trip entry count: got %d, want %d", len(po2.Entries), len(po.Entries))
+			}
+			for j := range po.Entries {
+				if j >= len(po2.Entries) {
+					break
+				}
+				e1, e2 := &po.Entries[j], &po2.Entries[j]
+				if e1.MsgID != e2.MsgID || e1.MsgStrSingle() != e2.MsgStrSingle() ||
+					e1.MsgIDPlural != e2.MsgIDPlural || e1.Obsolete != e2.Obsolete {
+					t.Errorf("entry %d: MsgID %q vs %q, MsgStr %q vs %q, MsgIDPlural %q vs %q, Obsolete %v vs %v",
+						j, e1.MsgID, e2.MsgID, e1.MsgStrSingle(), e2.MsgStrSingle(),
+						e1.MsgIDPlural, e2.MsgIDPlural, e1.Obsolete, e2.Obsolete)
+				}
+				if !GettextEntriesEqual(e1, e2) {
+					t.Errorf("entry %d: GettextEntriesEqual failed", j)
+				}
 			}
 		})
 	}
@@ -388,9 +406,8 @@ msgstr "活跃"
 	if ob.Comments[1] != "#, fuzzy" {
 		t.Errorf("Comments[1]: got %q", ob.Comments[1])
 	}
-	// Build from entry (no RawLines) must emit "#~ " before each comment line.
+	// Build from entry must emit "#~ " before each comment line.
 	obNoRaw := *ob
-	obNoRaw.RawLines = nil
 	var buf bytes.Buffer
 	if err := writeGettextEntryToPO(&buf, obNoRaw); err != nil {
 		t.Fatal(err)
@@ -1148,30 +1165,6 @@ msgstr "乙"
 			}
 		})
 	}
-}
-
-// bytesDiff returns a string describing the first difference between a and b.
-func bytesDiff(a, b []byte) string {
-	aLines := bytes.Split(a, []byte("\n"))
-	bLines := bytes.Split(b, []byte("\n"))
-	maxLen := len(aLines)
-	if len(bLines) > maxLen {
-		maxLen = len(bLines)
-	}
-	for i := 0; i < maxLen; i++ {
-		var aLine, bLine []byte
-		if i < len(aLines) {
-			aLine = aLines[i]
-		}
-		if i < len(bLines) {
-			bLine = bLines[i]
-		}
-		if !bytes.Equal(aLine, bLine) {
-			return fmt.Sprintf("first difference at line %d:\noriginal (%d bytes): %q\nwritten (%d bytes):  %q\n",
-				i+1, len(a), aLine, len(b), bLine)
-		}
-	}
-	return fmt.Sprintf("lengths differ: original %d bytes, written %d bytes", len(a), len(b))
 }
 
 func TestStrDeQuote(t *testing.T) {

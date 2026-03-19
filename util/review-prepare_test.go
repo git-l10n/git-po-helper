@@ -27,7 +27,7 @@ func TestWriteReviewInputPo(t *testing.T) {
 			name:   "simple header and entry",
 			header: []string{"msgid \"\"", "msgstr \"Content-Type: text/plain; charset=UTF-8\\n\""},
 			entries: []*GettextEntry{
-				{RawLines: []string{"msgid \"Hello\"", "msgstr \"你好\""}},
+				{MsgID: "Hello", MsgStr: []string{"你好"}},
 			},
 		},
 	}

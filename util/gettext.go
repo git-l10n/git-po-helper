@@ -8,16 +8,16 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // GettextEntry represents a single PO/JSON entry. Used for parsing, comparison, and output.
-// MsgID, MsgStr (forms), MsgIDPlural use PO string format (escape sequences like \n, \t
-// stored as literal backslash+char, not decoded). MsgStr holds one element for singular
-// msgstr, multiple for msgstr[0], msgstr[1], ... RawLines preserves exact PO format for round-trip.
+// All PO content is represented by fields (Comments, MsgCtxt, MsgID, MsgIDPlural, MsgStr, Obsolete, Fuzzy)
+// and by #|/#~| lines stored in Comments. Output is always generated from fields via writeGettextEntryToPO.
 // MsgCtxt is optional; nil means the line was absent (distinct from empty string).
-// Previous-untranslated (#|) and obsolete-previous (#~| msgctxt/msgid/msgid_plural) exist only
-// in Comments and RawLines; use IsObsolete(), HasPreviousMsgctxt(), HasPreviousMsgid(),
-// HasPreviousMsgidPlural(), and GetPreviousMsgctxt/GetPreviousMsgid/GetPreviousMsgidPlural to detect or read.
+// Previous-untranslated (#|) and obsolete-previous (#~|) exist only in Comments; use IsObsolete(),
+// HasPreviousMsgctxt(), HasPreviousMsgid(), HasPreviousMsgidPlural(), and GetPrevious* to detect or read.
 type GettextEntry struct {
 	MsgID       string   `json:"msgid"`
 	MsgStr      []string `json:"msgstr,omitempty"` // Always a JSON array; one element = singular, multiple = msgstr[0..]
@@ -26,7 +26,6 @@ type GettextEntry struct {
 	Comments    []string `json:"comments,omitempty"`
 	Fuzzy       bool     `json:"fuzzy"`
 	Obsolete    bool     `json:"obsolete,omitempty"` // True for #~ obsolete entries
-	RawLines    []string `json:"-"`                  // Original PO lines for round-trip; empty when built from JSON
 	// EntryLocation is the 1-based line number of the msgid line (or #~ msgid for obsolete). Set by ParsePoEntries; not serialized.
 	EntryLocation int `json:"-"`
 }
@@ -79,7 +78,7 @@ func (e *GettextEntry) UnmarshalJSON(data []byte) error {
 }
 
 // MarshalJSON encodes the entry as JSON. When the entry is obsolete and has previous msgctxt/msgid
-// (from Comments or RawLines), includes msgctxt_previous and msgid_previous in the output.
+// (from Comments), includes msgctxt_previous and msgid_previous in the output.
 func (e *GettextEntry) MarshalJSON() ([]byte, error) {
 	type enc GettextEntry
 	base := (*enc)(e)
@@ -141,14 +140,6 @@ func previousLineKind(rest string) int {
 func (e *GettextEntry) scanPreviousLines(f func(trimmed, rest string, isObsolete bool)) {
 	if e == nil {
 		return
-	}
-	for _, line := range e.RawLines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "#~| ") {
-			f(trimmed, trimmed[4:], true)
-		} else if strings.HasPrefix(trimmed, "#| ") {
-			f(trimmed, trimmed[3:], false)
-		}
 	}
 	for _, line := range e.Comments {
 		trimmed := strings.TrimSpace(line)
@@ -665,7 +656,6 @@ type poParseState struct {
 	headerLines        []string
 
 	currentEntry       *GettextEntry
-	entryLines         []string
 	msgctxtValue       strings.Builder
 	msgidValue         strings.Builder
 	msgstrValue        strings.Builder
@@ -687,8 +677,8 @@ type poParseState struct {
 }
 
 // finishCurrentEntry writes the current entry's collected msgid/msgstr into
-// currentEntry, sets RawLines/Fuzzy/Obsolete, and appends to entries if the
-// entry has content. Call before starting a new entry or on blank line.
+// currentEntry, sets Fuzzy/Obsolete, and appends to entries if the entry has content.
+// Call before starting a new entry or on blank line.
 func finishCurrentEntry(st *poParseState, entries *[]*GettextEntry) {
 	if st.currentEntry == nil {
 		return
@@ -710,7 +700,6 @@ func finishCurrentEntry(st *poParseState, entries *[]*GettextEntry) {
 	} else {
 		st.currentEntry.MsgStr = []string{poParsedToPoFormat(st.msgstrValue.String())}
 	}
-	st.currentEntry.RawLines = st.entryLines
 	st.currentEntry.Fuzzy = entryHasFuzzyFlag(st.currentEntry.Comments)
 	st.currentEntry.Obsolete = st.inObsolete
 	if st.msgidStartLineNo > 0 {
@@ -720,7 +709,7 @@ func finishCurrentEntry(st *poParseState, entries *[]*GettextEntry) {
 }
 
 // resetEntryContent resets only the string builders and inMsgid/inMsgstr flags.
-// Use when keeping currentEntry and entryLines (e.g. entry had only comments).
+// Use when keeping currentEntry (e.g. entry had only comments).
 func resetEntryContent(st *poParseState) {
 	st.msgctxtValue.Reset()
 	st.msgidValue.Reset()
@@ -742,7 +731,6 @@ func resetEntryContent(st *poParseState) {
 // allocates currentEntry and resets string builders and flags.
 func startNewEntry(st *poParseState) {
 	st.currentEntry = &GettextEntry{}
-	st.entryLines = nil
 	resetEntryContent(st)
 }
 
@@ -790,7 +778,6 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 						st.msgstrValue.WriteString(value)
 					}
 				}
-				st.entryLines = append(st.entryLines, line)
 				continue
 			}
 			// For obsolete comment lines (#~ #:, #~ #,, etc.), store content without "#~ " (gettext-json-format 7.2 Option A).
@@ -809,7 +796,7 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 				}
 				st.currentEntry.Obsolete = true
 				st.inObsolete = true
-				st.entryLines = append(st.entryLines, line)
+				st.currentEntry.Comments = append(st.currentEntry.Comments, line)
 				continue
 			}
 		}
@@ -822,7 +809,6 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 			if value == "" {
 				st.hasSeenHeaderBlock = true
 				st.headerLines = append(st.headerLines, line)
-				st.entryLines = append(st.entryLines, line)
 				continue
 			}
 		}
@@ -878,19 +864,16 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 			}
 			if st.currentEntry == nil {
 				st.currentEntry = &GettextEntry{}
-				st.entryLines = nil
 			}
 			if st.obsoleteCommentStripPrefix {
 				st.currentEntry.Comments = append(st.currentEntry.Comments, trimmed)
 			} else {
 				st.currentEntry.Comments = append(st.currentEntry.Comments, line)
 			}
-			st.entryLines = append(st.entryLines, line)
 
 		case poLineMsgctxt:
 			if st.currentEntry == nil {
 				st.currentEntry = &GettextEntry{}
-				st.entryLines = nil
 			}
 			if strings.HasPrefix(strings.TrimSpace(line), "#~ ") {
 				st.inObsolete = true
@@ -904,7 +887,6 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 			value = strings.TrimSpace(value)
 			value = strDeQuote(value)
 			st.msgctxtValue.WriteString(value)
-			st.entryLines = append(st.entryLines, line)
 
 		case poLineMsgid:
 			finishCurrentEntry(st, &entries)
@@ -933,7 +915,6 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 			value = strings.TrimSpace(value)
 			value = strDeQuote(value)
 			st.msgidValue.WriteString(value)
-			st.entryLines = append(st.entryLines, line)
 
 		case poLineMsgidPlural:
 			st.inMsgid = false
@@ -942,7 +923,6 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 			value = strings.TrimSpace(value)
 			value = strDeQuote(value)
 			st.msgidPluralValue.WriteString(value)
-			st.entryLines = append(st.entryLines, line)
 
 		case poLineMsgstrN:
 			st.inMsgid = false
@@ -961,7 +941,6 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 			value = strings.TrimSpace(value)
 			value = strDeQuote(value)
 			st.msgstrPluralValues[idx].WriteString(value)
-			st.entryLines = append(st.entryLines, line)
 
 		case poLineMsgstr:
 			st.inMsgid = false
@@ -972,7 +951,6 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 			value = strings.TrimSpace(value)
 			value = strDeQuote(value)
 			st.msgstrValue.WriteString(value)
-			st.entryLines = append(st.entryLines, line)
 
 		case poLineQuotedString:
 			if st.inMsgctxt || st.inMsgid || st.inMsgstr || st.inMsgidPlural {
@@ -990,18 +968,12 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 						st.msgstrValue.WriteString(value)
 					}
 				}
-				st.entryLines = append(st.entryLines, line)
 			} else {
-				if st.currentEntry != nil {
-					st.entryLines = append(st.entryLines, line)
-				} else if !st.inHeader {
-					st.entryLines = append(st.entryLines, line)
-				}
+				log.Warnf("unrecognized PO line at %d (quoted string outside context): %s", line1Based, line)
 			}
 
 		case poLineBlank:
 			// Ignore meaningless blank lines: between comments and msgid, or between msgid and msgstr.
-			// Do not finish the entry and do not add the blank to entryLines so BuildPoContent won't output it.
 			if st.currentEntry != nil && st.msgidValue.Len() == 0 {
 				// Comments only (no msgid yet); keep comments with the following msgid.
 				continue
@@ -1012,7 +984,6 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 			}
 			finishCurrentEntry(st, &entries)
 			st.currentEntry = nil
-			st.entryLines = nil
 			st.msgctxtValue.Reset()
 			st.msgidValue.Reset()
 			st.msgstrValue.Reset()
@@ -1028,11 +999,7 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 			st.hasSeenMsgstr = false
 
 		default:
-			if st.currentEntry != nil {
-				st.entryLines = append(st.entryLines, line)
-			} else if !st.inHeader {
-				st.entryLines = append(st.entryLines, line)
-			}
+			log.Warnf("unrecognized PO line at %d: %s", line1Based, line)
 		}
 	}
 
@@ -1058,7 +1025,7 @@ func entryHasFuzzyFlag(comments []string) bool {
 // BuildPoContent builds PO file content from header and entries.
 // It is the inverse of ParsePoEntries: the output can be parsed back to produce the same header and entries.
 // When header is nil or empty, no header block is written (only content entries).
-// Entries with RawLines use them for round-trip; otherwise content is built from the entry.
+// Entry content is always generated from fields via writeGettextEntryToPO.
 func BuildPoContent(header []string, entries []*GettextEntry) []byte {
 	var b strings.Builder
 	if len(entries) > 0 && len(header) > 0 {
@@ -1071,14 +1038,7 @@ func BuildPoContent(header []string, entries []*GettextEntry) []byte {
 		b.WriteString("\n")
 	}
 	for i, entry := range entries {
-		if len(entry.RawLines) > 0 {
-			for _, line := range entry.RawLines {
-				b.WriteString(line)
-				b.WriteString("\n")
-			}
-		} else {
-			_ = writeGettextEntryToPO(&b, *entry)
-		}
+		_ = writeGettextEntryToPO(&b, *entry)
 		// Add blank line between entries, but not after the last one
 		if i < len(entries)-1 {
 			b.WriteString("\n")
@@ -1264,20 +1224,15 @@ func MsgSelect(poFile, rangeSpec string, w io.Writer, noHeader bool, filter *Ent
 		}
 	}
 
-	// Write selected entries
-	for _, entry := range selected {
-		for _, line := range entry.RawLines {
-			if _, err := io.WriteString(w, line); err != nil {
+	// Write selected entries (from fields via writeGettextEntryToPO)
+	for i, entry := range selected {
+		if err := writeGettextEntryToPO(w, *entry); err != nil {
+			return err
+		}
+		if i < len(selected)-1 {
+			if _, err := io.WriteString(w, "\n"); err != nil {
 				return err
 			}
-			if !strings.HasSuffix(line, "\n") {
-				if _, err := io.WriteString(w, "\n"); err != nil {
-					return err
-				}
-			}
-		}
-		if _, err := io.WriteString(w, "\n"); err != nil {
-			return err
 		}
 	}
 

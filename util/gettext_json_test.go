@@ -987,7 +987,7 @@ func TestMergeGettextJSON(t *testing.T) {
 	}
 }
 
-// gettextJSONEqualForTest compares two GettextJSON for equality (ignores RawLines).
+// gettextJSONEqualForTest compares two GettextJSON for equality.
 func gettextJSONEqualForTest(a, b *GettextJSON) bool {
 	if a == nil || b == nil {
 		return a == b

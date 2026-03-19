@@ -114,20 +114,12 @@ func GettextPOFromGettextJSON(j *GettextJSON) *GettextPO {
 	return &GettextPO{HeaderEntry: headerEntry, Entries: entriesCopy}
 }
 
-// GettextEntriesWithRawLines converts GettextEntry slice to []*GettextEntry with RawLines
-// populated for BuildPoContent. Use when entries lack RawLines (e.g. from CompareGettextEntries).
+// GettextEntriesWithRawLines converts GettextEntry slice to []*GettextEntry for BuildPoContent.
+// BuildPoContent generates PO from fields via writeGettextEntryToPO; this just returns pointers.
 func GettextEntriesWithRawLines(entries []GettextEntry) []*GettextEntry {
 	out := make([]*GettextEntry, 0, len(entries))
-	for _, e := range entries {
-		var buf bytes.Buffer
-		if err := writeGettextEntryToPO(&buf, e); err != nil {
-			return nil
-		}
-		s := strings.TrimSuffix(buf.String(), "\n")
-		rawLines := strings.Split(s, "\n")
-		ent := e
-		ent.RawLines = rawLines
-		out = append(out, &ent)
+	for i := range entries {
+		out = append(out, &entries[i])
 	}
 	return out
 }
@@ -675,18 +667,26 @@ func WriteGettextJSONToPO(j *GettextJSON, w io.Writer, noHeader, addTrailingNewl
 	}
 	for ei, entry := range j.Entries {
 		wroteFuzzyFlag := false
+		commentPrefix := ""
+		if entry.Obsolete {
+			commentPrefix = "#~ "
+		}
 		for _, c := range entry.Comments {
 			trimmed := strings.TrimSpace(c)
+			prefix := commentPrefix
+			if prefix != "" && (strings.HasPrefix(trimmed, "#~| ") || strings.HasPrefix(trimmed, "#| ")) {
+				prefix = ""
+			}
 			if strings.HasPrefix(trimmed, "#,") {
 				line := MergeFuzzyIntoFlagLine(c, entry.Fuzzy)
 				if entry.Fuzzy {
 					wroteFuzzyFlag = true
 				}
-				if _, err := io.WriteString(w, line+"\n"); err != nil {
+				if _, err := io.WriteString(w, prefix+line+"\n"); err != nil {
 					return err
 				}
 			} else {
-				if _, err := io.WriteString(w, c); err != nil {
+				if _, err := io.WriteString(w, prefix+c); err != nil {
 					return err
 				}
 				if !strings.HasSuffix(c, "\n") {
@@ -704,18 +704,6 @@ func WriteGettextJSONToPO(j *GettextJSON, w io.Writer, noHeader, addTrailingNewl
 		prefix := ""
 		if entry.Obsolete {
 			prefix = "#~ "
-		}
-		if entry.Obsolete {
-			if v, ok := entry.GetPreviousMsgctxt(); ok && v != "" {
-				if err := writePoStringWithPrefix(w, "#~| ", "msgctxt", v); err != nil {
-					return err
-				}
-			}
-			if v, ok := entry.GetPreviousMsgid(); ok && v != "" {
-				if err := writePoStringWithPrefix(w, "#~| ", "msgid", v); err != nil {
-					return err
-				}
-			}
 		}
 		if entry.MsgCtxt != nil {
 			if err := writePoStringWithPrefix(w, prefix, "msgctxt", *entry.MsgCtxt); err != nil {
@@ -768,16 +756,20 @@ func writeGettextEntryToPO(w io.Writer, entry GettextEntry) error {
 	}
 	for _, c := range entry.Comments {
 		trimmed := strings.TrimSpace(c)
+		prefix := commentPrefix
+		if prefix != "" && (strings.HasPrefix(trimmed, "#~| ") || strings.HasPrefix(trimmed, "#| ")) {
+			prefix = "" // #~| and #| lines already have their prefix
+		}
 		if strings.HasPrefix(trimmed, "#,") {
 			line := MergeFuzzyIntoFlagLine(c, entry.Fuzzy)
 			if entry.Fuzzy {
 				wroteFuzzyFlag = true
 			}
-			if _, err := io.WriteString(w, commentPrefix+line+"\n"); err != nil {
+			if _, err := io.WriteString(w, prefix+line+"\n"); err != nil {
 				return err
 			}
 		} else {
-			if _, err := io.WriteString(w, commentPrefix+c); err != nil {
+			if _, err := io.WriteString(w, prefix+c); err != nil {
 				return err
 			}
 			if !strings.HasSuffix(c, "\n") {
@@ -795,18 +787,6 @@ func writeGettextEntryToPO(w io.Writer, entry GettextEntry) error {
 	prefix := ""
 	if entry.Obsolete {
 		prefix = "#~ "
-	}
-	if entry.Obsolete {
-		if v, ok := entry.GetPreviousMsgctxt(); ok && v != "" {
-			if err := writePoStringWithPrefix(w, "#~| ", "msgctxt", v); err != nil {
-				return err
-			}
-		}
-		if v, ok := entry.GetPreviousMsgid(); ok && v != "" {
-			if err := writePoStringWithPrefix(w, "#~| ", "msgid", v); err != nil {
-				return err
-			}
-		}
 	}
 	if entry.MsgCtxt != nil {
 		if err := writePoStringWithPrefix(w, prefix, "msgctxt", *entry.MsgCtxt); err != nil {
