@@ -124,8 +124,7 @@ Available Commands:
   agent-test    Test agent commands with multiple runs
   check         Check all ".po" files and commits
   check-commits Check commits for l10n conventions
-  check-po      Check syntax of XX.po file
-  check-pot     Check syntax of XX.pot file
+  check-po      Check syntax of XX.po or XX.pot file
   compare       Show changes between two l10n files
   help          Help about any command
   init          Create XX.po file
@@ -145,7 +144,7 @@ Flags:
 Use "git-po-helper [command] --help" for more information about a command.
 ```
 
-The `--pot-file` option (way to get latest pot file: 'auto', 'download', 'build', 'no' or filename such as po/git.pot) is available for: `check`, `check-po`, `check-commits`, `check-pot`, `init`, and `update` commands.
+The `--pot-file` option (way to get latest pot file: 'auto', 'download', 'build', 'no' or filename such as po/git.pot) is available for: `check`, `check-po`, `check-commits`, `init`, and `update` commands.
 
 ## Commands
 
@@ -155,8 +154,7 @@ The `--pot-file` option (way to get latest pot file: 'auto', 'download', 'build'
 |---------|-------------|
 | `check` | Check all `.po` files and commits. Options: `--core` (also check against git-core.pot), `--force`, `--no-gpg`, `--pot-file`, `--report-file-locations`, `--report-typos`. |
 | `check-commits` | Check commits for l10n conventions. Usage: `check-commits [<range>]`. Options: `--force`, `--no-gpg`, `--pot-file`, `--report-file-locations`, `--report-typos`. |
-| `check-po` | Check syntax of XX.po file. Usage: `check-po <XX.po>...`. Options: `--core`, `--pot-file`, `--report-file-locations`, `--report-typos`. |
-| `check-pot` | Check config variables in POT file. Options: `--pot-file`, `--show-all-configs`, `--show-camel-case-configs` (for config manpage). |
+| `check-po` | Check syntax of XX.po or XX.pot file. Usage: `check-po <XX.po|XX.pot>...`. For Git project .pot files, also runs CamelCase config variable check (requires Documentation/config with .txt or .adoc files). Options: `--core`, `--pot-file`, `--report-file-locations`, `--report-typos`. |
 
 ### PO file operations
 

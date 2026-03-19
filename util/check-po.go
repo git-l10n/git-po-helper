@@ -265,17 +265,19 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 
 // CmdCheckPo implements check-po sub command.
 // Args must be non-empty. Each arg is either a directory (scan for *.po in it, no recursion)
-// or a file (must have .po extension). All found/listed .po files are checked.
+// or a file (.po or .pot). All found/listed .po files are checked; .pot files are checked
+// for CamelCase config variables when Project-Id-Version indicates Git.
 func CmdCheckPo(args ...string) bool {
 	ret := true
 
 	if len(args) == 0 {
-		log.Errorf("no arguments given; specify .po files or directories containing them")
+		log.Errorf("no arguments given; specify .po/.pot files or directories containing them")
 		return false
 	}
 
 	type checkItem struct{ locale, poFile string }
 	var toCheck []checkItem
+	var potFilesToCheck []string
 
 	for _, arg := range args {
 		info, err := os.Stat(arg)
@@ -305,8 +307,13 @@ func CmdCheckPo(args ...string) bool {
 			continue
 		}
 		// file
-		if filepath.Ext(arg) != ".po" {
-			log.Errorf("not a .po file: %q", arg)
+		ext := filepath.Ext(arg)
+		if ext == ".pot" {
+			potFilesToCheck = append(potFilesToCheck, arg)
+			continue
+		}
+		if ext != ".po" {
+			log.Errorf("not a .po or .pot file: %q", arg)
 			ret = false
 			continue
 		}
@@ -315,8 +322,8 @@ func CmdCheckPo(args ...string) bool {
 		toCheck = append(toCheck, checkItem{locale: locale, poFile: poFile})
 	}
 
-	if len(toCheck) == 0 {
-		log.Errorf("no .po files to check (specify .po files or directories containing them)")
+	if len(toCheck) == 0 && len(potFilesToCheck) == 0 {
+		log.Errorf("no .po or .pot files to check (specify .po/.pot files or directories containing them)")
 		return false
 	}
 
@@ -328,6 +335,13 @@ func CmdCheckPo(args ...string) bool {
 			if !CheckCorePoFile(item.locale, item.poFile) {
 				ret = false
 			}
+		}
+	}
+
+	for _, potFile := range potFilesToCheck {
+		if err := CheckGitPotFile(potFile); err != nil {
+			log.Errorf("%v", err)
+			ret = false
 		}
 	}
 	return ret

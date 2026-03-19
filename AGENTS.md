@@ -143,8 +143,7 @@ The project uses automatically generated version files:
 - `agent-test` - Test agent commands with multiple runs
 - `check` - Check all .po files and commits
 - `check-commits` - Check if commits comply with l10n conventions
-- `check-po` - Check syntax of XX.po file
-- `check-pot` - Check syntax of XX.pot file
+- `check-po` - Check syntax of XX.po or XX.pot file (for Git .pot, also checks CamelCase config variables; requires Documentation/config)
 - `compare` - Show differences between two l10n files (--stat for diff stats, or new/changed entries)
 - `init` - Create a new XX.po file
 - `msg-cat` - Concatenate and merge PO/POT/JSON files (first occurrence of each msgid wins)

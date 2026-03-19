@@ -39,13 +39,15 @@ func getConfigsFromManpage(onlyCamelCase bool) ([]string, error) {
 		return nil, err
 	}
 
+	var foundSuitable bool
 	for _, f := range files {
 		if f.IsDir() {
 			continue
 		}
-		if path.Ext(f.Name()) != ".txt" {
+		if path.Ext(f.Name()) != ".txt" && path.Ext(f.Name()) != ".adoc" {
 			continue
 		}
+		foundSuitable = true
 		items, err := getConfigsFromOneManpage(filepath.Join(docDir, f.Name()), onlyCamelCase)
 		if err != nil {
 			return nil, err
@@ -53,6 +55,9 @@ func getConfigsFromManpage(onlyCamelCase bool) ([]string, error) {
 		configs = append(configs, items...)
 	}
 
+	if !foundSuitable {
+		return nil, fmt.Errorf("no .txt or .adoc files found in %s", docDir)
+	}
 	return configs, err
 }
 
@@ -99,16 +104,39 @@ func ShowManpageConfigs(onlyCamelCase bool) error {
 	return nil
 }
 
-func CheckCamelCaseConfigVariableInPotFile() error {
+// CheckGitPotFile reads the POT file, verifies it is a Git project, and runs the CamelCase config variable check.
+// Returns an error for read/parse failure, missing or non-Git Project-Id-Version, or check failure.
+func CheckGitPotFile(potFile string) error {
+	poData, err := os.ReadFile(potFile)
+	if err != nil {
+		return fmt.Errorf("fail to read %q: %w", potFile, err)
+	}
+	po, err := ParsePoEntries(poData)
+	if err != nil {
+		return fmt.Errorf("fail to parse %q: %w", potFile, err)
+	}
+	projectName := po.GetProject()
+	if !strings.EqualFold(projectName, "Git") {
+		if projectName == "" {
+			return fmt.Errorf("do not know how to check .pot for project without Project-Id-Version: %q", potFile)
+		}
+		return fmt.Errorf("do not know how to check .pot for non-Git project %q: %q", projectName, potFile)
+	}
+	return CheckCamelCaseConfigVariableInPotFileWithPath(potFile)
+}
+
+// CheckCamelCaseConfigVariableInPotFileWithPath checks CamelCase config variables in the given POT file.
+// Caller should ensure the file is a Git project POT (Project-Id-Version indicates Git).
+// Requires Documentation/config to exist and contain at least one .txt or .adoc file; otherwise returns an error.
+func CheckCamelCaseConfigVariableInPotFileWithPath(potFilePath string) error {
 	var (
-		potFile    = filepath.Join(PoDir, GitPot)
 		configs    []string
 		err        error
 		mismatched = 0
 	)
 
-	if !IsFile(potFile) {
-		return fmt.Errorf("cannot find file %s", potFile)
+	if !IsFile(potFilePath) {
+		return fmt.Errorf("cannot find file %s", potFilePath)
 	}
 
 	configs, err = getConfigsFromManpage(false)
@@ -117,7 +145,7 @@ func CheckCamelCaseConfigVariableInPotFile() error {
 	}
 
 	// Make sure pot file is pretty formatted.
-	cmd := exec.Command("msgcat", "--no-wrap", "--indent", potFile)
+	cmd := exec.Command("msgcat", "--no-wrap", "--indent", potFilePath)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
