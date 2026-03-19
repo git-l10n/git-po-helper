@@ -109,6 +109,14 @@ var projectPotConfigs = []*ProjectPotConfig{
 		DefaultAction:     DefaultPotActionAuto,
 		MinGettextVersion: "0.14",
 	},
+	{
+		ProjectName:       "Gitk",
+		BuildCmd:          []string{"make", "po/gitk.pot"},
+		BuildDirRel:       "../",
+		PotFilenameRel:    "gitk.pot",
+		DefaultAction:     DefaultPotActionBuild,
+		MinGettextVersion: "0.14",
+	},
 }
 
 // defaultProjectPotConfig is the config for unknown projects.
