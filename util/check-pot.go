@@ -21,19 +21,18 @@ var (
 	gitConfigCamelCasePattern = regexp.MustCompile(`[a-z][A-Z][a-z]`)
 )
 
-func getConfigsFromManpage(onlyCamelCase bool) ([]string, error) {
+func getConfigsFromManpage(configsDir string, onlyCamelCase bool) ([]string, error) {
 	var (
 		err     error
 		configs []string
 	)
 
 	// Scan *.txt files from Documentation/config/.
-	docDir := filepath.Join("Documentation", "config")
-	if !IsDir(docDir) {
-		return nil, fmt.Errorf("cannot find dir %s", docDir)
+	if !IsDir(configsDir) {
+		return nil, fmt.Errorf("cannot find dir %s", configsDir)
 	}
 
-	files, err := os.ReadDir(docDir)
+	files, err := os.ReadDir(configsDir)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +46,7 @@ func getConfigsFromManpage(onlyCamelCase bool) ([]string, error) {
 			continue
 		}
 		foundSuitable = true
-		items, err := getConfigsFromOneManpage(filepath.Join(docDir, f.Name()), onlyCamelCase)
+		items, err := getConfigsFromOneManpage(filepath.Join(configsDir, f.Name()), onlyCamelCase)
 		if err != nil {
 			return nil, err
 		}
@@ -55,7 +54,7 @@ func getConfigsFromManpage(onlyCamelCase bool) ([]string, error) {
 	}
 
 	if !foundSuitable {
-		return nil, fmt.Errorf("no .txt or .adoc files found in %s", docDir)
+		return nil, fmt.Errorf("no .txt or .adoc files found in %s", configsDir)
 	}
 	return configs, err
 }
@@ -92,17 +91,6 @@ func getConfigsFromOneManpage(filename string, onlyCamelCase bool) ([]string, er
 	return configs, err
 }
 
-func ShowManpageConfigs(onlyCamelCase bool) error {
-	configs, err := getConfigsFromManpage(onlyCamelCase)
-	if err != nil {
-		return err
-	}
-	for _, item := range configs {
-		fmt.Println(item)
-	}
-	return nil
-}
-
 // CheckGitPotFile reads the POT file, verifies it is a Git project, and runs the CamelCase config variable check.
 // Returns an error for read/parse failure, missing or non-Git Project-Id-Version, or check failure.
 func CheckGitPotFile(potFile string) error {
@@ -121,13 +109,16 @@ func CheckGitPotFile(potFile string) error {
 		}
 		return fmt.Errorf("do not know how to check .pot for non-Git project %q: %q", projectName, potFile)
 	}
-	return CheckCamelCaseConfigVariableInPotFile(po)
+	return checkMissMatchedConfigVariableInPotFile(po, potFile)
 }
 
-// countConfigMismatchesInString checks a single string (e.g. msgid or msgid_plural) for config variable casing.
-// Returns the number of mismatches and logs each one.
-func countConfigMismatchesInString(text string, configs []string) int {
-	mismatched := 0
+const configMismatchExcerptLen = 80
+
+// collectConfigMismatchErrs finds config variables in text that appear with wrong casing and returns error messages.
+// entryLine is the 1-based line number of the entry; fieldName is "msgid" or "msgid_plural".
+// Each error includes entry line, the full config variable name to use, and a short excerpt of the string.
+func collectConfigMismatchErrs(text string, configs []string, entryLine int, fieldName string) []string {
+	var errs []string
 	for _, item := range configs {
 		for len(text) > 0 {
 			lowerText := strings.ToLower(text)
@@ -138,21 +129,44 @@ func countConfigMismatchesInString(text string, configs []string) int {
 			if strings.HasPrefix(text[idx:], item) {
 				log.Debugf("'%s' is found in: %s", item, text)
 			} else {
-				log.Errorf("config variable '%s' in manpage does not match string in pot file:", item)
-				log.Errorf("    >> %s", text)
-				mismatched++
+				start := idx
+				if start > 25 {
+					start = idx - 25
+				}
+				end := idx + len(item) + 35
+				if end > len(text) {
+					end = len(text)
+				}
+				excerpt := text[start:end]
+				excerpt = strings.ReplaceAll(excerpt, "\n", " ")
+				if len(excerpt) > configMismatchExcerptLen {
+					excerpt = excerpt[:configMismatchExcerptLen-3] + "..."
+				}
+				lineInfo := ""
+				if entryLine > 0 {
+					lineInfo = fmt.Sprintf("entry at L%d ", entryLine)
+				}
+				errs = append(errs, fmt.Sprintf("%s(%s): should use %q in msgid: %q",
+					lineInfo, fieldName, item, excerpt))
 			}
 			text = text[idx+len(item):]
 		}
 	}
-	return mismatched
+	return errs
 }
 
-// CheckCamelCaseConfigVariableInPotFile checks CamelCase config variables using the parsed POT (po).
-// Caller should ensure the PO is a Git project (Project-Id-Version indicates Git).
-// Requires Documentation/config to exist and contain at least one .txt or .adoc file; otherwise returns an error.
-func CheckCamelCaseConfigVariableInPotFile(po *GettextPO) error {
-	configs, err := getConfigsFromManpage(false)
+// checkMissMatchedConfigVariableInPotFile checks CamelCase config variables using the parsed POT (po).
+func checkMissMatchedConfigVariableInPotFile(po *GettextPO, potFile string) error {
+	prompt := "[" + filepath.Base(potFile) + "]"
+	if !filepath.IsAbs(potFile) {
+		absPotFile, err := filepath.Abs(potFile)
+		if err != nil {
+			return fmt.Errorf("fail to get absolute path of %q: %w", potFile, err)
+		}
+		potFile = absPotFile
+	}
+	configsDir := filepath.Join(filepath.Dir(filepath.Dir(potFile)), "Documentation", "config")
+	configs, err := getConfigsFromManpage(configsDir, false)
 	if err != nil {
 		return err
 	}
@@ -160,16 +174,20 @@ func CheckCamelCaseConfigVariableInPotFile(po *GettextPO) error {
 		return fmt.Errorf("no Git config variables were scanned for checking POT msgid")
 	}
 
-	mismatched := 0
+	var errs []string
 	for _, e := range po.Entries {
-		mismatched += countConfigMismatchesInString(e.MsgID, configs)
+		errs = append(errs, collectConfigMismatchErrs(e.MsgID, configs, e.EntryLocation, "msgid")...)
 		if e.MsgIDPlural != "" {
-			mismatched += countConfigMismatchesInString(e.MsgIDPlural, configs)
+			errs = append(errs, collectConfigMismatchErrs(e.MsgIDPlural, configs, e.EntryLocation, "msgid_plural")...)
 		}
 	}
 
-	if mismatched != 0 {
-		return fmt.Errorf("%d mismatched config variables", mismatched)
+	if len(errs) > 0 {
+		ReportSection("CamelCase config variables", false, log.InfoLevel, prompt, errs...)
+		return fmt.Errorf("%d entries checked, %d config variables, %d mismatched",
+			len(po.Entries), len(configs), len(errs))
 	}
+	msg := fmt.Sprintf("checked %d entries against %d config variables", len(po.Entries), len(configs))
+	ReportSection("CamelCase config variables", true, log.InfoLevel, prompt, msg)
 	return nil
 }

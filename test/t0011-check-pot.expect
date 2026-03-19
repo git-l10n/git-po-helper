@@ -1,0 +1,9 @@
+❌ CamelCase config variables
+ ERROR [git.pot] entry at L2249 (msgid): should use "i18n.commitEncoding" in msgid: "set the config\\nvariable i18n.commitencoding to the encoding your project uses."
+ ERROR [git.pot] entry at L7883 (msgid): should use "submodule.fetchJobs" in msgid: "e values not allowed for submodule.fetchjobs"
+ ERROR [git.pot] entry at L14362 (msgid): should use "gc.logExpiry" in msgid: "gc.logexpiry value %s"
+ ERROR [git.pot] entry at L15206 (msgid): should use "pack.indexVersion" in msgid: "pack.indexversion=%<PRIu32>"
+ ERROR [git.pot] entry at L19334 (msgid): should use "pack.writeBitmaps" in msgid: "map-index or disable the pack.writebitmaps configuration."
+ ERROR [git.pot] entry at L22129 (msgid): should use "http.postBuffer" in msgid: "http.postbuffer; defaulting to %d"
+level=error msg="5104 entries checked, 589 config variables, 6 mismatched"
+ERROR: check-po command failed

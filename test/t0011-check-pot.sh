@@ -23,23 +23,7 @@ test_expect_success "check-po on git.pot (Git project, CamelCase check)" '
 	test_must_fail git -C workdir po-helper check-po po/git.pot >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
-	cat >expect <<-EOF &&
-	level=error msg="config variable ${SQ}i18n.commitEncoding${SQ} in manpage does not match string in pot file:"
-	level=error msg=" >> \"variable i18n.commitencoding to the encoding your project uses.\\\\n\""
-	level=error msg="config variable ${SQ}submodule.fetchJobs${SQ} in manpage does not match string in pot file:"
-	level=error msg=" >> msgid \"negative values not allowed for submodule.fetchjobs\""
-	level=error msg="config variable ${SQ}gc.logExpiry${SQ} in manpage does not match string in pot file:"
-	level=error msg=" >> msgid \"failed to parse gc.logexpiry value %s\""
-	level=error msg="config variable ${SQ}pack.indexVersion${SQ} in manpage does not match string in pot file:"
-	level=error msg=" >> msgid \"bad pack.indexversion=%<PRIu32>\""
-	level=error msg="config variable ${SQ}pack.writeBitmaps${SQ} in manpage does not match string in pot file:"
-	level=error msg=" >> \"--no-write-bitmap-index or disable the pack.writebitmaps configuration.\""
-	level=error msg="config variable ${SQ}http.postBuffer${SQ} in manpage does not match string in pot file:"
-	level=error msg=" >> msgid \"negative value for http.postbuffer; defaulting to %d\""
-	level=error msg="6 mismatched config variables"
-	ERROR: check-po command failed
-	EOF
-
+	cp "$TEST_DIRECTORY/t0011-check-pot.expect" expect &&
 	test_cmp expect actual
 '
 
