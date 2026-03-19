@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -122,66 +121,50 @@ func CheckGitPotFile(potFile string) error {
 		}
 		return fmt.Errorf("do not know how to check .pot for non-Git project %q: %q", projectName, potFile)
 	}
-	return CheckCamelCaseConfigVariableInPotFileWithPath(potFile)
+	return CheckCamelCaseConfigVariableInPotFile(po)
 }
 
-// CheckCamelCaseConfigVariableInPotFileWithPath checks CamelCase config variables in the given POT file.
-// Caller should ensure the file is a Git project POT (Project-Id-Version indicates Git).
-// Requires Documentation/config to exist and contain at least one .txt or .adoc file; otherwise returns an error.
-func CheckCamelCaseConfigVariableInPotFileWithPath(potFilePath string) error {
-	var (
-		configs    []string
-		err        error
-		mismatched = 0
-	)
-
-	if !IsFile(potFilePath) {
-		return fmt.Errorf("cannot find file %s", potFilePath)
-	}
-
-	configs, err = getConfigsFromManpage(false)
-	if err != nil {
-		return err
-	}
-
-	// Make sure pot file is pretty formatted.
-	cmd := exec.Command("msgcat", "--no-wrap", "--indent", potFilePath)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	if err = cmd.Start(); err != nil {
-		return err
-	}
-
-	// Scan msgid, which has prefix "msgid", "msgid_plural", and 8 spaces.
-	scanner := bufio.NewScanner(stdout)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
-		} else if line[0] == '#' {
-			continue
-		} else if strings.HasPrefix(line, "msgstr") {
-			continue
-		}
-
-		for _, item := range configs {
-			for len(line) > 0 {
-				lowerLine := strings.ToLower(line)
-				if idx := strings.Index(lowerLine, strings.ToLower(item)); idx != -1 {
-					if strings.HasPrefix(line[idx:], item) {
-						log.Debugf("'%s' is found in: %s", item, line)
-					} else {
-						log.Errorf("config variable '%s' in manpage does not match string in pot file:", item)
-						log.Errorf("    >> %s", line)
-						mismatched++
-					}
-					line = line[idx+len(item):]
-				} else {
-					break
-				}
+// countConfigMismatchesInString checks a single string (e.g. msgid or msgid_plural) for config variable casing.
+// Returns the number of mismatches and logs each one.
+func countConfigMismatchesInString(text string, configs []string) int {
+	mismatched := 0
+	for _, item := range configs {
+		for len(text) > 0 {
+			lowerText := strings.ToLower(text)
+			idx := strings.Index(lowerText, strings.ToLower(item))
+			if idx == -1 {
+				break
 			}
+			if strings.HasPrefix(text[idx:], item) {
+				log.Debugf("'%s' is found in: %s", item, text)
+			} else {
+				log.Errorf("config variable '%s' in manpage does not match string in pot file:", item)
+				log.Errorf("    >> %s", text)
+				mismatched++
+			}
+			text = text[idx+len(item):]
+		}
+	}
+	return mismatched
+}
+
+// CheckCamelCaseConfigVariableInPotFile checks CamelCase config variables using the parsed POT (po).
+// Caller should ensure the PO is a Git project (Project-Id-Version indicates Git).
+// Requires Documentation/config to exist and contain at least one .txt or .adoc file; otherwise returns an error.
+func CheckCamelCaseConfigVariableInPotFile(po *GettextPO) error {
+	configs, err := getConfigsFromManpage(false)
+	if err != nil {
+		return err
+	}
+	if len(configs) == 0 {
+		return fmt.Errorf("no Git config variables were scanned for checking POT msgid")
+	}
+
+	mismatched := 0
+	for _, e := range po.Entries {
+		mismatched += countConfigMismatchesInString(e.MsgID, configs)
+		if e.MsgIDPlural != "" {
+			mismatched += countConfigMismatchesInString(e.MsgIDPlural, configs)
 		}
 	}
 
