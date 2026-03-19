@@ -59,7 +59,7 @@ cat >expect <<-\EOF
 ℹ️ Syntax check with msgfmt
  INFO [fr.po] 2 translated messages.
 ❌ gettext compatibility
- ERROR [fr.po] entry 3 (msgid "invalid --stat value: %s"): #~| format not supported by gettext 0.14
+ ERROR [fr.po] entry 3@L29 (msgid "invalid --stat value: %s"): #~| format not supported by gettext 0.14
 ❌ Obsolete #~ entries
  ERROR [fr.po] you have 3 obsolete entries, please remove them
 ERROR: check-po command failed

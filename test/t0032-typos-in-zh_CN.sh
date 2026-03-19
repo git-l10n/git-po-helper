@@ -91,7 +91,7 @@ cat >expect <<-\EOF
 ℹ️ Syntax check with msgfmt
  INFO [zh_CN.po] 5282 translated messages.
 ℹ️ Location comments (#:)
- INFO [zh_CN.po] entry 1 (msgid "Huh (%s)?"): location comment contains line number (use file-only or remove): "add-interactive.c:382"
+ INFO [zh_CN.po] entry 1@L160 (msgid "Huh (%s)?"): location comment contains line number (use file-only or remove): "add-interactive.c:382"
 ℹ️ PO filter (.gitattributes)
  INFO [zh_CN.po] No filter attribute set for XX.po. This will introduce location newlines into the
  INFO [zh_CN.po] repository and cause repository bloat.

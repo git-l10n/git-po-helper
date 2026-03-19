@@ -23,7 +23,7 @@ cat >expect <<-\EOF
  ERROR [zh_CN.po] msgfmt: found 1 fatal error
  ERROR [zh_CN.po] fail to check po: exit status 1
 ❌ Location comments (#:)
- ERROR [zh_CN.po] entry 1 (msgid "more than one receivepack g..."): location comment contains line number (use file-only or remove): "remote.c:399"
+ ERROR [zh_CN.po] entry 1@L16 (msgid "more than one receivepack g..."): location comment contains line number (use file-only or remove): "remote.c:399"
 ❌ PO filter (.gitattributes)
  ERROR [zh_CN.po] No filter attribute set for XX.po. This will introduce location newlines into the
  ERROR [zh_CN.po] repository and cause repository bloat.

@@ -26,6 +26,15 @@ func checkPoMetaEscapeChars(po *GettextPO) ([]string, bool) {
 // locationLineNumPattern matches a reference that contains a line number (e.g. file.c:116 or file.c:116,5).
 var locationLineNumPattern = regexp.MustCompile(`:\d+`)
 
+// entryDescWithLine returns a short description for an entry (index, msgid, optional line from parsing).
+// Format: "entry <N>@L<line> (msgid %q)" when line > 0, else "entry <N> (msgid %q)" so the line number is easy to spot and grep.
+func entryDescWithLine(entryIndex int, msgid string, startLineNo int) string {
+	if startLineNo > 0 {
+		return fmt.Sprintf("entry %d@L%d (msgid %q)", entryIndex, startLineNo, msgid)
+	}
+	return fmt.Sprintf("entry %d (msgid %q)", entryIndex, msgid)
+}
+
 // checkPoLocationCommentsNoLineNumbers scans each entry's comments for location comments (#:)
 // and reports any that contain line numbers. Per Git l10n convention, location comments should
 // not include line numbers (use --add-location=file or --no-location).
@@ -37,7 +46,7 @@ func checkPoLocationCommentsNoLineNumbers(po *GettextPO) ([]string, bool) {
 		if len(msgid) > 30 {
 			msgid = msgid[:27] + "..."
 		}
-		entryDesc := fmt.Sprintf("entry %d (msgid %q)", i+1, msgid)
+		entryDesc := entryDescWithLine(i+1, msgid, e.EntryLocation)
 		for _, c := range e.Comments {
 			trimmed := strings.TrimSpace(c)
 			if !strings.HasPrefix(trimmed, "#:") {
@@ -67,7 +76,7 @@ func checkPoCompatibility(po *GettextPO) ([]string, bool) {
 		if len(msgid) > 30 {
 			msgid = msgid[:27] + "..."
 		}
-		entryDesc := fmt.Sprintf("entry %d (msgid %q)", i+1, msgid)
+		entryDesc := entryDescWithLine(i+1, msgid, e.EntryLocation)
 
 		if e.MsgCtxt != nil && !e.Obsolete {
 			return []string{fmt.Sprintf("%s: msgctxt not supported by gettext below 0.15", entryDesc)}, false

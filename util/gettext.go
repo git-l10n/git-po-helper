@@ -26,6 +26,8 @@ type GettextEntry struct {
 	Obsolete        bool     `json:"obsolete,omitempty"`       // True for #~ obsolete entries
 	MsgIDPrevious   string   `json:"msgid_previous,omitempty"` // For #~| format (gettext 0.19.8+)
 	RawLines        []string `json:"-"`                        // Original PO lines for round-trip; empty when built from JSON
+	// EntryLocation is the 1-based line number of the msgid line (or #~ msgid for obsolete). Set by ParsePoEntries; not serialized.
+	EntryLocation int `json:"-"`
 }
 
 // MsgStrSingle returns the first translation form, or "" if none (singular msgstr or msgstr[0]).
@@ -503,6 +505,8 @@ type poParseState struct {
 	obsoleteCommentStripPrefix bool
 	// hasSeenMsgstr is set when we have seen at least one "msgstr " or "msgstr[n]" line for the current entry (used to not finish on blank between msgid and msgstr).
 	hasSeenMsgstr bool
+	// msgidStartLineNo is the 1-based line number of the first msgid (or #~ msgid) line for the current entry; 0 until set.
+	msgidStartLineNo int
 }
 
 // finishCurrentEntry writes the current entry's collected msgid/msgstr into
@@ -532,6 +536,9 @@ func finishCurrentEntry(st *poParseState, entries *[]*GettextEntry) {
 	st.currentEntry.RawLines = st.entryLines
 	st.currentEntry.Fuzzy = entryHasFuzzyFlag(st.currentEntry.Comments)
 	st.currentEntry.Obsolete = st.inObsolete
+	if st.msgidStartLineNo > 0 {
+		st.currentEntry.EntryLocation = st.msgidStartLineNo
+	}
 	*entries = append(*entries, st.currentEntry)
 }
 
@@ -550,6 +557,7 @@ func resetEntryContent(st *poParseState) {
 	st.inMsgidPlural = false
 	st.currentPluralIndex = -1
 	st.hasSeenMsgstr = false
+	st.msgidStartLineNo = 0
 }
 
 // startNewEntry resets entry-related state for a new entry. If the current
@@ -574,7 +582,8 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 		currentPluralIndex: -1,
 	}
 
-	for _, line := range lines {
+	for lineNo, line := range lines {
+		line1Based := lineNo + 1
 		trimmed := strings.TrimSpace(line)
 		st.obsoleteCommentStripPrefix = false
 
@@ -591,6 +600,9 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 				if st.inMsgctxt {
 					st.msgctxtValue.WriteString(value)
 				} else if st.inMsgid {
+					if st.msgidStartLineNo == 0 {
+						st.msgidStartLineNo = line1Based
+					}
 					st.msgidValue.WriteString(value)
 				} else if st.inMsgidPlural {
 					st.msgidPluralValue.WriteString(value)
@@ -757,6 +769,8 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 			if strings.HasPrefix(strings.TrimSpace(line), "#~ ") {
 				st.inObsolete = true
 			}
+			// Always record this line as the msgid line for the current entry (avoids reusing a stale value when we kept same entry above).
+			st.msgidStartLineNo = line1Based
 			st.inMsgctxt = false
 			st.inMsgid = true
 			value := strings.TrimPrefix(trimmed, "msgid ")
