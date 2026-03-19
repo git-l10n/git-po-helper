@@ -1,4 +1,5 @@
-// Package config provides configuration structures and loading for agent commands.
+// Package config provides configuration structures and loading for git-po-helper:
+// agent settings and POT project settings, loaded from .git-po-helper.yaml.
 package config
 
 import (
@@ -83,7 +84,7 @@ var KnownAgentKinds = map[string]bool{
 	AgentKindQoder:    true,
 }
 
-// GitPoHelperConfigFileName is the name of the agent config file (user home and repository root).
+// GitPoHelperConfigFileName is the name of the config file (user home and repository root).
 const GitPoHelperConfigFileName = ".git-po-helper.yaml"
 
 // Agent output format enum. Output must be one of these when specified.
@@ -217,7 +218,7 @@ func getDefaultConfig() *AgentConfig {
 	}
 }
 
-// loadUserHomeConfig loads ~/AgentConfigFileName if it exists.
+// loadUserHomeConfig loads ~/GitPoHelperConfigFileName if it exists.
 // Returns (config, nil) on success, (nil, nil) when the file is missing, (nil, err) on read/parse error.
 func loadUserHomeConfig() (*AgentConfig, error) {
 	homeDir, err := os.UserHomeDir()
@@ -236,7 +237,7 @@ func loadUserHomeConfig() (*AgentConfig, error) {
 	return config, nil
 }
 
-// loadRepoConfig loads <repo-root>/AgentConfigFileName if it exists.
+// loadRepoConfig loads <repo-root>/GitPoHelperConfigFileName if it exists.
 // Returns (config, nil) on success, (nil, nil) when the file is missing, (nil, err) on read/parse error.
 func loadRepoConfig() (*AgentConfig, error) {
 	workDir := repository.WorkDir()
