@@ -427,8 +427,8 @@ func TestParsePoEntriesObsoleteHashTildePipe(t *testing.T) {
 	if entries[1].MsgID != "Obsolete" || !entries[1].Obsolete {
 		t.Errorf("entry 1: got MsgID=%q Obsolete=%v", entries[1].MsgID, entries[1].Obsolete)
 	}
-	if entries[1].MsgIDPrevious != "Old source" {
-		t.Errorf("entry 1 MsgIDPrevious: got %q, want %q", entries[1].MsgIDPrevious, "Old source")
+	if prev, ok := entries[1].GetPreviousMsgid(); !ok || prev != "Old source" {
+		t.Errorf("entry 1 GetPreviousMsgid(): got %q, %v; want %q", prev, ok, "Old source")
 	}
 }
 
@@ -905,11 +905,12 @@ msgstr "活跃"
 				if entries[1].MsgCtxt == nil || *entries[1].MsgCtxt != "Menu" {
 					t.Errorf("entry 1 msgctxt: got %v", entries[1].MsgCtxt)
 				}
-				if entries[1].MsgCtxtPrevious == nil || *entries[1].MsgCtxtPrevious != "OldMenu" {
-					t.Errorf("entry 1 msgctxt_previous: got %v", entries[1].MsgCtxtPrevious)
+				if prevCtx, ok := entries[1].GetPreviousMsgctxt(); !ok || prevCtx != "OldMenu" {
+					t.Errorf("entry 1 GetPreviousMsgctxt(): got %q, %v; want OldMenu", prevCtx, ok)
 				}
-				if entries[1].MsgID != "Obsolete" || entries[1].MsgIDPrevious != "Old source" || !entries[1].Obsolete {
-					t.Errorf("entry 1: MsgID=%q MsgIDPrevious=%q Obsolete=%v", entries[1].MsgID, entries[1].MsgIDPrevious, entries[1].Obsolete)
+				prevID, _ := entries[1].GetPreviousMsgid()
+				if entries[1].MsgID != "Obsolete" || prevID != "Old source" || !entries[1].Obsolete {
+					t.Errorf("entry 1: MsgID=%q GetPreviousMsgid()=%q Obsolete=%v", entries[1].MsgID, prevID, entries[1].Obsolete)
 				}
 			},
 		},

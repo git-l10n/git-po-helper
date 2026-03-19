@@ -828,12 +828,12 @@ msgstr "活跃"
 	if len(parsedPO.Entries) != 2 {
 		t.Fatalf("expected 2 entries, got %d", len(parsedPO.Entries))
 	}
-	if parsedPO.Entries[1].MsgIDPrevious != "Old source" {
-		t.Errorf("MsgIDPrevious: got %q", parsedPO.Entries[1].MsgIDPrevious)
+	if prev, ok := parsedPO.Entries[1].GetPreviousMsgid(); !ok || prev != "Old source" {
+		t.Errorf("GetPreviousMsgid(): got %q, %v", prev, ok)
 	}
 	j := GettextJSONFromGettextPO(parsedPO)
-	if j.Entries[1].MsgIDPrevious != "Old source" {
-		t.Errorf("JSON MsgIDPrevious: got %q", j.Entries[1].MsgIDPrevious)
+	if prev, ok := j.Entries[1].GetPreviousMsgid(); !ok || prev != "Old source" {
+		t.Errorf("JSON entry GetPreviousMsgid(): got %q, %v", prev, ok)
 	}
 	var poBuf bytes.Buffer
 	if err := WriteGettextJSONToPO(j, &poBuf, false, false); err != nil {
@@ -846,8 +846,8 @@ msgstr "活跃"
 	if err != nil {
 		t.Fatalf("ParsePoEntries round-trip: %v", err)
 	}
-	if po2.Entries[1].MsgIDPrevious != "Old source" {
-		t.Errorf("round-trip MsgIDPrevious: got %q", po2.Entries[1].MsgIDPrevious)
+	if prev, ok := po2.Entries[1].GetPreviousMsgid(); !ok || prev != "Old source" {
+		t.Errorf("round-trip GetPreviousMsgid(): got %q", prev)
 	}
 }
 
@@ -1001,9 +1001,6 @@ func gettextJSONEqualForTest(a, b *GettextJSON) bool {
 	for i := range a.Entries {
 		e1, e2 := &a.Entries[i], &b.Entries[i]
 		if !GettextEntriesEqual(e1, e2) {
-			return false
-		}
-		if e1.MsgIDPrevious != e2.MsgIDPrevious {
 			return false
 		}
 		if len(e1.Comments) != len(e2.Comments) {

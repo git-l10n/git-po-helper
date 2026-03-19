@@ -68,7 +68,8 @@ func checkPoLocationCommentsNoLineNumbers(po *GettextPO) ([]string, bool) {
 
 // checkPoCompatibility reports gettext version compatibility issues:
 // - msgctxt: gettext below 0.15 does not support
-// - #~| (MsgCtxtPrevious, MsgIDPrevious): gettext 0.14 does not support
+// - #| previous msgctxt: gettext below 0.15 does not support
+// - #~| (obsolete previous msgctxt/msgid/msgid_plural): gettext 0.14 does not support
 // - #~ msgctxt (obsolete with context): gettext 0.14 does not support
 func checkPoCompatibility(po *GettextPO) ([]string, bool) {
 	for i, e := range po.Entries {
@@ -81,7 +82,10 @@ func checkPoCompatibility(po *GettextPO) ([]string, bool) {
 		if e.MsgCtxt != nil && !e.Obsolete {
 			return []string{fmt.Sprintf("%s: msgctxt not supported by gettext below 0.15", entryDesc)}, false
 		}
-		if e.MsgCtxtPrevious != nil || e.MsgIDPrevious != "" {
+		if !e.IsObsolete() && e.HasPreviousMsgctxt() {
+			return []string{fmt.Sprintf("%s: previous msgctxt (#|) not supported by gettext below 0.15", entryDesc)}, false
+		}
+		if e.IsObsolete() && (e.HasPreviousMsgctxt() || e.HasPreviousMsgid() || e.HasPreviousMsgidPlural()) {
 			return []string{fmt.Sprintf("%s: #~| format not supported by gettext 0.14", entryDesc)}, false
 		}
 		if e.Obsolete && e.MsgCtxt != nil {

@@ -188,7 +188,7 @@ func TestCheckPoCompatibility(t *testing.T) {
 		{
 			name: "#~| format not supported by gettext 0.14",
 			entries: []GettextEntry{
-				{MsgID: "Old", MsgStr: []string{"旧"}, MsgIDPrevious: "Previous"},
+				{MsgID: "Old", MsgStr: []string{"旧"}, Obsolete: true, RawLines: []string{"#~| msgid \"Previous\"", "#~ msgid \"Old\"", "#~ msgstr \"旧\""}},
 			},
 			wantErr: true,
 			wantMsg: "#~| format not supported by gettext 0.14",
@@ -196,7 +196,7 @@ func TestCheckPoCompatibility(t *testing.T) {
 		{
 			name: "#~| msgctxt not supported",
 			entries: []GettextEntry{
-				{MsgID: "X", MsgStr: []string{"X"}, MsgCtxtPrevious: &menu},
+				{MsgID: "X", MsgStr: []string{"X"}, Obsolete: true, RawLines: []string{"#~| msgctxt \"Menu\"", "#~ msgid \"X\"", "#~ msgstr \"X\""}},
 			},
 			wantErr: true,
 			wantMsg: "#~| format not supported by gettext 0.14",

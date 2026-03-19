@@ -1,5 +1,7 @@
 ℹ️ Syntax check with msgfmt
  INFO [vi.po] 5104 translated messages.
+❌ gettext compatibility
+ ERROR [vi.po] entry 4652@L23545 (msgid "--packfile requires --index..."): previous msgctxt (#|) not supported by gettext below 0.15
 ❌ Obsolete #~ entries
  ERROR [vi.po] you have 466 obsolete entries, please remove them
 ⚠️ msgid/msgstr pattern check

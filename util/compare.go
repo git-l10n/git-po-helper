@@ -20,7 +20,14 @@ func GettextEntriesEqual(e1, e2 *GettextEntry) bool {
 	if !equalMsgCtxtPtr(e1.MsgCtxt, e2.MsgCtxt) {
 		return false
 	}
-	if !equalMsgCtxtPtr(e1.MsgCtxtPrevious, e2.MsgCtxtPrevious) {
+	ctx1, ok1 := e1.GetPreviousMsgctxt()
+	ctx2, ok2 := e2.GetPreviousMsgctxt()
+	if ok1 != ok2 || ctx1 != ctx2 {
+		return false
+	}
+	id1, ok1 := e1.GetPreviousMsgid()
+	id2, ok2 := e2.GetPreviousMsgid()
+	if ok1 != ok2 || id1 != id2 {
 		return false
 	}
 	if e1.MsgID != e2.MsgID {

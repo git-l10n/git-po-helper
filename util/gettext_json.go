@@ -198,19 +198,14 @@ func parseGettextJSONWithGjson(data []byte, err error) *GettextJSON {
 	var entries []GettextEntry
 	for _, r := range entriesResult.Array() {
 		ent := GettextEntry{
-			MsgID:         r.Get("msgid").String(),
-			Fuzzy:         r.Get("fuzzy").Bool(),
-			Obsolete:      r.Get("obsolete").Bool(),
-			MsgIDPrevious: r.Get("msgid_previous").String(),
-			Comments:      []string{},
+			MsgID:    r.Get("msgid").String(),
+			Fuzzy:    r.Get("fuzzy").Bool(),
+			Obsolete: r.Get("obsolete").Bool(),
+			Comments: []string{},
 		}
 		if r.Get("msgctxt").Exists() {
 			s := r.Get("msgctxt").String()
 			ent.MsgCtxt = &s
-		}
-		if r.Get("msgctxt_previous").Exists() {
-			s := r.Get("msgctxt_previous").String()
-			ent.MsgCtxtPrevious = &s
 		}
 		if r.Get("msgid_plural").Exists() {
 			ent.MsgIDPlural = r.Get("msgid_plural").String()
@@ -232,6 +227,14 @@ func parseGettextJSONWithGjson(data []byte, err error) *GettextJSON {
 			for i, v := range arr {
 				ent.Comments[i] = v.String()
 			}
+		}
+		if r.Get("msgctxt_previous").Exists() {
+			s := jsonDecodedToPoFormat(r.Get("msgctxt_previous").String())
+			ent.Comments = append(ent.Comments, "#~| msgctxt \""+poEscape(s)+"\"\n")
+		}
+		if r.Get("msgid_previous").Exists() {
+			s := jsonDecodedToPoFormat(r.Get("msgid_previous").String())
+			ent.Comments = append(ent.Comments, "#~| msgid \""+poEscape(s)+"\"\n")
 		}
 		entries = append(entries, ent)
 	}
@@ -266,14 +269,9 @@ func convertGettextJSONToPoFormat(j *GettextJSON) {
 		e := &j.Entries[i]
 		e.MsgID = jsonDecodedToPoFormat(e.MsgID)
 		e.MsgIDPlural = jsonDecodedToPoFormat(e.MsgIDPlural)
-		e.MsgIDPrevious = jsonDecodedToPoFormat(e.MsgIDPrevious)
 		if e.MsgCtxt != nil {
 			s := jsonDecodedToPoFormat(*e.MsgCtxt)
 			e.MsgCtxt = &s
-		}
-		if e.MsgCtxtPrevious != nil {
-			s := jsonDecodedToPoFormat(*e.MsgCtxtPrevious)
-			e.MsgCtxtPrevious = &s
 		}
 		for k := range e.MsgStr {
 			e.MsgStr[k] = jsonDecodedToPoFormat(e.MsgStr[k])
@@ -707,14 +705,16 @@ func WriteGettextJSONToPO(j *GettextJSON, w io.Writer, noHeader, addTrailingNewl
 		if entry.Obsolete {
 			prefix = "#~ "
 		}
-		if entry.Obsolete && entry.MsgCtxtPrevious != nil {
-			if err := writePoStringWithPrefix(w, "#~| ", "msgctxt", *entry.MsgCtxtPrevious); err != nil {
-				return err
+		if entry.Obsolete {
+			if v, ok := entry.GetPreviousMsgctxt(); ok && v != "" {
+				if err := writePoStringWithPrefix(w, "#~| ", "msgctxt", v); err != nil {
+					return err
+				}
 			}
-		}
-		if entry.Obsolete && entry.MsgIDPrevious != "" {
-			if err := writePoStringWithPrefix(w, "#~| ", "msgid", entry.MsgIDPrevious); err != nil {
-				return err
+			if v, ok := entry.GetPreviousMsgid(); ok && v != "" {
+				if err := writePoStringWithPrefix(w, "#~| ", "msgid", v); err != nil {
+					return err
+				}
 			}
 		}
 		if entry.MsgCtxt != nil {
@@ -796,14 +796,16 @@ func writeGettextEntryToPO(w io.Writer, entry GettextEntry) error {
 	if entry.Obsolete {
 		prefix = "#~ "
 	}
-	if entry.Obsolete && entry.MsgCtxtPrevious != nil {
-		if err := writePoStringWithPrefix(w, "#~| ", "msgctxt", *entry.MsgCtxtPrevious); err != nil {
-			return err
+	if entry.Obsolete {
+		if v, ok := entry.GetPreviousMsgctxt(); ok && v != "" {
+			if err := writePoStringWithPrefix(w, "#~| ", "msgctxt", v); err != nil {
+				return err
+			}
 		}
-	}
-	if entry.Obsolete && entry.MsgIDPrevious != "" {
-		if err := writePoStringWithPrefix(w, "#~| ", "msgid", entry.MsgIDPrevious); err != nil {
-			return err
+		if v, ok := entry.GetPreviousMsgid(); ok && v != "" {
+			if err := writePoStringWithPrefix(w, "#~| ", "msgid", v); err != nil {
+				return err
+			}
 		}
 	}
 	if entry.MsgCtxt != nil {
