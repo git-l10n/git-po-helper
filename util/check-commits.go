@@ -145,7 +145,10 @@ func checkCommitChanges(commit string, notL10nChanges, l10nChanges []string) (ok
 			prompt := fmt.Sprintf("[%s@%s]",
 				locale+".po",
 				AbbrevCommit(commit))
-			if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, prompt) {
+			// Do not compare with POT template for tmpFile, because:
+			// 1. we only know path of tmpfile, not the real PO file, fail to build POT,
+			// 2. the temporary PO file is translated based on a history POT template.
+			if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, false, prompt) {
 				// Error errs in CheckPoFileWithPrompt() have been output already,
 				// mark ok as false
 				ok = false
@@ -282,6 +285,9 @@ func CmdCheckCommits(args ...string) bool {
 		maxCommits = defaultMaxCommits
 	}
 	if len(args) > 0 {
+		// GitHub Actions may pass 40-digit (or 64-digit for SHA-256) zero oid
+		// as source commit in commit range like "<000...0000>..<commit>", We
+		// need to strip the leading zeros for git-rev-list to work.
 		re := regexp.MustCompile(`^(0{40,}\.\.)`)
 		for _, arg := range args {
 			if re.MatchString(arg) {
@@ -368,6 +374,7 @@ func checkCommits(commits ...string) bool {
 			brk            bool
 		)
 
+		// Get file changes of the commit
 		changes, ok = getCommitChanges(commit)
 		if !ok {
 			break

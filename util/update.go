@@ -149,5 +149,5 @@ func CmdUpdate(fileName string) bool {
 
 	viper.Set("check--report-file-locations", "none")
 	viper.Set("check--allow-obsolete", true)
-	return CheckPoFile(locale, poFile)
+	return CheckPoFile(locale, poFile, true)
 }

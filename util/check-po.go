@@ -164,12 +164,15 @@ func checkPoNoObsoleteEntries(po *GettextPO) ([]string, bool) {
 }
 
 // CheckPoFile checks syntax of "po/xx.po".
-func CheckPoFile(locale, poFile string) bool {
-	return CheckPoFileWithPrompt(locale, poFile, "")
+// When compareWithPot is true, also checks incomplete translations against the POT template.
+func CheckPoFile(locale, poFile string, compareWithPot bool) bool {
+	return CheckPoFileWithPrompt(locale, poFile, compareWithPot, "")
 }
 
 // CheckPoFileWithPrompt checks syntax of "po/xx.po", and use specific prompt.
-func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
+// When compareWithPot is true, also checks incomplete translations against the POT template
+// (subject to --pot-file; use "no" to skip acquisition inside CheckWithPoFile).
+func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt string) bool {
 	var (
 		ret  = true
 		ok   bool
@@ -259,9 +262,11 @@ func CheckPoFileWithPrompt(locale, poFile string, prompt string) bool {
 		ret = false
 	}
 
-	// Check incomplete translations (can be disabled with "--pot-file=no").
-	if !CheckUnfinishedPoFile("HEAD", projectName, poFile) {
-		ret = false
+	// Check incomplete translations against POT (can be disabled with "--pot-file=no" inside CheckWithPoFile).
+	if compareWithPot {
+		if !CheckWithPoFile("HEAD", projectName, poFile) {
+			ret = false
+		}
 	}
 
 	return ret
@@ -332,7 +337,7 @@ func CmdCheckPo(args ...string) bool {
 	}
 
 	for _, item := range toCheck {
-		if !CheckPoFile(item.locale, item.poFile) {
+		if !CheckPoFile(item.locale, item.poFile, true) {
 			ret = false
 		}
 		if flag.Core() {
