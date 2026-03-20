@@ -22,14 +22,14 @@ func (v *updateCommand) Command() *cobra.Command {
 			return v.Execute(args)
 		},
 	}
-	v.cmd.Flags().Bool("no-file-location",
-		false,
-		"no filename and location in comment for entry")
 	v.cmd.Flags().Bool("no-location",
 		false,
-		"no location in comment for entry")
-	_ = viper.BindPFlag("no-file-location", v.cmd.Flags().Lookup("no-file-location"))
+		"no filename and location in comment for entry")
+	v.cmd.Flags().Bool("no-line-number",
+		false,
+		"no line number in comment for entry")
 	_ = viper.BindPFlag("no-location", v.cmd.Flags().Lookup("no-location"))
+	_ = viper.BindPFlag("no-line-number", v.cmd.Flags().Lookup("no-line-number"))
 	return v.cmd
 }
 

@@ -161,7 +161,7 @@ The `--pot-file` option (way to get latest pot file: 'auto', 'download', 'build'
 | `msg-cat` | Concatenate and merge PO/POT/JSON files. Usage: `msg-cat -o <output> [--json] [inputfile]...`. Output to file or stdout (`-o -`). Duplicate msgid: first occurrence by file order wins. |
 | `msg-select` | Extract entries from PO/POT file by index range. Usage: `msg-select --range "3,5,9-13" <po-file>`. Range format: `3,5` (entries 3 and 5), `9-13` (entries 9–13), `-5` (first 5), `50-` (from 50 to end). |
 | `stat` | Report statistics for a PO file. Usage: `stat <po-file>`. Outputs: translated, untranslated, same (msgstr equals msgid), fuzzy, obsolete. For review JSON report use `agent-run report`. |
-| `update` | Update XX.po file. Usage: `update <XX.po>...`. Options: `--no-file-location`, `--no-location`, `--pot-file`. |
+| `update` | Update XX.po file. Usage: `update <XX.po>...`. Options: `--no-location`, `--no-line-number`, `--pot-file`. |
 
 ### Team and version
 

@@ -36,19 +36,19 @@ func UpdatePotFile(projectName string, poFile string) (string, bool) {
 // CmdUpdate implements update sub command.
 func CmdUpdate(fileName string) bool {
 	var (
-		cmd               *exec.Cmd
-		msgCatCmd         *exec.Cmd
-		locale            string
-		localeFullName    string
-		err               error
-		poFile            string
-		tmpFile           string
-		cmdArgs           []string
-		poTemplate        string
-		ok                bool
-		optNoLocation     = viper.GetBool("no-location")
-		optNoFileLocation = viper.GetBool("no-file-location")
-		output            []byte
+		cmd             *exec.Cmd
+		msgCatCmd       *exec.Cmd
+		locale          string
+		localeFullName  string
+		err             error
+		poFile          string
+		tmpFile         string
+		cmdArgs         []string
+		poTemplate      string
+		ok              bool
+		optNoLineNumber = viper.GetBool("no-line-number")
+		optNoLocation   = viper.GetBool("no-location")
+		output          []byte
 	)
 
 	locale = strings.TrimSuffix(filepath.Base(fileName), ".po")
@@ -91,9 +91,9 @@ func CmdUpdate(fileName string) bool {
 	}
 
 	cmdArgs = []string{"msgmerge"}
-	if optNoFileLocation {
+	if optNoLocation {
 		cmdArgs = append(cmdArgs, "--no-location")
-	} else {
+	} else if optNoLineNumber {
 		cmdArgs = append(cmdArgs, "--add-location=file")
 	}
 	cmdArgs = append(cmdArgs,
@@ -105,7 +105,7 @@ func CmdUpdate(fileName string) bool {
 	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Stderr = os.Stderr
 
-	if optNoLocation {
+	if optNoLineNumber {
 		msgCatCmdArgs := []string{"msgcat", "--add-location=file", "-"}
 		log.Infof(`run msgcat for "%s": %s`, localeFullName, strings.Join(msgCatCmdArgs, " "))
 		msgCatCmd = exec.Command(msgCatCmdArgs[0], msgCatCmdArgs[1:]...)
@@ -140,7 +140,7 @@ func CmdUpdate(fileName string) bool {
 		return false
 	}
 
-	if optNoLocation {
+	if optNoLineNumber {
 		if err := cmd.Wait(); err != nil {
 			log.Errorf(`wait failed: %s`, err)
 			return false
