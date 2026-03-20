@@ -122,12 +122,10 @@ Usage:
 Available Commands:
   agent-run     Run agent commands for automation
   agent-test    Test agent commands with multiple runs
-  check         Check all ".po" files and commits
   check-commits Check commits for l10n conventions
   check-po      Check syntax of XX.po or XX.pot file
   compare       Show changes between two l10n files
   help          Help about any command
-  init          Create XX.po file
   msg-cat       Concatenate and merge PO/POT/JSON files
   msg-select    Extract entries from PO/POT file by index range
   stat          Report statistics for a PO file
@@ -144,7 +142,7 @@ Flags:
 Use "git-po-helper [command] --help" for more information about a command.
 ```
 
-The `--pot-file` option (way to get latest pot file: 'auto', 'download', 'build', 'no' or filename such as po/git.pot) is available for: `check`, `check-po`, `check-commits`, `init`, and `update` commands.
+The `--pot-file` option (way to get latest pot file: 'auto', 'download', 'build', 'no' or filename such as po/git.pot) is available for: `check-po`, `check-commits`, and `update` commands.
 
 ## Commands
 
@@ -152,7 +150,6 @@ The `--pot-file` option (way to get latest pot file: 'auto', 'download', 'build'
 
 | Command | Description |
 |---------|-------------|
-| `check` | Check all `.po` files and commits. Options: `--core` (also check against git-core.pot), `--force`, `--no-gpg`, `--pot-file`, `--report-file-locations`, `--report-typos`. |
 | `check-commits` | Check commits for l10n conventions. Usage: `check-commits [<range>]`. Options: `--force`, `--no-gpg`, `--pot-file`, `--report-file-locations`, `--report-typos`. |
 | `check-po` | Check syntax of XX.po or XX.pot file. Usage: `check-po <XX.po|XX.pot>...`. For Git project .pot files, also runs CamelCase config variable check (requires Documentation/config with .txt or .adoc files). Options: `--core`, `--pot-file`, `--report-file-locations`, `--report-typos`. |
 
@@ -161,7 +158,6 @@ The `--pot-file` option (way to get latest pot file: 'auto', 'download', 'build'
 | Command | Description |
 |---------|-------------|
 | `compare` | Show changes between two PO files or versions. Default: output new or changed entries to stdout. With `--stat`: show diff statistics. Use `-r`, `--commit`, or `--since` for revision range. Usage: `compare [-r range] [[<src>] <target>]`. |
-| `init` | Create XX.po file. Usage: `init <XX.po>`. Options: `--core` (generate from po/git-core.pot), `--pot-file`. |
 | `msg-cat` | Concatenate and merge PO/POT/JSON files. Usage: `msg-cat -o <output> [--json] [inputfile]...`. Output to file or stdout (`-o -`). Duplicate msgid: first occurrence by file order wins. |
 | `msg-select` | Extract entries from PO/POT file by index range. Usage: `msg-select --range "3,5,9-13" <po-file>`. Range format: `3,5` (entries 3 and 5), `9-13` (entries 9–13), `-5` (first 5), `50-` (from 50 to end). |
 | `stat` | Report statistics for a PO file. Usage: `stat <po-file>`. Outputs: translated, untranslated, same (msgstr equals msgid), fuzzy, obsolete. For review JSON report use `agent-run report`. |

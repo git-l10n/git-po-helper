@@ -173,8 +173,8 @@ func (v *rootCommand) AddCommand(cmds ...*cobra.Command) {
 
 // potFileVisibleCommands lists commands that use --pot-file; the flag is shown only for them.
 var potFileVisibleCommands = map[string]bool{
-	"check": true, "check-po": true, "check-commits": true,
-	"init": true, "update": true,
+	"check-po": true, "check-commits": true,
+	"update": true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

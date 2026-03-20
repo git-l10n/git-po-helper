@@ -28,8 +28,8 @@ established contribution conventions.
 
 The project follows a standard Go project structure:
 
-- `cmd/` - CLI subcommand implementations (check, check-commits,
-  check-po, compare, agent-run, agent-test, init, msg-cat, msg-select,
+- `cmd/` - CLI subcommand implementations (check-commits,
+  check-po, compare, agent-run, agent-test, msg-cat, msg-select,
   team, update, version)
 - `util/` - Core utility functions and business logic
 - `data/` - ISO-3166 and ISO-639 language/country code data
@@ -141,11 +141,9 @@ The project uses automatically generated version files:
 
 - `agent-run` - Run agent commands for automation (update-pot, update-po, translate, review, report)
 - `agent-test` - Test agent commands with multiple runs
-- `check` - Check all .po files and commits
 - `check-commits` - Check if commits comply with l10n conventions
 - `check-po` - Check syntax of XX.po or XX.pot file (for Git .pot, also checks CamelCase config variables; requires Documentation/config)
 - `compare` - Show differences between two l10n files (--stat for diff stats, or new/changed entries)
-- `init` - Create a new XX.po file
 - `msg-cat` - Concatenate and merge PO/POT/JSON files (first occurrence of each msgid wins)
 - `msg-select` - Extract entries from PO/POT file by index range
 - `team` - Show team leader/member information
