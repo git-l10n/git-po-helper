@@ -30,12 +30,16 @@ const (
 func getCommitChanges(commit string) ([]string, bool) {
 	var changes []string
 
+	// Notes:
+	// - for one commit's diff-tree: If there is only one <tree-ish> given,
+	//   the commit is compared with its parents
+	// - original: --diff-filter=ACM: only show added, copied, and modified files
+	//   remove this filter to see all changes
 	cmd := exec.Command("git",
 		"diff-tree",
 		"-r",
 		"-z",
 		"--no-renames",
-		"--diff-filter=ACM",
 		"--name-only",
 		commit)
 	stdout, err := cmd.StdoutPipe()
