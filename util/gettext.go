@@ -799,6 +799,11 @@ func ParsePoEntries(data []byte) (*GettextPO, error) {
 				st.currentEntry.Comments = append(st.currentEntry.Comments, line)
 				continue
 			}
+			// Continuation line: #~| "value" (multi-line #~| msgid "" format)
+			if st.currentEntry != nil {
+				st.currentEntry.Comments = append(st.currentEntry.Comments, line)
+			}
+			continue
 		}
 
 		// Header: first msgid "" starts the header block
