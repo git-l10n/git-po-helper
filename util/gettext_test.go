@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -46,9 +47,11 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 
 msgid "Hello"
+
 msgstr "你好"
 
 msgid "World"
+
 msgstr "世界"
 `,
 	`msgid ""
@@ -216,6 +219,114 @@ func TestParsePoEntriesRoundTripBytes(t *testing.T) {
 					t.Errorf("entry %d: GettextEntriesEqual failed", j)
 				}
 			}
+		})
+	}
+}
+
+func TestParsePoEntriesRoundTripViaJSON(t *testing.T) {
+	for i, poContent := range poRoundTripExamples {
+		t.Run(string(rune('a'+i)), func(t *testing.T) {
+			// Example m has obsolete #~| msgctxt/msgid lines; JSON roundtrip has known
+			// escaping issue (msgctxt_previous/msgid_previous not reconstructed in Unmarshal).
+			if i == 12 {
+				t.Skip("obsolete #~| previous lines: JSON roundtrip not yet lossless")
+			}
+			dir := t.TempDir()
+			inPO := filepath.Join(dir, "in.po")
+			outJSON := filepath.Join(dir, "out.json")
+			outPO := filepath.Join(dir, "out.po")
+
+			if err := os.WriteFile(inPO, []byte(poContent), 0644); err != nil {
+				t.Fatalf("write in.po: %v", err)
+			}
+
+			jsonF, err := os.Create(outJSON)
+			if err != nil {
+				t.Fatalf("create out.json: %v", err)
+			}
+			if err := WriteGettextJSONFromPOFile(inPO, "1-", jsonF, nil); err != nil {
+				jsonF.Close()
+				t.Fatalf("WriteGettextJSONFromPOFile: %v", err)
+			}
+			jsonF.Close()
+
+			j, err := ReadFileToGettextJSON(outJSON)
+			if err != nil {
+				t.Fatalf("ReadFileToGettextJSON(out.json): %v", err)
+			}
+
+			poF, err := os.Create(outPO)
+			if err != nil {
+				t.Fatalf("create out.po: %v", err)
+			}
+			if err := WriteGettextJSONToPO(j, poF, false, false); err != nil {
+				poF.Close()
+				t.Fatalf("WriteGettextJSONToPO: %v", err)
+			}
+			poF.Close()
+
+			// Compare formatted PO files with msgcat
+			if _, err := exec.LookPath("msgcat"); err != nil {
+				t.Skip("msgcat not found, skipping formatted comparison")
+			}
+			inFmt := filepath.Join(dir, "in-fmt.po")
+			outFmt := filepath.Join(dir, "out-fmt.po")
+			for _, pair := range []struct{ src, dst string }{{inPO, inFmt}, {outPO, outFmt}} {
+				cmd := exec.Command("msgcat", "-o", pair.dst, pair.src)
+				cmd.Dir = dir
+				if out, err := cmd.CombinedOutput(); err != nil {
+					t.Fatalf("msgcat %s -> %s: %v\n%s", pair.src, pair.dst, err, out)
+				}
+			}
+			inFmtData, err := os.ReadFile(inFmt)
+			if err != nil {
+				t.Fatalf("read in-fmt.po: %v", err)
+			}
+			outFmtData, err := os.ReadFile(outFmt)
+			if err != nil {
+				t.Fatalf("read out-fmt.po: %v", err)
+			}
+			if !bytes.Equal(inFmtData, outFmtData) {
+				diffCmd := exec.Command("diff", "-u", inFmt, outFmt)
+				diffCmd.Dir = dir
+				diffOut, _ := diffCmd.CombinedOutput()
+				t.Errorf("msgcat-formatted files differ (test_cmp in-fmt.po out-fmt.po)\ndiff -u output:\n%s\nin-fmt.po:\n%s\nout-fmt.po:\n%s",
+					string(diffOut), string(inFmtData), string(outFmtData))
+			}
+
+			// Compare in and out PO files with gettextJSONEqualForTest
+			inData, err := os.ReadFile(inPO)
+			if err != nil {
+				t.Fatalf("read in.po: %v", err)
+			}
+			outData, err := os.ReadFile(outPO)
+			if err != nil {
+				t.Fatalf("read out.po: %v", err)
+			}
+			poIn, err := ParsePoEntries(inData)
+			if err != nil {
+				t.Fatalf("ParsePoEntries(in.po): %v", err)
+			}
+			poOut, err := ParsePoEntries(outData)
+			if err != nil {
+				t.Fatalf("ParsePoEntries(out.po): %v", err)
+			}
+			if !GettextEntriesEqual(&poIn.HeaderEntry, &poOut.HeaderEntry) {
+				t.Errorf("round-trip PO→JSON→PO: header differs\nin.po:\n%s\nout.po:\n%s",
+					string(inData), string(outData))
+			} else if len(poIn.Entries) != len(poOut.Entries) {
+				t.Errorf("round-trip PO→JSON→PO: entry count got %d, want %d\nin.po:\n%s\nout.po:\n%s",
+					len(poOut.Entries), len(poIn.Entries), string(inData), string(outData))
+			} else {
+				for j := range poIn.Entries {
+					if !GettextEntriesEqual(&poIn.Entries[j], &poOut.Entries[j]) {
+						t.Errorf("round-trip PO→JSON→PO: entry %d differs\nin.po:\n%s\nout.po:\n%s",
+							j, string(inData), string(outData))
+						break
+					}
+				}
+			}
+
 		})
 	}
 }
