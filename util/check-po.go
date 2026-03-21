@@ -264,7 +264,7 @@ func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt st
 
 	// Check incomplete translations against POT (can be disabled with "--pot-file=no" inside CheckWithPoFile).
 	if compareWithPot {
-		if !CheckWithPoFile("HEAD", projectName, poFile) {
+		if !CheckWithPotFile("HEAD", projectName, poFile) {
 			ret = false
 		}
 	}

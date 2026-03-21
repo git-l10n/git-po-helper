@@ -13,10 +13,10 @@ var (
 	PotFileURL = "https://github.com/git-l10n/pot-changes/raw/pot/master/po/git.pot"
 )
 
-// CheckWithPoFile checks a single po file for incomplete translations.
+// CheckWithPotFile checks a single po file for incomplete translations.
 // When commit is "HEAD" or empty, uses the file from disk; otherwise checkouts
 // the file from the given commit. projectName is from Project-Id-Version meta.
-func CheckWithPoFile(commit, projectName, poFile string) bool {
+func CheckWithPotFile(commit, projectName, poFile string) bool {
 	cfg := GetProjectPotConfig(projectName, poFile)
 	action := cfg.GetEffectiveAction()
 	if action == DefaultPotActionNo {
@@ -69,7 +69,7 @@ func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {
 		projectName = getProjectNameFromPoFile(poFiles[0], commit)
 	}
 	for _, poFile := range poFiles {
-		if !CheckWithPoFile(commit, projectName, poFile) {
+		if !CheckWithPotFile(commit, projectName, poFile) {
 			ok = false
 		}
 	}
