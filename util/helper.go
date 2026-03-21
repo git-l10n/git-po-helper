@@ -38,14 +38,13 @@ func ShowExecError(err error) {
 	}
 }
 
-// GetPrettyLocaleName shows full language name and location
-func GetPrettyLocaleName(locale string) (string, []error) {
+// parseLocale parses locale (lang_zone) and returns display name and validation errors.
+func parseLocale(locale string) (displayName string, errs []error) {
 	var (
 		lang     string
 		zone     string
 		langName string
 		zoneName string
-		errs     []error
 	)
 	items := strings.SplitN(locale, "_", 2)
 	lang = items[0]
@@ -91,6 +90,18 @@ func GetPrettyLocaleName(locale string) (string, []error) {
 		return fmt.Sprintf("%s - %s", langName, zoneName), errs
 	}
 	return langName, errs
+}
+
+// ValidateLocale validates locale against ISO 639, ISO 3166, and ISO 15924.
+func ValidateLocale(locale string) []error {
+	_, errs := parseLocale(locale)
+	return errs
+}
+
+// FormatLocaleName returns the display name for locale (e.g. "Chinese - China").
+func FormatLocaleName(locale string) string {
+	name, _ := parseLocale(locale)
+	return name
 }
 
 // GetUserInput reads user input from stdin.

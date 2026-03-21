@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestGetPrettyLocaleName(t *testing.T) {
+func TestValidateLocale(t *testing.T) {
 	tests := []struct {
 		name      string
 		locale    string
@@ -88,19 +88,20 @@ func TestGetPrettyLocaleName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotName, gotErrs := GetPrettyLocaleName(tt.locale)
+			gotName := FormatLocaleName(tt.locale)
+			gotErrs := ValidateLocale(tt.locale)
 			if gotName != tt.wantName {
-				t.Errorf("GetPrettyLocaleName(%q) name = %q, want %q", tt.locale, gotName, tt.wantName)
+				t.Errorf("FormatLocaleName(%q) = %q, want %q", tt.locale, gotName, tt.wantName)
 			}
 			errStrs := errSliceToStrings(gotErrs)
 			for _, want := range tt.wantErrs {
 				if !containsAny(errStrs, want) {
-					t.Errorf("GetPrettyLocaleName(%q) errs = %v, want substring %q", tt.locale, errStrs, want)
+					t.Errorf("ValidateLocale(%q) errs = %v, want substring %q", tt.locale, errStrs, want)
 				}
 			}
 			for _, noWant := range tt.wantNoErr {
 				if containsAny(errStrs, noWant) {
-					t.Errorf("GetPrettyLocaleName(%q) errs = %v, must not contain %q", tt.locale, errStrs, noWant)
+					t.Errorf("ValidateLocale(%q) errs = %v, must not contain %q", tt.locale, errStrs, noWant)
 				}
 			}
 		})
@@ -124,28 +125,37 @@ func containsAny(strs []string, sub string) bool {
 	return false
 }
 
-func TestGetPrettyLocaleName_ErrorCount(t *testing.T) {
+func TestValidateLocale_ErrorCount(t *testing.T) {
 	// Invalid language only: 1 error
-	_, errs := GetPrettyLocaleName("xx")
+	errs := ValidateLocale("xx")
 	if len(errs) != 1 {
-		t.Errorf("GetPrettyLocaleName(\"xx\") got %d errs, want 1: %v", len(errs), errs)
+		t.Errorf("ValidateLocale(\"xx\") got %d errs, want 1: %v", len(errs), errs)
 	}
 
 	// Invalid language + invalid zone: at least 1 (language), zone may add another
-	_, errs = GetPrettyLocaleName("xx_YY")
+	errs = ValidateLocale("xx_YY")
 	if len(errs) < 1 {
-		t.Errorf("GetPrettyLocaleName(\"xx_YY\") got %d errs, want >= 1", len(errs))
+		t.Errorf("ValidateLocale(\"xx_YY\") got %d errs, want >= 1", len(errs))
 	}
 
 	// Valid but wrong case: 1 error
-	_, errs = GetPrettyLocaleName("zh_cn")
+	errs = ValidateLocale("zh_cn")
 	if len(errs) != 1 {
-		t.Errorf("GetPrettyLocaleName(\"zh_cn\") got %d errs, want 1: %v", len(errs), errs)
+		t.Errorf("ValidateLocale(\"zh_cn\") got %d errs, want 1: %v", len(errs), errs)
 	}
 
 	// Language case + zone case: 2 errors
-	_, errs = GetPrettyLocaleName("ZH_cn")
+	errs = ValidateLocale("ZH_cn")
 	if len(errs) != 2 {
-		t.Errorf("GetPrettyLocaleName(\"ZH_cn\") got %d errs, want 2: %v", len(errs), errs)
+		t.Errorf("ValidateLocale(\"ZH_cn\") got %d errs, want 2: %v", len(errs), errs)
+	}
+}
+
+func TestFormatLocaleName(t *testing.T) {
+	if got := FormatLocaleName("zh_CN"); got != "Chinese - China" {
+		t.Errorf("FormatLocaleName(\"zh_CN\") = %q, want \"Chinese - China\"", got)
+	}
+	if got := FormatLocaleName("zh"); got != "Chinese" {
+		t.Errorf("FormatLocaleName(\"zh\") = %q, want \"Chinese\"", got)
 	}
 }

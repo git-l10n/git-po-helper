@@ -29,7 +29,7 @@ func CheckCorePoFile(locale, poFile string) bool {
 		}
 	}()
 
-	_, localeErrs := GetPrettyLocaleName(locale)
+	localeErrs := ValidateLocale(locale)
 	for _, e := range localeErrs {
 		errs = append(errs, e.Error())
 	}
