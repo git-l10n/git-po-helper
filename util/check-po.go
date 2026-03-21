@@ -250,10 +250,12 @@ func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt st
 	ReportSection("PO filter (.gitattributes)", ok, log.InfoLevel, prompt, errs...)
 	ret = ret && ok
 
-	// Check possible typos in a .po file.
-	errs, ok = checkTyposInPo(locale, po)
-	ReportSection("msgid/msgstr pattern check", ok, log.WarnLevel, prompt, errs...)
-	ret = ret && ok
+	// Check possible typos in a .po file (Git project only).
+	if strings.EqualFold(projectName, "Git") {
+		errs, ok = checkTyposInPo(locale, po)
+		ReportSection("msgid/msgstr pattern check", ok, log.WarnLevel, prompt, errs...)
+		ret = ret && ok
+	}
 
 	// Check that Project-Id-Version defines a project name.
 	if projectName == "" {
