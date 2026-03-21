@@ -185,6 +185,59 @@ msgstr "活跃"
 #~ msgid "Obsolete"
 #~ msgstr "已废弃"
 `,
+	`# With syntax not compatible with gettext 0.14, 0.15.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. Active entry
+msgid "Hello"
+msgstr "你好"
+
+#. Previous untranslated entry
+#| msgid "Old text"
+msgid "New text"
+msgstr "新文本"
+
+#. Previous untranslated entry with multi-line msgid
+#| msgid ""
+#| "Old text (2)"
+msgid ""
+"New text (2)"
+msgstr ""
+"新文本 (2)"
+
+#. Active entry with msgctxt
+msgctxt "menu action"
+msgid "Open"
+msgstr "打开"
+
+#~ #. Previous untranslated entry with msgctxt
+#| msgctxt "old context"
+#| msgid "Save"
+msgctxt "button"
+msgid "Save"
+msgstr "保存"
+
+#~ #. Obsolete entry with #~ msgctxt
+#~ msgctxt "shop status"
+#~ msgid "Open"
+#~ msgstr "营业中"
+
+#~ #. Obsolete entry with #~| msgid
+#~| msgid "Older entry"
+#~ msgid "Old entry"
+#~ msgstr "旧条目"
+
+#~ #. Obsolete entry with #~| msgid, multi-line msgid
+#~| msgid ""
+#~| "Older entry (2)"
+#~ msgid ""
+#~ "Old entry (2)"
+#~ msgstr ""
+#~ "旧条目 (2)"
+`,
 }
 
 func TestParsePoEntriesRoundTripBytes(t *testing.T) {
