@@ -58,12 +58,6 @@ func GetPrettyLocaleName(locale string) (string, []error) {
 			lang))
 		lang = strings.ToLower(lang)
 	}
-	if zone != "" && zone != strings.ToUpper(zone) {
-		errs = append(errs, fmt.Errorf(
-			`region/territory code %q must be all uppercase`,
-			zone))
-		zone = strings.ToUpper(zone)
-	}
 	langName = data.GetLanguageName(lang)
 	if langName == "" {
 		errs = append(errs, fmt.Errorf(
@@ -71,10 +65,25 @@ func GetPrettyLocaleName(locale string) (string, []error) {
 			lang))
 	}
 	if zone != "" {
-		zoneName = data.GetLocationName(zone)
-		if zoneName == "" {
+		locName, locCanon := data.GetLocationNameInsensitive(zone)
+		scriptName, scriptCanon := data.GetScriptNameInsensitive(zone)
+		if locName != "" {
+			if zone != locCanon {
+				errs = append(errs, fmt.Errorf(
+					`region/territory code %q should be %q (ISO 3166)`,
+					zone, locCanon))
+			}
+			zoneName = locName
+		} else if scriptName != "" {
+			if zone != scriptCanon {
+				errs = append(errs, fmt.Errorf(
+					`script code %q should be %q (ISO 15924)`,
+					zone, scriptCanon))
+			}
+			zoneName = scriptName
+		} else {
 			errs = append(errs, fmt.Errorf(
-				`invalid country or location code for "%s", see ISO 3166 for valid codes`,
+				`invalid region/territory or script code for "%s", see ISO 3166 and ISO 15924 for valid codes`,
 				zone))
 		}
 	}
