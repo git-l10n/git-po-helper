@@ -226,11 +226,6 @@ func TestParsePoEntriesRoundTripBytes(t *testing.T) {
 func TestParsePoEntriesRoundTripViaJSON(t *testing.T) {
 	for i, poContent := range poRoundTripExamples {
 		t.Run(string(rune('a'+i)), func(t *testing.T) {
-			// Example m has obsolete #~| msgctxt/msgid lines; JSON roundtrip has known
-			// escaping issue (msgctxt_previous/msgid_previous not reconstructed in Unmarshal).
-			if i == 12 {
-				t.Skip("obsolete #~| previous lines: JSON roundtrip not yet lossless")
-			}
 			dir := t.TempDir()
 			inPO := filepath.Join(dir, "in.po")
 			outJSON := filepath.Join(dir, "out.json")

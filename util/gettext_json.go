@@ -685,6 +685,15 @@ func WriteGettextJSONToPO(j *GettextJSON, w io.Writer, noHeader, addTrailingNewl
 				if _, err := io.WriteString(w, prefix+line+"\n"); err != nil {
 					return err
 				}
+			} else if strings.HasPrefix(trimmed, "#~| ") || strings.HasPrefix(trimmed, "#| ") {
+				linePrefix := "#| "
+				if strings.HasPrefix(trimmed, "#~| ") {
+					linePrefix = "#~| "
+				}
+				rest := trimmed[len(linePrefix):]
+				if err := writePreviousLineToPO(w, linePrefix, rest); err != nil {
+					return err
+				}
 			} else {
 				if _, err := io.WriteString(w, prefix+c); err != nil {
 					return err
@@ -747,6 +756,37 @@ func WriteGettextJSONToPO(j *GettextJSON, w io.Writer, noHeader, addTrailingNewl
 	return nil
 }
 
+// writePreviousLineToPO parses a #| or #~| line rest (e.g. "msgid \"val\"" or "msgctxt \"val\"")
+// and writes it with proper poEscape so JSON roundtrip produces valid PO.
+// Handles multi-line format: "msgid \"\"" followed by continuation "\"line\"".
+func writePreviousLineToPO(w io.Writer, linePrefix, rest string) error {
+	rest = strings.TrimSpace(rest)
+	for _, kw := range []string{"msgctxt", "msgid_plural", "msgid"} {
+		prefix := kw + " "
+		if !strings.HasPrefix(rest, prefix) {
+			continue
+		}
+		quoted := strings.TrimSpace(rest[len(prefix):])
+		value := strDeQuote(quoted)
+		value = poUnescape(value)
+		// After poUnescape, value may still be wrapped in quotes (from JSON "\"val\"")
+		value = strDeQuote(value)
+		out := linePrefix + kw + " \"" + poEscape(value) + "\"\n"
+		_, err := io.WriteString(w, out)
+		return err
+	}
+	// Continuation line (multi-line #| msgid "" / #| msgctxt ""): rest is "value" or \"value\".
+	// jsonDecodedToPoFormat may have turned " into \", so we must parse and re-output.
+	if len(rest) >= 2 && (rest[0] == '"' || (rest[0] == '\\' && len(rest) >= 3 && rest[1] == '"')) {
+		value := strDeQuote(poUnescape(rest))
+		_, err := io.WriteString(w, linePrefix+"\""+poEscape(value)+"\"\n")
+		return err
+	}
+	// Unknown format: write as-is
+	_, err := io.WriteString(w, linePrefix+rest+"\n")
+	return err
+}
+
 // writeGettextEntryToPO writes a single GettextEntry as PO content (used by noHeader path).
 func writeGettextEntryToPO(w io.Writer, entry GettextEntry) error {
 	wroteFuzzyFlag := false
@@ -766,6 +806,17 @@ func writeGettextEntryToPO(w io.Writer, entry GettextEntry) error {
 				wroteFuzzyFlag = true
 			}
 			if _, err := io.WriteString(w, prefix+line+"\n"); err != nil {
+				return err
+			}
+		} else if strings.HasPrefix(trimmed, "#~| ") || strings.HasPrefix(trimmed, "#| ") {
+			// #| and #~| lines: parse and re-output with proper poEscape so JSON roundtrip
+			// (which may store values with JSON escaping) produces valid PO.
+			linePrefix := "#| "
+			if strings.HasPrefix(trimmed, "#~| ") {
+				linePrefix = "#~| "
+			}
+			rest := trimmed[len(linePrefix):]
+			if err := writePreviousLineToPO(w, linePrefix, rest); err != nil {
 				return err
 			}
 		} else {
