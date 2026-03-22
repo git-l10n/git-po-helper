@@ -90,7 +90,7 @@ test_expect_success "bad syntax of zh_CN.po" '
 
 test_expect_success "update zh_CN (with location)" '
 	cat >expect <<-EOF &&
-	INFO: run msgmerge for "Chinese - China": msgmerge -o - po/zh_CN.po po/git.pot
+	INFO: run msgmerge for "Chinese - China": msgmerge -o po/zh_CN.po.tmp po/zh_CN.po po/git.pot
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
 	⚠️ Incomplete translations found

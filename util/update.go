@@ -37,10 +37,8 @@ func UpdatePotFile(projectName string, poFile string) (string, bool) {
 func CmdUpdate(fileName string) bool {
 	var (
 		cmd             *exec.Cmd
-		msgCatCmd       *exec.Cmd
 		locale          string
 		localeFullName  string
-		err             error
 		poFile          string
 		tmpFile         string
 		cmdArgs         []string
@@ -48,30 +46,52 @@ func CmdUpdate(fileName string) bool {
 		ok              bool
 		optNoLineNumber = viper.GetBool("no-line-number")
 		optNoLocation   = viper.GetBool("no-location")
-		output          []byte
 	)
 
 	locale = strings.TrimSuffix(filepath.Base(fileName), ".po")
+	localeFullName = FormatLocaleName(locale)
 	localeErrs := ValidateLocale(locale)
+	// ISO / locale validation errors are logged but do not stop the update when
+	// FormatLocaleName still yields a display name (warn-only). If the locale
+	// cannot be interpreted at all (empty display name), abort.
 	if len(localeErrs) > 0 {
 		for _, e := range localeErrs {
-			log.Errorf("fail to get locale name: %s", e)
+			log.Errorf("%s", e)
 		}
-		return false
+		if localeFullName == "" {
+			return false
+		}
 	}
-	localeFullName = FormatLocaleName(locale)
-	poFile = filepath.Join(PoDir, locale+".po")
+	poFile = filepath.Clean(fileName)
+	if rel := filepath.ToSlash(poFile); !strings.HasPrefix(rel, PoDir+"/") {
+		poFile = filepath.Join(PoDir, locale+".po")
+	}
 	tmpFile = poFile + ".tmp"
 	defer func() {
 		os.Remove(tmpFile)
 	}()
 
 	// Load PO to get ProjectName for UpdatePotFile.
+	if !Exist(poFile) {
+		log.Errorf(`fail to update "%s", does not exist`, poFile)
+		return false
+	}
 	projectName := ""
-	if data, err := os.ReadFile(poFile); err == nil {
-		if po, err := ParsePoEntries(data); err == nil {
-			projectName = po.GetProject()
-		}
+	data, err := os.ReadFile(poFile)
+	if err != nil {
+		log.Errorf("fail to read %s: %s", poFile, err)
+		return false
+	}
+	if po, err := ParsePoEntries(data); err == nil {
+		projectName = po.GetProject()
+	} else {
+		log.Errorf("fail to parse %s: %s", poFile, err)
+		return false
+	}
+
+	if projectName == "" {
+		log.Errorf("fail to get project name from %s", poFile)
+		return false
 	}
 
 	// Update pot file.
@@ -79,15 +99,12 @@ func CmdUpdate(fileName string) bool {
 		return false
 	}
 	if poTemplate == "" {
-		poTemplate = filepath.Join(PoDir, GitPot)
+		log.Errorf("fail to update %s, unknown pot file", poFile)
+		return false
 	}
 
 	if !Exist(poTemplate) {
-		log.Errorf(`fail to update "%s", pot file does not exist`, poFile)
-		return false
-	}
-	if !Exist(poFile) {
-		log.Errorf(`fail to update "%s", does not exist`, poFile)
+		log.Errorf(`fail to update "%s", pot file "%s" does not exist`, poFile, poTemplate)
 		return false
 	}
 
@@ -98,56 +115,29 @@ func CmdUpdate(fileName string) bool {
 		cmdArgs = append(cmdArgs, "--add-location=file")
 	}
 	cmdArgs = append(cmdArgs,
-		"-o", "-", // Save output to stdout
+		"-o", tmpFile,
 		poFile,
 		poTemplate,
 	)
 	log.Infof(`run msgmerge for "%s": %s`, localeFullName, strings.Join(cmdArgs, " "))
 	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Stderr = os.Stderr
-
-	if optNoLineNumber {
-		msgCatCmdArgs := []string{"msgcat", "--add-location=file", "-"}
-		log.Infof(`run msgcat for "%s": %s`, localeFullName, strings.Join(msgCatCmdArgs, " "))
-		msgCatCmd = exec.Command(msgCatCmdArgs[0], msgCatCmdArgs[1:]...)
-		msgCatCmd.Stdin, err = cmd.StdoutPipe()
-		if err != nil {
-			log.Errorf("fail to create pipe: %v\n", err)
-			return false
-		}
-		if err := cmd.Start(); err != nil {
-			log.Errorf(`fail to start msgmerge: %s`, err)
-			return false
-		}
-		output, err = msgCatCmd.Output()
-		if err != nil {
-			log.Errorf(`fail to read output for "%s": %s`, poFile, err)
-			return false
-		}
-	} else {
-		output, err = cmd.Output()
-		if err != nil {
-			log.Errorf(`fail to read output for "%s": %s`, poFile, err)
-			return false
-		}
-	}
-
-	if err := os.WriteFile(tmpFile, output, 0644); err != nil {
-		log.Errorf(`fail to write to "%s": %s`, tmpFile, err)
+	if err := cmd.Run(); err != nil {
+		log.Errorf(`msgmerge failed for "%s": %s`, poFile, err)
 		return false
 	}
+
 	if err := os.Rename(tmpFile, poFile); err != nil {
 		log.Errorf(`fail to rename "%s" to "%s": %s`, tmpFile, poFile, err)
 		return false
 	}
 
-	if optNoLineNumber {
-		if err := cmd.Wait(); err != nil {
-			log.Errorf(`wait failed: %s`, err)
-			return false
-		}
-	}
-
+	prevReportLoc := viper.GetString("check--report-file-locations")
+	prevAllowObsolete := viper.GetBool("check--allow-obsolete")
+	defer func() {
+		viper.Set("check--report-file-locations", prevReportLoc)
+		viper.Set("check--allow-obsolete", prevAllowObsolete)
+	}()
 	viper.Set("check--report-file-locations", "none")
 	viper.Set("check--allow-obsolete", true)
 	return CheckPoFile(locale, poFile, true)

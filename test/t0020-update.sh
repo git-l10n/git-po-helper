@@ -60,7 +60,7 @@ test_expect_success "fail to update zh_CN: bad syntax of zh_CN.po" '
 
 	cat >expect <<-\EOF &&
 	po/zh_CN.po:25: end-of-line within string
-	ERROR: fail to read output for "po/zh_CN.po": exit status 1
+	ERROR: msgmerge failed for "po/zh_CN.po": exit status 1
 	ERROR: update command failed
 	EOF
 
