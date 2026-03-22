@@ -1,0 +1,11 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Git\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "hello world"
+msgstr "你好世界"
+
+msgid "second string"
+msgstr "第二"
