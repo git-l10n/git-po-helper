@@ -2,10 +2,12 @@ package util
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/git-l10n/git-po-helper/util/utiltest"
 	"github.com/spf13/viper"
 )
 
@@ -311,4 +313,55 @@ msgstr "文件"
 	if !ok {
 		t.Error("CheckPoFileWithPrompt expected ok when project has no MinGettextVersion (compatibility skipped), got !ok")
 	}
+}
+
+func TestCmdCheckPo_pathsUnderGitCeiling(t *testing.T) {
+	if _, err := exec.LookPath("msgfmt"); err != nil {
+		t.Skip("msgfmt not in PATH")
+	}
+
+	cmdUpdateTestMu.Lock()
+	defer cmdUpdateTestMu.Unlock()
+
+	root := t.TempDir()
+	utiltest.MaterializeCmdUpdateTree(t, root)
+	utiltest.SetGitCeilingDirectories(t, root)
+
+	potPath := filepath.Join(root, "po", "git.pot")
+	defer func() {
+		viper.Set("pot-file", "auto")
+		viper.Set("check--report-typos", "")
+		viper.Set("check-po--report-file-locations", "")
+	}()
+	viper.Set("pot-file", potPath)
+	viper.Set("check--report-typos", "none")
+	viper.Set("check-po--report-file-locations", "none")
+
+	t.Run("from project root with po/zh_CN.po", func(t *testing.T) {
+		utiltest.Chdir(t, root)
+		if !CmdCheckPo("po/zh_CN.po") {
+			t.Fatal("CmdCheckPo(po/zh_CN.po) failed from project root")
+		}
+	})
+
+	t.Run("from project root with po directory", func(t *testing.T) {
+		utiltest.Chdir(t, root)
+		if !CmdCheckPo("po") {
+			t.Fatal("CmdCheckPo(po) failed from project root")
+		}
+	})
+
+	t.Run("from po with zh_CN.po", func(t *testing.T) {
+		utiltest.Chdir(t, filepath.Join(root, "po"))
+		if !CmdCheckPo("zh_CN.po") {
+			t.Fatal("CmdCheckPo(zh_CN.po) failed from po/")
+		}
+	})
+
+	t.Run("from po with current directory", func(t *testing.T) {
+		utiltest.Chdir(t, filepath.Join(root, "po"))
+		if !CmdCheckPo(".") {
+			t.Fatal("CmdCheckPo(.) failed from po/")
+		}
+	})
 }
