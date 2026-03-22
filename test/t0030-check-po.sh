@@ -98,7 +98,7 @@ test_expect_success "update zh_CN successfully" '
 	msgstr "提供了一个以上的 uploadpack，使用第一个"
 	EOF
 
-	git -C workdir $HELPER update $POT_FILE zh_CN
+	git -C workdir $HELPER update $POT_FILE po/zh_CN.po
 '
 
 test_expect_success "check update of zh_CN.po" '

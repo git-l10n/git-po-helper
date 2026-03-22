@@ -37,8 +37,8 @@ func (v updateCommand) Execute(args []string) error {
 	if len(args) == 0 {
 		return NewErrorWithUsage("no argument for update command")
 	}
-	for _, locale := range args {
-		if !util.CmdUpdate(locale) {
+	for _, fileName := range args {
+		if !util.CmdUpdate(fileName) {
 			return NewStandardError("update command failed")
 		}
 	}

@@ -14,7 +14,7 @@ test_expect_success "setup" '
 test_expect_success "update: zh_CN.po not exist" '
 	rm workdir/po/zh_CN.po &&
 	test_must_fail git -C workdir $HELPER update --pot-file=po/git.pot \
-		zh_CN >out 2>&1 &&
+		po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
@@ -54,9 +54,10 @@ test_expect_success "fail to update zh_CN: bad syntax of zh_CN.po" '
 	EOF
 
 	test_must_fail git -C workdir $HELPER update --pot-file=po/git.pot \
-		zh_CN >out 2>&1 &&
-	grep "po/zh_CN.po:25: end-of-line within string" out >actual &&
-	grep "^ERROR:" out >>actual &&
+		po/zh_CN.po >out 2>&1 &&
+	grep "end-of-line within string" out |
+		sed "s#.*/\\(po/zh_CN.po\\)#\\1#" >actual &&
+	grep "^ERROR:" out | make_user_friendly_and_stable_output >>actual &&
 
 	cat >expect <<-\EOF &&
 	po/zh_CN.po:25: end-of-line within string
@@ -95,7 +96,7 @@ test_expect_success "update zh_CN successfully" '
 	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz"
 	EOF
 
-	git -C workdir $HELPER update --pot-file=po/git.pot zh_CN
+	git -C workdir $HELPER update --pot-file=po/git.pot po/zh_CN.po
 '
 
 test_expect_success "check update of zh_CN.po" '
@@ -140,7 +141,7 @@ test_expect_success "update zh_CN with file and location" '
 	"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 	EOF
 
-	git -C workdir $HELPER update --pot-file=po/git.pot zh_CN &&
+	git -C workdir $HELPER update --pot-file=po/git.pot po/zh_CN.po &&
 
 	grep "^#: builtin/clean.c" workdir/po/zh_CN.po >output &&
 	sort output | head -1 >actual &&
@@ -167,7 +168,7 @@ test_expect_success "update zh_CN --no-line-number" '
 	"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 	EOF
 
-	git -C workdir $HELPER update --pot-file=po/git.pot --no-line-number zh_CN &&
+	git -C workdir $HELPER update --pot-file=po/git.pot --no-line-number po/zh_CN.po &&
 
 	grep "^#: builtin/clean.c" workdir/po/zh_CN.po >output &&
 	sort output | head -1 >actual &&
@@ -194,8 +195,45 @@ test_expect_success "update zh_CN --no-location" '
 	"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 	EOF
 
-	git -C workdir $HELPER update --pot-file=po/git.pot --no-location zh_CN &&
+	git -C workdir $HELPER update --pot-file=po/git.pot --no-location po/zh_CN.po &&
 	test_must_fail grep "^#: builtin/clean.c" workdir/po/zh_CN.po
+'
+
+test_expect_success "update from po/ with shorthand path (cwd in po/)" '
+	cat >workdir/po/zh_CN.po <<-\EOF &&
+	msgid ""
+	msgstr ""
+	"Project-Id-Version: Git\n"
+	"Report-Msgid-Bugs-To: Git Mailing List <git@vger.kernel.org>\n"
+	"POT-Creation-Date: 2021-03-04 22:41+0800\n"
+	"PO-Revision-Date: 2021-03-04 22:41+0800\n"
+	"Last-Translator: Automatically generated\n"
+	"Language-Team: none\n"
+	"Language: zh_CN\n"
+	"MIME-Version: 1.0\n"
+	"Content-Type: text/plain; charset=UTF-8\n"
+	"Content-Transfer-Encoding: 8bit\n"
+	"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+	#: remote.c:399
+	msgid "more than one receivepack given, using the first"
+	msgstr "提供了一个以上的 receivepack，使用第一个"
+
+	#: remote.c:407
+	msgid "more than one uploadpack given, using the first"
+	msgstr "提供了一个以上的 uploadpack，使用第一个"
+
+	msgid "po-helper test: not a real l10n message: xyz"
+	msgstr "po-helper 测试：不是一个真正的本地化字符串: xyz"
+	EOF
+	(
+		cd workdir/po &&
+		git -C . $HELPER update --pot-file=git.pot zh_CN.po
+	) &&
+	(
+		cd workdir/po &&
+		git -C . $HELPER update --pot-file=git.pot ./zh_CN.po
+	)
 '
 
 test_done

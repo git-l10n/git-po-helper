@@ -62,15 +62,12 @@ func CmdUpdate(fileName string) bool {
 			return false
 		}
 	}
-	poFile = filepath.Clean(fileName)
-	if rel := filepath.ToSlash(poFile); !strings.HasPrefix(rel, PoDir+"/") {
-		poFile = filepath.Join(PoDir, locale+".po")
-	}
+
+	poFile = fileName
 	tmpFile = poFile + ".tmp"
 	defer func() {
 		os.Remove(tmpFile)
 	}()
-
 	// Load PO to get ProjectName for UpdatePotFile.
 	if !Exist(poFile) {
 		log.Errorf(`fail to update "%s", does not exist`, poFile)
@@ -102,7 +99,6 @@ func CmdUpdate(fileName string) bool {
 		log.Errorf("fail to update %s, unknown pot file", poFile)
 		return false
 	}
-
 	if !Exist(poTemplate) {
 		log.Errorf(`fail to update "%s", pot file "%s" does not exist`, poFile, poTemplate)
 		return false
