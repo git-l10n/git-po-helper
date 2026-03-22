@@ -115,7 +115,7 @@ func sectionIcon(l log.Level) string {
 
 func formatPromptField(prompt string) string {
 	if prompt == "" {
-		return strings.Repeat(" ", reportPromptWidth)
+		return ""
 	}
 	if len(prompt) < reportPromptWidth {
 		return prompt + strings.Repeat(" ", reportPromptWidth-len(prompt))
@@ -123,8 +123,13 @@ func formatPromptField(prompt string) string {
 	return prompt
 }
 
-func messageColumnPad() int {
-	return reportLevelWidth + len(reportMsgSep) + reportPromptWidth + len(reportMsgSep)
+// messageStartColumnWidth is the visual width from the end of the level label to the
+// start of the message text (after reportMsgSep), used to align continuation lines.
+func messageStartColumnWidth(prompt string) int {
+	if prompt == "" {
+		return reportLevelWidth + len(reportMsgSep)
+	}
+	return reportLevelWidth + 1 + reportPromptWidth + len(reportMsgSep)
 }
 
 // forceFullRow: always print LEVEL and prompt (e.g. blank lines); ignores continuation padding.
@@ -140,17 +145,19 @@ func writeReportLine(level log.Level, prompt, line string, firstLine bool, force
 	var b strings.Builder
 	b.WriteString(reportIndent)
 	if usePadding {
-		b.WriteString(strings.Repeat(" ", messageColumnPad()))
+		b.WriteString(strings.Repeat(" ", messageStartColumnWidth(prompt)))
 		b.WriteString(line)
 	} else {
 		b.WriteString(lc)
 		b.WriteString(colorBold)
 		b.WriteString(levelStr)
 		b.WriteString(rs)
-		b.WriteString(" ")
-		b.WriteString(pc)
-		b.WriteString(promptFmt)
-		b.WriteString(rs)
+		if promptFmt != "" {
+			b.WriteString(" ")
+			b.WriteString(pc)
+			b.WriteString(promptFmt)
+			b.WriteString(rs)
+		}
 		b.WriteString(reportMsgSep)
 		b.WriteString(line)
 	}
