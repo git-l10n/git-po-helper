@@ -13,8 +13,13 @@ func newAgentRunUpdatePotCmd(opts *agentRunOptions) *cobra.Command {
 		Long: `Update the po/git.pot template file using a configured agent.
 
 This command uses an agent with a configured prompt to update the po/git.pot
-file according to po/README.md. The agent command is specified in the
-git-po-helper.yaml configuration file.
+file according to po/README.md and po/AGENTS.md. The agent command is specified
+in the git-po-helper.yaml configuration file.
+
+You must run this from inside a Git work tree. The command opens the repository
+from the current directory and uses the work tree root, then requires at that
+root: Makefile, po/, po/README.md, and po/AGENTS.md (upstream Git po/ layout).
+The process working directory is switched to that root for the run.
 
 If only one agent is configured, the --agent flag is optional. If multiple
 agents are configured, you must specify which agent to use with --agent.

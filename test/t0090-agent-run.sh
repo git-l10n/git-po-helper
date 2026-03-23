@@ -58,6 +58,10 @@ EOF
 test_expect_success "setup" '
 	git clone "$PO_HELPER_TEST_REPOSITORY" workdir &&
 	test -f workdir/po/git.pot &&
+	# agent-run update-pot requires Makefile, po/README.md, and po/AGENTS.md (see ensureUpdatePotProjectRootAndChdir)
+	( test -f workdir/Makefile || printf "# test stub Makefile for git-po-helper integration tests\n" >workdir/Makefile ) &&
+	( test -f workdir/po/README.md || printf "# test stub po/README.md\n" >workdir/po/README.md ) &&
+	( test -f workdir/po/AGENTS.md || printf "# test stub po/AGENTS.md\n" >workdir/po/AGENTS.md ) &&
 	# Create mock agent
 	create_mock_agent "$PWD/mock-agent" &&
 	# Create config file
