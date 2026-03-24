@@ -83,9 +83,16 @@ func buildReviewUseAgentMdPrompt(target *CompareTarget) string {
 
 // runAgentReviewDispatch runs either local orchestration or prompt orchestration.
 func runAgentReviewDispatch(cfg *config.AgentConfig, agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
+	if target.NewFile != "" && target.OldFile == target.NewFile {
+		agentsMd := filepath.Join(filepath.Dir(target.NewFile), "AGENTS.md")
+		if !Exist(agentsMd) {
+			log.Infof("no AGENTS.md beside %s, using local orchestration", target.NewFile)
+			useLocalOrchestration = true
+		}
+	}
 	if useLocalOrchestration {
 		if batchSize <= 0 {
-			batchSize = 50
+			batchSize = 100
 		}
 		return RunAgentReviewLocalOrchestration(cfg, agentName, target, batchSize)
 	}

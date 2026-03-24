@@ -14,9 +14,17 @@ import (
 
 // runAgentTranslateDispatch runs either local orchestration or prompt orchestration.
 func runAgentTranslateDispatch(cfg *config.AgentConfig, agentName, poFile string, useLocalOrchestration bool, batchSize int) (*AgentRunResult, error) {
+	if poFile != "" {
+		agentsMd := filepath.Join(filepath.Dir(poFile), "AGENTS.md")
+		if !Exist(agentsMd) {
+			log.Infof("no AGENTS.md beside %s, using local orchestration", poFile)
+			useLocalOrchestration = true
+		}
+	}
+
 	if useLocalOrchestration {
 		if batchSize <= 0 {
-			batchSize = 50
+			batchSize = 100
 		}
 		return RunAgentTranslateLocalOrchestration(cfg, agentName, poFile, batchSize)
 	}
