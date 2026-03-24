@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
+	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -173,5 +174,30 @@ func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string
 
 // CmdAgentRunReview implements the agent-run review command logic via AgentRunWorkflow.
 func CmdAgentRunReview(agentName string, target *CompareTarget, useLocalOrchestration bool, batchSize int) error {
+	if target.NewFile != "" && target.OldFile == target.NewFile {
+		absPo, err := filepath.Abs(target.NewFile)
+		if err != nil {
+			return fmt.Errorf("cannot resolve PO file path: %w", err)
+		}
+		absPo = filepath.Clean(absPo)
+		cleanup, err := EnsureInGitProjectRootDir()
+		if err == nil {
+			defer cleanup()
+			if absPo != "" {
+				repoRoot := filepath.Clean(repository.WorkDir())
+				rel, err := filepath.Rel(repoRoot, absPo)
+				if err != nil {
+					return fmt.Errorf("PO file %s vs repository root %s: %w", absPo, repoRoot, err)
+				}
+				relSlash := filepath.ToSlash(rel)
+				if relSlash == ".." || strings.HasPrefix(relSlash, "../") || strings.Contains(relSlash, "/../") {
+					return fmt.Errorf("PO file %s is not under repository root %s", absPo, repoRoot)
+				}
+				target.OldFile = relSlash
+				target.NewFile = relSlash
+			}
+		}
+	}
+
 	return RunAgentRunWorkflow(NewWorkflowReview(agentName, target, useLocalOrchestration, batchSize))
 }

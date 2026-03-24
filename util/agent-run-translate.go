@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/git-l10n/git-po-helper/config"
+	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -86,5 +87,31 @@ func RunAgentTranslatePromptOrchestration(cfg *config.AgentConfig, agentName, po
 
 // CmdAgentRunTranslate implements the agent-run translate command logic via AgentRunWorkflow.
 func CmdAgentRunTranslate(agentName, poFile string, useLocalOrchestration bool, batchSize int) error {
+	var absPo string
+	if poFile != "" {
+		var err error
+		absPo, err = filepath.Abs(poFile)
+		if err != nil {
+			return fmt.Errorf("cannot resolve PO file path: %w", err)
+		}
+		absPo = filepath.Clean(absPo)
+	}
+	cleanup, err := EnsureInGitProjectRootDir()
+	if err == nil {
+		defer cleanup()
+		if absPo != "" {
+			repoRoot := filepath.Clean(repository.WorkDir())
+			rel, err := filepath.Rel(repoRoot, absPo)
+			if err != nil {
+				return fmt.Errorf("PO file %s vs repository root %s: %w", absPo, repoRoot, err)
+			}
+			relSlash := filepath.ToSlash(rel)
+			if relSlash == ".." || strings.HasPrefix(relSlash, "../") || strings.Contains(relSlash, "/../") {
+				return fmt.Errorf("PO file %s is not under repository root %s", absPo, repoRoot)
+			}
+			poFile = relSlash
+		}
+	}
+
 	return RunAgentRunWorkflow(NewWorkflowTranslate(agentName, poFile, useLocalOrchestration, batchSize))
 }
