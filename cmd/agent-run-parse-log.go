@@ -7,8 +7,9 @@ import (
 
 func newAgentRunParseLogCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "parse-log [log-file]",
-		Short: "Parse agent JSONL log file and display formatted output",
+		Use:    "parse-log [log-file]",
+		Hidden: true,
+		Short:  "Parse agent JSONL log file and display formatted output",
 		Long: `Parse a Claude or Qwen/Gemini agent JSONL log file (one JSON object per line).
 Auto-detects format and displays with type-specific icons:
 - 🤔 thinking content
