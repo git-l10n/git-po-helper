@@ -8,7 +8,7 @@ import (
 
 func newAgentRunReviewCmd(opts *agentRunOptions) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "review [-r range | --commit <commit> | --since <commit>] [[<src>] <target>]",
+		Use:   "review XX.po",
 		Short: "Review translations in a po/XX.po file using an agent",
 		Long: `Review translations in a PO file using a configured agent.
 
@@ -19,9 +19,6 @@ or all changes since a given commit.
 If only one agent is configured, the --agent flag is optional. If multiple
 agents are configured, you must specify which agent to use with --agent.
 
-If no po/XX.po argument is given, the PO file is derived from changed files
-or default_lang_code in configuration.
-
 Review modes:
 - --range a..b: compare commit a with commit b
 - --range a..: compare commit a with working tree
@@ -29,9 +26,11 @@ Review modes:
 - --since <commit>: review changes since the specified commit
 - no --range/--commit/--since: review changes since HEAD (local changes)
 
-Exactly one of --range, --commit and --since may be specified.
-With two file arguments, compare worktree files (revisions not allowed).`,
+Exactly one of --range, --commit and --since may be specified.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return NewErrorWithUsage("review command expects exactly one argument: XX.po")
+			}
 			if opts.UseAgentMd && opts.UseLocalOrchestration {
 				return NewErrorWithUsage("--use-agent-md and --use-local-orchestration are mutually exclusive")
 			}
