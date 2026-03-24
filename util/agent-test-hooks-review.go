@@ -20,7 +20,11 @@ type ReviewPostResult struct {
 type agentTestHooksReview struct{}
 
 func (agentTestHooksReview) CleanupBeforeLoop(ctx *AgentRunContext, runNum, totalRuns int) error {
-	cleanReviewOutputFilesForTest(GetReviewPathSet())
+	poFile := ""
+	if ctx != nil && ctx.Target != nil {
+		poFile = ctx.Target.NewFile
+	}
+	cleanReviewOutputFilesForTest(GetReviewPathSet(poFile))
 	return nil
 }
 
@@ -35,7 +39,14 @@ func (agentTestHooksReview) ValidateAfterPostCheck(ctx *AgentRunContext, cfg *co
 // PostProcess aggregates review JSONs from all runs (same msgid takes lowest score),
 // saves the merged JSON, applies it to the output PO, and returns the aggregated score and result.
 func (agentTestHooksReview) PostProcess(results []TestRunResult, cfg *config.AgentConfig) (interface{}, error) {
-	ps := GetReviewPathSet()
+	poFile := ""
+	for i := range results {
+		if results[i].Ctx != nil && results[i].Ctx.Target != nil && results[i].Ctx.Target.NewFile != "" {
+			poFile = results[i].Ctx.Target.NewFile
+			break
+		}
+	}
+	ps := GetReviewPathSet(poFile)
 	var reviewJSONs []*ReviewResult
 
 	for i := range results {

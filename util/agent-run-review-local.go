@@ -238,7 +238,7 @@ func loadReviewDoneFromDisk(donePath string, entryCount int) (*ReviewResult, err
 // Step 7: Loop back (handled by continue).
 // Step 8: Merge all review-result-*.json and display report.
 func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string, target *CompareTarget, batchSize int) (*AgentRunResult, error) {
-	ps := GetReviewPathSet()
+	ps := GetReviewPathSet(target.NewFile)
 	startTime := time.Now()
 	result := &AgentRunResult{}
 
@@ -273,7 +273,7 @@ func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string,
 		// Step 1: review-input.po exists → else if review-result.json exists → step 8.
 		if resultExists {
 			log.Infof("%s exists; running merge and summary", ps.ResultJSON)
-			return runMergeAndSummary(ps, startTime, result)
+			return runMergeAndSummary(target, startTime, result)
 		}
 
 		// Step 1: else if review-done.json exists → step 6 (Rename result).
@@ -307,7 +307,7 @@ func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string,
 		if done {
 			// Step 4: no todo (no entries left) → step 8. Do NOT cleanup (AGENTS.md: keep for inspection/resumption).
 			log.Infof("no more entries in %s; running merge and summary (step 8)", ps.PendingPO)
-			return runMergeAndSummary(ps, startTime, result)
+			return runMergeAndSummary(target, startTime, result)
 		}
 		log.Infof("prepared batch %d (%d entries, %d remaining)", batchNum, num, entryCount-num)
 		// review-todo.json now exists; next iteration executes step 5.
@@ -350,8 +350,12 @@ func runReviewOneTodo(cfg *config.AgentConfig, selectedAgent config.AgentEntry, 
 
 // runMergeAndSummary merges all review-result-*.json and returns the report.
 // Corresponds to AGENTS.md Task 4 step 8.
-func runMergeAndSummary(ps ReviewPathSet, startTime time.Time, result *AgentRunResult) (*AgentRunResult, error) {
-	reportResult, err := GetReviewReport()
+func runMergeAndSummary(target *CompareTarget, startTime time.Time, result *AgentRunResult) (*AgentRunResult, error) {
+	pathName := ""
+	if target != nil {
+		pathName = target.NewFile
+	}
+	reportResult, err := GetReviewReport(pathName)
 	if err != nil {
 		return result, err
 	}

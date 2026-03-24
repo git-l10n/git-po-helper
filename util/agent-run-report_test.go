@@ -104,7 +104,7 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 	if err := os.MkdirAll("po", 0755); err != nil {
 		t.Fatalf("MkdirAll po: %v", err)
 	}
-	ps := GetReviewPathSet()
+	ps := GetReviewPathSet("po")
 	if err := os.WriteFile(ps.ResultJSON, data, 0644); err != nil {
 		t.Fatalf("write failed: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestReportReviewWithTotalEntries(t *testing.T) {
 		t.Errorf("expected score ~98, got %d", score)
 	}
 
-	result, err := GetReviewReport()
+	result, err := GetReviewReport("po")
 	if err != nil {
 		t.Fatalf("GetReviewReport failed: %v", err)
 	}
@@ -171,7 +171,7 @@ msgstr "old"
 	if err := os.MkdirAll("po", 0755); err != nil {
 		t.Fatalf("MkdirAll po: %v", err)
 	}
-	ps := GetReviewPathSet()
+	ps := GetReviewPathSet("po")
 	if err := os.WriteFile(ps.InputPO, []byte(inputPO), 0644); err != nil {
 		t.Fatalf("write input PO: %v", err)
 	}
@@ -245,14 +245,14 @@ func TestReportReviewMarkdownWrappedJSON(t *testing.T) {
 	if err := os.MkdirAll("po", 0755); err != nil {
 		t.Fatalf("MkdirAll po: %v", err)
 	}
-	ps := GetReviewPathSet()
+	ps := GetReviewPathSet("po")
 	if err := os.WriteFile(ps.ResultJSON, []byte(validInMarkdown), 0644); err != nil {
 		t.Fatalf("write failed: %v", err)
 	}
 	if err := os.WriteFile(ps.InputPO, []byte(minimalPoWithEntries(1)), 0644); err != nil {
 		t.Fatalf("write po failed: %v", err)
 	}
-	result, err := GetReviewReport()
+	result, err := GetReviewReport("po")
 	if err != nil {
 		t.Fatalf("GetReviewReport failed: %v", err)
 	}

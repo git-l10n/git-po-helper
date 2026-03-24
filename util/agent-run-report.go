@@ -214,8 +214,8 @@ func ApplyReviewFromResultJSON(ps ReviewPathSet) (bool, error) {
 
 // GetReviewReport reads ps.ResultJSON and fills total_entries from ps.InputPO (or ps.OutputPO).
 // Returns *ReviewJSONResult with Score, CriticalCount, MajorCount, MinorCount, ReportFile, AppliedFile set.
-func GetReviewReport() (*ReviewResult, error) {
-	ps := GetReviewPathSet()
+func GetReviewReport(pathName string) (*ReviewResult, error) {
+	ps := GetReviewPathSet(pathName)
 
 	if err := AggregateReviewBatches(ps); err != nil {
 		return nil, err

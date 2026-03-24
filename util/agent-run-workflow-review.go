@@ -73,7 +73,11 @@ func (w *workflowReview) PostCheck(ctx *AgentRunContext) error {
 		log.Errorf("%v", err)
 	}
 
-	ps := GetReviewPathSet()
+	reviewPo := ""
+	if ctx.Target != nil {
+		reviewPo = ctx.Target.NewFile
+	}
+	ps := GetReviewPathSet(reviewPo)
 	totalCount := 0
 	if Exist(ps.InputPO) {
 		stats, statsErr := GetPoStats(ps.InputPO)

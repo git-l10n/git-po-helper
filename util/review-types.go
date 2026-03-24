@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -304,8 +306,8 @@ func (r *ReviewResult) IssueCount() int {
 
 var (
 	ReviewDefaultOutputFile = filepath.Join(PoDir, "review.json")
-	// ReviewDefaultBase is the default base for Task 4 review paths (po/review).
-	ReviewDefaultBase = filepath.Join(PoDir, "review")
+	// ReviewDefaultBase is the default base for Task 4 review paths (review).
+	ReviewDefaultBase = "review"
 )
 
 // ReviewPathSet holds paths for Task 4 review workflow (AGENTS.md).
@@ -321,22 +323,35 @@ type ReviewPathSet struct {
 	OutputPO   string // po/review-output.po
 }
 
-// GetReviewPathSet returns paths using ReviewDefaultBase (po/review).
-func GetReviewPathSet() ReviewPathSet {
-	base := ReviewDefaultBase
-	dir := filepath.Dir(base)
-	name := filepath.Base(base)
-	if name == "" || name == "." {
-		name = "review"
-		dir = PoDir
+// GetReviewPathSet returns paths for Task 4 review files under BaseDir.
+// If pathName names an existing directory, BaseDir is that path (cleaned).
+// If pathName names a file (or does not exist yet), BaseDir is its parent directory.
+// If pathName is empty, BaseDir is PoDir when that directory exists, otherwise ".".
+// Review file names use the ReviewDefaultBase prefix (e.g. review-input.po).
+func GetReviewPathSet(pathName string) ReviewPathSet {
+	var baseDir string
+	if strings.TrimSpace(pathName) != "" {
+		pathName = filepath.Clean(pathName)
+		if fi, err := os.Stat(pathName); err == nil && fi.IsDir() {
+			baseDir = pathName
+		} else {
+			baseDir = filepath.Dir(pathName)
+		}
+	} else {
+		if fi, err := os.Stat(PoDir); err == nil && fi.IsDir() {
+			baseDir = PoDir
+		} else {
+			baseDir = "."
+		}
 	}
+	baseName := ReviewDefaultBase
 	return ReviewPathSet{
-		BaseDir:    dir,
-		BaseName:   name,
-		InputPO:    filepath.Join(dir, name+"-input.po"),
-		PendingPO:  filepath.Join(dir, name+"-pending.po"),
-		ResultJSON: filepath.Join(dir, name+"-result.json"),
-		OutputPO:   filepath.Join(dir, name+"-output.po"),
+		BaseDir:    baseDir,
+		BaseName:   baseName,
+		InputPO:    filepath.Join(baseDir, baseName+"-input.po"),
+		PendingPO:  filepath.Join(baseDir, baseName+"-pending.po"),
+		ResultJSON: filepath.Join(baseDir, baseName+"-result.json"),
+		OutputPO:   filepath.Join(baseDir, baseName+"-output.po"),
 	}
 }
 

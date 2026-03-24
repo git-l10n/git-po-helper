@@ -103,7 +103,7 @@ func runAgentReviewDispatch(cfg *config.AgentConfig, agentName string, target *C
 // No programmatic extraction or batching; the agent does everything and writes review.json.
 // Before execution: deletes review.po and review.json. After: expects review.json to exist.
 func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string, target *CompareTarget) (*AgentRunResult, error) {
-	ps := GetReviewPathSet()
+	ps := GetReviewPathSet(target.NewFile)
 	workDir, _ := os.Getwd()
 	if workDir == "" {
 		workDir = "."
@@ -161,7 +161,7 @@ func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string
 		return result, fmt.Errorf("review JSON not generated at %s\nHint: The agent must write the review result to this file", ps.ResultJSON)
 	}
 
-	reportResult, err := GetReviewReport()
+	reportResult, err := GetReviewReport(target.NewFile)
 	if err != nil {
 		return result, fmt.Errorf("failed to read review JSON: %w", err)
 	}
