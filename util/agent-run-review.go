@@ -78,7 +78,7 @@ func buildReviewUseAgentMdPrompt(target *CompareTarget) string {
 		taskDesc = fmt.Sprintf("Review %s local changes", target.NewFile)
 	}
 
-	return taskDesc + " according to @po/AGENTS.md."
+	return taskDesc + " according to @{{.agents_md}}."
 }
 
 // runAgentReviewDispatch runs either local orchestration or prompt orchestration.
@@ -132,8 +132,9 @@ func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string
 	if rel, err := filepath.Rel(workDir, poFile); err == nil && rel != "" && rel != "." {
 		poFileRel = filepath.ToSlash(rel)
 	}
+	agentsMdPath := filepath.ToSlash(filepath.Join(filepath.Dir(filepath.Clean(poFileRel)), "AGENTS.md"))
 	prompt := buildReviewUseAgentMdPrompt(target)
-	agentCmd, outputFormat, err := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": poFileRel})
+	agentCmd, outputFormat, err := BuildAgentCommand(selectedAgent, PlaceholderVars{"prompt": prompt, "source": poFileRel, "agents_md": agentsMdPath})
 	if err != nil {
 		return result, fmt.Errorf("failed to build agent command: %w", err)
 	}

@@ -51,12 +51,12 @@ func RunAgentTranslateLocalOrchestration(cfg *config.AgentConfig, agentName, poF
 		return result, fmt.Errorf("PO file does not exist: %s\nHint: Ensure the PO file exists before running translate", poFile)
 	}
 
-	poDir := filepath.Dir(poFile)
-	pendingPO := filepath.Join(poDir, l10nPendingBase+".po")
-	todoJSON := filepath.Join(poDir, l10nTodoBase+".json")
-	doneJSON := filepath.Join(poDir, l10nDoneBase+".json")
-	donePO := filepath.Join(poDir, l10nDoneBase+".po")
-	mergedFile := filepath.Join(poDir, l10nMergedExt)
+	baseDir := filepath.Dir(poFile)
+	pendingPO := filepath.Join(baseDir, l10nPendingBase+".po")
+	todoJSON := filepath.Join(baseDir, l10nTodoBase+".json")
+	doneJSON := filepath.Join(baseDir, l10nDoneBase+".json")
+	donePO := filepath.Join(baseDir, l10nDoneBase+".po")
+	mergedFile := filepath.Join(baseDir, l10nMergedExt)
 
 	filter := &EntryStateFilter{Untranslated: true, Fuzzy: true, NoObsolete: true}
 
@@ -86,7 +86,7 @@ func RunAgentTranslateLocalOrchestration(cfg *config.AgentConfig, agentName, poF
 				if len(out) > 0 {
 					log.Infof("msgfmt --stat: %s", strings.TrimSpace(string(out)))
 				}
-				cleanupIntermediateFiles(poDir)
+				cleanupIntermediateFiles(baseDir)
 				result.ExecutionTime = time.Since(startTime)
 				return result, nil
 			}
@@ -121,10 +121,10 @@ func RunAgentTranslateLocalOrchestration(cfg *config.AgentConfig, agentName, poF
 // generatePendingPO extracts untranslated+fuzzy entries from poFile into pendingPO.
 // Corresponds to AGENTS.md Task 3 Step 1 (po_extract_pending).
 func generatePendingPO(poFile, pendingPO string, filter *EntryStateFilter) error {
-	poDir := filepath.Dir(pendingPO)
+	baseDir := filepath.Dir(pendingPO)
 	// Clean up any stale batch files before starting fresh
-	os.Remove(filepath.Join(poDir, l10nTodoBase+".json"))
-	os.Remove(filepath.Join(poDir, l10nDoneBase+".json"))
+	os.Remove(filepath.Join(baseDir, l10nTodoBase+".json"))
+	os.Remove(filepath.Join(baseDir, l10nDoneBase+".json"))
 
 	f, err := os.Create(pendingPO)
 	if err != nil {
@@ -416,12 +416,12 @@ func cleanupAfterMerge(pendingPO, doneJSON, donePO, mergedFile string) {
 
 // cleanupIntermediateFiles removes all l10n intermediate files.
 // Corresponds to AGENTS.md Task 3 Step 8 (po_cleanup).
-func cleanupIntermediateFiles(poDir string) {
-	removeGlob(poDir, l10nPendingBase+".po")
-	removeGlob(poDir, l10nTodoBase+".json")
-	removeGlob(poDir, l10nDoneBase+".json")
-	removeGlob(poDir, l10nDoneBase+".po")
-	removeGlob(poDir, l10nMergedExt)
+func cleanupIntermediateFiles(baseDir string) {
+	removeGlob(baseDir, l10nPendingBase+".po")
+	removeGlob(baseDir, l10nTodoBase+".json")
+	removeGlob(baseDir, l10nDoneBase+".json")
+	removeGlob(baseDir, l10nDoneBase+".po")
+	removeGlob(baseDir, l10nMergedExt)
 }
 
 func removeGlob(dir, pattern string) {

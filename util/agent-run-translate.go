@@ -50,7 +50,9 @@ func RunAgentTranslatePromptOrchestration(cfg *config.AgentConfig, agentName, po
 	}
 
 	sourcePath := filepath.ToSlash(filepath.Clean(poFile))
-	vars := PlaceholderVars{"prompt": prompt, "source": sourcePath}
+	agentsMdPath := filepath.ToSlash(filepath.Join(filepath.Dir(filepath.Clean(poFile)), "AGENTS.md"))
+
+	vars := PlaceholderVars{"prompt": prompt, "source": sourcePath, "agents_md": agentsMdPath}
 	resolvedPrompt, err := ExecutePromptTemplate(prompt, vars)
 	if err != nil {
 		return result, fmt.Errorf("failed to resolve prompt template: %w", err)
