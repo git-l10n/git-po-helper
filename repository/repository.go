@@ -52,7 +52,7 @@ func RequireOpened() error {
 	return nil
 }
 
-func assertRepositoryNotNil() {
+func AssertRepositoryNotNil() {
 	if theRepository.error != nil {
 		log.Fatal(theRepository.error)
 	} else if theRepository.repository == nil {
@@ -62,13 +62,13 @@ func assertRepositoryNotNil() {
 
 // GitDir returns locations of .git dir.
 func GitDir() string {
-	assertRepositoryNotNil()
+	AssertRepositoryNotNil()
 	return theRepository.repository.GitDir()
 }
 
 // WorkDir returns root dir of worktree.
 func WorkDir() string {
-	assertRepositoryNotNil()
+	AssertRepositoryNotNil()
 	return theRepository.repository.WorkDir()
 }
 

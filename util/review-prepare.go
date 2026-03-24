@@ -17,7 +17,7 @@ func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string
 		relOldFile, relNewFile string
 	)
 	if oldCommit != "" || newCommit != "" {
-		_ = repository.WorkDir() // assert repo when using revisions
+		repository.AssertRepositoryNotNil() // assert repo when using revisions
 	}
 
 	// Use temp files for orig and new; they are deleted when the function returns

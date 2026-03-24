@@ -26,7 +26,7 @@ func CmdAgentRunUpdatePo(agentName, poFile string) error {
 	}
 	defer cleanup()
 
-	if poFile != "" {
+	if absPo != "" {
 		repoRoot := filepath.Clean(repository.WorkDir())
 		rel, err := filepath.Rel(repoRoot, absPo)
 		if err != nil {

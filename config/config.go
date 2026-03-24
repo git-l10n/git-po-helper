@@ -251,6 +251,9 @@ func loadUserHomeConfig() (*AgentConfig, error) {
 // loadRepoConfig loads <repo-root>/GitPoHelperConfigFileName if it exists.
 // Returns (config, nil) on success, (nil, nil) when the file is missing, (nil, err) on read/parse error.
 func loadRepoConfig() (*AgentConfig, error) {
+	if !repository.Opened() {
+		return nil, nil
+	}
 	workDir := repository.WorkDir()
 	repoConfigPath := filepath.Join(workDir, GitPoHelperConfigFileName)
 	if _, err := os.Stat(repoConfigPath); err != nil {
@@ -302,10 +305,15 @@ func LoadAgentConfig(customConfigPath string) (*AgentConfig, error) {
 	}
 
 	if !configsLoaded {
-		workDir := repository.WorkDir()
-		repoConfigPath := filepath.Join(workDir, GitPoHelperConfigFileName)
-		log.Warnf("no configuration files found (checked ~/%s and %s), using defaults",
-			GitPoHelperConfigFileName, repoConfigPath)
+		if repository.Opened() {
+			workDir := repository.WorkDir()
+			repoConfigPath := filepath.Join(workDir, GitPoHelperConfigFileName)
+			log.Warnf("no configuration files found (checked ~/%s and %s), using defaults",
+				GitPoHelperConfigFileName, repoConfigPath)
+		} else {
+			log.Warnf("no configuration files found (checked ~/%s), using defaults",
+				GitPoHelperConfigFileName)
+		}
 		return getDefaultConfig(), nil
 	}
 
