@@ -181,17 +181,14 @@ Translate new (untranslated) and fuzzy entries in a PO file using a configured a
 
 **Usage:**
 ```bash
-git-po-helper agent-run translate [--use-agent-md | --use-local-orchestration] [--agent <agent-name>] [--batch-size <n>] [po/XX.po]
+git-po-helper agent-run translate [--use-local-orchestration] [--agent <agent-name>] [--batch-size <n>] [po/XX.po]
 ```
 
 **Options:**
-- `--use-agent-md`: Use existing flow: agent receives full/extracted PO, does translation (default)
 - `--use-local-orchestration`: Use local orchestration: agent only translates batch JSON files
 - `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
 - `--batch-size <n>`: Min entries per batch when using `--use-local-orchestration` (default: 50)
 - `po/XX.po`: Optional PO file path; if omitted, `default_lang_code` is used
-
-**Note:** `--use-agent-md` and `--use-local-orchestration` are mutually exclusive. If neither is specified, defaults to `--use-agent-md`.
 
 **Examples:**
 ```bash
@@ -218,11 +215,10 @@ Review translations in a PO file using a configured agent. The agent reviews tra
 
 **Usage:**
 ```bash
-git-po-helper agent-run review [--use-agent-md | --use-local-orchestration] [--agent <agent-name>] [-r range | --commit <commit> | --since <commit>] [[<src>] <target>]
+git-po-helper agent-run review [--report <dir>] [--use-local-orchestration] [--agent <agent-name>] [-r range | --commit <commit> | --since <commit>] [[<src>] <target>]
 ```
 
 **Options:**
-- `--use-agent-md`: Use agent with po/AGENTS.md: agent does extraction, review, writes `po/review-result.json` (default)
 - `--use-local-orchestration`: Use local orchestration: extracts to `po/review-input.po`, splits into `po/review-input-<N>.json`, agent reviews each batch and writes `po/review-result-<N>.json`, merged to `po/review-result.json`
 - `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
 - `-r`, `--range <range>`: Revision range: `a..b` (compare a with b), `a..` (compare a with working tree), or `a` (compare a~ with a)
@@ -230,7 +226,7 @@ git-po-helper agent-run review [--use-agent-md | --use-local-orchestration] [--a
 - `--since <commit>`: Equivalent to `-r <commit>..` (compare commit with working tree)
 - `[<src>] <target>`: Zero, one, or two PO file paths. With two files, compare worktree files (revisions not allowed)
 
-**Note:** `--use-agent-md` and `--use-local-orchestration` are mutually exclusive. If neither is specified, defaults to `--use-agent-md`. Exactly one of `--range`, `--commit`, or `--since` may be specified. If none is provided, defaults to reviewing local changes (since HEAD). With no file arguments, the PO file is auto-selected from changed files or `default_lang_code`.
+**Note:** Exactly one of `--range`, `--commit`, or `--since` may be specified. If none is provided, defaults to reviewing local changes (since HEAD). With no file arguments, the PO file is auto-selected from changed files or `default_lang_code`.
 
 **Examples:**
 ```bash
@@ -256,7 +252,10 @@ git-po-helper agent-run review po/zh_CN.po po/zh_TW.po
 git-po-helper agent-run review --agent claude po/zh_CN.po
 
 # Use agent with po/AGENTS.md (agent does extraction, review, and writes review.json)
-git-po-helper agent-run review --use-agent-md po/zh_CN.po
+git-po-helper agent-run review po/zh_CN.po
+
+# Print review report from po/
+git-po-helper agent-run review --report po/
 ```
 
 **What it does:**
@@ -475,18 +474,15 @@ Test the `translate` operation multiple times and calculate an average score.
 
 **Usage:**
 ```bash
-git-po-helper agent-test translate [--use-agent-md | --use-local-orchestration] [--agent <agent-name>] [--runs <n>] [--batch-size <n>] [po/XX.po]
+git-po-helper agent-test translate [--use-local-orchestration] [--agent <agent-name>] [--runs <n>] [--batch-size <n>] [po/XX.po]
 ```
 
 **Options:**
-- `--use-agent-md`: Use agent with po/AGENTS.md (default, same as agent-run translate)
 - `--use-local-orchestration`: Use local orchestration (same as agent-run translate)
 - `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
 - `--runs <n>`: Number of test runs (default: 5, or from config file)
 - `--batch-size <n>`: Min entries per batch when using `--use-local-orchestration` (default: 50)
 - `po/XX.po`: Optional PO file path; if omitted, `default_lang_code` is used
-
-**Note:** `--use-agent-md` and `--use-local-orchestration` are mutually exclusive. If neither is specified, defaults to `--use-agent-md`.
 
 **Examples:**
 ```bash
@@ -506,11 +502,10 @@ Test the `review` operation multiple times and calculate an average score. Aggre
 
 **Usage:**
 ```bash
-git-po-helper agent-test review [--use-agent-md | --use-local-orchestration] [--agent <agent-name>] [--runs <n>] [-r range | --commit <commit> | --since <commit>] [[<src>] <target>]
+git-po-helper agent-test review [--use-local-orchestration] [--agent <agent-name>] [--runs <n>] [-r range | --commit <commit> | --since <commit>] [[<src>] <target>]
 ```
 
 **Options:**
-- `--use-agent-md`: Use agent with po/AGENTS.md (default, same as agent-run review)
 - `--use-local-orchestration`: Use local orchestration (same as agent-run review)
 - `--runs <n>`: Number of test runs (default: 1, or from config file)
 - `-r`, `--range <range>`: Revision range (same as agent-run review)
@@ -518,7 +513,7 @@ git-po-helper agent-test review [--use-agent-md | --use-local-orchestration] [--
 - `--since <commit>`: Review changes since the specified commit
 - `[<src>] <target>`: Zero, one, or two PO file paths (same as agent-run review)
 
-**Note:** `--use-agent-md` and `--use-local-orchestration` are mutually exclusive. If neither is specified, defaults to `--use-agent-md`. Exactly one of `--range`, `--commit`, or `--since` may be specified. If none is provided, defaults to reviewing local changes (since HEAD).
+**Note:** Exactly one of `--range`, `--commit`, or `--since` may be specified. If none is provided, defaults to reviewing local changes (since HEAD).
 
 **Examples:**
 ```bash
@@ -533,9 +528,6 @@ git-po-helper agent-test review --agent claude --runs 10 po/zh_CN.po
 
 # Run tests reviewing changes since a specific commit
 git-po-helper agent-test review --since abc123 po/zh_CN.po
-
-# Run tests with --use-agent-md (agent uses po/AGENTS.md)
-git-po-helper agent-test review --use-agent-md --runs 3 po/zh_CN.po
 ```
 
 **What it does:**

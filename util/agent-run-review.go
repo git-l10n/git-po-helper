@@ -130,7 +130,7 @@ func RunAgentReviewPromptOrchestration(cfg *config.AgentConfig, agentName string
 		return result, fmt.Errorf("failed to build agent command: %w", err)
 	}
 
-	log.Infof("executing agent command (use-agent-md, output=%s): %s", outputFormat, truncateCommandDisplay(strings.Join(agentCmd, " ")))
+	log.Infof("executing agent command (prompt orchestration, output=%s): %s", outputFormat, truncateCommandDisplay(strings.Join(agentCmd, " ")))
 	result.AgentExecuted = true
 
 	kind := selectedAgent.Kind

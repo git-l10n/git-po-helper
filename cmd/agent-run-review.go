@@ -31,9 +31,6 @@ Exactly one of --range, --commit and --since may be specified.`,
 			if len(args) != 1 {
 				return NewErrorWithUsage("review command expects exactly one argument: XX.po")
 			}
-			if opts.UseAgentMd && opts.UseLocalOrchestration {
-				return NewErrorWithUsage("--use-agent-md and --use-local-orchestration are mutually exclusive")
-			}
 
 			target, err := util.ResolveRevisionsAndFiles(opts.Range, opts.Commit, opts.Since, args)
 			if err != nil {
@@ -46,8 +43,6 @@ Exactly one of --range, --commit and --since may be specified.`,
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.UseAgentMd, "use-agent-md", false,
-		"use agent with po/AGENTS.md: agent does extraction, review, writes review.json (default)")
 	cmd.Flags().BoolVar(&opts.UseLocalOrchestration, "use-local-orchestration", false,
 		"use local orchestration: agent only reviews batch JSON files")
 	cmd.Flags().StringVarP(&opts.Output, "output", "o", "",

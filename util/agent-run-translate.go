@@ -85,8 +85,6 @@ func RunAgentTranslatePromptOrchestration(cfg *config.AgentConfig, agentName, po
 }
 
 // CmdAgentRunTranslate implements the agent-run translate command logic via AgentRunWorkflow.
-func CmdAgentRunTranslate(agentName, poFile string, useAgentMd, useLocalOrchestration bool, batchSize int) error {
-	// useAgentMd unused when local orchestration is false (default path uses prompt with source)
-	_ = useAgentMd
+func CmdAgentRunTranslate(agentName, poFile string, useLocalOrchestration bool, batchSize int) error {
 	return RunAgentRunWorkflow(NewWorkflowTranslate(agentName, poFile, useLocalOrchestration, batchSize))
 }

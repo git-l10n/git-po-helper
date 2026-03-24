@@ -34,23 +34,18 @@ Examples:
 			if len(args) != 1 {
 				return NewErrorWithUsage("translate command expects exactly one argument: XX.po")
 			}
-			if opts.UseAgentMd && opts.UseLocalOrchestration {
-				return NewErrorWithUsage("--use-agent-md and --use-local-orchestration are mutually exclusive")
-			}
 			// When neither specified, default to agent-md
 			useLocalOrchestration := opts.UseLocalOrchestration
 
 			poFile := args[0]
 
-			if err := util.CmdAgentRunTranslate(opts.Agent, poFile, !useLocalOrchestration, useLocalOrchestration, opts.BatchSize); err != nil {
+			if err := util.CmdAgentRunTranslate(opts.Agent, poFile, useLocalOrchestration, opts.BatchSize); err != nil {
 				return NewStandardErrorF("%v", err)
 			}
 			return nil
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.UseAgentMd, "use-agent-md", false,
-		"use agent with po/AGENTS.md: agent receives full/extracted PO (default)")
 	cmd.Flags().BoolVar(&opts.UseLocalOrchestration, "use-local-orchestration", false,
 		"use local orchestration: agent only translates batch JSON files")
 	cmd.Flags().IntVar(&opts.BatchSize, "batch-size", 100,

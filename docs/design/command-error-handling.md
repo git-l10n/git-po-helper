@@ -100,7 +100,7 @@ if resp.Err != nil {
 
 ### 6.1 NewErrorWithUsage 适用场景（示例）
 
-- 参数互斥：`--unset-fuzzy` 与 `--clear-fuzzy`、`--use-agent-md` 与 `--use-local-orchestration`
+- 参数互斥：`--unset-fuzzy` 与 `--clear-fuzzy`
 - argument 数量：`requires exactly one argument`、`expects at most one argument`、`needs no arguments`
 - 参数解析：`must given 1 argument`、`requires at least one argument`
 

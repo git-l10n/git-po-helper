@@ -59,13 +59,6 @@ EOF
 	rm -f workdir/.git-po-helper.yaml.bak
 '
 
-test_expect_success "agent-run translate: mutual exclusivity of mode flags" '
-	test_must_fail git -C workdir $HELPER agent-run translate \
-		--use-agent-md --use-local-orchestration po/zh_CN.po >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
-	grep "mutually exclusive" actual
-'
-
 test_expect_success "agent-run translate --use-local-orchestration: success" '
 	test_must_fail git -C workdir $HELPER agent-run translate \
 		--use-local-orchestration --agent copy po/zh_CN.po >out 2>&1 &&
