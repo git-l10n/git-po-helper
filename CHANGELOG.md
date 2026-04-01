@@ -2,6 +2,48 @@
 
 Changes of git-po-helper.
 
+## 0.8.2 (2026-03-31)
+
+### Agent review/translate workflow
+
+* feat(agent-run): add `agent-run review --report <dir>` and deprecate/hide legacy `agent-run report`
+* feat(agent-run): parameterize review paths and report by PO file or directory
+* feat(agent): pass `agents_md` path placeholder for translate/review prompts
+* feat(agent-run): fall back to local orchestration when `AGENTS.md` is missing beside target PO
+* feat(agent-run): resolve PO paths relative to git repository root for translate/review
+* feat(agent-run): require explicit `XX.po` argument for translate and review
+* refactor(agent-run): remove unused `--use-agent-md` option
+* fix(agent): tolerate non-repository environments in config flow and correct update-po path checks
+* feat(agent-run): require Git l10n tree preconditions for update-pot/update-po
+* chore(agent-run): hide debug-only `parse-log` subcommand
+
+### update/check-po and command behavior
+
+* fix(update): tighten `CmdUpdate` validation, path handling, and post-check state
+* refactor(update): require explicit PO path and drop automatic `po/` prefixing
+* refactor(update): rename update-related options for clearer semantics
+* test(util): add `CmdUpdate` unit tests and shared utiltest helpers
+* fix(check-po): run typo checks only for Git project POT/PO flows
+* test(util): add `CmdCheckPo` paths test with `GIT_CEILING_DIRECTORIES`
+
+### gettext / locale / data
+
+* fix(gettext): handle `#~|` continuation lines for multi-line previous msgid
+* fix(gettext): fix `#|`/`#~|` previous-line roundtrip behavior in JSON conversion
+* test(gettext): add PO->JSON->PO roundtrip test with `msgcat` comparison
+* test: add more gettext/PO roundtrip coverage
+* feat(data): add ISO 15924 script-code dataset support
+* feat(helper): extend locale zone validation with ISO 3166 and ISO 15924
+* refactor(helper): split `GetPrettyLocaleName` into `ValidateLocale` and `FormatLocaleName`
+
+### Misc
+
+* fix(report): tighten spacing for report sections without a prompt
+* typo: fix function name `CheckWithPotFile`
+* refactor(check-commits): scan all changed files for each commit
+* check-pot: add option parameter to skip POT comparison in specific flows
+* chore: remove rarely used `init` and `check` subcommands
+
 ## 0.8.1 (2026-03-19)
 
 ### check-po and POT / CamelCase
@@ -21,7 +63,7 @@ Changes of git-po-helper.
 
 ### gettext / PO format
 
-* gettext: introduce GettextPO; ParsePoEntries returns (*GettextPO, error) with HeaderEntry and Entries
+* gettext: introduce GettextPO; ParsePoEntries returns (`*GettextPO`, error) with HeaderEntry and Entries
 * gettext: add GetMeta and GetProject to GettextPO; ignore meaningless blank lines in PO parsing
 * feat(gettext): add msgctxt support (Phase 2); Phase 3 #= flag lines; Phase 4 MsgCtxtPrevious round-trip, 7.2 Option A
 * refactor(gettext): store previous msgctxt/msgid in comments only; remove RawLines, build PO from fields only
