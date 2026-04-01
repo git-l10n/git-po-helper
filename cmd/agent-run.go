@@ -10,6 +10,7 @@ type agentRunOptions struct {
 	Range                 string
 	Commit                string
 	Since                 string
+	Report                string
 	Prompt                string
 	Output                string
 	UseAgentMd            bool

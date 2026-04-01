@@ -221,12 +221,13 @@ git-po-helper agent-run review [--report <dir>] [--use-local-orchestration] [--a
 **Options:**
 - `--use-local-orchestration`: Use local orchestration: extracts to `po/review-input.po`, splits into `po/review-input-<N>.json`, agent reviews each batch and writes `po/review-result-<N>.json`, merged to `po/review-result.json`
 - `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
+- `--report <dir>`: Print review report from `<dir>` (same behavior as legacy `agent-run report <dir>`)
 - `-r`, `--range <range>`: Revision range: `a..b` (compare a with b), `a..` (compare a with working tree), or `a` (compare a~ with a)
 - `--commit <commit>`: Equivalent to `-r <commit>^..<commit>` (review changes in the specified commit)
 - `--since <commit>`: Equivalent to `-r <commit>..` (compare commit with working tree)
 - `[<src>] <target>`: Zero, one, or two PO file paths. With two files, compare worktree files (revisions not allowed)
 
-**Note:** Exactly one of `--range`, `--commit`, or `--since` may be specified. If none is provided, defaults to reviewing local changes (since HEAD). With no file arguments, the PO file is auto-selected from changed files or `default_lang_code`.
+**Note:** Exactly one of `--range`, `--commit`, or `--since` may be specified. If none is provided, defaults to reviewing local changes (since HEAD). With no file arguments, the PO file is auto-selected from changed files or `default_lang_code`. When `--report` is used, it cannot be combined with `--since`, `--range`, `--output`, or `--commit`.
 
 **Examples:**
 ```bash
@@ -315,7 +316,7 @@ The command displays:
 
 ### agent-run report
 
-Report aggregated review statistics from batch or single review JSON. Use this after running `agent-run review` or `agent-test review` to display total entries, issues, and score. When multiple batch JSON files exist (e.g. `po/review-result-*.json`), they are aggregated; otherwise the single review JSON is used.
+Report aggregated review statistics from batch or single review JSON. This is a legacy command and is deprecated; use `agent-run review --report <dir>` instead. When multiple batch JSON files exist (e.g. `po/review-result-*.json`), they are aggregated; otherwise the single review JSON is used.
 
 **Usage:**
 ```bash

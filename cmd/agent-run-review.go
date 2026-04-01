@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -24,10 +26,32 @@ Review modes:
 - --range a..: compare commit a with working tree
 - --commit <commit>: review the changes in the specified commit
 - --since <commit>: review changes since the specified commit
+- --report <dir>: print review report under the specified directory
 - no --range/--commit/--since: review changes since HEAD (local changes)
 
-Exactly one of --range, --commit and --since may be specified.`,
+Exactly one of --range, --commit and --since may be specified.
+
+When --report is used, it cannot be combined with --since, --range,
+--output, or --commit, and behaves the same as "agent-run report".`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if strings.TrimSpace(opts.Report) != "" {
+				if strings.TrimSpace(opts.Since) != "" ||
+					strings.TrimSpace(opts.Range) != "" ||
+					strings.TrimSpace(opts.Output) != "" ||
+					strings.TrimSpace(opts.Commit) != "" {
+					return NewErrorWithUsage("--report cannot be used with --since, --range, --output, or --commit")
+				}
+				if len(args) != 0 {
+					return NewErrorWithUsage("review command with --report does not accept positional arguments")
+				}
+				result, err := util.GetReviewReport(opts.Report)
+				if err != nil {
+					return NewStandardErrorF("%v", err)
+				}
+				util.PrintReviewReportResult(result)
+				return nil
+			}
+
 			if len(args) != 1 {
 				return NewErrorWithUsage("review command expects exactly one argument: XX.po")
 			}
@@ -47,6 +71,8 @@ Exactly one of --range, --commit and --since may be specified.`,
 		"use local orchestration: agent only reviews batch JSON files")
 	cmd.Flags().StringVarP(&opts.Output, "output", "o", "",
 		"base path for review output files (default: po/review); .po/.json are appended")
+	cmd.Flags().StringVar(&opts.Report, "report", "",
+		"print review report from the specified directory (same as agent-run report <dir>)")
 	cmd.Flags().StringVar(&opts.Agent,
 		"agent",
 		"",

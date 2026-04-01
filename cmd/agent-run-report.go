@@ -7,8 +7,10 @@ import (
 
 func newAgentRunReportCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "report <poDir>",
-		Short: "Report aggregated review statistics from batch or single JSON",
+		Use:        "report <poDir>",
+		Short:      "Report aggregated review statistics from batch or single JSON",
+		Hidden:     true,
+		Deprecated: "use 'agent-run review --report <dir>' instead",
 		Long: `Report review statistics for agent-run review output.
 
 Uses ` + util.DefaultReviewBase + ` for paths. Uses review-input.po for total count,
