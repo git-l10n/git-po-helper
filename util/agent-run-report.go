@@ -291,8 +291,61 @@ func PrintReviewReportResult(r *ReviewResult) {
 	reportFile, _ := r.GetReportFile()
 	if reportFile != "" {
 		fmt.Printf("  %-*s %s\n", w, "Report JSON:", reportFile)
+		printReviewIssueDetails(r)
 		fmt.Println()
 		fmt.Println("For full review details, see the report JSON file")
 		fmt.Println()
 	}
+}
+
+func printReviewIssueDetails(r *ReviewResult) {
+	if r == nil || len(r.Issues) == 0 {
+		return
+	}
+
+	var issues []ReviewIssue
+	for _, issue := range r.Issues {
+		if issue.Score < ReviewIssueScorePerfect {
+			issues = append(issues, issue)
+		}
+	}
+	if len(issues) == 0 {
+		return
+	}
+
+	sort.SliceStable(issues, func(i, j int) bool {
+		if issues[i].Score != issues[j].Score {
+			return issues[i].Score < issues[j].Score
+		}
+		return issues[i].MsgID < issues[j].MsgID
+	})
+
+	fmt.Println()
+	fmt.Printf("⚠️ Issues (score < %d):", ReviewIssueScorePerfect)
+	for i, issue := range issues {
+		if issue.Score >= ReviewIssueScorePerfect {
+			continue
+		}
+		fmt.Printf("  %d) score: %d\n", i+1, issue.Score)
+		fmt.Printf("     description: %s\n", issue.Description)
+		fmt.Printf("     msgid: %q\n", issue.MsgID)
+		if issue.MsgIDPlural != "" {
+			fmt.Printf("     msgid_plural: %q\n", issue.MsgIDPlural)
+		}
+		fmt.Printf("     suggest_msgstr: %s\n", formatMsgstrForDisplay(issue.SuggestMsgstr))
+	}
+}
+
+func formatMsgstrForDisplay(msgstr []string) string {
+	if len(msgstr) == 0 {
+		return "(empty)"
+	}
+	if len(msgstr) == 1 {
+		return fmt.Sprintf("%q", msgstr[0])
+	}
+	parts := make([]string, 0, len(msgstr))
+	for i, s := range msgstr {
+		parts = append(parts, fmt.Sprintf("[%d]=%q", i, s))
+	}
+	return strings.Join(parts, ", ")
 }

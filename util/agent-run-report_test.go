@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"strings"
@@ -266,5 +267,58 @@ func TestReportReviewMarkdownWrappedJSON(t *testing.T) {
 	}
 	if len(result.Issues) != 1 {
 		t.Errorf("expected 1 issue, got %d", len(result.Issues))
+	}
+}
+
+func TestPrintReviewReportResult_IncludesIssueDetails(t *testing.T) {
+	tmpDir := t.TempDir()
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	defer func() { _ = os.Chdir(origWd) }()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir %s: %v", tmpDir, err)
+	}
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatalf("MkdirAll po: %v", err)
+	}
+	ps := GetReviewPathSet("po")
+	if err := os.WriteFile(ps.InputPO, []byte(minimalPoWithEntries(2)), 0644); err != nil {
+		t.Fatalf("write po failed: %v", err)
+	}
+	reviewJSON := `{"total_entries":2,"issues":[{"msgid":"bad 1","score":2,"description":"desc2","suggest_msgstr":["fix2"]},{"msgid":"bad 0","score":0,"description":"desc0","suggest_msgstr":["fix0"]},{"msgid":"ok","score":3,"description":"desc3","suggest_msgstr":["fix3"]}]}`
+	if err := os.WriteFile(ps.ResultJSON, []byte(reviewJSON), 0644); err != nil {
+		t.Fatalf("write review-result.json: %v", err)
+	}
+
+	result, err := GetReviewReport("po")
+	if err != nil {
+		t.Fatalf("GetReviewReport failed: %v", err)
+	}
+
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	os.Stdout = w
+	defer func() { os.Stdout = oldStdout }()
+
+	PrintReviewReportResult(result)
+	_ = w.Close()
+	var out bytes.Buffer
+	_, _ = out.ReadFrom(r)
+	output := out.String()
+	if !strings.Contains(output, "Issues (score < 3)") {
+		t.Fatalf("expected issues section, got: %s", output)
+	}
+	if !strings.Contains(output, "description: desc0") ||
+		!strings.Contains(output, `msgid: "bad 0"`) ||
+		!strings.Contains(output, `suggest_msgstr: "fix0"`) {
+		t.Fatalf("expected score<3 issue details in output, got: %s", output)
+	}
+	if strings.Contains(output, `msgid: "ok"`) {
+		t.Fatalf("did not expect score=3 issue in details, got: %s", output)
 	}
 }
