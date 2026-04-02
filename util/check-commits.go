@@ -289,8 +289,9 @@ func CmdCheckCommits(args ...string) bool {
 			"git",
 			"rev-list",
 		}
-		maxCommits int
-		err        error
+		maxCommits  int
+		err         error
+		hasDashDash = false
 	)
 
 	if max, err := strconv.ParseInt(os.Getenv("MAX_COMMITS"), 10, 32); err == nil {
@@ -307,10 +308,16 @@ func CmdCheckCommits(args ...string) bool {
 			if re.MatchString(arg) {
 				arg = re.ReplaceAllString(arg, "")
 			}
+			if arg == "--" {
+				hasDashDash = true
+			}
 			cmdArgs = append(cmdArgs, arg)
 		}
 	} else {
 		cmdArgs = append(cmdArgs, "HEAD@{u}..HEAD")
+	}
+	if !hasDashDash {
+		cmdArgs = append(cmdArgs, "--")
 	}
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = repository.GitDir()

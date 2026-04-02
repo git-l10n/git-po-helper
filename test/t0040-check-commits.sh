@@ -861,9 +861,7 @@ test_expect_success "bad commit range" '
 		check-commits $POT_NO -qq non_exist_commit..HEAD >out 2>&1 &&
 	cat >expect <<-EOF &&
 	ERROR: fail to run git-rev-list: exit status 128
-	fatal: ambiguous argument ${SQ}non_exist_commit..HEAD${SQ}: unknown revision or path not in the working tree.
-	Use ${SQ}--${SQ} to separate paths from revisions, like this:
-	${SQ}git <command> [<revision>...] -- [<file>...]${SQ}
+	fatal: bad revision ${SQ}non_exist_commit..HEAD${SQ}
 	ERROR: check-commits command failed
 	EOF
 	test_cmp expect out
