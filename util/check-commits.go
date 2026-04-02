@@ -18,6 +18,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func logRevListError(err error, stderr []byte) {
+	msg := strings.TrimSpace(string(stderr))
+	if msg != "" {
+		log.Errorf("fail to run git-rev-list: %s\n%s", err, msg)
+		return
+	}
+	log.Errorf("fail to run git-rev-list: %s", err)
+}
+
 const (
 	defaultMaxCommits     = 100
 	subjectWidthHardLimit = 72
@@ -200,6 +209,8 @@ func fetchBlobsInPartialClone(args []string) error {
 	}
 	cmdArgs = append(cmdArgs, "--", "po/")
 	cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	var fetchRevListStderr bytes.Buffer
+	cmd.Stderr = &fetchRevListStderr
 	stdout, err := cmd.StdoutPipe()
 	if err == nil {
 		err = cmd.Start()
@@ -216,6 +227,9 @@ func fetchBlobsInPartialClone(args []string) error {
 		}
 	}
 	if err = cmd.Wait(); err != nil {
+		if msg := strings.TrimSpace(fetchRevListStderr.String()); msg != "" {
+			return fmt.Errorf("%w\n%s", err, msg)
+		}
 		return err
 	}
 	if len(blobList) == 0 {
@@ -300,13 +314,15 @@ func CmdCheckCommits(args ...string) bool {
 	}
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = repository.GitDir()
+	var revListStderr bytes.Buffer
+	cmd.Stderr = &revListStderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Errorf("fail to run git-rev-list: %s", err)
+		logRevListError(err, revListStderr.Bytes())
 		return false
 	}
 	if err = cmd.Start(); err != nil {
-		log.Errorf("fail to run git-rev-list: %s", err)
+		logRevListError(err, revListStderr.Bytes())
 		return false
 	}
 	reader := bufio.NewReader(stdout)
@@ -322,7 +338,7 @@ func CmdCheckCommits(args ...string) bool {
 	}
 	err = cmd.Wait()
 	if err != nil {
-		log.Errorf("fail to run git-rev-list: %s", err)
+		logRevListError(err, revListStderr.Bytes())
 		return false
 	}
 	nr := len(commits)

@@ -859,14 +859,14 @@ test_expect_success "bad utf-8 characters in commit log" '
 test_expect_success "bad commit range" '
 	test_must_fail git -C workdir $HELPER \
 		check-commits $POT_NO -qq non_exist_commit..HEAD >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
-
 	cat >expect <<-EOF &&
 	ERROR: fail to run git-rev-list: exit status 128
+	fatal: ambiguous argument ${SQ}non_exist_commit..HEAD${SQ}: unknown revision or path not in the working tree.
+	Use ${SQ}--${SQ} to separate paths from revisions, like this:
+	${SQ}git <command> [<revision>...] -- [<file>...]${SQ}
 	ERROR: check-commits command failed
 	EOF
-
-	test_cmp expect actual
+	test_cmp expect out
 '
 
 test_done
