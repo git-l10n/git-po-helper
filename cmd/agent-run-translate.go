@@ -50,12 +50,7 @@ Examples:
 		"use local orchestration: agent only translates batch JSON files")
 	cmd.Flags().IntVar(&opts.BatchSize, "batch-size", 100,
 		"min entries per batch when using --use-local-orchestration (default: 100)")
-	cmd.Flags().StringVar(&opts.Agent,
-		"agent",
-		"",
-		"agent name to use (required if multiple agents are configured)")
 
-	_ = viper.BindPFlag("agent-run--agent", cmd.Flags().Lookup("agent"))
 	_ = viper.BindPFlag("agent-run--batch-size", cmd.Flags().Lookup("batch-size"))
 
 	return cmd

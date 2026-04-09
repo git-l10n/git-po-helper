@@ -73,10 +73,6 @@ When --report is used, it cannot be combined with --since, --range,
 		"base path for review output files (default: po/review); .po/.json are appended")
 	cmd.Flags().StringVar(&opts.Report, "report", "",
 		"print review report from the specified directory (same as agent-run report <dir>)")
-	cmd.Flags().StringVar(&opts.Agent,
-		"agent",
-		"",
-		"agent name to use (required if multiple agents are configured)")
 	cmd.Flags().IntVar(&opts.BatchSize, "batch-size", 100,
 		"min entries per batch when splitting review (default: 100)")
 	cmd.Flags().StringVarP(&opts.Range, "range", "r", "",
@@ -90,7 +86,6 @@ When --report is used, it cannot be combined with --since, --range,
 		"",
 		"equivalent to -r <commit>.. (compare commit with working tree)")
 
-	_ = viper.BindPFlag("agent-run--agent", cmd.Flags().Lookup("agent"))
 	_ = viper.BindPFlag("agent-run--batch-size", cmd.Flags().Lookup("batch-size"))
 	_ = viper.BindPFlag("agent-run--range", cmd.Flags().Lookup("range"))
 	_ = viper.BindPFlag("agent-run--output", cmd.Flags().Lookup("output"))

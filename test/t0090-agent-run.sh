@@ -313,4 +313,51 @@ EOF
 	grep "override prompt for update-po" workdir/po/zh_CN.po
 '
 
+test_expect_success "agent-run: direct run with -p (no subcommand)" '
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
+prompt:
+  update_pot: "unused for direct"
+agents:
+  mock:
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
+    kind: echo
+EOF
+	sed -i.bak "s|\$PWD|$PWD|g" workdir/.git-po-helper.yaml &&
+	rm -f workdir/.git-po-helper.yaml.bak &&
+
+	sed -i.bak "/Updated by mock agent/d" workdir/po/git.pot &&
+	rm -f workdir/po/git.pot.bak &&
+
+	git -C workdir $HELPER agent-run -p "direct run prompt" --agent mock >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+
+	grep "completed successfully" actual &&
+	grep "direct run prompt" workdir/po/git.pot
+'
+
+test_expect_success "agent-run: --agent before subcommand (persistent)" '
+	cat >workdir/.git-po-helper.yaml <<-EOF &&
+prompt:
+  update_pot: "update po/git.pot according to po/AGENTS.md"
+agents:
+  mock:
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
+    kind: echo
+  mock2:
+    cmd: ["$PWD/mock-agent", "--prompt", "{{.prompt}}"]
+    kind: echo
+EOF
+	sed -i.bak "s|\$PWD|$PWD|g" workdir/.git-po-helper.yaml &&
+	rm -f workdir/.git-po-helper.yaml.bak &&
+
+	sed -i.bak "/Updated by mock agent/d" workdir/po/git.pot &&
+	rm -f workdir/po/git.pot.bak &&
+
+	git -C workdir $HELPER agent-run --agent mock update-pot >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+
+	grep "completed successfully" actual &&
+	grep "Updated by mock agent" workdir/po/git.pot
+'
+
 test_done

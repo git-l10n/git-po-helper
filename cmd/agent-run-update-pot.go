@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func newAgentRunUpdatePotCmd(opts *agentRunOptions) *cobra.Command {
@@ -46,13 +45,6 @@ Examples:
 			return nil
 		},
 	}
-
-	cmd.Flags().StringVar(&opts.Agent,
-		"agent",
-		"",
-		"agent name to use (required if multiple agents are configured)")
-
-	_ = viper.BindPFlag("agent-run--agent", cmd.Flags().Lookup("agent"))
 
 	return cmd
 }
