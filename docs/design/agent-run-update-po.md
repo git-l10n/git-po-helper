@@ -18,7 +18,7 @@ This command uses a code agent with a configured prompt to update the `po/git.po
 git-po-helper agent-test update-po [--agent <agent-name>] [--runs <n>] [po/XX.po]
 ```
 
-This command runs the `agent-run update-po` operation multiple times (default: from config, or 5 if not configured) and provides an average score where success = 100 points and failure = 0 points.
+This command runs the `agent-run update-po` operation multiple times (default: from config, or 3 if not configured) and provides an average score where success = 100 points and failure = 0 points.
 
 The `po/XX.po` argument is optional. If omitted, the default language code from configuration is used to determine the PO file path (e.g., `default_lang_code: "zh_CN"` -> `po/zh_CN.po`).
 
@@ -34,7 +34,7 @@ prompt:
   translate: "translate {{.source}} according to po/README.md"
   review: "review and improve {{.source}} according to po/README.md"
 agent-test:
-  runs: 5
+  runs: 3
   pot_entries_before_update: null
   pot_entries_after_update: null
   po_entries_before_update: null
@@ -392,7 +392,7 @@ agent-test:
 3. **Determine number of runs**:
    - If `--runs` is provided and > 0, use that value.
    - Otherwise, use `cfg.AgentTest.Runs` if configured and > 0.
-   - If neither is set, default to 5.
+   - If neither is set, default to 3.
 4. **Loop over runs** (`i = 1..runs`):
    - Optionally **clean PO directory** using `CleanPoDirectory()` to restore `po/` to `HEAD` before each run (for reproducible tests).
    - Call `RunAgentUpdatePo(cfg, agentName, poFile)` (the PO file is derived the same way as in agent-run).

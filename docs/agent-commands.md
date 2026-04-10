@@ -69,7 +69,7 @@ agents:
 
 #### Agent Test Configuration
 
-- `agent-test.runs`: Default number of runs for `agent-test` (default: 1)
+- `agent-test.runs`: Default number of runs for `agent-test` (default: 3)
 - `agent-test.pot_entries_before_update`: Expected POT entry count before update (null or 0 to disable)
 - `agent-test.pot_entries_after_update`: Expected POT entry count after update (null or 0 to disable)
 - `agent-test.po_entries_before_update`: Expected PO entry count before update (used by update-po)
@@ -383,7 +383,7 @@ git-po-helper agent-test update-pot [--agent <agent-name>] [--runs <n>]
 
 **Options:**
 - `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
-- `--runs <n>`: Number of test runs (default: 1, or from config file)
+- `--runs <n>`: Number of test runs (default: 3, or from config file)
 
 **Examples:**
 ```bash
@@ -396,7 +396,7 @@ git-po-helper agent-test update-pot --agent claude --runs 10
 
 **What it does:**
 1. Loads configuration from `git-po-helper.yaml`
-2. Determines number of runs (from `--runs` flag, config file, or default to 1)
+2. Determines number of runs (from `--runs` flag, config file, or default to 3)
 3. For each run:
    - Performs pre-validation (if configured)
    - Executes agent command (if pre-validation passed)
@@ -432,7 +432,7 @@ git-po-helper agent-test update-po [--agent <agent-name>] [--runs <n>] [po/XX.po
 
 **Options:**
 - `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
-- `--runs <n>`: Number of test runs (default: 1, or from config file)
+- `--runs <n>`: Number of test runs (default: 3, or from config file)
 - `po/XX.po`: Optional PO file path; if omitted, `default_lang_code` is used (e.g., `zh_CN` → `po/zh_CN.po`)
 
 **Examples:**
@@ -449,7 +449,7 @@ git-po-helper agent-test update-po --agent claude --runs 10 po/zh_CN.po
 
 **What it does:**
 1. Loads configuration from `git-po-helper.yaml`
-2. Determines number of runs (from `--runs` flag, config file, or default to 1)
+2. Determines number of runs (from `--runs` flag, config file, or default to 3)
 3. For each run:
    - Restores `po/` directory to `HEAD` for a clean state
    - Calls `agent-run update-po` logic via `RunAgentUpdatePo`
@@ -481,13 +481,13 @@ git-po-helper agent-test translate [--use-local-orchestration] [--agent <agent-n
 **Options:**
 - `--use-local-orchestration`: Use local orchestration (same as agent-run translate)
 - `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
-- `--runs <n>`: Number of test runs (default: 5, or from config file)
+- `--runs <n>`: Number of test runs (default: 3, or from config file)
 - `--batch-size <n>`: Min entries per batch when using `--use-local-orchestration` (default: 50)
 - `po/XX.po`: Optional PO file path; if omitted, `default_lang_code` is used
 
 **Examples:**
 ```bash
-# Run 5 tests using default flow
+# Run 3 tests using default flow
 git-po-helper agent-test translate po/zh_CN.po
 
 # Run tests with local orchestration
@@ -508,7 +508,7 @@ git-po-helper agent-test review [--use-local-orchestration] [--agent <agent-name
 
 **Options:**
 - `--use-local-orchestration`: Use local orchestration (same as agent-run review)
-- `--runs <n>`: Number of test runs (default: 1, or from config file)
+- `--runs <n>`: Number of test runs (default: 3, or from config file)
 - `-r`, `--range <range>`: Revision range (same as agent-run review)
 - `--commit <commit>`: Review changes in the specified commit
 - `--since <commit>`: Review changes since the specified commit
@@ -533,7 +533,7 @@ git-po-helper agent-test review --since abc123 po/zh_CN.po
 
 **What it does:**
 1. Loads configuration from `git-po-helper.yaml`
-2. Determines number of runs (from `--runs` flag, config file, or default to 1)
+2. Determines number of runs (from `--runs` flag, config file, or default to 3)
 3. For each run:
    - Calls `agent-run review` logic
    - Parses JSON and records score for this run

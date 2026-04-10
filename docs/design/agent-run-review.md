@@ -21,7 +21,7 @@ This command uses a code agent with a configured prompt to review translations i
 git-po-helper agent-test review [--agent <agent-name>] [--runs <n>] [--commit commit] [--since commit] [po/XX.po]
 ```
 
-This command runs the `agent-run review` operation multiple times (default: 5, configurable via `--runs` or config file) and provides an average score based on the review JSON results.
+This command runs the `agent-run review` operation multiple times (default: 3, configurable via `--runs` or config file) and provides an average score based on the review JSON results.
 
 ### 1.2 Configuration File
 
@@ -35,7 +35,7 @@ prompt:
   translate: "translate {{.source}} according to po/README.md"
   review: "review and improve {{.source}} according to po/README.md"
 agent-test:
-  runs: 5
+  runs: 3
 agents:
   claude:
     cmd: ["claude", "-p", "{{.prompt}}"]
@@ -257,7 +257,7 @@ Example:
 2. Determine number of runs:
    - Use `--runs` if provided
    - Otherwise use `agent-test.runs` from config
-   - Default to 5 if neither provided
+   - Default to 3 if neither provided
 3. For each run:
    - **Save output to directory**: `output/<agent-name>/<iteration-number>/`
      - Create directory if it doesn't exist

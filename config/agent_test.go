@@ -213,8 +213,8 @@ func TestGetDefaultConfig(t *testing.T) {
 	if config.AgentTest.Runs == nil {
 		t.Fatal("AgentTest.Runs should not be nil")
 	}
-	if *config.AgentTest.Runs != 1 {
-		t.Fatalf("expected Runs default 1, got %d", *config.AgentTest.Runs)
+	if *config.AgentTest.Runs != 3 {
+		t.Fatalf("expected Runs default 3, got %d", *config.AgentTest.Runs)
 	}
 
 	// Check default agents

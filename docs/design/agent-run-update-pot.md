@@ -18,7 +18,7 @@ This command uses a code agent with a configured prompt to update the `po/git.po
 git-po-helper agent-test update-pot [--agent <agent-name>] [--runs <n>]
 ```
 
-This command runs the `agent-run update-pot` operation multiple times (default: 5, configurable via `--runs` or config file) and provides an average score where success = 100 points and failure = 0 points.
+This command runs the `agent-run update-pot` operation multiple times (default: 3, configurable via `--runs` or config file) and provides an average score where success = 100 points and failure = 0 points.
 
 ### 1.2 Configuration File
 
@@ -32,7 +32,7 @@ prompt:
   translate: "translate {{.source}} according to po/README.md"
   review: "review and improve {{.source}} according to po/README.md"
 agent-test:
-  runs: 5
+  runs: 3
   pot_entries_before_update: null
   pot_entries_after_update: null
   po_entries_before_update: null

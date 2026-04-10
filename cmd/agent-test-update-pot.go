@@ -12,7 +12,7 @@ func newAgentTestUpdatePotCmd(opts *agentTestOptions) *cobra.Command {
 		Short: "Test update-pot operation multiple times and calculate average score",
 		Long: `Test the update-pot operation multiple times and calculate an average score.
 
-This command runs agent-run update-pot multiple times (default: 5, configurable
+This command runs agent-run update-pot multiple times (default: 3, configurable
 via --runs or config file) and provides detailed results including:
 - Individual run results with validation status
 - Success/failure counts

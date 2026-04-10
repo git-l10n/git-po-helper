@@ -184,7 +184,8 @@ func loadEmbeddedPrompt(prompt string) string {
 // getDefaultConfig returns a default AgentConfig with sensible defaults.
 // Prompt templates are loaded from embedded files in config/prompts/.
 func getDefaultConfig() *AgentConfig {
-	defaultRuns := 1
+	// Align with ResolveAgentTestRuns fallback and agent-test CLI help (default 3).
+	defaultRuns := 3
 	systemLocale := getSystemLocale()
 
 	return &AgentConfig{

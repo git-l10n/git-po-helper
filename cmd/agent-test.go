@@ -39,7 +39,7 @@ performance. It calculates an average score where success = 100 points and
 failure = 0 points.
 
 The number of runs can be specified via --runs flag or configured in
-git-po-helper.yaml. If not specified, the default is 5 runs.
+git-po-helper.yaml. If not specified, the default is 3 runs.
 
 Entry count validation can be configured to verify that the agent correctly
 updates files with the expected number of entries.`,

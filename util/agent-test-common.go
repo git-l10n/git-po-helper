@@ -199,7 +199,7 @@ func ConfirmAgentTestExecution(skipConfirmation bool) error {
 
 // ResolveAgentTestRuns returns the effective run count for agent-test commands.
 // If runs > 0, that value is used (from command line). Otherwise uses cfg.AgentTest.Runs
-// when set and positive, or defaults to 5. Logs the source at debug level.
+// when set and positive, or defaults to 3. Logs the source at debug level.
 func ResolveAgentTestRuns(cfg *config.AgentConfig, runs int) int {
 	if runs != 0 {
 		log.Debugf("using runs from command line: %d", runs)
@@ -210,7 +210,7 @@ func ResolveAgentTestRuns(cfg *config.AgentConfig, runs int) int {
 		log.Debugf("using runs from configuration: %d", runs)
 		return runs
 	}
-	runs = 5
+	runs = 3
 	log.Debugf("using default number of runs: %d", runs)
 	return runs
 }

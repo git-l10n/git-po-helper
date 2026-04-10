@@ -53,7 +53,7 @@ This command uses a code agent to review changes in a PO file. It can review:
 git-po-helper agent-test translate [--agent <agent-name>] [--runs <n>] [po/XX.po]
 ```
 
-This command runs the `agent-run translate` operation multiple times (default: 5, configurable via `--runs` or config file) and provides an average score. Similar to `agent-test update-pot`, it reuses the `agent-run translate` logic.
+This command runs the `agent-run translate` operation multiple times (default: 3, configurable via `--runs` or config file) and provides an average score. Similar to `agent-test update-pot`, it reuses the `agent-run translate` logic.
 
 **agent-test review:**
 ```bash
@@ -74,7 +74,7 @@ prompt:
   translate: "translate {{.source}} according to po/README.md"
   review: "review and improve {{.source}} according to po/README.md"
 agent-test:
-  runs: 5
+  runs: 3
   pot_entries_before_update: null
   pot_entries_after_update: null
   po_entries_before_update: null

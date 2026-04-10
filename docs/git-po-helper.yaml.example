@@ -29,8 +29,8 @@ prompt:
 
 # Agent test configuration
 agent-test:
-  # Default number of runs for agent-test command (default: 5)
-  runs: 5
+  # Default number of runs for agent-test command (default: 3)
+  runs: 3
 
   # Entry count validation (null or 0 to disable)
   # Pre-validation: Check entry count before agent execution

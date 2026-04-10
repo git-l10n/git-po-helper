@@ -12,7 +12,7 @@ func newAgentTestTranslateCmd(opts *agentTestOptions) *cobra.Command {
 		Short: "Test translate operation multiple times and calculate average score",
 		Long: `Test the translate operation multiple times and calculate an average score.
 
-This command runs agent-run translate multiple times (default: 5, configurable
+This command runs agent-run translate multiple times (default: 3, configurable
 via --runs or config file) and provides detailed results including:
 - Individual run results with validation status
 - Success/failure counts
