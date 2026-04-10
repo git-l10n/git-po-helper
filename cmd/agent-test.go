@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"strings"
+
+	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -41,8 +44,13 @@ failure = 0 points.
 The number of runs can be specified via --runs flag or configured in
 git-po-helper.yaml. If not specified, the default is 3 runs.
 
+Without a subcommand, -p/--prompt runs the agent that many times with that
+prompt text (direct execution). Subcommands use --prompt as an override for
+the configured workflow prompt.
+
 Entry count validation can be configured to verify that the agent correctly
 updates files with the expected number of entries.`,
+		RunE: v.runRoot,
 	}
 
 	v.cmd.PersistentFlags().BoolVar(&v.O.DangerouslyRemovePoDir,
@@ -58,12 +66,27 @@ updates files with the expected number of entries.`,
 
 	_ = viper.BindPFlag("agent-test--dangerously-remove-po-directory", v.cmd.PersistentFlags().Lookup("dangerously-remove-po-directory"))
 
-	v.cmd.PersistentFlags().StringVar(&v.O.Prompt,
+	v.cmd.PersistentFlags().StringVarP(&v.O.Prompt,
 		"prompt",
+		"p",
 		"",
-		"override prompt from configuration (if provided, overrides the prompt in git-po-helper.yaml)")
+		"prompt: for direct run (no subcommand), text passed to the agent each run; with a subcommand, overrides the prompt from git-po-helper.yaml")
 
 	_ = viper.BindPFlag("agent-test--prompt", v.cmd.PersistentFlags().Lookup("prompt"))
+
+	v.cmd.PersistentFlags().StringVar(&v.O.Agent,
+		"agent",
+		"",
+		"agent name to use (required if multiple agents are configured)")
+
+	_ = viper.BindPFlag("agent-test--agent", v.cmd.PersistentFlags().Lookup("agent"))
+
+	v.cmd.PersistentFlags().IntVar(&v.O.Runs,
+		"runs",
+		0,
+		"number of test runs (0 means use config file value or default to 3)")
+
+	_ = viper.BindPFlag("agent-test--runs", v.cmd.PersistentFlags().Lookup("runs"))
 
 	v.cmd.AddCommand(newAgentTestUpdatePotCmd(&v.O))
 	v.cmd.AddCommand(newAgentTestUpdatePoCmd(&v.O))
@@ -71,6 +94,22 @@ updates files with the expected number of entries.`,
 	v.cmd.AddCommand(newAgentTestReviewCmd(&v.O))
 
 	return v.cmd
+}
+
+func (v *agentTestCommand) runRoot(cmd *cobra.Command, args []string) error {
+	if len(args) > 0 {
+		return NewErrorWithUsageF("unknown argument %q (use a subcommand or -p/--prompt for direct run)", args[0])
+	}
+	if strings.TrimSpace(v.O.Prompt) == "" {
+		if err := cmd.Help(); err != nil {
+			return NewStandardErrorF("%v", err)
+		}
+		return nil
+	}
+	if err := util.CmdAgentTestDirect(v.O.Agent, v.O.Prompt, v.O.Runs); err != nil {
+		return NewStandardErrorF("%v", err)
+	}
+	return nil
 }
 
 var agentTestCmd = agentTestCommand{}

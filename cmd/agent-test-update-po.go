@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/git-l10n/git-po-helper/util"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func newAgentTestUpdatePoCmd(opts *agentTestOptions) *cobra.Command {
@@ -43,7 +42,7 @@ Examples:
   git-po-helper agent-test update-po po/zh_CN.po
 
   # Run 10 tests with a specific agent
-  git-po-helper agent-test update-po --agent claude --runs 10 po/zh_CN.po`,
+  git-po-helper agent-test --agent claude --runs 10 update-po po/zh_CN.po`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 1 {
 				return NewErrorWithUsage("update-po command expects at most one argument: po/XX.po")
@@ -60,18 +59,6 @@ Examples:
 			return nil
 		},
 	}
-
-	cmd.Flags().StringVar(&opts.Agent,
-		"agent",
-		"",
-		"agent name to use (required if multiple agents are configured)")
-	cmd.Flags().IntVar(&opts.Runs,
-		"runs",
-		0,
-		"number of test runs (0 means use config file value or default to 5)")
-
-	_ = viper.BindPFlag("agent-test--agent", cmd.Flags().Lookup("agent"))
-	_ = viper.BindPFlag("agent-test--runs", cmd.Flags().Lookup("runs"))
 
 	return cmd
 }

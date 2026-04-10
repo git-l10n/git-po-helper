@@ -43,16 +43,8 @@ With two file arguments, compare worktree files (revisions not allowed).`,
 		"use local orchestration: agent only reviews batch JSON files")
 	cmd.Flags().StringVarP(&opts.Output, "output", "o", "",
 		"base path for review output files (default: po/review); .po/.json are appended")
-	cmd.Flags().StringVar(&opts.Agent,
-		"agent",
-		"",
-		"agent name to use (required if multiple agents are configured)")
 	cmd.Flags().IntVar(&opts.BatchSize, "batch-size", 100,
 		"min entries per batch when splitting review (default: 100)")
-	cmd.Flags().IntVar(&opts.Runs,
-		"runs",
-		0,
-		"number of test runs (0 means use config file value or default to 5)")
 	cmd.Flags().StringVarP(&opts.Range, "range", "r", "",
 		"revision range: a..b (a and b), a.. (a and working tree), or a (a~ and a)")
 	cmd.Flags().StringVar(&opts.Commit,
@@ -64,9 +56,7 @@ With two file arguments, compare worktree files (revisions not allowed).`,
 		"",
 		"equivalent to -r <commit>.. (compare commit with working tree)")
 
-	_ = viper.BindPFlag("agent-test--agent", cmd.Flags().Lookup("agent"))
 	_ = viper.BindPFlag("agent-test--batch-size", cmd.Flags().Lookup("batch-size"))
-	_ = viper.BindPFlag("agent-test--runs", cmd.Flags().Lookup("runs"))
 	_ = viper.BindPFlag("agent-test--range", cmd.Flags().Lookup("range"))
 	_ = viper.BindPFlag("agent-test--output", cmd.Flags().Lookup("output"))
 

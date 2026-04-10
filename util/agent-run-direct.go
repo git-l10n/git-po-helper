@@ -10,27 +10,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// CmdAgentRunDirect runs the configured agent once with the given prompt text (no workflow).
-// agentName is optional when exactly one agent is configured.
-func CmdAgentRunDirect(agentName, prompt string) error {
-	if strings.TrimSpace(prompt) == "" {
-		return fmt.Errorf("prompt is empty")
-	}
-
-	cfg, err := LoadAgentConfigForCmd()
-	if err != nil {
-		return err
-	}
+// runAgentDirectOnce runs the configured agent once with the given prompt (no workflow).
+// cfg must be loaded; agentName is optional when exactly one agent is configured.
+func runAgentDirectOnce(cfg *config.AgentConfig, agentName, prompt string) (*AgentRunResult, error) {
 	selectedAgent, err := SelectAgent(cfg, agentName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	log.Debugf("using agent: %s (%s)", agentName, selectedAgent.Kind)
 
 	vars := PlaceholderVars{"prompt": prompt}
 	agentCmd, outputFormat, err := BuildAgentCommand(selectedAgent, vars)
 	if err != nil {
-		return fmt.Errorf("failed to build agent command: %w", err)
+		return nil, fmt.Errorf("failed to build agent command: %w", err)
 	}
 
 	start := time.Now()
@@ -60,12 +52,30 @@ func CmdAgentRunDirect(agentName, prompt string) error {
 	}
 
 	GetAgentDiagnostics(result, streamResult)
+	return result, nil
+}
+
+// CmdAgentRunDirect runs the configured agent once with the given prompt text (no workflow).
+// agentName is optional when exactly one agent is configured.
+func CmdAgentRunDirect(agentName, prompt string) error {
+	if strings.TrimSpace(prompt) == "" {
+		return fmt.Errorf("prompt is empty")
+	}
+
+	cfg, err := LoadAgentConfigForCmd()
+	if err != nil {
+		return err
+	}
+	result, err := runAgentDirectOnce(cfg, agentName, prompt)
+	if err != nil {
+		return err
+	}
 	PrintAgentDiagnosticsFromResult(result)
 	ctx := &AgentRunContext{Cfg: cfg, Result: result}
 	PrintAgentRunStatus(ctx)
 
-	if execErr != nil {
-		return execErr
+	if result.Error != nil {
+		return result.Error
 	}
 	if ctx.PreValidationError() != nil {
 		return ctx.PreValidationError()
