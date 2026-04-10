@@ -64,5 +64,13 @@ func init() {
 			Pattern: regexp.MustCompile(`\bgit-(arkiv|arkivet)\b`),
 			Replace: "git repository",
 		},
+		{
+			Pattern: "git-hashningsalgoritm",
+			Replace: "git hash algorithm",
+		},
+		{
+			Pattern: regexp.MustCompile(`(--[a-z-]+)-argument\b`),
+			Replace: "$1 argument",
+		},
 	}
 }
