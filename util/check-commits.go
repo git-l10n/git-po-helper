@@ -148,7 +148,7 @@ func checkCommitL10nFile(commit, fileName string, isTipCommit bool) (ok bool, er
 	// Do not compare with POT template for tmpFile, because:
 	// 1. we only know path of tmpfile, not the real PO file, fail to build POT,
 	// 2. the temporary PO file is translated based on a history POT template.
-	if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, false, prompt, fileName, isTipCommit) {
+	if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, false, prompt, fileName, isTipCommit, commit) {
 		// Error errs in CheckPoFileWithPrompt() have been output already,
 		// mark ok as false
 		ok = false

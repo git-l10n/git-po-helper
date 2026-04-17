@@ -166,7 +166,7 @@ func checkPoNoObsoleteEntries(po *GettextPO) ([]string, bool) {
 // CheckPoFile checks syntax of "po/xx.po".
 // When compareWithPot is true, also checks incomplete translations against the POT template.
 func CheckPoFile(locale, poFile string, compareWithPot bool) bool {
-	return CheckPoFileWithPrompt(locale, poFile, compareWithPot, "", "", true)
+	return CheckPoFileWithPrompt(locale, poFile, compareWithPot, "", "", true, "")
 }
 
 // CheckPoFileWithPrompt checks syntax of "po/xx.po", and use specific prompt.
@@ -177,7 +177,10 @@ func CheckPoFile(locale, poFile string, compareWithPot bool) bool {
 // When isTipCommit is false, PO filter (.gitattributes) / msgcat mismatches are still reported
 // at WARNING if the filter check would have failed, but not as a failing check (ret is not
 // forced false by that section alone).
-func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt string, filterRepoRelPath string, isTipCommit bool) bool {
+// attrSourceCommit, when non-empty, is passed to git check-attr --source so attributes (including
+// .gitattributes) are read from that revision; use the commit being checked (e.g. in check-commits)
+// so bare partial clones can resolve filters without a populated worktree.
+func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt string, filterRepoRelPath string, isTipCommit bool, attrSourceCommit string) bool {
 	var (
 		ret  = true
 		ok   bool
@@ -251,7 +254,7 @@ func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt st
 	}
 
 	// Format check: use driver return from git-check-attr to format PO file
-	errs, filterOk := checkPoFilterFormat(poFile, filterRepoRelPath)
+	errs, filterOk := checkPoFilterFormat(poFile, filterRepoRelPath, attrSourceCommit)
 	filterReportLevel := log.InfoLevel
 	if !isTipCommit && !filterOk {
 		filterReportLevel = log.WarnLevel

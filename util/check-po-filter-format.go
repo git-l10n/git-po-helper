@@ -18,7 +18,16 @@ import (
 // (e.g. "po/zh_CN.po") used only for git check-attr and user-facing messages; this allows
 // checking content outside the worktree while still applying .gitattributes for the real path.
 // When repoAttrRelPath is empty, the path for attributes is derived from contentPath under the worktree.
-func checkPoFilterFormat(contentPath, repoAttrRelPath string) ([]string, bool) {
+//
+// attrSourceCommit, when non-empty, must be a revision (commit, tag, etc.) whose tree is used to
+// resolve attributes: the command becomes "git check-attr --source=<rev> filter <path>".
+// That matches how attributes apply at that revision and is important for bare repositories
+// created with partial clone (promisor): .gitattributes may not be present locally until Git
+// fetches missing blobs; --source ties attribute lookup to the commit under inspection so Git
+// can materialize .gitattributes from the object store / remote as needed. When empty,
+// attributes are resolved the usual way (working tree / index), which is appropriate for
+// in-worktree checks (e.g. check-po on local files).
+func checkPoFilterFormat(contentPath, repoAttrRelPath, attrSourceCommit string) ([]string, bool) {
 	var errs []string
 	if flag.NoCheckFilter() {
 		return nil, true
@@ -80,8 +89,13 @@ func checkPoFilterFormat(contentPath, repoAttrRelPath string) ([]string, bool) {
 		relPath = filepath.ToSlash(relPath)
 	}
 
-	// Query git check-attr filter <path>
-	cmd := exec.Command("git", "-C", workDir, "check-attr", "filter", relPath)
+	// Query git check-attr [--source=<rev>] filter <path>
+	checkAttrArgs := []string{"-C", workDir, "check-attr"}
+	if attrSourceCommit != "" {
+		checkAttrArgs = append(checkAttrArgs, "--source="+attrSourceCommit)
+	}
+	checkAttrArgs = append(checkAttrArgs, "filter", relPath)
+	cmd := exec.Command("git", checkAttrArgs...)
 	cmd.Stderr = nil
 	out, err := cmd.Output()
 	if err != nil {

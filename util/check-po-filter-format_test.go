@@ -82,7 +82,7 @@ msgstr "Hi"
 	viper.Set("check--report-file-locations", "error")
 	defer viper.Set("check--report-file-locations", "")
 
-	errs, ok := checkPoFilterFormat(outsidePath, "po/test.po")
+	errs, ok := checkPoFilterFormat(outsidePath, "po/test.po", "")
 	if ok || len(errs) == 0 {
 		t.Fatalf("expected filter format failure, ok=%v errs=%v", ok, errs)
 	}
@@ -94,7 +94,7 @@ msgstr "Hi"
 
 	viper.Set("check-po--no-check-filter", true)
 	defer viper.Set("check-po--no-check-filter", false)
-	errs, ok = checkPoFilterFormat(outsidePath, "po/test.po")
+	errs, ok = checkPoFilterFormat(outsidePath, "po/test.po", "")
 	if !ok || len(errs) > 0 {
 		t.Fatalf("with --no-check-filter expected ok, got ok=%v errs=%v", ok, errs)
 	}
@@ -134,7 +134,7 @@ msgstr ""
 	viper.Set("check--report-file-locations", "error")
 	defer viper.Set("check--report-file-locations", "")
 
-	errs, ok := checkPoFilterFormat(outside, "")
+	errs, ok := checkPoFilterFormat(outside, "", "")
 	if !ok || len(errs) > 0 {
 		t.Fatalf("expected skip (ok=true, no errs), ok=%v errs=%v", ok, errs)
 	}
@@ -143,7 +143,7 @@ msgstr ""
 func TestCheckPoFilterFormat_noCheckFilterSkipsBeforeExist(t *testing.T) {
 	viper.Set("check--no-check-filter", true)
 	defer viper.Set("check--no-check-filter", false)
-	errs, ok := checkPoFilterFormat("/nonexistent/path/does-not-exist.po", "")
+	errs, ok := checkPoFilterFormat("/nonexistent/path/does-not-exist.po", "", "")
 	if !ok || len(errs) > 0 {
 		t.Fatalf("NoCheckFilter should skip entire check, ok=%v errs=%v", ok, errs)
 	}
@@ -176,8 +176,106 @@ func TestCheckPoFilterFormat_invalidRepoAttrPath(t *testing.T) {
 	viper.Set("check--report-file-locations", "error")
 	defer viper.Set("check--report-file-locations", "")
 
-	_, ok := checkPoFilterFormat(poPath, "../outside.po")
+	_, ok := checkPoFilterFormat(poPath, "../outside.po", "")
 	if ok {
 		t.Fatal("expected failure for attr path escaping repo")
+	}
+}
+
+// TestCheckPoFilterFormat_attrSourceCommit checks git check-attr --source=<rev> so attribute
+// resolution follows the given revision (needed for bare partial clones; see checkPoFilterFormat).
+func TestCheckPoFilterFormat_attrSourceCommit(t *testing.T) {
+	if _, err := exec.LookPath("msgcat"); err != nil {
+		t.Skip("msgcat not in PATH")
+	}
+	tmpDir := t.TempDir()
+	gitEnv := gitTestEnv()
+
+	runGit := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = tmpDir
+		cmd.Env = gitEnv
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, string(output))
+		}
+	}
+	revParse := func() string {
+		t.Helper()
+		cmd := exec.Command("git", "rev-parse", "HEAD")
+		cmd.Dir = tmpDir
+		cmd.Env = gitEnv
+		out, err := cmd.Output()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.TrimSpace(string(out))
+	}
+
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = os.Chdir(origWd)
+		repository.OpenRepository(origWd)
+	}()
+
+	runGit("init")
+	runGit("config", "user.email", "t@t.com")
+	runGit("config", "user.name", "T")
+
+	poDir := filepath.Join(tmpDir, "po")
+	if err := os.MkdirAll(poDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	poBody := `msgid ""
+msgstr ""
+"Project-Id-Version: Git\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: main.c:42
+msgid "Hello"
+msgstr "Hi"
+`
+	repoPo := filepath.Join(poDir, "test.po")
+	if err := os.WriteFile(repoPo, []byte(poBody), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, ".gitattributes"), []byte("po/*.po filter=gettext-no-location\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runGit("add", "po/test.po", ".gitattributes")
+	runGit("commit", "--no-verify", "-m", "with filter")
+	commitWithFilter := revParse()
+
+	if err := os.Remove(filepath.Join(tmpDir, ".gitattributes")); err != nil {
+		t.Fatal(err)
+	}
+	runGit("add", "-A")
+	runGit("commit", "--no-verify", "-m", "drop gitattributes")
+	commitNoAttr := revParse()
+
+	repository.OpenRepository(tmpDir)
+	viper.Set("check--report-file-locations", "error")
+	defer viper.Set("check--report-file-locations", "")
+
+	errs, ok := checkPoFilterFormat(repoPo, "po/test.po", commitWithFilter)
+	if ok || len(errs) == 0 {
+		t.Fatalf("expected filter format failure at old rev, ok=%v errs=%v", ok, errs)
+	}
+	if !strings.Contains(strings.Join(errs, "\n"), "does not match expected filter output") {
+		t.Fatalf("expected filter mismatch for rev with .gitattributes: %v", errs)
+	}
+
+	errs, ok = checkPoFilterFormat(repoPo, "po/test.po", commitNoAttr)
+	if ok || len(errs) == 0 {
+		t.Fatalf("expected failure (no filter) at new rev, ok=%v errs=%v", ok, errs)
+	}
+	if !strings.Contains(strings.Join(errs, "\n"), "No filter attribute set") {
+		t.Fatalf("expected missing-filter message for rev without .gitattributes: %v", errs)
 	}
 }
