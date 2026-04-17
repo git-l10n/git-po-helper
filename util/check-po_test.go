@@ -69,7 +69,7 @@ func TestCheckPoFileWithPrompt_MetaNewlines(t *testing.T) {
 		t.Fatalf("write temp po: %v", err)
 	}
 
-	ok := CheckPoFileWithPrompt("zh_CN", poPath, true, "[zh_CN.po]", "")
+	ok := CheckPoFileWithPrompt("zh_CN", poPath, true, "[zh_CN.po]", "", true)
 	if ok {
 		t.Error("CheckPoFileWithPrompt expected to fail for meta with literal \\n, got ok")
 	}
@@ -158,7 +158,7 @@ msgstr "你好"
 	viper.Set("check-po--report-file-locations", "error")
 	defer viper.Set("check-po--report-file-locations", "")
 
-	ok := CheckPoFileWithPrompt("zh_CN", poPath, true, "[zh_CN.po]", "")
+	ok := CheckPoFileWithPrompt("zh_CN", poPath, true, "[zh_CN.po]", "", true)
 	if ok {
 		t.Error("CheckPoFileWithPrompt expected to fail for location comment with line number, got ok")
 	}
@@ -283,7 +283,7 @@ msgstr "文件"
 	viper.Set("check-po--report-file-locations", "none")
 	defer viper.Set("check-po--report-file-locations", "")
 
-	ok := CheckPoFileWithPrompt("zh_CN", poPath, true, "[zh_CN.po]", "")
+	ok := CheckPoFileWithPrompt("zh_CN", poPath, true, "[zh_CN.po]", "", true)
 	if ok {
 		t.Error("CheckPoFileWithPrompt expected to fail for msgctxt (Git min 0.14 < 0.15), got ok")
 	}
@@ -309,7 +309,7 @@ msgstr "文件"
 	viper.Set("check-po--report-file-locations", "none")
 	defer viper.Set("check-po--report-file-locations", "")
 
-	ok := CheckPoFileWithPrompt("zh_CN", poPath, true, "[zh_CN.po]", "")
+	ok := CheckPoFileWithPrompt("zh_CN", poPath, true, "[zh_CN.po]", "", true)
 	if !ok {
 		t.Error("CheckPoFileWithPrompt expected ok when project has no MinGettextVersion (compatibility skipped), got !ok")
 	}

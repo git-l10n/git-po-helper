@@ -115,8 +115,9 @@ func checkCommitNotL10nChanges(commit string, notL10nChanges, l10nChanges []stri
 }
 
 // checkCommitL10nFile checks one path under po/ (TEAMS or *.po) at the given commit.
+// isTipCommit is true when this commit is the newest in the checked rev-list that touched fileName.
 // ok is false when PO checks fail; errs holds checkout or TEAMS parse errors.
-func checkCommitL10nFile(commit, fileName string) (ok bool, errs []string) {
+func checkCommitL10nFile(commit, fileName string, isTipCommit bool) (ok bool, errs []string) {
 	ok = true
 	tmpFile := FileRevision{
 		Revision: commit,
@@ -147,7 +148,7 @@ func checkCommitL10nFile(commit, fileName string) (ok bool, errs []string) {
 	// Do not compare with POT template for tmpFile, because:
 	// 1. we only know path of tmpfile, not the real PO file, fail to build POT,
 	// 2. the temporary PO file is translated based on a history POT template.
-	if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, false, prompt, fileName) {
+	if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, false, prompt, fileName, isTipCommit) {
 		// Error errs in CheckPoFileWithPrompt() have been output already,
 		// mark ok as false
 		ok = false
@@ -442,7 +443,8 @@ func checkCommits(commits ...string) bool {
 			for _, fileName := range l10nChanges {
 				// fileTipCommitInRange[fileName] == commit iff this iteration is the newest commit
 				// in the checked range that modified fileName (see loop over changes above).
-				fileOk, fe := checkCommitL10nFile(commit, fileName)
+				isTipCommit := fileTipCommitInRange[fileName] == commit
+				fileOk, fe := checkCommitL10nFile(commit, fileName, isTipCommit)
 				errs = append(errs, fe...)
 				if !fileOk {
 					ok = false

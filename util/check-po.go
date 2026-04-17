@@ -166,7 +166,7 @@ func checkPoNoObsoleteEntries(po *GettextPO) ([]string, bool) {
 // CheckPoFile checks syntax of "po/xx.po".
 // When compareWithPot is true, also checks incomplete translations against the POT template.
 func CheckPoFile(locale, poFile string, compareWithPot bool) bool {
-	return CheckPoFileWithPrompt(locale, poFile, compareWithPot, "", "")
+	return CheckPoFileWithPrompt(locale, poFile, compareWithPot, "", "", true)
 }
 
 // CheckPoFileWithPrompt checks syntax of "po/xx.po", and use specific prompt.
@@ -174,7 +174,10 @@ func CheckPoFile(locale, poFile string, compareWithPot bool) bool {
 // (subject to --pot-file; use "no" to skip acquisition inside CheckWithPoFile).
 // filterRepoRelPath, when non-empty, is the path under the repo root used for git check-attr
 // (e.g. "po/zh_CN.po") while poFile may be a temp file; use "" when poFile is already in the worktree.
-func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt string, filterRepoRelPath string) bool {
+// When isTipCommit is false, PO filter (.gitattributes) / msgcat mismatches are still reported
+// at WARNING if the filter check would have failed, but not as a failing check (ret is not
+// forced false by that section alone).
+func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt string, filterRepoRelPath string, isTipCommit bool) bool {
 	var (
 		ret  = true
 		ok   bool
@@ -248,8 +251,16 @@ func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt st
 	}
 
 	// Format check: use driver return from git-check-attr to format PO file
-	errs, ok = checkPoFilterFormat(poFile, filterRepoRelPath)
-	ReportSection("PO filter (.gitattributes)", ok, log.InfoLevel, prompt, errs...)
+	errs, filterOk := checkPoFilterFormat(poFile, filterRepoRelPath)
+	filterReportLevel := log.InfoLevel
+	if !isTipCommit && !filterOk {
+		filterReportLevel = log.WarnLevel
+	}
+	ok = filterOk
+	if !isTipCommit {
+		ok = true
+	}
+	ReportSection("PO filter (.gitattributes)", ok, filterReportLevel, prompt, errs...)
 	ret = ret && ok
 
 	// Check possible typos in a .po file (Git project only).
