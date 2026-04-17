@@ -372,6 +372,11 @@ func checkCommits(commits ...string) bool {
 		nr        = len(commits)
 		tipCommit = commits[0]
 		poMaps    = make(map[string]bool)
+		// fileTipCommitInRange maps each path touched in the rev-list to the newest commit
+		// in that list that modified it. git rev-list yields commits[0] as the range tip
+		// (newest); we walk i=0,1,… so the first time we see a path is its latest modifier
+		// within the checked commits—useful to treat tip vs older snapshots differently.
+		fileTipCommitInRange = make(map[string]string)
 	)
 
 	for i := 0; i < nr; i++ {
@@ -390,6 +395,12 @@ func checkCommits(commits ...string) bool {
 			break
 		}
 		for _, change := range changes {
+			// First occurrence of this path while walking from tip toward older commits:
+			// record that commit as the path's "latest in range" (same as tipCommit for paths
+			// only touched on the newest commit in the slice).
+			if _, seen := fileTipCommitInRange[change]; !seen {
+				fileTipCommitInRange[change] = commit
+			}
 			if !strings.HasPrefix(change, PoDir+"/") && change != ".github/workflows/l10n.yml" {
 				notL10nChanges = append(notL10nChanges, change)
 			} else if change == "po/TEAMS" {
@@ -429,6 +440,8 @@ func checkCommits(commits ...string) bool {
 				return ok, brk
 			}
 			for _, fileName := range l10nChanges {
+				// fileTipCommitInRange[fileName] == commit iff this iteration is the newest commit
+				// in the checked range that modified fileName (see loop over changes above).
 				fileOk, fe := checkCommitL10nFile(commit, fileName)
 				errs = append(errs, fe...)
 				if !fileOk {
