@@ -1,7 +1,6 @@
 package util
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,10 +11,16 @@ import (
 	"github.com/git-l10n/git-po-helper/repository"
 )
 
-// checkPoFilterFormat verifies PO bytes match the repository's clean filter (e.g. msgcat).
-// contentPath is the file whose bytes are read and filtered (often a temp checkout path).
+// checkPoFilterFormat checks git attributes for the filter driver and matches PO #: comments
+// to that policy: gettext-no-line-number allows #: lines but refs must be file-only (no line
+// numbers; see checkPoLocationCommentsNoLineNumbers); gettext-no-location (and unsupported
+// drivers, which fall back to gettext-no-location) require no #: lines (checkPoLocationCommentsAbsent).
+// If no filter is set, this function appends the missing-attribute guidance but does not return
+// early so the caller's "Location comments (#:)" section can still run.
+// It does not run msgcat or compare normalized bytes, and does not read filter.<driver>.clean.
 // When repoAttrRelPath is non-empty, it must be a path relative to the repository root
-// (e.g. "po/zh_CN.po") used only for git check-attr and user-facing messages; this allows
+// (e.g. "po/zh_CN.po") used for git check-attr (unless filterAttribute is injected), and for
+// user-facing messages; this allows
 // checking content outside the worktree while still applying .gitattributes for the real path.
 // When repoAttrRelPath is empty, the path for attributes is derived from contentPath under the worktree.
 //
@@ -27,14 +32,14 @@ import (
 // can materialize .gitattributes from the object store / remote as needed. When empty,
 // attributes are resolved the usual way (working tree / index), which is appropriate for
 // in-worktree checks (e.g. check-po on local files).
-func checkPoFilterFormat(contentPath, repoAttrRelPath, attrSourceCommit string) ([]string, bool) {
+//
+// filterAttribute, when non-empty after trimming, is used as the Git filter driver name
+// instead of running "git check-attr filter <path>" (for example in tests without
+// .gitattributes). When empty, the filter is read from git check-attr as usual.
+// Callers that honor --no-check-filter must not invoke this function when that flag is set
+// (see check-po.go).
+func checkPoFilterFormat(contentPath, repoAttrRelPath, attrSourceCommit, filterAttribute string) ([]string, bool) {
 	var errs []string
-	if flag.NoCheckFilter() {
-		return nil, true
-	}
-	if flag.ReportFileLocations() == flag.ReportIssueNone || flag.AllowObsoleteEntries() {
-		return nil, true
-	}
 
 	if !Exist(contentPath) {
 		errs = append(errs, fmt.Sprintf("cannot open %s: file does not exist", contentPath))
@@ -89,35 +94,46 @@ func checkPoFilterFormat(contentPath, repoAttrRelPath, attrSourceCommit string) 
 		relPath = filepath.ToSlash(relPath)
 	}
 
-	// Query git check-attr [--source=<rev>] filter <path>
-	checkAttrArgs := []string{"-C", workDir, "check-attr"}
-	if attrSourceCommit != "" {
-		checkAttrArgs = append(checkAttrArgs, "--source="+attrSourceCommit)
-	}
-	checkAttrArgs = append(checkAttrArgs, "filter", relPath)
-	cmd := exec.Command("git", checkAttrArgs...)
-	cmd.Stderr = nil
-	out, err := cmd.Output()
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("git check-attr failed for %s: %s", displayPath, err))
-		return errs, false
+	filterValue := strings.TrimSpace(filterAttribute)
+	if filterValue == "" {
+		// Query git check-attr [--source=<rev>] filter <path>
+		checkAttrArgs := []string{"-C", workDir, "check-attr"}
+		if attrSourceCommit != "" {
+			checkAttrArgs = append(checkAttrArgs, "--source="+attrSourceCommit)
+		}
+		checkAttrArgs = append(checkAttrArgs, "filter", relPath)
+		cmd := exec.Command("git", checkAttrArgs...)
+		cmd.Stderr = nil
+		out, err := cmd.Output()
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("git check-attr failed for %s: %s", displayPath, err))
+			return errs, false
+		}
+
+		// Parse: "path: filter: value"
+		line := strings.TrimSpace(string(out))
+		parts := strings.SplitN(line, ": ", 3)
+		if len(parts) < 3 {
+			errs = append(errs, fmt.Sprintf("unexpected git check-attr output: %s", line))
+			return errs, false
+		}
+		filterValue = strings.TrimSpace(parts[2])
 	}
 
-	// Parse: "path: filter: value"
-	line := strings.TrimSpace(string(out))
-	parts := strings.SplitN(line, ": ", 3)
-	if len(parts) < 3 {
-		errs = append(errs, fmt.Sprintf("unexpected git check-attr output: %s", line))
-		return errs, false
-	}
-	filterValue := strings.TrimSpace(parts[2])
-
-	if filterValue == "unspecified" || filterValue == "unset" || filterValue == "" {
+	missingFilter := filterValue == "unspecified" || filterValue == "unset" || filterValue == ""
+	if missingFilter {
 		errs = append(errs,
-			"No filter attribute set for XX.po. This will introduce location newlines into the",
-			"repository and cause repository bloat.",
+			"No Git `filter` attribute is set for *.po files on this path.",
 			"",
-			"Please configure the filter attribute for XX.po, for example:",
+			"The filter attribute describes how Git should normalize #: location comments on each",
+			"PO entry when you commit. Those comments change often as source files move; committing",
+			"their churn produces noisy diffs and inflates the repository.",
+			"",
+			"Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes",
+			"tells git-po-helper which location style you intend, so it can flag bad #: lines in",
+			"the PO (for example references that still include line numbers).",
+			"",
+			"Please configure the filter for XX.po, for example:",
 			"",
 			"    .gitattributes: *.po filter=gettext-no-location",
 			"",
@@ -125,112 +141,59 @@ func checkPoFilterFormat(contentPath, repoAttrRelPath, attrSourceCommit string) 
 			"",
 			"    https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/",
 		)
-		return errs, flag.ReportFileLocations() == flag.ReportIssueWarn
 	}
 
-	// Determine filter clean command: try git config filter.<name>.clean first
-	var cmdArgs []string
-	cleanOut, err := exec.Command("git", "-C", workDir, "config", "filter."+filterValue+".clean").Output()
-	if err != nil || len(bytes.TrimSpace(cleanOut)) == 0 {
-		errs = append(errs,
-			fmt.Sprintf("File %s has filter %q set, but the filter clean command is not configured.", displayPath, filterValue),
-			fmt.Sprintf("Run 'git config filter.%s.clean <command>' to set the filter so that location lines in the file can be filtered out.", filterValue),
-		)
+	effectiveFilter := filterValue
+	if !missingFilter && filterValue != "gettext-no-location" && filterValue != "gettext-no-line-number" {
+		if len(errs) > 0 {
+			errs = append(errs, "")
+		}
+		errs = append(errs, fmt.Sprintf(
+			"Unsupported filter attribute %q for %s; "+
+				`using "gettext-no-location" rules as fallback (PO must not contain #: location comments). `+
+				`Prefer filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes.`,
+			filterValue, displayPath))
+		effectiveFilter = "gettext-no-location"
+	}
+
+	poData, err := os.ReadFile(contentPath)
+	if err != nil {
+		if len(errs) > 0 {
+			errs = append(errs, "")
+		}
+		errs = append(errs, fmt.Sprintf("cannot read %s: %s", displayPath, err))
+		return errs, false
+	}
+	po, err := ParsePoEntries(poData)
+	if err != nil {
+		if len(errs) > 0 {
+			errs = append(errs, "")
+		}
+		errs = append(errs, fmt.Sprintf("cannot parse %s: %s", displayPath, err))
+		return errs, false
+	}
+	if effectiveFilter == "gettext-no-line-number" {
+		locErrs, locOk := checkPoLocationCommentsNoLineNumbers(po)
+		if !locOk {
+			if len(errs) > 0 {
+				errs = append(errs, "")
+			}
+			errs = append(errs, locErrs...)
+		}
 	} else {
-		cmdArgs = strings.Fields(string(bytes.TrimSpace(cleanOut)))
-		if len(cmdArgs) == 0 {
-			errs = append(errs, fmt.Sprintf("File %s has filter %q set, but the filter clean command is empty.", displayPath, filterValue))
-		}
-	}
-	// Determine filter clean command: use known mappings or git config filter.<name>.clean
-	if len(cmdArgs) == 0 {
-		switch filterValue {
-		case "gettext-no-location":
-			cmdArgs = []string{"msgcat", "--no-location", "-"}
-		case "gettext-no-line-number":
-			cmdArgs = []string{"msgcat", "--add-location=file", "-"}
-		default:
-			errs = append(errs, fmt.Sprintf("File %s has filter %q set, but the filter clean command is empty.", displayPath, filterValue))
-			return errs, false
+		locErrs, locOk := checkPoLocationCommentsAbsent(po)
+		if !locOk {
+			if len(errs) > 0 {
+				errs = append(errs, "")
+			}
+			errs = append(errs, locErrs...)
 		}
 	}
 
-	exe, err := exec.LookPath(cmdArgs[0])
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("%s not found; cannot verify file format (filter %s)", cmdArgs[0], filterValue))
-		return errs, false
+	hasErrs := len(errs) > 0
+	filterOk := !hasErrs
+	if hasErrs && flag.ReportFileLocations() == flag.ReportIssueWarn {
+		filterOk = true
 	}
-
-	original, err := os.ReadFile(contentPath)
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("cannot read %s: %s", contentPath, err))
-		return errs, false
-	}
-
-	cmd = exec.Command(exe, cmdArgs[1:]...)
-	cmd.Stdin = bytes.NewReader(original)
-	cmd.Stderr = nil
-	formatted, err := cmd.Output()
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("filter %s clean command failed for %s: %s", filterValue, displayPath, err))
-		return errs, false
-	}
-
-	if bytes.Equal(original, formatted) {
-		return nil, true
-	}
-
-	// Content differs: produce diff
-	origTmp, err := os.CreateTemp("", "git-po-helper-orig-*.po")
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("cannot create temp file: %s", err))
-		errs = append(errs, "File content does not match expected format (filter "+filterValue+")")
-		return errs, flag.ReportFileLocations() == flag.ReportIssueWarn
-	}
-	_, _ = origTmp.Write(original)
-	_ = origTmp.Close()
-	defer os.Remove(origTmp.Name())
-
-	formTmp, err := os.CreateTemp("", "git-po-helper-formatted-*.po")
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("cannot create temp file: %s", err))
-		errs = append(errs, "File content does not match expected format (filter "+filterValue+")")
-		return errs, flag.ReportFileLocations() == flag.ReportIssueWarn
-	}
-	_, _ = formTmp.Write(formatted)
-	_ = formTmp.Close()
-	defer os.Remove(formTmp.Name())
-
-	diffCmd := exec.Command("diff", "-u", origTmp.Name(), formTmp.Name())
-	diffOut, _ := diffCmd.Output()
-
-	filterCmd := strings.Join(cmdArgs, " ")
-	errs = append(errs,
-		"PO file does not match expected filter output.",
-		"",
-		"This repository uses a Git filter driver to automatically strip location",
-		fmt.Sprintf("comments from PO files on commit (filter: %s).", filterCmd),
-		"The file being committed still contains location comments, which will",
-		"cause the file to appear modified for other users who have the filter",
-		"driver configured.",
-		"",
-		"Please do one of the following:",
-		"  - Set up the Git filter driver as described in po/README.md, or",
-		"  - Run the filter manually before committing:",
-		fmt.Sprintf("      %s <XX.po >tmp.po && mv tmp.po XX.po", filterCmd),
-		"",
-		"Diff (before vs filtered):",
-		"",
-	)
-	const maxDiffLines = 10
-	diffLines := strings.Split(strings.TrimSuffix(string(diffOut), "\n"), "\n")
-	for i, line := range diffLines {
-		if i >= maxDiffLines {
-			errs = append(errs, "    ... ...")
-			break
-		}
-		errs = append(errs, "    "+line)
-	}
-
-	return errs, flag.ReportFileLocations() == flag.ReportIssueWarn
+	return errs, filterOk
 }

@@ -44,15 +44,23 @@ func checkPoLocationCommentsNoLineNumbers(po *GettextPO) ([]string, bool) {
 
 	for i, e := range po.Entries {
 		msgid := e.MsgID
+		if msgid == "" {
+			continue
+		}
+		if e.Obsolete {
+			continue
+		}
 		if len(msgid) > 30 {
 			msgid = msgid[:27] + "..."
 		}
+		hasLocationComments := false
 		entryDesc := entryDescWithLine(i+1, msgid, e.EntryLocation)
 		for _, c := range e.Comments {
 			trimmed := strings.TrimSpace(c)
 			if !strings.HasPrefix(trimmed, "#:") {
 				continue
 			}
+			hasLocationComments = true
 			content := strings.TrimPrefix(trimmed, "#:")
 			content = strings.TrimSpace(content)
 			for _, ref := range strings.Fields(content) {
@@ -62,8 +70,33 @@ func checkPoLocationCommentsNoLineNumbers(po *GettextPO) ([]string, bool) {
 				}
 			}
 		}
+		if !hasLocationComments {
+			errs = append(errs, fmt.Sprintf("%s: location comment not found (mixed --no-location and --add-location=file)", entryDesc))
+			return errs, false
+		}
 	}
 
+	return errs, true
+}
+
+// checkPoLocationCommentsAbsent reports an error if any entry has #: location comments.
+// Use when .gitattributes sets filter=gettext-no-location (PO must not carry file references).
+func checkPoLocationCommentsAbsent(po *GettextPO) ([]string, bool) {
+	var errs []string
+	for i, e := range po.Entries {
+		msgid := e.MsgID
+		if len(msgid) > 30 {
+			msgid = msgid[:27] + "..."
+		}
+		entryDesc := entryDescWithLine(i+1, msgid, e.EntryLocation)
+		for _, c := range e.Comments {
+			trimmed := strings.TrimSpace(c)
+			if strings.HasPrefix(trimmed, "#:") {
+				errs = append(errs, fmt.Sprintf("%s: location comment not allowed with gettext-no-location (use --no-location): %q", entryDesc, trimmed))
+				return errs, false
+			}
+		}
+	}
 	return errs, true
 }
 
@@ -174,7 +207,7 @@ func CheckPoFile(locale, poFile string, compareWithPot bool) bool {
 // (subject to --pot-file; use "no" to skip acquisition inside CheckWithPoFile).
 // filterRepoRelPath, when non-empty, is the path under the repo root used for git check-attr
 // (e.g. "po/zh_CN.po") while poFile may be a temp file; use "" when poFile is already in the worktree.
-// When isTipCommit is false, PO filter (.gitattributes) / msgcat mismatches are still reported
+// When isTipCommit is false, PO filter (.gitattributes) attribute errors are still reported
 // at WARNING if the filter check would have failed, but not as a failing check (ret is not
 // forced false by that section alone).
 // attrSourceCommit, when non-empty, is passed to git check-attr --source so attributes (including
@@ -229,14 +262,6 @@ func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt st
 	ReportSection("Syntax of PO header meta lines", ok, log.InfoLevel, prompt, errs...)
 	ret = ret && ok
 
-	// Check that location comments (#:) do not contain line numbers.
-	if flag.ReportFileLocations() != flag.ReportIssueNone {
-		errs, ok = checkPoLocationCommentsNoLineNumbers(po)
-		ok = ok || flag.ReportFileLocations() == flag.ReportIssueWarn
-		ReportSection("Location comments (#:)", ok, log.InfoLevel, prompt, errs...)
-		ret = ret && ok
-	}
-
 	// Compatibility checks (only when project sets MinGettextVersion): 0.15+ msgctxt/#|/#~ msgctxt, 0.16+ #~|.
 	projectName := po.GetProject()
 	cfg := GetProjectPotConfig(projectName, poFile)
@@ -253,18 +278,26 @@ func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt st
 		ret = ret && ok
 	}
 
-	// Format check: use driver return from git-check-attr to format PO file
-	errs, filterOk := checkPoFilterFormat(poFile, filterRepoRelPath, attrSourceCommit)
-	filterReportLevel := log.InfoLevel
-	if !isTipCommit && !filterOk {
-		filterReportLevel = log.WarnLevel
+	// Policy check: git check-attr filter must be a supported driver name (see checkPoFilterFormat).
+	if !flag.NoCheckFilter() {
+		errs, filterOk := checkPoFilterFormat(poFile, filterRepoRelPath, attrSourceCommit, "")
+		filterReportLevel := log.InfoLevel
+
+		ok = filterOk
+
+		if flag.ReportFileLocations() == flag.ReportIssueNone {
+			filterReportLevel = log.InfoLevel
+			ok = true
+		} else if flag.ReportFileLocations() == flag.ReportIssueWarn {
+			filterReportLevel = log.WarnLevel
+			ok = true
+		} else if !isTipCommit {
+			filterReportLevel = log.WarnLevel
+			ok = true
+		}
+		ReportSection("PO filter (.gitattributes)", ok, filterReportLevel, prompt, errs...)
+		ret = ret && ok
 	}
-	ok = filterOk
-	if !isTipCommit {
-		ok = true
-	}
-	ReportSection("PO filter (.gitattributes)", ok, filterReportLevel, prompt, errs...)
-	ret = ret && ok
 
 	// Check possible typos in a .po file (Git project only).
 	if strings.EqualFold(projectName, "Git") {

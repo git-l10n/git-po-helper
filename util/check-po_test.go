@@ -87,7 +87,8 @@ func TestCheckPoLocationCommentsNoLineNumbers(t *testing.T) {
 			entries: []GettextEntry{
 				{MsgID: "Hello", MsgStr: []string{"你好"}, Comments: []string{"#. extracted comment"}},
 			},
-			wantErr: false,
+			wantErr: true,
+			wantMsg: "location comment not found",
 		},
 		{
 			name: "file-only location (no line number)",

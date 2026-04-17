@@ -12,9 +12,6 @@ import (
 )
 
 func TestCheckPoFilterFormat_repoAttrPathWithTempContent(t *testing.T) {
-	if _, err := exec.LookPath("msgcat"); err != nil {
-		t.Skip("msgcat not in PATH")
-	}
 	tmpDir := t.TempDir()
 	gitEnv := gitTestEnv()
 
@@ -61,10 +58,7 @@ msgstr "Hi"
 	if err := os.WriteFile(repoPo, []byte(poBody), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(tmpDir, ".gitattributes"), []byte("po/*.po filter=gettext-no-location\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	runGit("add", "po/test.po", ".gitattributes")
+	runGit("add", "po/test.po")
 	runGit("commit", "--no-verify", "-m", "init")
 
 	outside, err := os.CreateTemp("", "git-po-helper-filter-*.po")
@@ -82,21 +76,14 @@ msgstr "Hi"
 	viper.Set("check--report-file-locations", "error")
 	defer viper.Set("check--report-file-locations", "")
 
-	errs, ok := checkPoFilterFormat(outsidePath, "po/test.po", "")
+	// gettext-no-location disallows any #: line in the PO (injected filter; no .gitattributes).
+	errs, ok := checkPoFilterFormat(outsidePath, "po/test.po", "", "gettext-no-location")
 	if ok || len(errs) == 0 {
-		t.Fatalf("expected filter format failure, ok=%v errs=%v", ok, errs)
+		t.Fatalf("expected failure for #: under gettext-no-location, ok=%v errs=%v", ok, errs)
 	}
 	joined := strings.Join(errs, "\n")
-	if !strings.Contains(joined, "does not match expected filter output") ||
-		!strings.Contains(joined, "msgcat --no-location -") {
+	if !strings.Contains(joined, "gettext-no-location") || !strings.Contains(joined, "location comment not allowed") {
 		t.Fatalf("unexpected messages: %s", joined)
-	}
-
-	viper.Set("check-po--no-check-filter", true)
-	defer viper.Set("check-po--no-check-filter", false)
-	errs, ok = checkPoFilterFormat(outsidePath, "po/test.po", "")
-	if !ok || len(errs) > 0 {
-		t.Fatalf("with --no-check-filter expected ok, got ok=%v errs=%v", ok, errs)
 	}
 }
 
@@ -134,18 +121,9 @@ msgstr ""
 	viper.Set("check--report-file-locations", "error")
 	defer viper.Set("check--report-file-locations", "")
 
-	errs, ok := checkPoFilterFormat(outside, "", "")
+	errs, ok := checkPoFilterFormat(outside, "", "", "")
 	if !ok || len(errs) > 0 {
 		t.Fatalf("expected skip (ok=true, no errs), ok=%v errs=%v", ok, errs)
-	}
-}
-
-func TestCheckPoFilterFormat_noCheckFilterSkipsBeforeExist(t *testing.T) {
-	viper.Set("check--no-check-filter", true)
-	defer viper.Set("check--no-check-filter", false)
-	errs, ok := checkPoFilterFormat("/nonexistent/path/does-not-exist.po", "", "")
-	if !ok || len(errs) > 0 {
-		t.Fatalf("NoCheckFilter should skip entire check, ok=%v errs=%v", ok, errs)
 	}
 }
 
@@ -176,7 +154,7 @@ func TestCheckPoFilterFormat_invalidRepoAttrPath(t *testing.T) {
 	viper.Set("check--report-file-locations", "error")
 	defer viper.Set("check--report-file-locations", "")
 
-	_, ok := checkPoFilterFormat(poPath, "../outside.po", "")
+	_, ok := checkPoFilterFormat(poPath, "../outside.po", "", "")
 	if ok {
 		t.Fatal("expected failure for attr path escaping repo")
 	}
@@ -185,9 +163,6 @@ func TestCheckPoFilterFormat_invalidRepoAttrPath(t *testing.T) {
 // TestCheckPoFilterFormat_attrSourceCommit checks git check-attr --source=<rev> so attribute
 // resolution follows the given revision (needed for bare partial clones; see checkPoFilterFormat).
 func TestCheckPoFilterFormat_attrSourceCommit(t *testing.T) {
-	if _, err := exec.LookPath("msgcat"); err != nil {
-		t.Skip("msgcat not in PATH")
-	}
 	tmpDir := t.TempDir()
 	gitEnv := gitTestEnv()
 
@@ -263,19 +238,19 @@ msgstr "Hi"
 	viper.Set("check--report-file-locations", "error")
 	defer viper.Set("check--report-file-locations", "")
 
-	errs, ok := checkPoFilterFormat(repoPo, "po/test.po", commitWithFilter)
+	errs, ok := checkPoFilterFormat(repoPo, "po/test.po", commitWithFilter, "")
 	if ok || len(errs) == 0 {
-		t.Fatalf("expected filter format failure at old rev, ok=%v errs=%v", ok, errs)
+		t.Fatalf("expected failure (#: under gettext-no-location at old rev), ok=%v errs=%v", ok, errs)
 	}
-	if !strings.Contains(strings.Join(errs, "\n"), "does not match expected filter output") {
-		t.Fatalf("expected filter mismatch for rev with .gitattributes: %v", errs)
+	if !strings.Contains(strings.Join(errs, "\n"), "location comment not allowed") {
+		t.Fatalf("expected no-location message: %v", errs)
 	}
 
-	errs, ok = checkPoFilterFormat(repoPo, "po/test.po", commitNoAttr)
+	errs, ok = checkPoFilterFormat(repoPo, "po/test.po", commitNoAttr, "")
 	if ok || len(errs) == 0 {
-		t.Fatalf("expected failure (no filter) at new rev, ok=%v errs=%v", ok, errs)
+		t.Fatalf("expected failure (no filter policy) at new rev, ok=%v errs=%v", ok, errs)
 	}
-	if !strings.Contains(strings.Join(errs, "\n"), "No filter attribute set") {
+	if !strings.Contains(strings.Join(errs, "\n"), "No Git `filter` attribute") {
 		t.Fatalf("expected missing-filter message for rev without .gitattributes: %v", errs)
 	}
 }
