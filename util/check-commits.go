@@ -76,6 +76,85 @@ func getCommitChanges(commit string) ([]string, bool) {
 	return changes, true
 }
 
+// checkCommitNotL10nChanges reports changes outside po/ and whether to stop processing
+// further commits (brk). It only returns slices; it does not report or log.
+func checkCommitNotL10nChanges(commit string, notL10nChanges, l10nChanges []string) (errs, warns []string, brk bool) {
+	if len(notL10nChanges) == 0 {
+		return nil, nil, false
+	}
+	msg := bytes.NewBuffer(nil)
+	msg.WriteString(fmt.Sprintf("commit %s: found changes beyond \"%s/\" directory:\n",
+		AbbrevCommit(commit), PoDir))
+	for _, change := range notL10nChanges {
+		msg.WriteString("\t\t")
+		msg.WriteString(change)
+		msg.WriteString("\n")
+	}
+	if len(l10nChanges) == 0 && flag.GitHubActionEvent() != "" {
+		brk = true // not l10n commit, and stop parsing other commits.
+		switch flag.GitHubActionEvent() {
+		case "push":
+			warns = append(warns,
+				msg.String(),
+				fmt.Sprintf(`commit %s: break because this commit is not for git-l10n`,
+					AbbrevCommit(commit)))
+		case "pull_request":
+			fallthrough
+		case "pull_request_target":
+			fallthrough
+		default:
+			errs = append(errs,
+				msg.String(),
+				fmt.Sprintf(`commit %s: break because this commit is not for git-l10n`,
+					AbbrevCommit(commit)))
+		}
+		return errs, warns, true
+	}
+	errs = append(errs, msg.String())
+	return errs, warns, false
+}
+
+// checkCommitL10nFile checks one path under po/ (TEAMS or *.po) at the given commit.
+// ok is false when PO checks fail; errs holds checkout or TEAMS parse errors.
+func checkCommitL10nFile(commit, fileName string) (ok bool, errs []string) {
+	ok = true
+	tmpFile := FileRevision{
+		Revision: commit,
+		File:     fileName,
+	}
+	if err := CheckoutTmpfile(&tmpFile); err != nil || tmpFile.Tmpfile == "" {
+		errs = append(errs,
+			fmt.Sprintf("commit %s: fail to checkout %s of revision %s: %s",
+				AbbrevCommit(commit), tmpFile.File, tmpFile.Revision, err))
+		return ok, errs
+	}
+	defer os.Remove(tmpFile.Tmpfile)
+
+	if fileName == "po/TEAMS" {
+		if _, errors := ParseTeams(tmpFile.Tmpfile); len(errors) > 0 {
+			for _, e := range errors {
+				errs = append(errs,
+					fmt.Sprintf("commit %s: %s",
+						AbbrevCommit(commit), e))
+			}
+		}
+		return ok, errs
+	}
+	locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
+	prompt := fmt.Sprintf("[%s@%s]",
+		locale+".po",
+		AbbrevCommit(commit))
+	// Do not compare with POT template for tmpFile, because:
+	// 1. we only know path of tmpfile, not the real PO file, fail to build POT,
+	// 2. the temporary PO file is translated based on a history POT template.
+	if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, false, prompt, fileName) {
+		// Error errs in CheckPoFileWithPrompt() have been output already,
+		// mark ok as false
+		ok = false
+	}
+	return ok, errs
+}
+
 func checkCommitChanges(commit string, notL10nChanges, l10nChanges []string) (ok, brk bool) {
 	var (
 		errs  []string
@@ -98,72 +177,20 @@ func checkCommitChanges(commit string, notL10nChanges, l10nChanges []string) (ok
 		}
 	}()
 
-	if len(notL10nChanges) > 0 {
-		msg := bytes.NewBuffer(nil)
-		msg.WriteString(fmt.Sprintf("commit %s: found changes beyond \"%s/\" directory:\n",
-			AbbrevCommit(commit), PoDir))
-		for _, change := range notL10nChanges {
-			msg.WriteString("\t\t")
-			msg.WriteString(change)
-			msg.WriteString("\n")
-		}
-		if len(l10nChanges) == 0 && flag.GitHubActionEvent() != "" {
-			brk = true // not l10n commit, and stop parsing other commits.
-			switch flag.GitHubActionEvent() {
-			case "push":
-				warns = append(warns,
-					msg.String(),
-					fmt.Sprintf(`commit %s: break because this commit is not for git-l10n`,
-						AbbrevCommit(commit)))
-			case "pull_request":
-				fallthrough
-			case "pull_request_target":
-				fallthrough
-			default:
-				errs = append(errs,
-					msg.String(),
-					fmt.Sprintf(`commit %s: break because this commit is not for git-l10n`,
-						AbbrevCommit(commit)))
-			}
-			return
-		}
-		errs = append(errs, msg.String())
+	nErrs, nWarns, nBrk := checkCommitNotL10nChanges(commit, notL10nChanges, l10nChanges)
+	errs = append(errs, nErrs...)
+	warns = append(warns, nWarns...)
+	brk = nBrk
+	if brk {
+		return
 	}
 
 	for _, fileName := range l10nChanges {
-		tmpFile := FileRevision{
-			Revision: commit,
-			File:     fileName,
+		fileOk, fe := checkCommitL10nFile(commit, fileName)
+		errs = append(errs, fe...)
+		if !fileOk {
+			ok = false
 		}
-		if err := CheckoutTmpfile(&tmpFile); err != nil || tmpFile.Tmpfile == "" {
-			errs = append(errs,
-				fmt.Sprintf("commit %s: fail to checkout %s of revision %s: %s",
-					AbbrevCommit(commit), tmpFile.File, tmpFile.Revision, err))
-			continue
-		}
-		if fileName == "po/TEAMS" {
-			if _, errors := ParseTeams(tmpFile.Tmpfile); len(errors) > 0 {
-				for _, error := range errors {
-					errs = append(errs,
-						fmt.Sprintf("commit %s: %s",
-							AbbrevCommit(commit), error))
-				}
-			}
-		} else {
-			locale := strings.TrimSuffix(filepath.Base(fileName), ".po")
-			prompt := fmt.Sprintf("[%s@%s]",
-				locale+".po",
-				AbbrevCommit(commit))
-			// Do not compare with POT template for tmpFile, because:
-			// 1. we only know path of tmpfile, not the real PO file, fail to build POT,
-			// 2. the temporary PO file is translated based on a history POT template.
-			if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, false, prompt, fileName) {
-				// Error errs in CheckPoFileWithPrompt() have been output already,
-				// mark ok as false
-				ok = false
-			}
-		}
-		os.Remove(tmpFile.Tmpfile)
 	}
 	return
 }
