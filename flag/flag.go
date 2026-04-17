@@ -114,6 +114,14 @@ func Core() bool {
 	return viper.GetBool("check--core") || viper.GetBool("check-po--core")
 }
 
+// NoCheckFilter returns true when --no-check-filter is set (check-po / check-commits),
+// skipping PO .gitattributes filter and msgcat format verification.
+func NoCheckFilter() bool {
+	return viper.GetBool("check--no-check-filter") ||
+		viper.GetBool("check-po--no-check-filter") ||
+		viper.GetBool("check-commits--no-check-filter")
+}
+
 // NoSpecialGettextVersions returns option "--no-special-gettext-versions".
 func NoSpecialGettextVersions() bool {
 	return viper.GetBool("no-special-gettext-versions")

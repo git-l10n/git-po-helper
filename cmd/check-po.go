@@ -31,9 +31,13 @@ func (v *checkPoCommand) Command() *cobra.Command {
 	v.cmd.Flags().String("report-file-locations",
 		"",
 		"way to report file-location issues (none, warn, error)")
+	v.cmd.Flags().Bool("no-check-filter",
+		false,
+		"skip PO .gitattributes filter check and msgcat format comparison")
 	_ = viper.BindPFlag("check-po--core", v.cmd.Flags().Lookup("core"))
 	_ = viper.BindPFlag("check-po--report-typos", v.cmd.Flags().Lookup("report-typos"))
 	_ = viper.BindPFlag("check-po--report-file-locations", v.cmd.Flags().Lookup("report-file-locations"))
+	_ = viper.BindPFlag("check-po--no-check-filter", v.cmd.Flags().Lookup("no-check-filter"))
 
 	return v.cmd
 }

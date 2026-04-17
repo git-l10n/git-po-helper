@@ -166,13 +166,15 @@ func checkPoNoObsoleteEntries(po *GettextPO) ([]string, bool) {
 // CheckPoFile checks syntax of "po/xx.po".
 // When compareWithPot is true, also checks incomplete translations against the POT template.
 func CheckPoFile(locale, poFile string, compareWithPot bool) bool {
-	return CheckPoFileWithPrompt(locale, poFile, compareWithPot, "")
+	return CheckPoFileWithPrompt(locale, poFile, compareWithPot, "", "")
 }
 
 // CheckPoFileWithPrompt checks syntax of "po/xx.po", and use specific prompt.
 // When compareWithPot is true, also checks incomplete translations against the POT template
 // (subject to --pot-file; use "no" to skip acquisition inside CheckWithPoFile).
-func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt string) bool {
+// filterRepoRelPath, when non-empty, is the path under the repo root used for git check-attr
+// (e.g. "po/zh_CN.po") while poFile may be a temp file; use "" when poFile is already in the worktree.
+func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt string, filterRepoRelPath string) bool {
 	var (
 		ret  = true
 		ok   bool
@@ -246,7 +248,7 @@ func CheckPoFileWithPrompt(locale, poFile string, compareWithPot bool, prompt st
 	}
 
 	// Format check: use driver return from git-check-attr to format PO file
-	errs, ok = checkPoFilterFormat(poFile)
+	errs, ok = checkPoFilterFormat(poFile, filterRepoRelPath)
 	ReportSection("PO filter (.gitattributes)", ok, log.InfoLevel, prompt, errs...)
 	ret = ret && ok
 

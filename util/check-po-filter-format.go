@@ -12,14 +12,23 @@ import (
 	"github.com/git-l10n/git-po-helper/repository"
 )
 
-func checkPoFilterFormat(poFile string) ([]string, bool) {
+// checkPoFilterFormat verifies PO bytes match the repository's clean filter (e.g. msgcat).
+// contentPath is the file whose bytes are read and filtered (often a temp checkout path).
+// When repoAttrRelPath is non-empty, it must be a path relative to the repository root
+// (e.g. "po/zh_CN.po") used only for git check-attr and user-facing messages; this allows
+// checking content outside the worktree while still applying .gitattributes for the real path.
+// When repoAttrRelPath is empty, the path for attributes is derived from contentPath under the worktree.
+func checkPoFilterFormat(contentPath, repoAttrRelPath string) ([]string, bool) {
 	var errs []string
+	if flag.NoCheckFilter() {
+		return nil, true
+	}
 	if flag.ReportFileLocations() == flag.ReportIssueNone || flag.AllowObsoleteEntries() {
 		return nil, true
 	}
 
-	if !Exist(poFile) {
-		errs = append(errs, fmt.Sprintf("cannot open %s: file does not exist", poFile))
+	if !Exist(contentPath) {
+		errs = append(errs, fmt.Sprintf("cannot open %s: file does not exist", contentPath))
 		return errs, false
 	}
 
@@ -28,24 +37,55 @@ func checkPoFilterFormat(poFile string) ([]string, bool) {
 	}
 
 	workDir := repository.WorkDir()
-	absPath, err := filepath.Abs(poFile)
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("cannot resolve path %s: %s", poFile, err))
-		return errs, false
+	displayPath := contentPath
+	if repoAttrRelPath != "" {
+		displayPath = repoAttrRelPath
 	}
-	relPath, err := filepath.Rel(workDir, absPath)
-	if err != nil || strings.HasPrefix(relPath, "..") {
-		// File is outside repo (e.g. temp file from check-commits); skip filter check
-		return nil, true
+
+	var relPath string
+	if repoAttrRelPath != "" {
+		if filepath.IsAbs(repoAttrRelPath) {
+			errs = append(errs, fmt.Sprintf("filter attr path must be relative to repository: %s", repoAttrRelPath))
+			return errs, false
+		}
+		clean := filepath.Clean(filepath.FromSlash(filepath.ToSlash(repoAttrRelPath)))
+		joined := filepath.Join(workDir, clean)
+		absJoined, err := filepath.Abs(joined)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("cannot resolve filter attr path %q: %s", repoAttrRelPath, err))
+			return errs, false
+		}
+		absWork, err := filepath.Abs(workDir)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("cannot resolve work tree: %s", err))
+			return errs, false
+		}
+		rel, err := filepath.Rel(absWork, absJoined)
+		if err != nil || strings.HasPrefix(rel, "..") {
+			errs = append(errs, fmt.Sprintf("filter attr path escapes repository: %s", repoAttrRelPath))
+			return errs, false
+		}
+		relPath = filepath.ToSlash(rel)
+	} else {
+		absPath, err := filepath.Abs(contentPath)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("cannot resolve path %s: %s", contentPath, err))
+			return errs, false
+		}
+		relPath, err = filepath.Rel(workDir, absPath)
+		if err != nil || strings.HasPrefix(relPath, "..") {
+			// File is outside repo and no logical path given; skip filter check
+			return nil, true
+		}
+		relPath = filepath.ToSlash(relPath)
 	}
-	relPath = filepath.ToSlash(relPath)
 
 	// Query git check-attr filter <path>
 	cmd := exec.Command("git", "-C", workDir, "check-attr", "filter", relPath)
 	cmd.Stderr = nil
 	out, err := cmd.Output()
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("git check-attr failed for %s: %s", poFile, err))
+		errs = append(errs, fmt.Sprintf("git check-attr failed for %s: %s", displayPath, err))
 		return errs, false
 	}
 
@@ -79,13 +119,13 @@ func checkPoFilterFormat(poFile string) ([]string, bool) {
 	cleanOut, err := exec.Command("git", "-C", workDir, "config", "filter."+filterValue+".clean").Output()
 	if err != nil || len(bytes.TrimSpace(cleanOut)) == 0 {
 		errs = append(errs,
-			fmt.Sprintf("File %s has filter %q set, but the filter clean command is not configured.", poFile, filterValue),
+			fmt.Sprintf("File %s has filter %q set, but the filter clean command is not configured.", displayPath, filterValue),
 			fmt.Sprintf("Run 'git config filter.%s.clean <command>' to set the filter so that location lines in the file can be filtered out.", filterValue),
 		)
 	} else {
 		cmdArgs = strings.Fields(string(bytes.TrimSpace(cleanOut)))
 		if len(cmdArgs) == 0 {
-			errs = append(errs, fmt.Sprintf("File %s has filter %q set, but the filter clean command is empty.", poFile, filterValue))
+			errs = append(errs, fmt.Sprintf("File %s has filter %q set, but the filter clean command is empty.", displayPath, filterValue))
 		}
 	}
 	// Determine filter clean command: use known mappings or git config filter.<name>.clean
@@ -96,7 +136,7 @@ func checkPoFilterFormat(poFile string) ([]string, bool) {
 		case "gettext-no-line-number":
 			cmdArgs = []string{"msgcat", "--add-location=file", "-"}
 		default:
-			errs = append(errs, fmt.Sprintf("File %s has filter %q set, but the filter clean command is empty.", poFile, filterValue))
+			errs = append(errs, fmt.Sprintf("File %s has filter %q set, but the filter clean command is empty.", displayPath, filterValue))
 			return errs, false
 		}
 	}
@@ -107,9 +147,9 @@ func checkPoFilterFormat(poFile string) ([]string, bool) {
 		return errs, false
 	}
 
-	original, err := os.ReadFile(poFile)
+	original, err := os.ReadFile(contentPath)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("cannot read %s: %s", poFile, err))
+		errs = append(errs, fmt.Sprintf("cannot read %s: %s", contentPath, err))
 		return errs, false
 	}
 
@@ -118,7 +158,7 @@ func checkPoFilterFormat(poFile string) ([]string, bool) {
 	cmd.Stderr = nil
 	formatted, err := cmd.Output()
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("filter %s clean command failed for %s: %s", filterValue, poFile, err))
+		errs = append(errs, fmt.Sprintf("filter %s clean command failed for %s: %s", filterValue, displayPath, err))
 		return errs, false
 	}
 

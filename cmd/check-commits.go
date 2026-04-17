@@ -35,10 +35,14 @@ func (v *checkCommitsCommand) Command() *cobra.Command {
 	v.cmd.Flags().String("report-file-locations",
 		"",
 		"way to report file-location issues (none, warn, error)")
+	v.cmd.Flags().Bool("no-check-filter",
+		false,
+		"skip PO .gitattributes filter check and msgcat format comparison")
 	_ = viper.BindPFlag("check-commits--no-gpg", v.cmd.Flags().Lookup("no-gpg"))
 	_ = viper.BindPFlag("check-commits--force", v.cmd.Flags().Lookup("force"))
 	_ = viper.BindPFlag("check-commits--report-typos", v.cmd.Flags().Lookup("report-typos"))
 	_ = viper.BindPFlag("check-commits--report-file-locations", v.cmd.Flags().Lookup("report-file-locations"))
+	_ = viper.BindPFlag("check-commits--no-check-filter", v.cmd.Flags().Lookup("no-check-filter"))
 	return v.cmd
 }
 

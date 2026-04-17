@@ -54,13 +54,24 @@ test_expect_success "create po/zh_CN with typos" '
 '
 
 test_expect_success "check-commits show typos" '
-	git -C workdir $HELPER \
+	test_must_fail git -C workdir $HELPER \
 		check-commits $POT_NO v1.. >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 
 	cat >expect <<-\EOF &&
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po@rev] 2 translated messages.
+	❌ PO filter (.gitattributes)
+	 ERROR [zh_CN.po@rev] No filter attribute set for XX.po. This will introduce location newlines into the
+	 ERROR [zh_CN.po@rev] repository and cause repository bloat.
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] Please configure the filter attribute for XX.po, for example:
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] .gitattributes: *.po filter=gettext-no-location
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] See:
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
 	⚠️ msgid/msgstr pattern check
 	 WARNING [zh_CN.po@rev] mismatched patterns: $command, $res
 	 WARNING [zh_CN.po@rev] >> msgid: exit code $res from $command is < 0 or >= 128
@@ -72,7 +83,8 @@ test_expect_success "check-commits show typos" '
 	 WARNING [zh_CN.po@rev]
 	⚠️ Author and committer
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-	INFO: checking commits: 1 passed.
+	INFO: checking commits: 0 passed, 1 failed.
+	ERROR: check-commits command failed
 	EOF
 
 	test_cmp expect actual
@@ -86,6 +98,17 @@ test_expect_success "check-commits show typos (--typos=error)" '
 	cat >expect <<-\EOF &&
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po@rev] 2 translated messages.
+	❌ PO filter (.gitattributes)
+	 ERROR [zh_CN.po@rev] No filter attribute set for XX.po. This will introduce location newlines into the
+	 ERROR [zh_CN.po@rev] repository and cause repository bloat.
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] Please configure the filter attribute for XX.po, for example:
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] .gitattributes: *.po filter=gettext-no-location
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] See:
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
 	❌ msgid/msgstr pattern check
 	 ERROR [zh_CN.po@rev] mismatched patterns: $command, $res
 	 ERROR [zh_CN.po@rev] >> msgid: exit code $res from $command is < 0 or >= 128
@@ -127,6 +150,17 @@ test_expect_success "check-commits show typos and TEAMS file" '
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po@rev] 2 translated messages.
+	❌ PO filter (.gitattributes)
+	 ERROR [zh_CN.po@rev] No filter attribute set for XX.po. This will introduce location newlines into the
+	 ERROR [zh_CN.po@rev] repository and cause repository bloat.
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] Please configure the filter attribute for XX.po, for example:
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] .gitattributes: *.po filter=gettext-no-location
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] See:
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
 	⚠️ msgid/msgstr pattern check
 	 WARNING [zh_CN.po@rev] mismatched patterns: $command, $res
 	 WARNING [zh_CN.po@rev] >> msgid: exit code $res from $command is < 0 or >= 128
@@ -138,7 +172,7 @@ test_expect_success "check-commits show typos and TEAMS file" '
 	 WARNING [zh_CN.po@rev]
 	⚠️ Author and committer
 	 WARNING commit <OID>: author (A U Thor <author@example.com>) and committer (C O Mitter <committer@example.com>) are different
-	INFO: checking commits: 1 passed, 1 failed.
+	INFO: checking commits: 0 passed, 2 failed.
 	ERROR: check-commits command failed
 	EOF
 

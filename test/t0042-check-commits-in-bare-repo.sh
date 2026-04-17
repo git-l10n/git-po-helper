@@ -73,7 +73,7 @@ INFO: checking commits: 1 passed.
 EOF
 
 test_expect_success "check-commits show typos" '
-	git -C repo.git $HELPER check-commits $POT_NO v1..v2 >out 2>&1 &&
+	git -C repo.git $HELPER check-commits $POT_NO --no-check-filter v1..v2 >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -98,7 +98,7 @@ EOF
 
 test_expect_success "check-commits show typos (--typos=error)" '
 	test_must_fail git -C repo.git $HELPER \
-		check-commits $POT_NO --report-typos=error v1..v2 >out 2>&1 &&
+		check-commits $POT_NO --no-check-filter --report-typos=error v1..v2 >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '
@@ -139,7 +139,7 @@ ERROR: check-commits command failed
 EOF
 
 test_expect_success "check-commits show typos and TEAMS file" '
-	test_must_fail git -C repo.git $HELPER check-commits $POT_NO v1..v3 >out 2>&1 &&
+	test_must_fail git -C repo.git $HELPER check-commits $POT_NO --no-check-filter v1..v3 >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
 	test_cmp expect actual
 '

@@ -157,7 +157,7 @@ func checkCommitChanges(commit string, notL10nChanges, l10nChanges []string) (ok
 			// Do not compare with POT template for tmpFile, because:
 			// 1. we only know path of tmpfile, not the real PO file, fail to build POT,
 			// 2. the temporary PO file is translated based on a history POT template.
-			if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, false, prompt) {
+			if !CheckPoFileWithPrompt(locale, tmpFile.Tmpfile, false, prompt, fileName) {
 				// Error errs in CheckPoFileWithPrompt() have been output already,
 				// mark ok as false
 				ok = false
