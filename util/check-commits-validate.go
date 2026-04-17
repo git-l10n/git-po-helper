@@ -11,9 +11,25 @@ import (
 	"unicode/utf8"
 
 	"github.com/git-l10n/git-po-helper/flag"
+	"github.com/mattn/go-runewidth"
 	"github.com/qiniu/iconv"
 	log "github.com/sirupsen/logrus"
 )
+
+// commitMsgRunewidth applies the Git 72-column rule using non-East-Asian cell
+// widths so results do not depend on the builder's locale (RUNEWIDTH_EASTASIAN
+// / CJK locale would otherwise count ambiguous punctuation as width 2).
+var commitMsgRunewidth = &runewidth.Condition{
+	EastAsianWidth:     false,
+	StrictEmojiNeutral: true,
+}
+
+// commitMsgDisplayWidth returns the visual width of s for commit-message
+// limits, not len(s) in bytes. Uses a fixed width condition so UTF-8
+// punctuation such as U+201C counts as one column regardless of locale.
+func commitMsgDisplayWidth(s string) int {
+	return commitMsgRunewidth.StringWidth(s)
+}
 
 func getDuration(s int64) string {
 	seconds := fmt.Sprintf("%ds", s)
@@ -177,7 +193,7 @@ func (v *commitLog) checkSubject() bool {
 	}
 
 	subject = v.Msg[0]
-	width = len(subject)
+	width = commitMsgDisplayWidth(subject)
 
 	if v.isMergeCommit() {
 		if !strings.HasPrefix(subject, "Merge ") {
@@ -351,7 +367,7 @@ func (v *commitLog) checkBody() bool {
 
 	// Scan width of lines.
 	for i := bodyStart; i < bodyEnd; i++ {
-		width = len(v.Msg[i])
+		width = commitMsgDisplayWidth(v.Msg[i])
 		if width > bodyWidthHardLimit {
 			errs = append(errs,
 				fmt.Sprintf(`commit %s: line #%d ("%s") is too long: %d > %d`,
