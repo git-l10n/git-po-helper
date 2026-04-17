@@ -2,6 +2,13 @@
 
 Changes of git-po-helper.
 
+## 0.8.4 (2026-04-17)
+
+### check-commits and check-po
+
+* feat(check-po): improve PO filter mismatch errors and trim diff (README-oriented guidance, embedded clean command, 10-line cap)
+* feat(util): use `git check-attr --source` with the inspected commit for PO filter checks (bare promisor partial clones); extend `CheckPoFileWithPrompt` with `attrSourceCommit`
+
 ## 0.8.3 (2026-04-17)
 
 ### check-commits and check-po
