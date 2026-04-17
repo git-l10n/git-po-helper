@@ -2,6 +2,31 @@
 
 Changes of git-po-helper.
 
+## 0.8.3 (2026-04-17)
+
+### check-commits and check-po
+
+* feat(check-commits): run PO filter check on checkout blobs (repo-relative path); add `--no-check-filter` for check-po and check-commits
+* feat(check-commits): record newest-in-range commit per changed path for tip vs history behavior
+* feat(util): for non-tip revisions in history, PO filter mismatches warn only and do not fail the overall check
+* fix(util): measure subject/body 72-column limit with display width (`go-runewidth`), not UTF-8 byte length
+* fix(check-commits): include `git rev-list` stderr in errors for easier debugging of bad ranges/pathspecs
+
+### Agent run / agent-test
+
+* feat(agent-run): review report lists low-score issues with description, msgid, and suggested msgstr
+* feat(agent-run): `-p` / `--prompt` with no subcommand runs the agent once (direct mode); hoist `--agent` to parent command
+* feat(agent-test): hoist `--agent` / `--runs` to persistent flags; add `-p` shorthand and direct multi-round mode without a subcommand
+
+### Configuration
+
+* fix(config): default embedded `agent-test.runs` to 3 so it matches CLI help and `ResolveAgentTestRuns`
+
+### Dictionaries
+
+* dict(bg): update smudge table for git 2.50.0
+* dict(sv): update smudge table for git 2.54
+
 ## 0.8.2 (2026-03-31)
 
 ### Agent review/translate workflow
