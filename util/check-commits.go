@@ -155,46 +155,6 @@ func checkCommitL10nFile(commit, fileName string) (ok bool, errs []string) {
 	return ok, errs
 }
 
-func checkCommitChanges(commit string, notL10nChanges, l10nChanges []string) (ok, brk bool) {
-	var (
-		errs  []string
-		warns []string
-	)
-
-	// commit is OK, if no error is found.
-	ok = true
-	// If brk is true, will stop parsing other commits.
-	brk = false
-
-	defer func() {
-		const title = "Changes outside po/"
-		if len(warns) > 0 {
-			ReportSection(title, true, log.WarnLevel, "", warns...)
-		}
-		if len(errs) > 0 {
-			ok = false
-			ReportSection(title, false, log.InfoLevel, "", errs...)
-		}
-	}()
-
-	nErrs, nWarns, nBrk := checkCommitNotL10nChanges(commit, notL10nChanges, l10nChanges)
-	errs = append(errs, nErrs...)
-	warns = append(warns, nWarns...)
-	brk = nBrk
-	if brk {
-		return
-	}
-
-	for _, fileName := range l10nChanges {
-		fileOk, fe := checkCommitL10nFile(commit, fileName)
-		errs = append(errs, fe...)
-		if !fileOk {
-			ok = false
-		}
-	}
-	return
-}
-
 func fetchBlobsInPartialClone(args []string) error {
 	var (
 		maxCommits int
@@ -440,7 +400,43 @@ func checkCommits(commits ...string) bool {
 			}
 		}
 
-		ok, brk = checkCommitChanges(commit, notL10nChanges, l10nChanges)
+		// Per-commit file checks (inlined from former checkCommitChanges) so callers can
+		// extend logic, e.g. comparing the same po path across commits. A closure keeps
+		// defer scoped to this commit instead of the whole checkCommits loop.
+		ok, brk = func() (ok bool, brk bool) {
+			var (
+				errs  []string
+				warns []string
+			)
+			ok = true
+			brk = false
+			defer func() {
+				const title = "Changes outside po/"
+				if len(warns) > 0 {
+					ReportSection(title, true, log.WarnLevel, "", warns...)
+				}
+				if len(errs) > 0 {
+					ok = false
+					ReportSection(title, false, log.InfoLevel, "", errs...)
+				}
+			}()
+
+			nErrs, nWarns, nBrk := checkCommitNotL10nChanges(commit, notL10nChanges, l10nChanges)
+			errs = append(errs, nErrs...)
+			warns = append(warns, nWarns...)
+			brk = nBrk
+			if brk {
+				return ok, brk
+			}
+			for _, fileName := range l10nChanges {
+				fileOk, fe := checkCommitL10nFile(commit, fileName)
+				errs = append(errs, fe...)
+				if !fileOk {
+					ok = false
+				}
+			}
+			return ok, brk
+		}()
 
 		if !brk {
 			ok = checkCommitLog(commit) && ok
