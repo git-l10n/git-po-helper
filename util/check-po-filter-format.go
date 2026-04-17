@@ -192,15 +192,29 @@ func checkPoFilterFormat(contentPath, repoAttrRelPath string) ([]string, bool) {
 
 	filterCmd := strings.Join(cmdArgs, " ")
 	errs = append(errs,
-		fmt.Sprintf("Filter command for po file: %s", filterCmd),
-		"File content differs before and after filtering, please run the",
-		"filter on the file and commit again.",
+		"PO file does not match expected filter output.",
+		"",
+		"This repository uses a Git filter driver to automatically strip location",
+		fmt.Sprintf("comments from PO files on commit (filter: %s).", filterCmd),
+		"The file being committed still contains location comments, which will",
+		"cause the file to appear modified for other users who have the filter",
+		"driver configured.",
+		"",
+		"Please do one of the following:",
+		"  - Set up the Git filter driver as described in po/README.md, or",
+		"  - Run the filter manually before committing:",
+		fmt.Sprintf("      %s <XX.po >tmp.po && mv tmp.po XX.po", filterCmd),
 		"",
 		"Diff (before vs filtered):",
 		"",
 	)
-	// Indent diff lines for consistency
-	for _, line := range strings.Split(strings.TrimSuffix(string(diffOut), "\n"), "\n") {
+	const maxDiffLines = 10
+	diffLines := strings.Split(strings.TrimSuffix(string(diffOut), "\n"), "\n")
+	for i, line := range diffLines {
+		if i >= maxDiffLines {
+			errs = append(errs, "    ... ...")
+			break
+		}
 		errs = append(errs, "    "+line)
 	}
 

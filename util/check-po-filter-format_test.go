@@ -87,7 +87,8 @@ msgstr "Hi"
 		t.Fatalf("expected filter format failure, ok=%v errs=%v", ok, errs)
 	}
 	joined := strings.Join(errs, "\n")
-	if !strings.Contains(joined, "differs") && !strings.Contains(joined, "filter") {
+	if !strings.Contains(joined, "does not match expected filter output") ||
+		!strings.Contains(joined, "msgcat --no-location -") {
 		t.Fatalf("unexpected messages: %s", joined)
 	}
 
