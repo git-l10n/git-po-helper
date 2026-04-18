@@ -2,6 +2,26 @@
  INFO [sv.po] 5104 translated messages.
 ❌ Obsolete #~ entries
  ERROR [sv.po] you have 475 obsolete entries, please remove them
+ℹ️ PO filter (.gitattributes)
+ INFO [sv.po] No Git `filter` attribute is set for *.po files on this path.
+ INFO [sv.po]
+ INFO [sv.po] The filter attribute describes how Git should normalize #: location comments on each
+ INFO [sv.po] PO entry when you commit. Those comments change often as source files move; committing
+ INFO [sv.po] their churn produces noisy diffs and inflates the repository.
+ INFO [sv.po]
+ INFO [sv.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+ INFO [sv.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+ INFO [sv.po] the PO (for example references that still include line numbers).
+ INFO [sv.po]
+ INFO [sv.po] Please configure the filter for XX.po, for example:
+ INFO [sv.po]
+ INFO [sv.po] .gitattributes: *.po filter=gettext-no-location
+ INFO [sv.po]
+ INFO [sv.po] See:
+ INFO [sv.po]
+ INFO [sv.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ INFO [sv.po]
+ INFO [sv.po] entry 1@L23 (msgid "Huh (%s)?"): location comment not allowed with gettext-no-location (use --no-location): "#: add-interactive.c:376"
 ⚠️ msgid/msgstr pattern check
  WARNING [sv.po] mismatched patterns: splitIndex.maxPercentChange, splitIndex.maxPercentage
  WARNING [sv.po] >> msgid: splitIndex.maxPercentChange value '%d' should be between 0 and 100

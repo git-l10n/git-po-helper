@@ -45,6 +45,24 @@ test_expect_success "mismatched shell variables" '
 	cat >expect <<-\EOF &&
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po] 2 translated messages.
+	ℹ️ PO filter (.gitattributes)
+	 INFO [zh_CN.po] No Git `filter` attribute is set for *.po files on this path.
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] The filter attribute describes how Git should normalize #: location comments on each
+	 INFO [zh_CN.po] PO entry when you commit. Those comments change often as source files move; committing
+	 INFO [zh_CN.po] their churn produces noisy diffs and inflates the repository.
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+	 INFO [zh_CN.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+	 INFO [zh_CN.po] the PO (for example references that still include line numbers).
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] Please configure the filter for XX.po, for example:
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] .gitattributes: *.po filter=gettext-no-location
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] See:
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
 	⚠️ msgid/msgstr pattern check
 	 WARNING [zh_CN.po] mismatched patterns: $command, $res
 	 WARNING [zh_CN.po] >> msgid: exit code $res from $command is < 0 or >= 128
@@ -87,6 +105,24 @@ test_expect_success "trash variables in msgStr (--typos=error)" '
 	cat >expect <<-\EOF &&
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po] 1 translated message.
+	ℹ️ PO filter (.gitattributes)
+	 INFO [zh_CN.po] No Git `filter` attribute is set for *.po files on this path.
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] The filter attribute describes how Git should normalize #: location comments on each
+	 INFO [zh_CN.po] PO entry when you commit. Those comments change often as source files move; committing
+	 INFO [zh_CN.po] their churn produces noisy diffs and inflates the repository.
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+	 INFO [zh_CN.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+	 INFO [zh_CN.po] the PO (for example references that still include line numbers).
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] Please configure the filter for XX.po, for example:
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] .gitattributes: *.po filter=gettext-no-location
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] See:
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
 	❌ msgid/msgstr pattern check
 	 ERROR [zh_CN.po] mismatched patterns: $command, $res
 	 ERROR [zh_CN.po] >> msgid: exit code %d from %s is < 0 or >= 128
@@ -150,6 +186,24 @@ test_expect_success "check typos of mismatched constant strings" '
 	cat >expect <<-\EOF &&
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po] 9 translated messages.
+	ℹ️ PO filter (.gitattributes)
+	 INFO [zh_CN.po] No Git `filter` attribute is set for *.po files on this path.
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] The filter attribute describes how Git should normalize #: location comments on each
+	 INFO [zh_CN.po] PO entry when you commit. Those comments change often as source files move; committing
+	 INFO [zh_CN.po] their churn produces noisy diffs and inflates the repository.
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+	 INFO [zh_CN.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+	 INFO [zh_CN.po] the PO (for example references that still include line numbers).
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] Please configure the filter for XX.po, for example:
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] .gitattributes: *.po filter=gettext-no-location
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] See:
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
 	⚠️ msgid/msgstr pattern check
 	 WARNING [zh_CN.po] mismatched patterns: log.graphColors, log.graphColorss
 	 WARNING [zh_CN.po] >> msgid: ignore invalid color %.*s in log.graphColors
@@ -219,6 +273,24 @@ test_expect_success "check typos of mismatched options" '
 	cat >expect <<-\EOF &&
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po] 3 translated messages.
+	ℹ️ PO filter (.gitattributes)
+	 INFO [zh_CN.po] No Git `filter` attribute is set for *.po files on this path.
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] The filter attribute describes how Git should normalize #: location comments on each
+	 INFO [zh_CN.po] PO entry when you commit. Those comments change often as source files move; committing
+	 INFO [zh_CN.po] their churn produces noisy diffs and inflates the repository.
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+	 INFO [zh_CN.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+	 INFO [zh_CN.po] the PO (for example references that still include line numbers).
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] Please configure the filter for XX.po, for example:
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] .gitattributes: *.po filter=gettext-no-location
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] See:
+	 INFO [zh_CN.po]
+	 INFO [zh_CN.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
 	⚠️ msgid/msgstr pattern check
 	 WARNING [zh_CN.po] mismatched patterns: --3way
 	 WARNING [zh_CN.po] >> msgid: --reject and --3way cannot be used together.

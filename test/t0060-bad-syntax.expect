@@ -1,0 +1,40 @@
+❌ Syntax check with msgfmt
+ ERROR [zh_CN.po] po/zh_CN.po:25: end-of-line within string
+ ERROR [zh_CN.po] msgfmt: found 1 fatal error
+ ERROR [zh_CN.po] fail to check po: exit status 1
+❌ PO filter (.gitattributes)
+ ERROR [zh_CN.po] No Git `filter` attribute is set for *.po files on this path.
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] The filter attribute describes how Git should normalize #: location comments on each
+ ERROR [zh_CN.po] PO entry when you commit. Those comments change often as source files move; committing
+ ERROR [zh_CN.po] their churn produces noisy diffs and inflates the repository.
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+ ERROR [zh_CN.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+ ERROR [zh_CN.po] the PO (for example references that still include line numbers).
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] Please configure the filter for XX.po, for example:
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] .gitattributes: *.po filter=gettext-no-location
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] See:
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] entry 1@L16 (msgid "more than one receivepack g..."): location comment not allowed with gettext-no-location (use --no-location): "#: remote.c:399"
+❌ Incomplete translations found
+ ERROR [zh_CN.po] 5102 new string(s) in POT file, but not in your PO file
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] > POT file: %-*s forces to %-*s (%s)
+ ERROR [zh_CN.po] > POT file: %-*s forces to %s
+ ERROR [zh_CN.po] > POT file: %-*s pushes to %-*s (%s)
+ ERROR [zh_CN.po] > ...
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] 1 obsolete string(s) in your PO file, which must be removed
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] > PO file:po-helper test: not a real l10...
+ ERROR [zh_CN.po]
+ ERROR [zh_CN.po] Please run "git-po-helper update PO-FILE" to update your po file,
+ ERROR [zh_CN.po] and translate the new strings in it.
+ ERROR [zh_CN.po]
+ERROR: check-po command failed

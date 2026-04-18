@@ -2,6 +2,26 @@
  INFO [es.po] 5104 translated messages.
 ❌ Obsolete #~ entries
  ERROR [es.po] you have 235 obsolete entries, please remove them
+ℹ️ PO filter (.gitattributes)
+ INFO [es.po] No Git `filter` attribute is set for *.po files on this path.
+ INFO [es.po]
+ INFO [es.po] The filter attribute describes how Git should normalize #: location comments on each
+ INFO [es.po] PO entry when you commit. Those comments change often as source files move; committing
+ INFO [es.po] their churn produces noisy diffs and inflates the repository.
+ INFO [es.po]
+ INFO [es.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+ INFO [es.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+ INFO [es.po] the PO (for example references that still include line numbers).
+ INFO [es.po]
+ INFO [es.po] Please configure the filter for XX.po, for example:
+ INFO [es.po]
+ INFO [es.po] .gitattributes: *.po filter=gettext-no-location
+ INFO [es.po]
+ INFO [es.po] See:
+ INFO [es.po]
+ INFO [es.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ INFO [es.po]
+ INFO [es.po] entry 1@L23 (msgid "Huh (%s)?"): location comment not allowed with gettext-no-location (use --no-location): "#: add-interactive.c:376"
 ⚠️ msgid/msgstr pattern check
  WARNING [es.po] mismatched patterns: git-upload-archive, git-upload-archivo
  WARNING [es.po] >> msgid: path to the remote git-upload-archive command

@@ -62,10 +62,17 @@ test_expect_success "check-commits show typos" '
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po@rev] 2 translated messages.
 	❌ PO filter (.gitattributes)
-	 ERROR [zh_CN.po@rev] No filter attribute set for XX.po. This will introduce location newlines into the
-	 ERROR [zh_CN.po@rev] repository and cause repository bloat.
+	 ERROR [zh_CN.po@rev] No Git `filter` attribute is set for *.po files on this path.
 	 ERROR [zh_CN.po@rev]
-	 ERROR [zh_CN.po@rev] Please configure the filter attribute for XX.po, for example:
+	 ERROR [zh_CN.po@rev] The filter attribute describes how Git should normalize #: location comments on each
+	 ERROR [zh_CN.po@rev] PO entry when you commit. Those comments change often as source files move; committing
+	 ERROR [zh_CN.po@rev] their churn produces noisy diffs and inflates the repository.
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+	 ERROR [zh_CN.po@rev] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+	 ERROR [zh_CN.po@rev] the PO (for example references that still include line numbers).
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] Please configure the filter for XX.po, for example:
 	 ERROR [zh_CN.po@rev]
 	 ERROR [zh_CN.po@rev] .gitattributes: *.po filter=gettext-no-location
 	 ERROR [zh_CN.po@rev]
@@ -99,10 +106,17 @@ test_expect_success "check-commits show typos (--typos=error)" '
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po@rev] 2 translated messages.
 	❌ PO filter (.gitattributes)
-	 ERROR [zh_CN.po@rev] No filter attribute set for XX.po. This will introduce location newlines into the
-	 ERROR [zh_CN.po@rev] repository and cause repository bloat.
+	 ERROR [zh_CN.po@rev] No Git `filter` attribute is set for *.po files on this path.
 	 ERROR [zh_CN.po@rev]
-	 ERROR [zh_CN.po@rev] Please configure the filter attribute for XX.po, for example:
+	 ERROR [zh_CN.po@rev] The filter attribute describes how Git should normalize #: location comments on each
+	 ERROR [zh_CN.po@rev] PO entry when you commit. Those comments change often as source files move; committing
+	 ERROR [zh_CN.po@rev] their churn produces noisy diffs and inflates the repository.
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+	 ERROR [zh_CN.po@rev] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+	 ERROR [zh_CN.po@rev] the PO (for example references that still include line numbers).
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] Please configure the filter for XX.po, for example:
 	 ERROR [zh_CN.po@rev]
 	 ERROR [zh_CN.po@rev] .gitattributes: *.po filter=gettext-no-location
 	 ERROR [zh_CN.po@rev]
@@ -151,10 +165,17 @@ test_expect_success "check-commits show typos and TEAMS file" '
 	ℹ️ Syntax check with msgfmt
 	 INFO [zh_CN.po@rev] 2 translated messages.
 	❌ PO filter (.gitattributes)
-	 ERROR [zh_CN.po@rev] No filter attribute set for XX.po. This will introduce location newlines into the
-	 ERROR [zh_CN.po@rev] repository and cause repository bloat.
+	 ERROR [zh_CN.po@rev] No Git `filter` attribute is set for *.po files on this path.
 	 ERROR [zh_CN.po@rev]
-	 ERROR [zh_CN.po@rev] Please configure the filter attribute for XX.po, for example:
+	 ERROR [zh_CN.po@rev] The filter attribute describes how Git should normalize #: location comments on each
+	 ERROR [zh_CN.po@rev] PO entry when you commit. Those comments change often as source files move; committing
+	 ERROR [zh_CN.po@rev] their churn produces noisy diffs and inflates the repository.
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+	 ERROR [zh_CN.po@rev] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+	 ERROR [zh_CN.po@rev] the PO (for example references that still include line numbers).
+	 ERROR [zh_CN.po@rev]
+	 ERROR [zh_CN.po@rev] Please configure the filter for XX.po, for example:
 	 ERROR [zh_CN.po@rev]
 	 ERROR [zh_CN.po@rev] .gitattributes: *.po filter=gettext-no-location
 	 ERROR [zh_CN.po@rev]

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-test_description="check-commits applies PO filter check using repo path"
+test_description="check-commits PO filter policy uses repo path (git check-attr only)"
 
 . ./lib/test-lib.sh
 
@@ -13,7 +13,7 @@ test_expect_success "setup" '
 
 # Use core.attributesfile so *.po filter applies without committing a root
 # .gitattributes file (which would fail the "only po/" l10n change rule).
-test_expect_success "check-commits fails when committed po does not match filter clean" '
+test_expect_success "check-commits passes when gettext-no-location and no #: lines" '
 	(
 		cd workdir &&
 		printf "%s\n" "po/*.po filter=gettext-no-location" >extra-attrs &&
@@ -24,22 +24,20 @@ test_expect_success "check-commits fails when committed po does not match filter
 	"Project-Id-Version: Git\n"
 	"Content-Type: text/plain; charset=UTF-8\n"
 
-	#: tiny.c
 	msgid "probe-filter-msg"
 	msgstr "probe-filter-msg"
 	EOF
 		git add po/sw.po &&
 		cat >.git/commit-message <<-\EOF &&
-		l10n: test: add sw.po with locations under filter
+		l10n: test: add sw.po under gettext-no-location filter
 
 		Signed-off-by: Author <author@example.com>
 		EOF
 		test_tick &&
 		git commit -F .git/commit-message
 	) &&
-	test_must_fail git -C workdir $HELPER \
-		check-commits --report-file-locations=error $POT_NO HEAD~..HEAD >out 2>&1 &&
-	test_grep "PO filter (.gitattributes)" out
+	git -C workdir $HELPER \
+		check-commits --report-file-locations=error $POT_NO HEAD~..HEAD >out 2>&1
 '
 
 test_expect_success "check-commits passes filter mismatch when --no-check-filter" '

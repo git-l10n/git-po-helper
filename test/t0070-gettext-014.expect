@@ -1,0 +1,28 @@
+ℹ️ Syntax check with msgfmt
+ INFO [fr.po] 2 translated messages.
+❌ gettext compatibility
+ ERROR [fr.po] entry 3@L29 (msgid "invalid --stat value: %s"): #~| msgid (obsolete previous) not supported by gettext below 0.16
+ ERROR [fr.po] entry 4@L34 (msgid "unable to resolve %s"): #~| msgid (obsolete previous) not supported by gettext below 0.16
+❌ Obsolete #~ entries
+ ERROR [fr.po] you have 3 obsolete entries, please remove them
+ℹ️ PO filter (.gitattributes)
+ INFO [fr.po] No Git `filter` attribute is set for *.po files on this path.
+ INFO [fr.po]
+ INFO [fr.po] The filter attribute describes how Git should normalize #: location comments on each
+ INFO [fr.po] PO entry when you commit. Those comments change often as source files move; committing
+ INFO [fr.po] their churn produces noisy diffs and inflates the repository.
+ INFO [fr.po]
+ INFO [fr.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+ INFO [fr.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+ INFO [fr.po] the PO (for example references that still include line numbers).
+ INFO [fr.po]
+ INFO [fr.po] Please configure the filter for XX.po, for example:
+ INFO [fr.po]
+ INFO [fr.po] .gitattributes: *.po filter=gettext-no-location
+ INFO [fr.po]
+ INFO [fr.po] See:
+ INFO [fr.po]
+ INFO [fr.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ INFO [fr.po]
+ INFO [fr.po] entry 1@L18 (msgid "%shint: %.*s%s\\n"): location comment not allowed with gettext-no-location (use --no-location): "#: advice.c:101"
+ERROR: check-po command failed

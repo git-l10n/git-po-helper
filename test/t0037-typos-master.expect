@@ -1,0 +1,48 @@
+ℹ️ Syntax check with msgfmt
+ INFO [bg.po] 5195 translated messages.
+ℹ️ PO filter (.gitattributes)
+ INFO [bg.po] No Git `filter` attribute is set for *.po files on this path.
+ INFO [bg.po]
+ INFO [bg.po] The filter attribute describes how Git should normalize #: location comments on each
+ INFO [bg.po] PO entry when you commit. Those comments change often as source files move; committing
+ INFO [bg.po] their churn produces noisy diffs and inflates the repository.
+ INFO [bg.po]
+ INFO [bg.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+ INFO [bg.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+ INFO [bg.po] the PO (for example references that still include line numbers).
+ INFO [bg.po]
+ INFO [bg.po] Please configure the filter for XX.po, for example:
+ INFO [bg.po]
+ INFO [bg.po] .gitattributes: *.po filter=gettext-no-location
+ INFO [bg.po]
+ INFO [bg.po] See:
+ INFO [bg.po]
+ INFO [bg.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ INFO [bg.po]
+ INFO [bg.po] entry 1@L202 (msgid "Huh (%s)?"): location comment not allowed with gettext-no-location (use --no-location): "#: add-interactive.c:380"
+❌ msgid/msgstr pattern check
+ ERROR [bg.po] mismatched patterns: --dirstat=<...>,, --dirstat=files,param1,param2...
+ ERROR [bg.po] >> msgid: synonym for --dirstat=files,param1,param2...
+ ERROR [bg.po] >> msgstr: псевдоним на „--dirstat=ФАЙЛ…,ПАРАМЕТЪР_1,ПАРАМЕТЪР_2,…“
+ ERROR [bg.po]
+ ERROR [bg.po] mismatched patterns: --force
+ ERROR [bg.po] >> msgid: helper %s does not support 'force'
+ ERROR [bg.po] >> msgstr: насрещната помощна програма „%s“ не поддържа опцията „--force“
+ ERROR [bg.po]
+ ERROR [bg.po] mismatched patterns: refs/heads, refs/heads/
+ ERROR [bg.po] >> msgid: HEAD (%s) points outside of refs/heads/
+ ERROR [bg.po] >> msgstr: „HEAD“ (%s) сочи извън директорията „refs/heads“
+ ERROR [bg.po]
+ ERROR [bg.po] mismatched patterns: _git_rev
+ ERROR [bg.po] >> msgid: git bundle create [<options>] <file> <git-rev-list args>
+ ERROR [bg.po] >> msgstr: git bundle create [ОПЦИЯ…] ФАЙЛ АРГУМЕНТ_ЗА_git_rev-list…
+ ERROR [bg.po]
+ ERROR [bg.po] mismatched patterns: --bare
+ ERROR [bg.po] >> msgid: create a mirror repository (implies bare)
+ ERROR [bg.po] >> msgstr: създаване на хранилище-огледало (включва опцията „--bare“ за голо хранилище)
+ ERROR [bg.po]
+ ERROR [bg.po] mismatched patterns: --mirror
+ ERROR [bg.po] >> msgid: unknown mirror argument: %s
+ ERROR [bg.po] >> msgstr: неправилна стойност за „--mirror“: %s
+ ERROR [bg.po]
+ERROR: check-po command failed

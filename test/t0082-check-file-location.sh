@@ -19,14 +19,14 @@ test_expect_success "setup" '
 test_expect_success "zh_CN.po: has file-locations (--report-file-location=error)" '
 	test_must_fail git -C workdir $HELPER check-po $POT_NO \
 		--report-file-locations=error po/zh_CN.po >out 2>&1 &&
-	test_grep "No filter attribute set" out &&
+	test_grep "inflates the repository" out &&
 	test_grep "mismatched patterns" out
 '
 
 test_expect_success "zh_CN.po: has file-locations (no --report-file-location option)" '
 	test_must_fail git -C workdir $HELPER check-po $POT_NO \
 		po/zh_CN.po >out 2>&1 &&
-	test_grep "No filter attribute set" out &&
+	test_grep "inflates the repository" out &&
 	test_grep "mismatched patterns" out
 '
 

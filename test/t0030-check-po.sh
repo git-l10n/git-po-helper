@@ -46,30 +46,7 @@ test_expect_success "bad syntax of zh_CN.po" '
 
 	test_must_fail git -C workdir $HELPER check-po $POT_FILE --report-file-locations=none po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
-
-	cat >expect <<-EOF &&
-	❌ Syntax check with msgfmt
-	 ERROR [zh_CN.po] po/zh_CN.po:25: end-of-line within string
-	 ERROR [zh_CN.po] msgfmt: found 1 fatal error
-	 ERROR [zh_CN.po] fail to check po: exit status 1
-	❌ Incomplete translations found
-	 ERROR [zh_CN.po] 5102 new string(s) in POT file, but not in your PO file
-	 ERROR [zh_CN.po]
-	 ERROR [zh_CN.po] > POT file: %-*s forces to %-*s (%s)
-	 ERROR [zh_CN.po] > POT file: %-*s forces to %s
-	 ERROR [zh_CN.po] > POT file: %-*s pushes to %-*s (%s)
-	 ERROR [zh_CN.po] > ...
-	 ERROR [zh_CN.po]
-	 ERROR [zh_CN.po] 1 obsolete string(s) in your PO file, which must be removed
-	 ERROR [zh_CN.po]
-	 ERROR [zh_CN.po] > PO file:po-helper test: not a real l10...
-	 ERROR [zh_CN.po]
-	 ERROR [zh_CN.po] Please run "git-po-helper update PO-FILE" to update your po file,
-	 ERROR [zh_CN.po] and translate the new strings in it.
-	 ERROR [zh_CN.po]
-	ERROR: check-po command failed
-	EOF
-
+	cp "$TEST_DIRECTORY/t0030-bad-syntax.expect" expect &&
 	test_cmp expect actual
 '
 
@@ -103,37 +80,15 @@ test_expect_success "update zh_CN successfully" '
 
 test_expect_success "check update of zh_CN.po" '
 	git -C workdir $HELPER check-po $POT_FILE --report-file-locations=none po/zh_CN.po >out 2>&1 &&
-	make_user_friendly_and_stable_output <out |
-		head -3 >actual &&
-
-	cat >expect <<-\EOF &&
-	ℹ️ Syntax check with msgfmt
-	 INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
-	⚠️ Incomplete translations found
-	EOF
-
+	make_user_friendly_and_stable_output <out >actual &&
+	cp "$TEST_DIRECTORY/t0030-check-update.expect" expect &&
 	test_cmp expect actual
 '
 
 test_expect_success "check core update of zh_CN.po" '
 	git -C workdir $HELPER check-po $POT_FILE --report-file-locations=none --core po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
-
-	cat >expect <<-EOF &&
-	ℹ️ Syntax check with msgfmt
-	 INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
-	⚠️ Incomplete translations found
-	 WARNING [zh_CN.po] 5102 untranslated string(s) in your PO file
-	 WARNING [zh_CN.po]
-	 WARNING [zh_CN.po] > PO file:Huh (%s)?
-	 WARNING [zh_CN.po] > PO file:could not read index
-	 WARNING [zh_CN.po] > PO file:binary
-	 WARNING [zh_CN.po] > ...
-	 WARNING [zh_CN.po]
-	ℹ️ Core PO vs git-core.pot
-	 INFO [zh_CN.po (core)] 2 translated messages, 479 untranslated messages.
-	EOF
-
+	cp "$TEST_DIRECTORY/t0030-check-core.expect" expect &&
 	test_cmp expect actual
 '
 

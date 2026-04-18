@@ -2,6 +2,26 @@
  INFO [pt_PT.po] 2876 translated messages, 1320 fuzzy translations, 842 untranslated messages.
 ❌ Obsolete #~ entries
  ERROR [pt_PT.po] you have 225 obsolete entries, please remove them
+ℹ️ PO filter (.gitattributes)
+ INFO [pt_PT.po] No Git `filter` attribute is set for *.po files on this path.
+ INFO [pt_PT.po]
+ INFO [pt_PT.po] The filter attribute describes how Git should normalize #: location comments on each
+ INFO [pt_PT.po] PO entry when you commit. Those comments change often as source files move; committing
+ INFO [pt_PT.po] their churn produces noisy diffs and inflates the repository.
+ INFO [pt_PT.po]
+ INFO [pt_PT.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+ INFO [pt_PT.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+ INFO [pt_PT.po] the PO (for example references that still include line numbers).
+ INFO [pt_PT.po]
+ INFO [pt_PT.po] Please configure the filter for XX.po, for example:
+ INFO [pt_PT.po]
+ INFO [pt_PT.po] .gitattributes: *.po filter=gettext-no-location
+ INFO [pt_PT.po]
+ INFO [pt_PT.po] See:
+ INFO [pt_PT.po]
+ INFO [pt_PT.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ INFO [pt_PT.po]
+ INFO [pt_PT.po] entry 1@L147 (msgid "Huh (%s)?"): location comment not allowed with gettext-no-location (use --no-location): "#: add-interactive.c:376"
 ⚠️ msgid/msgstr pattern check
  WARNING [pt_PT.po] mismatched patterns: --add-file, --fixup, --remote, --squash
  WARNING [pt_PT.po] >> msgid: Options --add-file and --remote cannot be used together

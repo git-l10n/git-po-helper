@@ -4,6 +4,26 @@
  ERROR [vi.po] entry 4652@L23545 (msgid "--packfile requires --index..."): previous msgctxt (#|) not supported by gettext below 0.15
 ❌ Obsolete #~ entries
  ERROR [vi.po] you have 466 obsolete entries, please remove them
+ℹ️ PO filter (.gitattributes)
+ INFO [vi.po] No Git `filter` attribute is set for *.po files on this path.
+ INFO [vi.po]
+ INFO [vi.po] The filter attribute describes how Git should normalize #: location comments on each
+ INFO [vi.po] PO entry when you commit. Those comments change often as source files move; committing
+ INFO [vi.po] their churn produces noisy diffs and inflates the repository.
+ INFO [vi.po]
+ INFO [vi.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+ INFO [vi.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+ INFO [vi.po] the PO (for example references that still include line numbers).
+ INFO [vi.po]
+ INFO [vi.po] Please configure the filter for XX.po, for example:
+ INFO [vi.po]
+ INFO [vi.po] .gitattributes: *.po filter=gettext-no-location
+ INFO [vi.po]
+ INFO [vi.po] See:
+ INFO [vi.po]
+ INFO [vi.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ INFO [vi.po]
+ INFO [vi.po] entry 1@L28 (msgid "Huh (%s)?"): location comment not allowed with gettext-no-location (use --no-location): "#: add-interactive.c:376"
 ⚠️ msgid/msgstr pattern check
  WARNING [vi.po] mismatched patterns: git-upload-archive, git-upload-pack
  WARNING [vi.po] >> msgid: path to the remote git-upload-archive command

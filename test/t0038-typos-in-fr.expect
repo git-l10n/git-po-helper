@@ -1,0 +1,46 @@
+ℹ️ Syntax check with msgfmt
+ INFO [fr.po] 5282 translated messages.
+❌ Obsolete #~ entries
+ ERROR [fr.po] you have 178 obsolete entries, please remove them
+ℹ️ PO filter (.gitattributes)
+ INFO [fr.po] No Git `filter` attribute is set for *.po files on this path.
+ INFO [fr.po]
+ INFO [fr.po] The filter attribute describes how Git should normalize #: location comments on each
+ INFO [fr.po] PO entry when you commit. Those comments change often as source files move; committing
+ INFO [fr.po] their churn produces noisy diffs and inflates the repository.
+ INFO [fr.po]
+ INFO [fr.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+ INFO [fr.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+ INFO [fr.po] the PO (for example references that still include line numbers).
+ INFO [fr.po]
+ INFO [fr.po] Please configure the filter for XX.po, for example:
+ INFO [fr.po]
+ INFO [fr.po] .gitattributes: *.po filter=gettext-no-location
+ INFO [fr.po]
+ INFO [fr.po] See:
+ INFO [fr.po]
+ INFO [fr.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ INFO [fr.po]
+ INFO [fr.po] entry 1@L94 (msgid "Huh (%s)?"): location comment not allowed with gettext-no-location (use --no-location): "#: add-interactive.c:382"
+❌ msgid/msgstr pattern check
+ ERROR [fr.po] mismatched patterns: refs/
+ ERROR [fr.po] >> msgid: The destination you provided is not a full refname (i.e.,
+ ERROR [fr.po] starting with "refs/"). We tried to guess what you meant by:
+ ERROR [fr.po]
+ ERROR [fr.po] - Looking for a ref that matches '%s' on the remote side.
+ ERROR [fr.po] - Checking if the <src> being pushed ('%s')
+ ERROR [fr.po] is a ref in "refs/{heads,tags}/". If so we add a corresponding
+ ERROR [fr.po] refs/{heads,tags}/ prefix on the remote side.
+ ERROR [fr.po]
+ ERROR [fr.po] Neither worked, so we gave up. You must fully qualify the ref.
+ ERROR [fr.po] >> msgstr: La destination que vous avez fournie n'est pas un nom de référence complète
+ ERROR [fr.po] (c'est-à-dire commençant par "ref/"). Essai d'approximation par :
+ ERROR [fr.po]
+ ERROR [fr.po] - Recherche d'une référence qui correspond à '%s' sur le serveur distant.
+ ERROR [fr.po] - Vérification si la <source> en cours de poussée ('%s')
+ ERROR [fr.po] est une référence dans "refs/{heads,tags}/". Si oui, ajout du préfixe
+ ERROR [fr.po] refs/{heads,tags}/ correspondant du côté distant.
+ ERROR [fr.po]
+ ERROR [fr.po] Aucune n'a fonctionné, donc abandon. Veuillez spécifier une référence totalement qualifiée.
+ ERROR [fr.po]
+ERROR: check-po command failed

@@ -26,13 +26,7 @@ test_expect_success "no typos in master branch" '
 		check-po $POT_NO --report-typos=error \
 		po/vi.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
-	cat >expect <<-\EOF &&
-	ℹ️ Syntax check with msgfmt
-	 INFO [vi.po] 5282 translated messages.
-	❌ Obsolete #~ entries
-	 ERROR [vi.po] you have 73 obsolete entries, please remove them
-	ERROR: check-po command failed
-	EOF
+	cp "$TEST_DIRECTORY/t0035-typos-master.expect" expect &&
 	test_cmp expect actual
 '
 

@@ -17,42 +17,6 @@ test_expect_success "setup" '
 	)
 '
 
-cat >expect <<-\EOF
-❌ Syntax check with msgfmt
- ERROR [zh_CN.po] po/zh_CN.po:25: end-of-line within string
- ERROR [zh_CN.po] msgfmt: found 1 fatal error
- ERROR [zh_CN.po] fail to check po: exit status 1
-❌ Location comments (#:)
- ERROR [zh_CN.po] entry 1@L16 (msgid "more than one receivepack g..."): location comment contains line number (use file-only or remove): "remote.c:399"
-❌ PO filter (.gitattributes)
- ERROR [zh_CN.po] No filter attribute set for XX.po. This will introduce location newlines into the
- ERROR [zh_CN.po] repository and cause repository bloat.
- ERROR [zh_CN.po]
- ERROR [zh_CN.po] Please configure the filter attribute for XX.po, for example:
- ERROR [zh_CN.po]
- ERROR [zh_CN.po] .gitattributes: *.po filter=gettext-no-location
- ERROR [zh_CN.po]
- ERROR [zh_CN.po] See:
- ERROR [zh_CN.po]
- ERROR [zh_CN.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
-❌ Incomplete translations found
- ERROR [zh_CN.po] 5102 new string(s) in POT file, but not in your PO file
- ERROR [zh_CN.po]
- ERROR [zh_CN.po] > POT file: %-*s forces to %-*s (%s)
- ERROR [zh_CN.po] > POT file: %-*s forces to %s
- ERROR [zh_CN.po] > POT file: %-*s pushes to %-*s (%s)
- ERROR [zh_CN.po] > ...
- ERROR [zh_CN.po]
- ERROR [zh_CN.po] 1 obsolete string(s) in your PO file, which must be removed
- ERROR [zh_CN.po]
- ERROR [zh_CN.po] > PO file:po-helper test: not a real l10...
- ERROR [zh_CN.po]
- ERROR [zh_CN.po] Please run "git-po-helper update PO-FILE" to update your po file,
- ERROR [zh_CN.po] and translate the new strings in it.
- ERROR [zh_CN.po]
-ERROR: check-po command failed
-EOF
-
 test_expect_success "bad syntax of zh_CN.po" '
 	cat >workdir/po/zh_CN.po <<-\EOF &&
 	msgid ""
@@ -84,25 +48,11 @@ test_expect_success "bad syntax of zh_CN.po" '
 	test_must_fail git -C workdir $HELPER \
 		check-po $POT_FILE po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
-
+	cp "$TEST_DIRECTORY/t0060-bad-syntax.expect" expect &&
 	test_cmp expect actual
 '
 
 test_expect_success "update zh_CN (with location)" '
-	cat >expect <<-EOF &&
-	INFO: run msgmerge for "Chinese - China": msgmerge -o po/zh_CN.po.tmp po/zh_CN.po po/git.pot
-	ℹ️ Syntax check with msgfmt
-	 INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
-	⚠️ Incomplete translations found
-	 WARNING [zh_CN.po] 5102 untranslated string(s) in your PO file
-	 WARNING [zh_CN.po]
-	 WARNING [zh_CN.po] > PO file:Huh (%s)?
-	 WARNING [zh_CN.po] > PO file:could not read index
-	 WARNING [zh_CN.po] > PO file:binary
-	 WARNING [zh_CN.po] > ...
-	 WARNING [zh_CN.po]
-	EOF
-
 	cat >workdir/po/zh_CN.po <<-\EOF &&
 	msgid ""
 	msgstr ""
@@ -130,41 +80,23 @@ test_expect_success "update zh_CN (with location)" '
 	git -C workdir $HELPER update $POT_FILE po/zh_CN.po 2>&1 |
 		make_user_friendly_and_stable_output |
 		sed "/^\.\./ d" >actual &&
+	cp "$TEST_DIRECTORY/t0060-update.expect" expect &&
 	test_cmp expect actual
 '
 
 test_expect_success "check update of zh_CN.po" '
-	cat >expect <<-\EOF &&
-	ℹ️ Syntax check with msgfmt
-	 INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
-	EOF
-
 	git -C workdir $HELPER \
 		check-po $POT_FILE --report-file-locations=none po/zh_CN.po >out 2>&1 &&
-	make_user_friendly_and_stable_output <out |
-		head -2 >actual &&
+	make_user_friendly_and_stable_output <out >actual &&
+	cp "$TEST_DIRECTORY/t0060-check-update.expect" expect &&
 	test_cmp expect actual
 '
-
-cat >expect <<-\EOF
-ℹ️ Syntax check with msgfmt
- INFO [zh_CN.po] 2 translated messages, 5102 untranslated messages.
-⚠️ Incomplete translations found
- WARNING [zh_CN.po] 5102 untranslated string(s) in your PO file
- WARNING [zh_CN.po]
- WARNING [zh_CN.po] > PO file:Huh (%s)?
- WARNING [zh_CN.po] > PO file:could not read index
- WARNING [zh_CN.po] > PO file:binary
- WARNING [zh_CN.po] > ...
- WARNING [zh_CN.po]
-ℹ️ Core PO vs git-core.pot
- INFO [zh_CN.po (core)] 2 translated messages, 479 untranslated messages.
-EOF
 
 test_expect_success "check core update of zh_CN.po" '
 	git -C workdir $HELPER \
 		check-po $POT_FILE --core --report-file-locations=none po/zh_CN.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
+	cp "$TEST_DIRECTORY/t0060-check-core.expect" expect &&
 	test_cmp expect actual
 '
 
@@ -239,15 +171,6 @@ cat >expect <<-\EOF
  WARNING commit <OID>: break because this commit is not for git-l10n
 INFO: checking commits: 0 passed, 0 failed, 2 skipped.
 EOF
-
-test_expect_success "check-commits --github-action-event=push" '
-	git -C workdir po-helper \
-		check-commits --pot-file=no \
-		--github-action-event push \
-		0000000000000000000000000000000000000000..HEAD >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
-	test_cmp expect actual
-'
 
 test_expect_success "check-commits --github-action-event=push" '
 	git -C workdir po-helper \

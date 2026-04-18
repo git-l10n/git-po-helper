@@ -1,5 +1,25 @@
 ℹ️ Syntax check with msgfmt
  INFO [bg.po] 5104 translated messages.
+ℹ️ PO filter (.gitattributes)
+ INFO [bg.po] No Git `filter` attribute is set for *.po files on this path.
+ INFO [bg.po]
+ INFO [bg.po] The filter attribute describes how Git should normalize #: location comments on each
+ INFO [bg.po] PO entry when you commit. Those comments change often as source files move; committing
+ INFO [bg.po] their churn produces noisy diffs and inflates the repository.
+ INFO [bg.po]
+ INFO [bg.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+ INFO [bg.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+ INFO [bg.po] the PO (for example references that still include line numbers).
+ INFO [bg.po]
+ INFO [bg.po] Please configure the filter for XX.po, for example:
+ INFO [bg.po]
+ INFO [bg.po] .gitattributes: *.po filter=gettext-no-location
+ INFO [bg.po]
+ INFO [bg.po] See:
+ INFO [bg.po]
+ INFO [bg.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ INFO [bg.po]
+ INFO [bg.po] entry 1@L185 (msgid "Huh (%s)?"): location comment not allowed with gettext-no-location (use --no-location): "#: add-interactive.c:376"
 ⚠️ msgid/msgstr pattern check
  WARNING [bg.po] mismatched patterns: crlf_action
  WARNING [bg.po] >> msgid: illegal crlf_action %d

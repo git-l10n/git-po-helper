@@ -26,34 +26,7 @@ test_expect_success "typos in master branch" '
 		check-po $POT_NO --report-typos=error \
 		po/sv.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
-	cat >expect <<-\EOF &&
-	ℹ️ Syntax check with msgfmt
-	 INFO [sv.po] 5282 translated messages.
-	❌ Obsolete #~ entries
-	 ERROR [sv.po] you have 768 obsolete entries, please remove them
-	❌ msgid/msgstr pattern check
-	 ERROR [sv.po] mismatched patterns: refs/{heads,tags}/-prefix
-	 ERROR [sv.po] >> msgid: The destination you provided is not a full refname (i.e.,
-	 ERROR [sv.po] starting with "refs/"). We tried to guess what you meant by:
-	 ERROR [sv.po]
-	 ERROR [sv.po] - Looking for a ref that matches '\''%s'\'' on the remote side.
-	 ERROR [sv.po] - Checking if the <src> being pushed ('\''%s'\'')
-	 ERROR [sv.po] is a ref in "refs/{heads,tags}/". If so we add a corresponding
-	 ERROR [sv.po] refs/{heads,tags}/ prefix on the remote side.
-	 ERROR [sv.po]
-	 ERROR [sv.po] Neither worked, so we gave up. You must fully qualify the ref.
-	 ERROR [sv.po] >> msgstr: Målet du angav är inte ett komplett referensamn (dvs.,
-	 ERROR [sv.po] startar med "refs/"). Vi försökte gissa vad du menade genom att:
-	 ERROR [sv.po]
-	 ERROR [sv.po] - Se efter en referens som motsvarar "%s" på fjärrsidan.
-	 ERROR [sv.po] - Se om <källan> som sänds ("%s")
-	 ERROR [sv.po] är en referens i "refs/{heads,tags}/". Om så lägger vi till
-	 ERROR [sv.po] motsvarande refs/{heads,tags}/-prefix på fjärrsidan.
-	 ERROR [sv.po]
-	 ERROR [sv.po] Inget av dem fungerade, så vi gav upp. Ange fullständig referens.
-	 ERROR [sv.po]
-	ERROR: check-po command failed
-	EOF
+	cp "$TEST_DIRECTORY/t0036-typos-master.expect" expect &&
 	test_cmp expect actual
 '
 

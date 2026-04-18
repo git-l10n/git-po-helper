@@ -1,0 +1,33 @@
+ℹ️ Syntax check with msgfmt
+ INFO [zh_CN.po] 5282 translated messages.
+⚠️ PO filter (.gitattributes)
+ WARNING [zh_CN.po] No Git `filter` attribute is set for *.po files on this path.
+ WARNING [zh_CN.po]
+ WARNING [zh_CN.po] The filter attribute describes how Git should normalize #: location comments on each
+ WARNING [zh_CN.po] PO entry when you commit. Those comments change often as source files move; committing
+ WARNING [zh_CN.po] their churn produces noisy diffs and inflates the repository.
+ WARNING [zh_CN.po]
+ WARNING [zh_CN.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+ WARNING [zh_CN.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+ WARNING [zh_CN.po] the PO (for example references that still include line numbers).
+ WARNING [zh_CN.po]
+ WARNING [zh_CN.po] Please configure the filter for XX.po, for example:
+ WARNING [zh_CN.po]
+ WARNING [zh_CN.po] .gitattributes: *.po filter=gettext-no-location
+ WARNING [zh_CN.po]
+ WARNING [zh_CN.po] See:
+ WARNING [zh_CN.po]
+ WARNING [zh_CN.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ WARNING [zh_CN.po]
+ WARNING [zh_CN.po] entry 1@L160 (msgid "Huh (%s)?"): location comment not allowed with gettext-no-location (use --no-location): "#: add-interactive.c:382"
+⚠️ msgid/msgstr pattern check
+ WARNING [zh_CN.po] mismatched patterns: refs/remotes/
+ WARNING [zh_CN.po] >> msgid: Note: A branch outside the refs/remotes/ hierarchy was not removed;
+ WARNING [zh_CN.po] to delete it, use:
+ WARNING [zh_CN.po] >> msgstr: 注意：ref/remotes 层级之外的一个分支未被移除。要删除它，使用：
+ WARNING [zh_CN.po]
+ WARNING [zh_CN.po] mismatched patterns: refs/remotes/
+ WARNING [zh_CN.po] >> msgid: Note: Some branches outside the refs/remotes/ hierarchy were not removed;
+ WARNING [zh_CN.po] to delete them, use:
+ WARNING [zh_CN.po] >> msgstr: 注意：ref/remotes 层级之外的一些分支未被移除。要删除它们，使用：
+ WARNING [zh_CN.po]

@@ -55,21 +55,11 @@ test_expect_success "setup" '
 	)
 '
 
-cat >expect <<-\EOF
-ℹ️ Syntax check with msgfmt
- INFO [fr.po] 2 translated messages.
-❌ gettext compatibility
- ERROR [fr.po] entry 3@L29 (msgid "invalid --stat value: %s"): #~| msgid (obsolete previous) not supported by gettext below 0.16
- ERROR [fr.po] entry 4@L34 (msgid "unable to resolve %s"): #~| msgid (obsolete previous) not supported by gettext below 0.16
-❌ Obsolete #~ entries
- ERROR [fr.po] you have 3 obsolete entries, please remove them
-ERROR: check-po command failed
-EOF
-
 test_expect_success "show gettext 0.14 incompatible errors" '
 	test_must_fail git -C workdir $HELPER check-po $POT_NO \
 		--report-file-locations=none po/fr.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
+	cp "$TEST_DIRECTORY/t0070-gettext-014.expect" expect &&
 	test_cmp expect actual
 '
 

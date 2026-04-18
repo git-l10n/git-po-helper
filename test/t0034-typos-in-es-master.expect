@@ -1,0 +1,34 @@
+ℹ️ Syntax check with msgfmt
+ INFO [es.po] 5210 translated messages.
+❌ Obsolete #~ entries
+ ERROR [es.po] you have 125 obsolete entries, please remove them
+ℹ️ PO filter (.gitattributes)
+ INFO [es.po] No Git `filter` attribute is set for *.po files on this path.
+ INFO [es.po]
+ INFO [es.po] The filter attribute describes how Git should normalize #: location comments on each
+ INFO [es.po] PO entry when you commit. Those comments change often as source files move; committing
+ INFO [es.po] their churn produces noisy diffs and inflates the repository.
+ INFO [es.po]
+ INFO [es.po] Setting filter=gettext-no-location or filter=gettext-no-line-number in .gitattributes
+ INFO [es.po] tells git-po-helper which location style you intend, so it can flag bad #: lines in
+ INFO [es.po] the PO (for example references that still include line numbers).
+ INFO [es.po]
+ INFO [es.po] Please configure the filter for XX.po, for example:
+ INFO [es.po]
+ INFO [es.po] .gitattributes: *.po filter=gettext-no-location
+ INFO [es.po]
+ INFO [es.po] See:
+ INFO [es.po]
+ INFO [es.po] https://lore.kernel.org/git/20220504124121.12683-1-worldhello.net@gmail.com/
+ INFO [es.po]
+ INFO [es.po] entry 1@L23 (msgid "Huh (%s)?"): location comment not allowed with gettext-no-location (use --no-location): "#: add-interactive.c:380"
+❌ msgid/msgstr pattern check
+ ERROR [es.po] mismatched patterns: refs/preferch/, refs/prefetch/
+ ERROR [es.po] >> msgid: modify the refspec to place all refs within refs/prefetch/
+ ERROR [es.po] >> msgstr: modificar el refspec para colocar todas las referencias en refs/preferch/
+ ERROR [es.po]
+ ERROR [es.po] mismatched patterns: refs/remotes/<...>/HEAD, refs/remotos/<...>/HEAD
+ ERROR [es.po] >> msgid: delete refs/remotes/<name>/HEAD
+ ERROR [es.po] >> msgstr: borrar refs/remotos/<nombre>/HEAD
+ ERROR [es.po]
+ERROR: check-po command failed
