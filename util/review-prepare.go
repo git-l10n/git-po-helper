@@ -44,8 +44,8 @@ func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string
 		oldTmpName, newTmpName, outputFile)
 
 	// Get original file (from git when revision set, else from worktree)
-	log.Infof("getting old file from commit: %s", oldCommit)
 	if oldCommit != "" {
+		log.Infof("getting old file from commit: %s", oldCommit)
 		workDir := repository.WorkDir()
 		if filepath.IsAbs(oldFile) {
 			relOldFile, err = filepath.Rel(workDir, oldFile)
@@ -77,8 +77,8 @@ func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string
 		}
 	}
 
-	log.Infof("getting new file from commit: %s", newCommit)
 	if newCommit != "" {
+		log.Infof("getting new file from commit: %s", newCommit)
 		workDir := repository.WorkDir()
 		if filepath.IsAbs(newFile) {
 			relNewFile, err = filepath.Rel(workDir, newFile)
