@@ -2,6 +2,46 @@
 
 Changes of git-po-helper.
 
+## 0.9.0 (2026-09-17)
+
+### version command and build
+
+* feat(version): add `--lt`/`--le`/`--gt`/`--ge`/`--eq` to assert the
+  running version; print version on stdout, print ERROR on stdout and
+  exit -1 on mismatch; compare major.minor.patch only (ignore
+  git-describe distance / `g<oid>` / dirty); reject short tags like
+  `v1.0`
+* build: `VERSION-GEN` falls back to the first `## X.Y.Z` in
+  `CHANGELOG.md` when `version` file and `git describe` are unavailable
+  (GitHub source zip / no tags)
+* test: require CHANGELOG top version >= built version so changelog is
+  updated before tagging
+* test: cover `VERSION-GEN` sources (`version` file, CHANGELOG, default)
+
+### stat and PO/JSON tooling
+
+* feat(stat): add `-c`/`--count` for content entry count (excluding
+  header); missing files print `0` on stdout and error on stderr
+* test: lock content-based PO/JSON detection for non-`.po`/`.json`
+  paths (e.g. `.tmp`)
+* docs: align empty-selection docs with empty-file behavior for
+  `msg-select` / `msg-cat` / `compare`
+
+### check-po / check-commits and GitHub Actions
+
+* feat(util): align PO checks with git attributes; warn when on-disk PO
+  differs from filter clean output; improve bare-repo / partial-clone
+  path handling via `FileRevision` and `GetRepoRelPath`
+* fix(flag): resolve `GitHubActionEvent` from CI env; honor explicit
+  `--report-typos` under GitHub Actions
+* Makefile: add `gh-it` / `gh-ut` to simulate GitHub Actions locally
+* test: fix GitHub Actions env drift in unit and integration tests
+
+### agent-run and misc
+
+* feat(agent-run): markdown-style review report for `--report`
+* util: log review file fetch from commit only when revision is set
+
 ## 0.8.4 (2026-04-17)
 
 ### check-commits and check-po
