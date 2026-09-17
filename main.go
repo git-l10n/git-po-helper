@@ -17,11 +17,13 @@ func main() {
 	resp := cmd.Execute()
 
 	if resp.Err != nil {
-		errOut := resp.Cmd.ErrOrStderr()
-		msg := strings.TrimRight(resp.Err.Error(), "\n")
-		fmt.Fprintf(errOut, "ERROR: %s\n", msg)
-		if cmd.IsErrorWithUsage(resp.Err) {
-			fmt.Fprint(errOut, resp.Cmd.UsageString())
+		if !cmd.IsExitWithoutMessage(resp.Err) {
+			errOut := resp.Cmd.ErrOrStderr()
+			msg := strings.TrimRight(resp.Err.Error(), "\n")
+			fmt.Fprintf(errOut, "ERROR: %s\n", msg)
+			if cmd.IsErrorWithUsage(resp.Err) {
+				fmt.Fprint(errOut, resp.Cmd.UsageString())
+			}
 		}
 		os.Exit(-1)
 	}

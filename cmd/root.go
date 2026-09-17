@@ -50,6 +50,24 @@ func NewStandardErrorF(format string, a ...interface{}) error {
 	return fmt.Errorf(format, a...)
 }
 
+// exitWithoutMessageError marks an error that should cause a non-zero exit
+// without main.go printing an additional ERROR line (message already shown).
+type exitWithoutMessageError struct{}
+
+func (e exitWithoutMessageError) Error() string { return "" }
+
+// NewExitWithoutMessage returns an error that exits with status -1 and no
+// further message from main.
+func NewExitWithoutMessage() error {
+	return exitWithoutMessageError{}
+}
+
+// IsExitWithoutMessage reports whether err is an exitWithoutMessageError.
+func IsExitWithoutMessage(err error) bool {
+	_, ok := err.(exitWithoutMessageError)
+	return ok
+}
+
 // IsErrorWithUsage returns true if the error should display command usage.
 func IsErrorWithUsage(err error) bool {
 	_, ok := err.(errorWithUsage)

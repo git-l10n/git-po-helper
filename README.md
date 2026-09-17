@@ -168,7 +168,7 @@ The `--pot-file` option (way to get latest pot file: 'auto', 'download', 'build'
 | Command | Description |
 |---------|-------------|
 | `team` | Show team leader/members. Usage: `team [options] [team]...`. Options: `-a` (all users), `-c` (check members), `-L` (language), `-l` (leaders only), `-m` (members only). |
-| `version` | Display the version of git-po-helper. |
+| `version` | Display the version of git-po-helper. Options: `--lt`/`--le`/`--gt`/`--ge`/`--eq` `<version>` to assert a version condition (partial constraints like `1` or `0.8` allowed). Comparison uses major.minor.patch only (ignores git-describe distance/`g<oid>`/dirty); the built version must have ≥3 numeric components (tags like `v1.0.0`, not `v1.0`). On failure prints ERROR on stdout and exits -1. |
 
 ### Agent commands (AI-assisted translation)
 

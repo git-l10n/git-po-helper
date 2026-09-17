@@ -3,7 +3,7 @@
 # This script is from git.git project
 
 RVF=VERSION-FILE
-DEF_VER=v0.0.GIT
+DEF_VER=v0.0.0
 
 LF='
 '
