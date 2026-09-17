@@ -13,9 +13,10 @@ func newAgentRunReportCmd() *cobra.Command {
 		Deprecated: "use 'agent-run review --report <dir>' instead",
 		Long: `Report review statistics for agent-run review output.
 
-Uses ` + util.DefaultReviewBase + ` for paths. Uses review-input.po for total count,
-review-result.json for output. If any files match po/review-result-*.json,
-they are aggregated; otherwise review-result.json is used.`,
+Uses ` + util.DefaultReviewBase + ` for paths. Uses review-input.json
+(or review-input.po) for total count, review-result.json for output.
+If any files match po/review-result-*.json, they are aggregated;
+otherwise review-result.json is used.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			poDir := util.PoDir
 			if len(args) > 0 {

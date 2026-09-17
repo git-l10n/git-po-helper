@@ -264,7 +264,8 @@ func RunAgentReviewLocalOrchestration(cfg *config.AgentConfig, agentName string,
 			log.Infof("starting fresh review; cleaning intermediate files")
 			cleanReviewIntermediateFiles(ps)
 			log.Infof("extracting review entries to %s", ps.InputPO)
-			if err := PrepareReviewData(target.OldCommit, target.OldFile, target.NewCommit, target.NewFile, ps.InputPO, false, false, false); err != nil {
+			useJSON := IsReviewJSONPath(ps.InputPO)
+			if err := PrepareReviewData(target.OldCommit, target.OldFile, target.NewCommit, target.NewFile, ps.InputPO, false, useJSON, false); err != nil {
 				return result, fmt.Errorf("failed to prepare review data: %w", err)
 			}
 			continue

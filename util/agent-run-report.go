@@ -301,8 +301,9 @@ func AggregateReviewBatches(ps ReviewPathSet) error {
 }
 
 // ApplyReviewFromResultJSON reads review from ps.ResultJSON and applies suggestions to ps.OutputPO.
-// Input PO is ps.InputPO. Returns (applied, err): applied is true if any suggestion was applied.
-// Skips apply if ps.OutputPO has the newest timestamp among ResultJSON, InputPO, and OutputPO.
+// Input is ps.InputPO (.json preferred over .po). Returns (applied, err): applied is true if
+// any suggestion was applied. Skips apply if ps.OutputPO has the newest timestamp among
+// ResultJSON, InputPO, and OutputPO.
 func ApplyReviewFromResultJSON(ps ReviewPathSet) (bool, error) {
 	outputStat, err := os.Stat(ps.OutputPO)
 	if err == nil {
@@ -321,7 +322,8 @@ func ApplyReviewFromResultJSON(ps ReviewPathSet) (bool, error) {
 }
 
 // GetReviewReport reads ps.ResultJSON and fills total_entries from ps.InputPO (or ps.OutputPO).
-// Returns *ReviewJSONResult with Score, CriticalCount, MajorCount, MinorCount, ReportFile, AppliedFile set.
+// Input/output may be gettext JSON or PO (.json preferred when both exist).
+// Returns *ReviewResult with Score, CriticalCount, MajorCount, MinorCount, ReportFile, AppliedFile set.
 func GetReviewReport(pathName string) (*ReviewResult, error) {
 	ps := GetReviewPathSet(pathName)
 
@@ -329,7 +331,7 @@ func GetReviewReport(pathName string) (*ReviewResult, error) {
 		return nil, err
 	}
 
-	// Apply review result to ps.OutputPO
+	// Apply review result to ps.OutputPO (.json or .po)
 	if _, err := ApplyReviewFromResultJSON(ps); err != nil {
 		return nil, fmt.Errorf("failed to apply review to %s: %w", ps.OutputPO, err)
 	}
@@ -344,13 +346,13 @@ func GetReviewReport(pathName string) (*ReviewResult, error) {
 		return nil, err
 	}
 
-	// Set source PO for lazy init of TotalEntries/Score/counts (default ps.InputPO)
+	// Set source for lazy init of TotalEntries/Score/counts (default ps.InputPO)
 	poFile := ps.InputPO
 	if !Exist(poFile) {
 		poFile = ps.OutputPO
 	}
 	if !Exist(poFile) {
-		return nil, fmt.Errorf("file does not exist: %s (need review-input.po for total_entries)", poFile)
+		return nil, fmt.Errorf("file does not exist: %s (need review-input.json or review-input.po for total_entries)", poFile)
 	}
 	review.SetReviewSource(poFile)
 	appliedFile := ""
@@ -401,7 +403,7 @@ func PrintReviewReportResult(r *ReviewResult) {
 	fmt.Println()
 	appliedFile, _ := r.GetAppliedFile()
 	if appliedFile != "" {
-		printMarkdownReviewBullet("Applied PO", appliedFile)
+		printMarkdownReviewBullet("Applied file", appliedFile)
 	}
 	reportFile, _ := r.GetReportFile()
 	if reportFile != "" {

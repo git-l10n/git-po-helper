@@ -21,7 +21,7 @@ type PreCheckResult struct {
 	AllEntries           int   // Update-pot/po: PO/POT msgid count before agent update
 	UntranslatePoEntries int   // Translate: new (untranslated) entries before
 	FuzzyPoEntries       int   // Translate: fuzzy entries before
-	ReviewTotalEntries   int   // Review: total entries in review-input.po
+	ReviewTotalEntries   int   // Review: total entries in review-input (.json or .po)
 }
 
 // PostCheckResult holds post-check outcome for all agent-run commands.
@@ -179,7 +179,7 @@ func (r *ReviewResult) init() error {
 	r.initOnce.Do(func() {
 		if r.sourceFile != "" {
 			if !Exist(r.sourceFile) {
-				r.initErr = fmt.Errorf("file does not exist: %s (need review-input.po for total_entries)", r.sourceFile)
+				r.initErr = fmt.Errorf("file does not exist: %s (need review-input.json or review-input.po for total_entries)", r.sourceFile)
 				return
 			}
 			stats, err := GetPoStats(r.sourceFile)
@@ -311,23 +311,48 @@ var (
 )
 
 // ReviewPathSet holds paths for Task 4 review workflow (AGENTS.md).
-// Naming: review-input.po, review-pending.po, review-result.json, review-output.po,
-// review-todo.json, review-done.json, review-batch.txt,
-// review-result-<N>.json.
+// Naming: review-input(.json|.po), review-pending.po, review-result.json,
+// review-output(.json|.po), review-todo.json, review-done.json, review-batch.txt,
+// review-result-<N>.json. For input/output, .json is preferred when both exist.
 type ReviewPathSet struct {
 	BaseDir    string // directory containing all review files (e.g. "po")
 	BaseName   string // base name prefix (e.g. "review")
-	InputPO    string // po/review-input.po (original extracted PO file, immutable)
+	InputPO    string // po/review-input.json or .po (extracted entries, immutable)
 	PendingPO  string // po/review-pending.po (remaining entries to review)
 	ResultJSON string // po/review-result.json
-	OutputPO   string // po/review-output.po
+	OutputPO   string // po/review-output.json or .po
+}
+
+// resolveReviewL10nFile picks stem.json if present, else stem.po if present,
+// else stem+defaultExt. Pass defaultExt ".po" for write-side defaults (local
+// orchestration); use ".json" when matching an existing JSON input for new output.
+func resolveReviewL10nFile(baseDir, stem, defaultExt string) string {
+	jsonPath := filepath.Join(baseDir, stem+".json")
+	poPath := filepath.Join(baseDir, stem+".po")
+	if Exist(jsonPath) {
+		return jsonPath
+	}
+	if Exist(poPath) {
+		return poPath
+	}
+	if strings.EqualFold(defaultExt, ".json") {
+		return jsonPath
+	}
+	return poPath
+}
+
+// IsReviewJSONPath reports whether path should be treated as gettext JSON by extension.
+func IsReviewJSONPath(path string) bool {
+	return strings.EqualFold(filepath.Ext(path), ".json")
 }
 
 // GetReviewPathSet returns paths for Task 4 review files under BaseDir.
 // If pathName names an existing directory, BaseDir is that path (cleaned).
 // If pathName names a file (or does not exist yet), BaseDir is its parent directory.
 // If pathName is empty, BaseDir is PoDir when that directory exists, otherwise ".".
-// Review file names use the ReviewDefaultBase prefix (e.g. review-input.po).
+// review-input / review-output: prefer .json when that file exists, else .po.
+// When neither exists, input defaults to .po (local orchestration); new output
+// matches the resolved input extension (.json if input is .json).
 func GetReviewPathSet(pathName string) ReviewPathSet {
 	var baseDir string
 	if strings.TrimSpace(pathName) != "" {
@@ -345,13 +370,18 @@ func GetReviewPathSet(pathName string) ReviewPathSet {
 		}
 	}
 	baseName := ReviewDefaultBase
+	inputPath := resolveReviewL10nFile(baseDir, baseName+"-input", ".po")
+	outputDefaultExt := ".po"
+	if IsReviewJSONPath(inputPath) {
+		outputDefaultExt = ".json"
+	}
 	return ReviewPathSet{
 		BaseDir:    baseDir,
 		BaseName:   baseName,
-		InputPO:    filepath.Join(baseDir, baseName+"-input.po"),
+		InputPO:    inputPath,
 		PendingPO:  filepath.Join(baseDir, baseName+"-pending.po"),
 		ResultJSON: filepath.Join(baseDir, baseName+"-result.json"),
-		OutputPO:   filepath.Join(baseDir, baseName+"-output.po"),
+		OutputPO:   resolveReviewL10nFile(baseDir, baseName+"-output", outputDefaultExt),
 	}
 }
 

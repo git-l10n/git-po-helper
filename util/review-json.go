@@ -8,9 +8,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// applyReviewJSON applies review suggestions from the review JSON result to PO entries,
-// then writes the result to the outputFile. It reads from inputFile, loads entities,
-// applies suggest_msgstr (array) to matching entries (by msgid),
+// applyReviewJSON applies review suggestions from the review JSON result to entries,
+// then writes the result to outputFile (.json or .po by extension). It reads from
+// inputFile (gettext JSON or PO), applies suggest_msgstr to matching entries (by msgid),
 // and serializes to outputFile.
 // Returns (applied, err): applied is true if any suggestion was applied; err is non-nil on failure.
 func applyReviewJSON(review *ReviewResult, inputFile, outputFile string) (bool, error) {
@@ -33,11 +33,11 @@ func applyReviewJSON(review *ReviewResult, inputFile, outputFile string) (bool, 
 
 	inputData, err := os.ReadFile(inputFile)
 	if err != nil {
-		return false, fmt.Errorf("failed to read pending PO %s: %w", inputFile, err)
+		return false, fmt.Errorf("failed to read input %s: %w", inputFile, err)
 	}
 	inputJSON, err := LoadFileToGettextJSON(inputData, inputFile)
 	if err != nil {
-		return false, fmt.Errorf("failed to load pending PO %s: %w", inputFile, err)
+		return false, fmt.Errorf("failed to load input %s: %w", inputFile, err)
 	}
 	applyMap := make(map[string]bool)
 	applyCount := 0
@@ -65,7 +65,7 @@ func applyReviewJSON(review *ReviewResult, inputFile, outputFile string) (bool, 
 			continue
 		}
 		if _, ok := applyMap[issue.MsgID]; !ok {
-			log.Errorf("apply review: msgid not applied (no matching entry in PO): %q\n", issue.MsgID)
+			log.Errorf("apply review: msgid not applied (no matching entry in input): %q\n", issue.MsgID)
 		}
 	}
 	if applyCount == 0 {
@@ -74,11 +74,17 @@ func applyReviewJSON(review *ReviewResult, inputFile, outputFile string) (bool, 
 	}
 	f, err := os.Create(outputFile)
 	if err != nil {
-		return false, fmt.Errorf("failed to create output PO %s: %w", outputFile, err)
+		return false, fmt.Errorf("failed to create output %s: %w", outputFile, err)
 	}
 	defer f.Close()
-	if err := WriteGettextJSONToPO(inputJSON, f, false, false); err != nil {
-		return false, fmt.Errorf("failed to write output PO %s: %w", outputFile, err)
+	if IsReviewJSONPath(outputFile) {
+		if err := WriteGettextJSONToJSON(inputJSON, f); err != nil {
+			return false, fmt.Errorf("failed to write output JSON %s: %w", outputFile, err)
+		}
+	} else {
+		if err := WriteGettextJSONToPO(inputJSON, f, false, false); err != nil {
+			return false, fmt.Errorf("failed to write output PO %s: %w", outputFile, err)
+		}
 	}
 	return true, nil
 }

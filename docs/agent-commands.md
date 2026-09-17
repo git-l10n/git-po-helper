@@ -219,7 +219,7 @@ git-po-helper agent-run review [--report <dir>] [--use-local-orchestration] [--a
 ```
 
 **Options:**
-- `--use-local-orchestration`: Use local orchestration: extracts to `po/review-input.po`, splits into `po/review-input-<N>.json`, agent reviews each batch and writes `po/review-result-<N>.json`, merged to `po/review-result.json`
+- `--use-local-orchestration`: Use local orchestration: extracts to `po/review-input.po` (or `.json`), splits into batches via `po/review-todo.json`, agent reviews each batch and writes `po/review-done.json` (renamed to `po/review-result-<N>.json`), merged to `po/review-result.json`
 - `--agent <agent-name>`: Specify which agent to use (required if multiple agents are configured)
 - `--report <dir>`: Print review report from `<dir>` (same behavior as legacy `agent-run report <dir>`)
 - `-r`, `--range <range>`: Revision range: `a..b` (compare a with b), `a..` (compare a with working tree), or `a` (compare a~ with a)
@@ -324,7 +324,7 @@ git-po-helper agent-run report [path]
 ```
 
 **Options:**
-- `path`: Base path for review files (default: `po/review`). Uses `review-input.po` for total count, `review-result.json` for output. If any files match `po/review-result-*.json`, they are loaded and aggregated; otherwise `po/review-result.json` is used.
+- `path`: Base path for review files (default: `po/review`). Uses `review-input.json` (preferred) or `review-input.po` for total count, `review-result.json` for output, and writes applied suggestions to `review-output.json` or `review-output.po` (matching input). If any files match `po/review-result-*.json`, they are loaded and aggregated; otherwise `po/review-result.json` is used.
 
 **Examples:**
 ```bash

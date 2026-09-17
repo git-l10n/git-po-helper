@@ -405,3 +405,150 @@ func jsonString(s string) string {
 	}
 	return string(b)
 }
+
+// minimalGettextJSONWithEntries returns gettext JSON with n content entries.
+func minimalGettextJSONWithEntries(n int) string {
+	entries := make([]string, 0, n)
+	for i := 0; i < n; i++ {
+		id := "entry" + string(rune('a'+i%26))
+		entries = append(entries, `{"msgid":`+jsonString(id)+`,"msgstr":[""]}`)
+	}
+	return `{"header_comment":"","header_meta":"Content-Type: text/plain; charset=UTF-8\n","entries":[` +
+		strings.Join(entries, ",") + `]}`
+}
+
+func TestGetReviewPathSet_PreferJSONOverPO(t *testing.T) {
+	tmpDir := t.TempDir()
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	defer func() { _ = os.Chdir(origWd) }()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir: %v", err)
+	}
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	t.Run("neither exists defaults to po", func(t *testing.T) {
+		ps := GetReviewPathSet("po")
+		if !strings.HasSuffix(ps.InputPO, "review-input.po") {
+			t.Errorf("InputPO = %q, want .../review-input.po", ps.InputPO)
+		}
+		if !strings.HasSuffix(ps.OutputPO, "review-output.po") {
+			t.Errorf("OutputPO = %q, want .../review-output.po", ps.OutputPO)
+		}
+	})
+
+	t.Run("json preferred when both exist", func(t *testing.T) {
+		if err := os.WriteFile("po/review-input.po", []byte(minimalPoWithEntries(1)), 0644); err != nil {
+			t.Fatalf("write po: %v", err)
+		}
+		if err := os.WriteFile("po/review-input.json", []byte(minimalGettextJSONWithEntries(1)), 0644); err != nil {
+			t.Fatalf("write json: %v", err)
+		}
+		if err := os.WriteFile("po/review-output.po", []byte(minimalPoWithEntries(1)), 0644); err != nil {
+			t.Fatalf("write output po: %v", err)
+		}
+		if err := os.WriteFile("po/review-output.json", []byte(minimalGettextJSONWithEntries(1)), 0644); err != nil {
+			t.Fatalf("write output json: %v", err)
+		}
+		ps := GetReviewPathSet("po")
+		if !strings.HasSuffix(ps.InputPO, "review-input.json") {
+			t.Errorf("InputPO = %q, want .../review-input.json", ps.InputPO)
+		}
+		if !strings.HasSuffix(ps.OutputPO, "review-output.json") {
+			t.Errorf("OutputPO = %q, want .../review-output.json", ps.OutputPO)
+		}
+	})
+
+	t.Run("json input implies json output default", func(t *testing.T) {
+		_ = os.Remove("po/review-input.po")
+		_ = os.Remove("po/review-output.po")
+		_ = os.Remove("po/review-output.json")
+		if err := os.WriteFile("po/review-input.json", []byte(minimalGettextJSONWithEntries(1)), 0644); err != nil {
+			t.Fatalf("write json: %v", err)
+		}
+		ps := GetReviewPathSet("po")
+		if !strings.HasSuffix(ps.InputPO, "review-input.json") {
+			t.Errorf("InputPO = %q, want .../review-input.json", ps.InputPO)
+		}
+		if !strings.HasSuffix(ps.OutputPO, "review-output.json") {
+			t.Errorf("OutputPO = %q, want .../review-output.json", ps.OutputPO)
+		}
+	})
+}
+
+func TestGetReviewReport_JSONInputAndOutput(t *testing.T) {
+	review := &ReviewResult{
+		TotalEntries: 2,
+		Issues: []ReviewIssue{
+			{MsgID: "entrya", Score: 0, Description: "fix", SuggestMsgstr: []string{"修好"}},
+		},
+	}
+	data, err := json.Marshal(review)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	tmpDir := t.TempDir()
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	defer func() { _ = os.Chdir(origWd) }()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir: %v", err)
+	}
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile("po/review-input.json", []byte(minimalGettextJSONWithEntries(2)), 0644); err != nil {
+		t.Fatalf("write input json: %v", err)
+	}
+	if err := os.WriteFile("po/review-result.json", data, 0644); err != nil {
+		t.Fatalf("write result: %v", err)
+	}
+
+	result, err := GetReviewReport("po")
+	if err != nil {
+		t.Fatalf("GetReviewReport: %v", err)
+	}
+	total, err := result.GetTotalEntries()
+	if err != nil {
+		t.Fatalf("GetTotalEntries: %v", err)
+	}
+	if total != 2 {
+		t.Errorf("TotalEntries = %d, want 2", total)
+	}
+	applied, err := result.GetAppliedFile()
+	if err != nil {
+		t.Fatalf("GetAppliedFile: %v", err)
+	}
+	if !strings.HasSuffix(applied, "review-output.json") {
+		t.Errorf("AppliedFile = %q, want .../review-output.json", applied)
+	}
+	outData, err := os.ReadFile(applied)
+	if err != nil {
+		t.Fatalf("read applied: %v", err)
+	}
+	if !strings.Contains(string(outData), "修好") {
+		t.Errorf("output JSON missing applied suggestion; got:\n%s", outData)
+	}
+	// Prefer json over po when both exist for source count
+	if err := os.WriteFile("po/review-input.po", []byte(minimalPoWithEntries(9)), 0644); err != nil {
+		t.Fatalf("write po: %v", err)
+	}
+	result2, err := GetReviewReport("po")
+	if err != nil {
+		t.Fatalf("GetReviewReport with both: %v", err)
+	}
+	total2, err := result2.GetTotalEntries()
+	if err != nil {
+		t.Fatalf("GetTotalEntries: %v", err)
+	}
+	if total2 != 2 {
+		t.Errorf("with both formats, TotalEntries = %d, want 2 from json", total2)
+	}
+}
