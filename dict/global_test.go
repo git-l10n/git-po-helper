@@ -105,3 +105,32 @@ func TestKeepWordsPattern(t *testing.T) {
 		}
 	}
 }
+
+func TestIsShortGitConfigLike(t *testing.T) {
+	cases := []struct {
+		s    string
+		want bool
+	}{
+		{"p.e", true},
+		{"p.e.", true}, // trailing dot still config-like; 2 letters
+		{"e.g", true},
+		{"i.e", true},
+		{"a.b", true},
+		{"ab.cd", true},    // 4 letters
+		{"abc.de", true},   // 5 letters
+		{"gc.auto", false}, // 6 letters
+		{"color.ui", false},
+		{"fetch.showForcedUpdates", false},
+		{"$action", false},
+		{"--stat", false},
+		{"lazy_name", false},
+		{"--dirstat=files,param1,param2...", false},
+		{"refs/heads", false},
+		{"no-dot", false},
+	}
+	for _, tc := range cases {
+		if got := IsShortGitConfigLike(tc.s); got != tc.want {
+			t.Errorf("IsShortGitConfigLike(%q) = %v, want %v", tc.s, got, tc.want)
+		}
+	}
+}

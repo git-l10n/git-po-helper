@@ -122,6 +122,9 @@ func findMismatchedVariables(locale, src, target string) []string {
 
 	for _, m := range dict.KeepWordsPattern.FindAllStringSubmatch(src, -1) {
 		key := m[1]
+		if dict.IsShortGitConfigLike(key) {
+			continue
+		}
 		if strings.HasPrefix(key, "${") && strings.HasSuffix(key, "}") {
 			key = "$" + key[2:len(key)-1]
 		}
@@ -129,6 +132,9 @@ func findMismatchedVariables(locale, src, target string) []string {
 	}
 	for _, m := range dict.KeepWordsPattern.FindAllStringSubmatch(target, -1) {
 		key := m[1]
+		if dict.IsShortGitConfigLike(key) {
+			continue
+		}
 		switch locale {
 		case "bg":
 			// Bulgarian (bg) translations removed "<>" boundary characters,
