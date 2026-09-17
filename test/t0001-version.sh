@@ -77,4 +77,24 @@ test_expect_success "version --ge with invalid constraint" '
 	grep -q "ERROR:" err
 '
 
+test_expect_success "CHANGELOG version >= built version (update changelog before tagging)" '
+	# Enforce release order: bump CHANGELOG ## X.Y.Z first, then tag.
+	# Built version may be X.Y.Z.N.g… (describe) or X.Y.Z (changelog fallback);
+	# comparison uses major.minor.patch only, so --le changelog_ver must hold.
+	ROOT="$(cd "$TEST_DIRECTORY/.." && pwd)" &&
+	changelog_ver=$(sed -n "s/^## \([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p" \
+		"$ROOT/CHANGELOG.md" | head -n 1) &&
+	test -n "$changelog_ver" &&
+	if ! $HELPER version --le "$changelog_ver" >out 2>err
+	then
+		echo "HINT: CHANGELOG.md top version is $changelog_ver but binary is newer." &&
+		echo "HINT: Update CHANGELOG before creating a higher vX.Y.Z tag." &&
+		cat out &&
+		cat err &&
+		return 1
+	fi &&
+	test_must_be_empty err &&
+	! grep -q "^ERROR:" out
+'
+
 test_done

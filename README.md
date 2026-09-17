@@ -96,6 +96,13 @@ $ make
 $ make test
 ```
 
+The build embeds a version via `VERSION-GEN`, in this order:
+
+1. a `version` file (for release tarballs / zip trees without `.git`)
+2. `git describe` when a `vX.Y.Z` tag is available
+3. the first `## X.Y.Z` heading in `CHANGELOG.md` (GitHub source zip / no tags)
+4. `0.0.0` as a last resort
+
 Install `git-po-helper`:
 
 ```

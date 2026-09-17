@@ -1,6 +1,12 @@
 #!/bin/sh
 
-# This script is from git.git project
+# Generate VERSION-FILE for the build.
+#
+# Precedence:
+#   1. version          - explicit file for release tarballs / zip builds
+#   2. git describe     - when a matching vX.Y.Z tag exists
+#   3. CHANGELOG.md     - first "## X.Y.Z" heading (no tag / no .git)
+#   4. DEF_VER          - last resort
 
 RVF=VERSION-FILE
 DEF_VER=v0.0.0
@@ -8,8 +14,6 @@ DEF_VER=v0.0.0
 LF='
 '
 
-# First see if there is a version file (included in release tarballs),
-# then try git-describe, then default.
 if test -f version
 then
 	VN=$(cat version) || VN="$DEF_VER"
@@ -23,7 +27,12 @@ elif test -d ${GIT_DIR:-.git} -o -f .git &&
 		VN="$VN-dirty" ;;
 	esac
 then
-	VN=$(echo "$VN" | sed -e 's/-/./g');
+	VN=$(echo "$VN" | sed -e 's/-/./g')
+elif test -f CHANGELOG.md &&
+	VN=$(sed -n 's/^## \([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' CHANGELOG.md | head -n 1) &&
+	test -n "$VN"
+then
+	: # VN from first CHANGELOG ## X.Y.Z heading
 else
 	VN="$DEF_VER"
 fi
