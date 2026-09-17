@@ -78,6 +78,23 @@ func GetPoStats(file string) (*PoStats, error) {
 	return getPoStatsFromGettextJSON(j), nil
 }
 
+// GetPoEntryCount returns the number of content entries in a PO or gettext
+// JSON file, excluding the header entry.
+func GetPoEntryCount(file string) (int, error) {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read %s: %w", file, err)
+	}
+	j, err := LoadFileToGettextJSON(data, file)
+	if err != nil {
+		return 0, err
+	}
+	if j == nil {
+		return 0, nil
+	}
+	return len(j.Entries), nil
+}
+
 // FormatMsgfmtStatistics formats stats to match msgfmt --statistics output.
 // For compatibility, "same" (msgstr == msgid) is counted as translated.
 func FormatMsgfmtStatistics(stats *PoStats) string {

@@ -11,6 +11,9 @@ import (
 
 type statCommand struct {
 	cmd *cobra.Command
+	O   struct {
+		Count bool
+	}
 }
 
 func (v *statCommand) Command() *cobra.Command {
@@ -28,6 +31,10 @@ func (v *statCommand) Command() *cobra.Command {
   fuzzy        - entries with fuzzy flag
   obsolete     - obsolete entries (#~ format)
 
+With -c/--count, print only the number of content entries (excluding the
+header entry). One number is printed per file. If a file does not exist,
+print 0 on stdout and report the error on stderr (non-zero exit).
+
 Input can be PO/POT files or gettext JSON (same schema as msg-select --json).
 Format is auto-detected: JSON if file starts with '{' after whitespace.
 
@@ -39,6 +46,9 @@ For review JSON report, use: git-po-helper agent-run report [path]`,
 			return v.Execute(args)
 		},
 	}
+
+	v.cmd.Flags().BoolVarP(&v.O.Count, "count", "c", false,
+		"print only the number of content entries (excluding header)")
 
 	return v.cmd
 }
@@ -52,6 +62,19 @@ func (v statCommand) Execute(args []string) error {
 	for i, file := range args {
 		if !util.Exist(file) {
 			errs = append(errs, fmt.Sprintf("file does not exist: %s", file))
+			if v.O.Count {
+				fmt.Println(0)
+			}
+			continue
+		}
+
+		if v.O.Count {
+			n, err := util.GetPoEntryCount(file)
+			if err != nil {
+				errs = append(errs, fmt.Sprintf("%s: %v", file, err))
+				continue
+			}
+			fmt.Println(n)
 			continue
 		}
 

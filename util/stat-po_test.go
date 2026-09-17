@@ -70,6 +70,15 @@ msgstr "好"
 	if got := stats.Total(); got != 5 {
 		t.Errorf("Total() = %d, want 5 (3 translated + 1 untranslated + 1 fuzzy)", got)
 	}
+
+	count, err := GetPoEntryCount(poFile)
+	if err != nil {
+		t.Fatalf("GetPoEntryCount failed: %v", err)
+	}
+	// All content entries including obsolete; header excluded.
+	if count != 6 {
+		t.Errorf("GetPoEntryCount = %d, want 6", count)
+	}
 }
 
 // TestReportMatchesMsgfmtStatistics verifies that report output matches
