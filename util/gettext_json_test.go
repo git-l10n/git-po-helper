@@ -1193,6 +1193,50 @@ msgstr "Ciao"
 	}
 }
 
+// TestLoadFileToGettextJSON_IgnoresExtension verifies format is detected by
+// content, not by file extension (e.g. .tmp works for both PO and JSON).
+func TestLoadFileToGettextJSON_IgnoresExtension(t *testing.T) {
+	poContent := []byte(`msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Hello"
+msgstr "你好"
+`)
+	jsonContent := []byte(`{"header_comment":"","header_meta":"","entries":[{"msgid":"Hi","msgstr":["Salut"]}]}`)
+
+	t.Run("PO content in .tmp", func(t *testing.T) {
+		j, err := LoadFileToGettextJSON(poContent, "sample.tmp")
+		if err != nil {
+			t.Fatalf("LoadFileToGettextJSON: %v", err)
+		}
+		if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hello" || j.Entries[0].MsgStrSingle() != "你好" {
+			t.Errorf("PO via .tmp: got %+v", j.Entries)
+		}
+	})
+
+	t.Run("JSON content in .tmp", func(t *testing.T) {
+		j, err := LoadFileToGettextJSON(jsonContent, "sample.tmp")
+		if err != nil {
+			t.Fatalf("LoadFileToGettextJSON: %v", err)
+		}
+		if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hi" || j.Entries[0].MsgStrSingle() != "Salut" {
+			t.Errorf("JSON via .tmp: got %+v", j.Entries)
+		}
+	})
+
+	t.Run("JSON with leading whitespace still detected", func(t *testing.T) {
+		padded := append([]byte("  \n\t"), jsonContent...)
+		j, err := LoadFileToGettextJSON(padded, "padded.tmp")
+		if err != nil {
+			t.Fatalf("LoadFileToGettextJSON: %v", err)
+		}
+		if len(j.Entries) != 1 || j.Entries[0].MsgID != "Hi" {
+			t.Errorf("padded JSON via .tmp: got %+v", j.Entries)
+		}
+	})
+}
+
 func TestWriteGettextJSONToJSON(t *testing.T) {
 	j := &GettextJSON{
 		HeaderComment: "#",

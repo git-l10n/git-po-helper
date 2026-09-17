@@ -75,6 +75,20 @@ test_expect_success "stat -c on JSON counts entries" '
 	test_cmp expect actual
 '
 
+test_expect_success "stat -c detects PO content in .tmp by content not extension" '
+	cp sample.po sample.tmp &&
+	echo 3 >expect &&
+	$HELPER stat -c sample.tmp >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success "stat -c detects JSON content in .tmp by content not extension" '
+	cp sample.json sample-json.tmp &&
+	echo 3 >expect &&
+	$HELPER stat -c sample-json.tmp >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success "stat -c missing file: stdout 0, stderr error, non-zero exit" '
 	echo 0 >expect &&
 	test_must_fail $HELPER stat -c missing.po >actual 2>err &&
