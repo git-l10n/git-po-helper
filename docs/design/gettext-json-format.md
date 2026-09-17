@@ -107,7 +107,7 @@ Same uniqueness and semantics as in gettext-format.md Section 6.
 
 ## 6. Empty and omitted fields
 
-- **Empty file or no entries:** Implementations may output `{"header_comment":"","header_meta":"","entries":[]}` or an empty file, depending on tool (e.g. msg-select with no selected entries can write an empty file).
+- **Empty file or no entries:** `msg-select`, `msg-cat`, and `compare` (when there are no new/changed entries) write an empty file (0 bytes) / empty stdout. They do not emit `{"header_comment":"","header_meta":"","entries":[]}`. In memory, an empty `GettextJSON` may still use `Entries: []`; that is not written unless a caller invokes `WriteGettextJSONToJSON` directly with empty entries.
 - **Omitted vs empty:** `omitempty` in the Go struct means optional in JSON. Absent `msgid_plural`, `comments`, `msgstr` (or empty array), `obsolete`, `msgid_previous` mean the same as empty or false as appropriate.
 
 ---

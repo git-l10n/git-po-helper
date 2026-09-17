@@ -70,11 +70,12 @@ Each element of `entries`:
 ## 1. Goal
 
 - **Input**: Support both PO files and JSON files as input. The JSON input format is the same as the JSON output format (see §2 and §3 below).
-- **Output**: When `--json` is set, write a single JSON object (header_comment, header_meta, entries). When `--json` is not set, write PO text. Thus:
+- **Output**: When `--json` is set and at least one content entry is selected, write a single JSON object (header_comment, header_meta, entries). When `--json` is not set and entries are selected, write PO text. When no content entries match, write nothing (empty file / empty stdout) for both formats. Thus:
   - PO input, no `--json` → PO output (current behavior).
   - PO input, `--json` → JSON output.
   - JSON input, no `--json` → PO output (convert JSON to PO).
   - JSON input, `--json` → JSON output (e.g. after applying range selection to the parsed JSON).
+  - Any input, empty selection → empty output (0 bytes; not `entries: []`).
 - **Bidirectional conversion**: Support converting PO entries to JSON and JSON entries back to PO so that round-trip (PO → JSON → PO or JSON → PO → JSON) preserves content. Range selection applies to the logical entry list in both cases.
 
 ---
@@ -282,7 +283,7 @@ No change to `ParsePoEntries` or `ParseEntryRange` is required; only a new code 
   - When `--json` is set, the command writes a single JSON object to the output (stdout or the file given by `-o`). No PO text is written.
   - When `--json` is not set, behavior is unchanged: PO text is written as today.
 - **Range and --no-header**: Same as today. Omit `--range` to select all entries. When `--no-header` is set and `--json` is used, the output object should still have `header_comment` and `header_meta` (they may be empty if the header was skipped from selection, but the parser still sees the file header once). Rationale: the JSON is a representation of the *selected* content; if we omit the header from selection, we can either (a) still include header_comment/header_meta from the file for context, or (b) set them to empty. Option (a) is more useful for consumers that want to see file metadata. **Recommendation**: When `--json` is set, always parse and output the file header (header_comment, header_meta) from the source file, regardless of `--no-header`. The `entries` array contains only the entries that match the range; when `--no-header` is true, the range does not include entry 0, so we simply don’t add a “header entry” to `entries` (we never do—entry 0 is the header and is not in `entries`). So `--no-header` only affects the non-JSON text output (whether we write the header block). For JSON, we always include header_comment and header_meta from the file.
-- **Empty selection**: If the range results in no content entries (e.g. range 10-20 but file has 5 entries), output a valid JSON object with `header_comment` and `header_meta` as parsed from the file, and `entries: []`.
+- **Empty selection**: If the range results in no content entries (e.g. range 10-20 but file has 5 entries), write nothing for both PO and JSON output (empty file / empty stdout). Do **not** emit a JSON object with `entries: []`.
 
 ---
 
@@ -327,8 +328,8 @@ Implement in the following order. Each step should be testable before moving on;
 - **Tasks**:
   - In `cmd/msg_select.go`, add `--json` flag (bool). When set, after parsing PO and resolving the range, call the new JSON builder and write to the same output (stdout or `-o` file) instead of writing PO text.
   - Ensure `--no-header` does not strip header from JSON (always include header_comment and header_meta from the parsed file).
-  - Handle empty selection: output `{"header_comment":"...","header_meta":"...","entries":[]}`.
-- **Tests**: Integration or CLI test: run `msg-select --range "1" --json` on a known PO file, capture stdout, decode JSON and assert structure and one entry’s msgid/msgstr. Test empty range (e.g. `--range "99-100"` on a 5-entry file) yields valid JSON with empty `entries`.
+  - Handle empty selection: write nothing (empty output file / empty stdout) for both PO and JSON; do not emit `entries: []`.
+- **Tests**: Integration or CLI test: run `msg-select --range "1" --json` on a known PO file, capture stdout, decode JSON and assert structure and one entry’s msgid/msgstr. Test empty range (e.g. `--range "99-100"` on a 5-entry file) yields empty output (0 bytes).
 - **Commit**: e.g. `feat(msg-select): add --json to output JSON for PO input`
 
 ### 8.3 Step 3: JSON → PO conversion (util)
@@ -353,7 +354,7 @@ Implement in the following order. Each step should be testable before moving on;
 - **Tests** (add or extend):
   - **Round-trip (Example 2)**: PO file with multi-line msgid/msgstr and `\n`/`\t` → JSON → PO → parse PO → JSON again; compare msgid and msgstr strings to original. This guards against special-character loss.
   - **Round-trip (Example 3)**: Plural entry PO → JSON → PO → parse → JSON; compare.
-  - **Edge cases**: Empty entries list; header only (range selects nothing); entry with only comments then msgid/msgstr.
+  - **Edge cases**: Empty entries list / header only (range selects nothing) → 0-byte empty output; entry with only comments then msgid/msgstr.
 - **Docs**: Update `cmd/msg_select.go` Long description to mention `--json` and that input can be PO or JSON; document gettext JSON schema or refer to this design doc (implemented as GettextJSON/GettextEntry in util/gettext_json.go).
 - **Commit**: e.g. `test(msg-select): add PO↔gettext JSON round-trip tests; doc --json and JSON input`
 

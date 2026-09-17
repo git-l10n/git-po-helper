@@ -49,7 +49,8 @@ See docs/design/msg-select-json-output.md for the gettext JSON schema (GettextJS
 Entry 0 is the header entry; it is included when content entries are selected
 (use --no-header to omit; for JSON output the file header is always included).
 Entry numbers 1, 2, 3, ... refer to the first, second, third content entries.
-If no content entries match the range, PO output is empty; JSON output has entries: [].
+If no content entries match the range, both PO and JSON output are empty
+(nothing written; with -o the output file exists but has size 0).
 
 By default, all entries are selected (translated, same, untranslated, fuzzy, obsolete).
 Use --translated, --untranslated, --fuzzy to filter by state (OR relationship).
