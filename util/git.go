@@ -2,6 +2,7 @@
 package util
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -17,6 +18,10 @@ import (
 // ErrOutsideWorktree is returned by GetRepoRelPath when the path resolves outside
 // the repository work tree (including repo-relative paths that escape with "..").
 var ErrOutsideWorktree = errors.New("path is outside repository worktree")
+
+// ErrFileNotInRevision is returned by FileRevision.GetFile when the path does not
+// exist at the requested revision (e.g. a newly added po/XX.po).
+var ErrFileNotInRevision = errors.New("file does not exist in revision")
 
 // FileRevision identifies a path at a revision for materialization via GetFile.
 // IsTipCommit is metadata for callers (e.g. check-commits PO policy); GetFile does not use it.
@@ -68,10 +73,13 @@ func (f *FileRevision) GetFile() (string, error) {
 	if err := repository.RequireOpened(); err != nil {
 		return "", fmt.Errorf("git show requires a repository: %w", err)
 	}
-	cmd := exec.Command("git",
-		"show",
-		f.Revision+":"+f.File)
-	cmd.Stderr = os.Stderr
+	object := f.Revision + ":" + f.File
+	if err := ensureGitPathAtRevision(f.Revision, f.File); err != nil {
+		return "", err
+	}
+	cmd := exec.Command("git", "show", object)
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = &stderrBuf
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", fmt.Errorf(`get StdoutPipe failed: %s`, err)
@@ -85,6 +93,11 @@ func (f *FileRevision) GetFile() (string, error) {
 		return "", fmt.Errorf("fail to read git-show output: %w", err)
 	}
 	if err := cmd.Wait(); err != nil {
+		msg := strings.TrimSpace(stderrBuf.String())
+		log.Debugf("git show %s failed: %v (%s)", object, err, msg)
+		if msg != "" {
+			return "", fmt.Errorf("fail to wait git-show command: %s: %s", err, msg)
+		}
 		return "", fmt.Errorf("fail to wait git-show command: %s", err)
 	}
 	if err := os.WriteFile(f.tmpfile, data, 0644); err != nil {
@@ -93,6 +106,26 @@ func (f *FileRevision) GetFile() (string, error) {
 	f.cached = true
 	log.Debugf(`creating "%s" file using command: %s`, f.tmpfile, cmd.String())
 	return f.tmpfile, nil
+}
+
+// ensureGitPathAtRevision checks whether rev:path exists via `git cat-file -e`.
+// Detection uses only the exit status (locale-independent). If the revision
+// itself is invalid, returns a normal error (not ErrFileNotInRevision).
+func ensureGitPathAtRevision(revision, file string) error {
+	object := revision + ":" + file
+	cmd := exec.Command("git", "cat-file", "-e", object)
+	cmd.Stderr = nil // discard localized stderr; exit code is enough
+	if err := cmd.Run(); err == nil {
+		return nil
+	}
+	log.Debugf("git cat-file -e %s failed", object)
+
+	revCmd := exec.Command("git", "rev-parse", "--verify", revision+"^{commit}")
+	revCmd.Stderr = nil
+	if revErr := revCmd.Run(); revErr != nil {
+		return fmt.Errorf("fail to resolve %s: revision %q is invalid", object, revision)
+	}
+	return fmt.Errorf("%w: %s", ErrFileNotInRevision, object)
 }
 
 // Cleanup removes the temp file created by GetFile for a non-empty Revision and clears tmpfile.

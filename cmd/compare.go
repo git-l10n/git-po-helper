@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -151,13 +152,33 @@ func (v compareCommand) executeStat(oldCommit, oldFile, newCommit, newFile strin
 	defer oldRev.Cleanup()
 	oldPath, err := oldRev.GetFile()
 	if err != nil {
-		return NewStandardErrorF("failed to checkout %s@%s: %v", oldFile, oldCommit, err)
+		if errors.Is(err, util.ErrFileNotInRevision) {
+			tmp, err := os.CreateTemp("", "compare-stat-old-*.po")
+			if err != nil {
+				return NewStandardErrorF("failed to create empty old file: %v", err)
+			}
+			tmp.Close()
+			defer os.Remove(tmp.Name())
+			oldPath = tmp.Name()
+		} else {
+			return NewStandardErrorF("failed to checkout %s@%s: %v", oldFile, oldCommit, err)
+		}
 	}
 	newRev := util.FileRevision{Revision: newCommit, File: newFile}
 	defer newRev.Cleanup()
 	newPath, err := newRev.GetFile()
 	if err != nil {
-		return NewStandardErrorF("failed to checkout %s@%s: %v", newFile, newCommit, err)
+		if errors.Is(err, util.ErrFileNotInRevision) {
+			tmp, err := os.CreateTemp("", "compare-stat-new-*.po")
+			if err != nil {
+				return NewStandardErrorF("failed to create empty new file: %v", err)
+			}
+			tmp.Close()
+			defer os.Remove(tmp.Name())
+			newPath = tmp.Name()
+		} else {
+			return NewStandardErrorF("failed to checkout %s@%s: %v", newFile, newCommit, err)
+		}
 	}
 
 	srcData, err := os.ReadFile(oldPath)

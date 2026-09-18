@@ -2,10 +2,10 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/git-l10n/git-po-helper/repository"
 	log "github.com/sirupsen/logrus"
@@ -66,7 +66,7 @@ func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string
 	}
 	oldPath, err := oldFileRevision.GetFile()
 	if err != nil {
-		if oldFileRevision.Revision != "" && strings.Contains(err.Error(), "does not exist in") {
+		if errors.Is(err, ErrFileNotInRevision) {
 			log.Infof("file %s not found in commit %s, using empty file as original", relOldFile, oldCommit)
 			if err := os.WriteFile(oldFileRevision.tmpfile, []byte{}, 0644); err != nil {
 				return fmt.Errorf("failed to create empty orig file: %w", err)
@@ -99,7 +99,7 @@ func PrepareReviewData(oldCommit, oldFile, newCommit, newFile, outputFile string
 	}
 	newPath, err := newFileRevision.GetFile()
 	if err != nil {
-		if newFileRevision.Revision != "" && strings.Contains(err.Error(), "does not exist in") {
+		if errors.Is(err, ErrFileNotInRevision) {
 			log.Infof("file %s not found in commit %s, using empty file as original", relNewFile, newCommit)
 			if err := os.WriteFile(newFileRevision.tmpfile, []byte{}, 0644); err != nil {
 				return fmt.Errorf("failed to create empty new file: %w", err)

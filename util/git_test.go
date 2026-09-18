@@ -275,3 +275,273 @@ msgstr ""
 		}
 	})
 }
+
+func TestEnsureGitPathAtRevision(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.Unsetenv("GIT_DIR")
+	os.Unsetenv("GIT_WORK_TREE")
+	os.Unsetenv("GIT_INDEX_FILE")
+	os.Unsetenv("GIT_COMMON_DIR")
+
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = os.Chdir(origWd)
+		repository.OpenRepository(origWd)
+	}()
+
+	gitEnv := gitTestEnv()
+	runGit := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = tmpDir
+		cmd.Env = gitEnv
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, string(output))
+		}
+	}
+
+	runGit("init")
+	runGit("config", "user.email", "test@test.com")
+	runGit("config", "user.name", "Test")
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("po/zh_CN.po", []byte("msgid \"\"\nmsgstr \"\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runGit("add", "po/zh_CN.po")
+	runGit("commit", "--no-verify", "-m", "initial")
+
+	repository.OpenRepository(tmpDir)
+
+	t.Setenv("LC_ALL", "zh_CN.UTF-8")
+	t.Setenv("LANG", "zh_CN.UTF-8")
+	t.Setenv("LANGUAGE", "zh_CN")
+
+	if err := ensureGitPathAtRevision("HEAD", "po/zh_CN.po"); err != nil {
+		t.Fatalf("existing path: %v", err)
+	}
+	err = ensureGitPathAtRevision("HEAD", "po/pt_BR.po")
+	if !errors.Is(err, ErrFileNotInRevision) {
+		t.Fatalf("missing path: got %v, want ErrFileNotInRevision", err)
+	}
+	err = ensureGitPathAtRevision("no-such-ref", "po/zh_CN.po")
+	if err == nil || errors.Is(err, ErrFileNotInRevision) {
+		t.Fatalf("invalid revision: got %v, want non-ErrFileNotInRevision error", err)
+	}
+}
+
+// TestFileRevisionGetFile_NotInRevision_LocalizedEnv verifies detection works
+// even when the user environment uses a non-English locale for git messages.
+func TestFileRevisionGetFile_NotInRevision_LocalizedEnv(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.Unsetenv("GIT_DIR")
+	os.Unsetenv("GIT_WORK_TREE")
+	os.Unsetenv("GIT_INDEX_FILE")
+	os.Unsetenv("GIT_COMMON_DIR")
+
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = os.Chdir(origWd)
+		repository.OpenRepository(origWd)
+	}()
+
+	gitEnv := gitTestEnv()
+	runGit := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = tmpDir
+		cmd.Env = gitEnv
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, string(output))
+		}
+	}
+
+	runGit("init")
+	runGit("config", "user.email", "test@test.com")
+	runGit("config", "user.name", "Test")
+	if err := os.WriteFile("README", []byte("x\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runGit("add", "README")
+	runGit("commit", "--no-verify", "-m", "initial")
+
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("po/pt_BR.po", []byte("msgid \"\"\nmsgstr \"\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	repository.OpenRepository(tmpDir)
+
+	t.Setenv("LC_ALL", "zh_CN.UTF-8")
+	t.Setenv("LANG", "zh_CN.UTF-8")
+	t.Setenv("LANGUAGE", "zh_CN")
+
+	fr := FileRevision{Revision: "HEAD", File: "po/pt_BR.po"}
+	defer fr.Cleanup()
+	_, err = fr.GetFile()
+	if !errors.Is(err, ErrFileNotInRevision) {
+		t.Fatalf("GetFile = %v, want ErrFileNotInRevision (locale-independent)", err)
+	}
+}
+
+// TestFileRevisionGetFile_NotInRevision verifies GetFile returns ErrFileNotInRevision
+// when the path exists on disk but not at the requested commit (newly added file).
+func TestFileRevisionGetFile_NotInRevision(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.Unsetenv("GIT_DIR")
+	os.Unsetenv("GIT_WORK_TREE")
+	os.Unsetenv("GIT_INDEX_FILE")
+	os.Unsetenv("GIT_COMMON_DIR")
+
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = os.Chdir(origWd)
+		repository.OpenRepository(origWd)
+	}()
+
+	gitEnv := gitTestEnv()
+	runGit := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = tmpDir
+		cmd.Env = gitEnv
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, string(output))
+		}
+	}
+
+	runGit("init")
+	runGit("config", "user.email", "test@test.com")
+	runGit("config", "user.name", "Test")
+	if err := os.WriteFile("README", []byte("x\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runGit("add", "README")
+	runGit("commit", "--no-verify", "-m", "initial")
+
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatal(err)
+	}
+	poContent := `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Hello"
+msgstr "Olá"
+`
+	if err := os.WriteFile("po/pt_BR.po", []byte(poContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	repository.OpenRepository(tmpDir)
+
+	fr := FileRevision{Revision: "HEAD", File: "po/pt_BR.po"}
+	defer fr.Cleanup()
+	_, err = fr.GetFile()
+	if !errors.Is(err, ErrFileNotInRevision) {
+		t.Fatalf("GetFile = %v, want ErrFileNotInRevision", err)
+	}
+}
+
+// TestPrepareReviewData_NewFile treats a missing old revision path as empty base,
+// so all entries in the new file appear as added.
+func TestPrepareReviewData_NewFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.Unsetenv("GIT_DIR")
+	os.Unsetenv("GIT_WORK_TREE")
+	os.Unsetenv("GIT_INDEX_FILE")
+	os.Unsetenv("GIT_COMMON_DIR")
+
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = os.Chdir(origWd)
+		repository.OpenRepository(origWd)
+	}()
+
+	gitEnv := gitTestEnv()
+	runGit := func(args ...string) string {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = tmpDir
+		cmd.Env = gitEnv
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, string(out))
+		}
+		return strings.TrimSpace(string(out))
+	}
+
+	runGit("init")
+	runGit("config", "user.email", "test@test.com")
+	runGit("config", "user.name", "Test")
+	if err := os.WriteFile("README", []byte("x\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runGit("add", "README")
+	runGit("commit", "--no-verify", "-m", "initial")
+	base := runGit("rev-parse", "HEAD")
+
+	if err := os.MkdirAll("po", 0755); err != nil {
+		t.Fatal(err)
+	}
+	poContent := `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Hello"
+msgstr "Olá"
+
+msgid "World"
+msgstr "Mundo"
+`
+	if err := os.WriteFile("po/pt_BR.po", []byte(poContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runGit("add", "po/pt_BR.po")
+	runGit("commit", "--no-verify", "-m", "l10n: add pt_BR")
+	tip := runGit("rev-parse", "HEAD")
+
+	repository.OpenRepository(tmpDir)
+
+	outPath := filepath.Join(tmpDir, "review-out.json")
+	if err := PrepareReviewData(base, "po/pt_BR.po", tip, "po/pt_BR.po", outPath, false, true, false); err != nil {
+		t.Fatalf("PrepareReviewData: %v", err)
+	}
+	data, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) == 0 {
+		t.Fatal("expected non-empty compare output for newly added PO")
+	}
+	j, err := LoadFileToGettextJSON(data, outPath)
+	if err != nil {
+		t.Fatalf("parse output: %v", err)
+	}
+	if len(j.Entries) != 2 {
+		t.Fatalf("expected 2 added entries, got %d", len(j.Entries))
+	}
+}

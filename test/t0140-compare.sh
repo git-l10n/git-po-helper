@@ -225,4 +225,68 @@ test_expect_success "compare --stat and --assert-no-changes are mutually exclusi
 	grep -q "cannot be used with"
 '
 
+test_expect_success "setup: newly added po file across commits" '
+	mkdir -p po &&
+	cat >README <<-\EOF &&
+	placeholder
+	EOF
+	git add README &&
+	git commit -m "base without po" &&
+	BASE=$(git rev-parse HEAD) &&
+	echo "$BASE" >base.commit &&
+
+	cat >po/pt_BR.po <<-\EOF &&
+	msgid ""
+	msgstr ""
+	"Content-Type: text/plain; charset=UTF-8\n"
+
+	msgid "Hello"
+	msgstr "Olá"
+
+	msgid "World"
+	msgstr "Mundo"
+	EOF
+	git add po/pt_BR.po &&
+	git commit -m "l10n: add pt_BR" &&
+	TIP=$(git rev-parse HEAD) &&
+	echo "$TIP" >tip.commit
+'
+
+test_expect_success "compare --commit: newly added po treats all entries as new" '
+	TIP=$(cat tip.commit) &&
+	$HELPER compare --stat --commit "$TIP" po/pt_BR.po >actual 2>&1 &&
+	cat >expect <<-\EOF &&
+	2 new
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success "compare --commit --json: newly added po outputs all entries" '
+	TIP=$(cat tip.commit) &&
+	$HELPER compare --json --commit "$TIP" po/pt_BR.po -o new-file.json &&
+	test -s new-file.json &&
+	jq -e ".entries | length == 2" new-file.json &&
+	jq -e ".entries[] | select(.msgid == \"Hello\")" new-file.json &&
+	jq -e ".entries[] | select(.msgid == \"World\")" new-file.json
+'
+
+test_expect_success "compare -r base..tip: newly added po works" '
+	BASE=$(cat base.commit) &&
+	TIP=$(cat tip.commit) &&
+	$HELPER compare --stat -r "$BASE..$TIP" po/pt_BR.po >actual 2>&1 &&
+	cat >expect <<-\EOF &&
+	2 new
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success "compare --since: newly added po vs worktree" '
+	BASE=$(cat base.commit) &&
+	$HELPER compare --stat --since "$BASE" po/pt_BR.po >actual 2>&1 &&
+	cat >expect <<-\EOF &&
+	2 new
+	EOF
+	test_cmp expect actual
+'
+
 test_done
