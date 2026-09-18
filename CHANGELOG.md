@@ -2,6 +2,21 @@
 
 Changes of git-po-helper.
 
+## 0.9.1 (2026-09-18)
+
+### check-po typos
+
+* fix(check-po): ignore short config-like keep-words under 6 letters
+  (e.g. Spanish/Portuguese `p.e.`) so real variables like `color.ui`
+  remain checked without per-locale smudge entries for abbreviations
+
+### agent-run review / report
+
+* feat(review): prefer JSON for review-input/output in `--report`;
+  resolve `.json` first with `.po` fallback, and write applied
+  suggestions in the matching format so gettext builds are not broken
+  by temp `.po` files under `po/`
+
 ## 0.9.0 (2026-09-17)
 
 ### version command and build
