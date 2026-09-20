@@ -319,9 +319,9 @@ func TestEnsureGitPathAtRevision(t *testing.T) {
 
 	repository.OpenRepository(tmpDir)
 
-	t.Setenv("LC_ALL", "zh_CN.UTF-8")
-	t.Setenv("LANG", "zh_CN.UTF-8")
-	t.Setenv("LANGUAGE", "zh_CN")
+	setTestEnv(t, "LC_ALL", "zh_CN.UTF-8")
+	setTestEnv(t, "LANG", "zh_CN.UTF-8")
+	setTestEnv(t, "LANGUAGE", "zh_CN")
 
 	if err := ensureGitPathAtRevision("HEAD", "po/zh_CN.po"); err != nil {
 		t.Fatalf("existing path: %v", err)
@@ -385,9 +385,9 @@ func TestFileRevisionGetFile_NotInRevision_LocalizedEnv(t *testing.T) {
 
 	repository.OpenRepository(tmpDir)
 
-	t.Setenv("LC_ALL", "zh_CN.UTF-8")
-	t.Setenv("LANG", "zh_CN.UTF-8")
-	t.Setenv("LANGUAGE", "zh_CN")
+	setTestEnv(t, "LC_ALL", "zh_CN.UTF-8")
+	setTestEnv(t, "LANG", "zh_CN.UTF-8")
+	setTestEnv(t, "LANGUAGE", "zh_CN")
 
 	fr := FileRevision{Revision: "HEAD", File: "po/pt_BR.po"}
 	defer fr.Cleanup()
