@@ -294,6 +294,29 @@ func AggregateReviewBatches(ps ReviewPathSet) error {
 	if merged == nil {
 		merged = &ReviewResult{Issues: []ReviewIssue{}}
 	}
+
+	// Sum per-batch total_entries. The manual AGENTS.md workflow leaves
+	// review-result-N.json files with total_entries=0, so if the sum is 0
+	// fall back to counting entries in the input PO/JSON file.
+	totalEntries := 0
+	for _, r := range batchReviews {
+		if r != nil {
+			totalEntries += r.TotalEntries
+		}
+	}
+	if totalEntries == 0 {
+		poFile := ps.InputPO
+		if !Exist(poFile) {
+			poFile = ps.OutputPO
+		}
+		if Exist(poFile) {
+			if stats, err := GetPoStats(poFile); err == nil {
+				totalEntries = stats.Total()
+			}
+		}
+	}
+	merged.TotalEntries = totalEntries
+
 	if err := saveReviewJSON(merged, resultJSONFile); err != nil {
 		return fmt.Errorf("failed to save aggregated review to %s: %w", resultJSONFile, err)
 	}
