@@ -2,6 +2,31 @@
 
 Changes of git-po-helper.
 
+## 0.9.2 (2026-09-28)
+
+### check-po
+
+* feat(check-po): detect PO entry order mismatch vs POT; report when
+  shared entries differ in relative order (ignore POT-only / PO-only),
+  and hint `make po-update PO_FILE=po/XX.po` in the Git project
+
+### compare
+
+* fix(compare): treat a missing old PO as empty for newly added files
+  under `--commit`/`--since`/`-r`, so all entries are reported as added
+  (including `--stat`) without relying on localized `git show` stderr
+
+### agent-run review
+
+* fix(agent-run-review): compute `total_entries` when review batches lack
+  it by summing per-batch totals and falling back to `GetPoStats` on the
+  input PO
+
+### tests / Go 1.16
+
+* fix(util): make test env helper compatible with Go 1.16 via
+  build-tagged `setTestEnv` (avoid `testing.T.Setenv` on older toolchains)
+
 ## 0.9.1 (2026-09-18)
 
 ### check-po typos
