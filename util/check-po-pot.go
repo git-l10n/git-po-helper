@@ -13,7 +13,8 @@ var (
 	PotFileURL = "https://github.com/git-l10n/pot-changes/raw/pot/master/po/git.pot"
 )
 
-// CheckWithPotFile checks a single po file for incomplete translations.
+// CheckWithPotFile checks a single po file for incomplete translations and
+// entry order consistency against the POT template.
 // When commit is "HEAD" or empty, uses the file from disk; otherwise checkouts
 // the file from the given commit. projectName is from Project-Id-Version meta.
 func CheckWithPotFile(commit, projectName, poFile string) bool {
@@ -62,10 +63,19 @@ func CheckWithPotFile(commit, projectName, poFile string) bool {
 		return false
 	}
 
-	msgs, ret := checkUnfinishedPoFile(potJ, poJ, projectName, poFile)
+	ret := true
+	msgs, unfinishedOK := checkUnfinishedPoFile(potJ, poJ, projectName, poFile)
 	if len(msgs) > 0 {
-		ReportSection("Incomplete translations found", ret, log.WarnLevel, prompt, msgs...)
+		ReportSection("Incomplete translations found", unfinishedOK, log.WarnLevel, prompt, msgs...)
 	}
+	ret = ret && unfinishedOK
+
+	orderMsgs, orderOK := checkPoEntryOrder(potJ, poJ)
+	if len(orderMsgs) > 0 {
+		ReportSection("Entry order mismatch", orderOK, log.WarnLevel, prompt, orderMsgs...)
+	}
+	ret = ret && orderOK
+
 	return ret
 }
 
@@ -229,4 +239,67 @@ func checkUnfinishedPoFile(potJ, poJ *GettextJSON, projectName, poFilePath strin
 	}
 
 	return errs, ok
+}
+
+// checkPoEntryOrder checks that entries present in both POT and PO appear in the
+// same relative order. Entries only in POT or only in PO are ignored. Obsolete
+// (#~) entries are skipped.
+func checkPoEntryOrder(potJ, poJ *GettextJSON) ([]string, bool) {
+	potEntries := filterObsolete(potJ.Entries)
+	poEntries := filterObsolete(poJ.Entries)
+
+	poKeys := make(map[string]bool, len(poEntries))
+	for _, e := range poEntries {
+		poKeys[entryKey(e)] = true
+	}
+
+	potIndex := make(map[string]int)
+	for _, e := range potEntries {
+		k := entryKey(e)
+		if poKeys[k] {
+			// First occurrence wins if duplicates exist.
+			if _, exists := potIndex[k]; !exists {
+				potIndex[k] = len(potIndex)
+			}
+		}
+	}
+	if len(potIndex) == 0 {
+		return nil, true
+	}
+
+	var outOfOrder []GettextEntry
+	prev := -1
+	for _, e := range poEntries {
+		k := entryKey(e)
+		idx, ok := potIndex[k]
+		if !ok {
+			continue
+		}
+		if idx < prev {
+			outOfOrder = append(outOfOrder, e)
+			continue
+		}
+		prev = idx
+	}
+
+	if len(outOfOrder) == 0 {
+		return nil, true
+	}
+
+	var errs []string
+	errs = append(errs, fmt.Sprintf("%d entr(ies) out of order compared to the POT file", len(outOfOrder)))
+	errs = append(errs, "")
+	for i, e := range outOfOrder {
+		if i >= maxSamples {
+			errs = append(errs, "  > ...")
+			break
+		}
+		errs = append(errs, "  > PO file:"+truncateMsgid(e.MsgID, maxMsgidSampleLen))
+	}
+	errs = append(errs, "")
+	errs = append(errs,
+		"Please run \"make po-update PO_FILE=po/XX.po\" in the Git",
+		"project to reorder entries to match the POT file.",
+		"")
+	return errs, false
 }
