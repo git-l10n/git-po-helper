@@ -56,7 +56,13 @@ func CheckWithPotFile(commit, projectName, poFile string) bool {
 		prompt = fmt.Sprintf("[%s]", filepath.Base(poFile))
 	}
 
-	msgs, ret := checkUnfinishedPoFile(fileToCheck, poTemplate, projectName, poFile)
+	potJ, poJ, loadMsgs, loadOK := loadPotAndPoJSON(poTemplate, fileToCheck)
+	if !loadOK {
+		ReportSection("Incomplete translations found", false, log.WarnLevel, prompt, loadMsgs...)
+		return false
+	}
+
+	msgs, ret := checkUnfinishedPoFile(potJ, poJ, projectName, poFile)
 	if len(msgs) > 0 {
 		ReportSection("Incomplete translations found", ret, log.WarnLevel, prompt, msgs...)
 	}
@@ -113,31 +119,31 @@ func truncateMsgid(msgid string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-func checkUnfinishedPoFile(fileToCheck, poTemplate, projectName, poFilePath string) ([]string, bool) {
-	var errs []string
-	ok := true
-
+// loadPotAndPoJSON reads and parses POT and PO files once for shared checks.
+func loadPotAndPoJSON(poTemplate, fileToCheck string) (potJ, poJ *GettextJSON, msgs []string, ok bool) {
 	potData, err := os.ReadFile(poTemplate)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("failed to read POT file: %v", err))
-		return errs, false
+		return nil, nil, []string{fmt.Sprintf("failed to read POT file: %v", err)}, false
 	}
 	poData, err := os.ReadFile(fileToCheck)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("failed to read PO file: %v", err))
-		return errs, false
+		return nil, nil, []string{fmt.Sprintf("failed to read PO file: %v", err)}, false
 	}
 
-	potJ, err := LoadFileToGettextJSON(potData, poTemplate)
+	potJ, err = LoadFileToGettextJSON(potData, poTemplate)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("failed to parse POT file: %v", err))
-		return errs, false
+		return nil, nil, []string{fmt.Sprintf("failed to parse POT file: %v", err)}, false
 	}
-	poJ, err := LoadFileToGettextJSON(poData, fileToCheck)
+	poJ, err = LoadFileToGettextJSON(poData, fileToCheck)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("failed to parse PO file: %v", err))
-		return errs, false
+		return nil, nil, []string{fmt.Sprintf("failed to parse PO file: %v", err)}, false
 	}
+	return potJ, poJ, nil, true
+}
+
+func checkUnfinishedPoFile(potJ, poJ *GettextJSON, projectName, poFilePath string) ([]string, bool) {
+	var errs []string
+	ok := true
 
 	// POT=old, PO=new: Deleted=Missing (in POT not in PO), Added=Unused (in PO not in POT)
 	_, unusedEntries, missingEntries := CompareGettextEntriesWithDeleted(potJ, poJ, true)
