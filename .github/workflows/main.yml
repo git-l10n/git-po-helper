@@ -26,7 +26,6 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          stable: false
           go-version: ${{ matrix.go }}
 
       - name: Build
@@ -71,7 +70,6 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          stable: false
           go-version: ${{ matrix.go }}
 
       - name: Build
