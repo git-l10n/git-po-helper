@@ -15,7 +15,7 @@ test_expect_success "checkout po-2.31.1" '
 test_expect_success "check typos in zh_CN.po" '
 	git -C workdir $HELPER check-po $POT_NO \
 		--report-file-locations=none po/zh_CN.po >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
+	format_legacy_po_check_output <out >actual &&
 	cp "$TEST_DIRECTORY/t0032-typos-zh_CN-po231.expect" expect &&
 	test_cmp expect actual
 '
@@ -25,7 +25,7 @@ test_expect_success "check typos in master branch" '
 	git -C workdir $HELPER \
 		check-po $POT_NO --report-typos=warn \
 		--report-file-locations=warn po/zh_CN.po >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
+	format_legacy_po_check_output <out >actual &&
 	cp "$TEST_DIRECTORY/t0032-typos-zh_CN-master.expect" expect &&
 	test_cmp expect actual
 '

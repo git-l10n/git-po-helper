@@ -18,7 +18,7 @@ test_expect_success "setup" '
 test_expect_success "zh_CN.po: all translated" '
 	test_must_fail git -C workdir $HELPER check-po --report-typos=error --pot-file=po/git.pot \
 		--report-file-locations=none po/zh_CN.po >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
+	format_legacy_po_check_output <out >actual &&
 	cp "$TEST_DIRECTORY/t0081-zh_CN.expect" expect &&
 	test_cmp expect actual
 '
@@ -26,7 +26,7 @@ test_expect_success "zh_CN.po: all translated" '
 test_expect_success "ko.po: has untranslated strings" '
 	test_must_fail git -C workdir $HELPER check-po --report-typos=error --pot-file=po/git.pot \
 		--report-file-locations=none po/ko.po >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
+	format_legacy_po_check_output <out >actual &&
 	cp "$TEST_DIRECTORY/t0081-ko.expect" expect &&
 	test_cmp expect actual
 '

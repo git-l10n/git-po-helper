@@ -194,6 +194,10 @@ func checkTyposInPoEntry(locale, msgID, msgStr string) ([]string, bool) {
 		return nil, true
 	}
 
+	if initialLetterCaseMismatch(msgID[0], msgStr[0]) {
+		msgs = append(msgs, "initial letter case mismatch")
+	}
+
 	if smudgeMaps, ok := dict.SmudgeMaps[locale]; ok {
 		for _, smudgeMap := range smudgeMaps {
 			if re, ok := smudgeMap.Pattern.(*regexp.Regexp); ok {
@@ -234,6 +238,8 @@ func checkTyposInPoEntry(locale, msgID, msgStr string) ([]string, bool) {
 		msgs = append(msgs,
 			fmt.Sprintf("mismatched patterns: %s",
 				strings.Join(mismatched, ", ")))
+	}
+	if len(msgs) > 0 {
 		msgs = append(msgs, fmt.Sprintf(">> msgid: %s", origMsgID))
 		msgs = append(msgs, fmt.Sprintf(">> msgstr: %s", origMsgStr))
 		msgs = append(msgs, "")
@@ -244,4 +250,12 @@ func checkTyposInPoEntry(locale, msgID, msgStr string) ([]string, bool) {
 	}
 
 	return msgs, true
+}
+
+func initialLetterCaseMismatch(source, target byte) bool {
+	sourceUpper := 'A' <= source && source <= 'Z'
+	sourceLower := 'a' <= source && source <= 'z'
+	targetUpper := 'A' <= target && target <= 'Z'
+	targetLower := 'a' <= target && target <= 'z'
+	return sourceUpper && targetLower || sourceLower && targetUpper
 }

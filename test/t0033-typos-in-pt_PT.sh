@@ -15,16 +15,19 @@ test_expect_success "checkout po-2.31.1" '
 test_expect_success "check typos in pt_PT.po" '
 	test_must_fail git -C workdir $HELPER check-po $POT_NO \
 		po/pt_PT.po >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
+	format_legacy_po_check_output <out >actual &&
 	cp "$TEST_DIRECTORY/t0033-typos-in-pt_PT.expect" expect &&
 	test_cmp expect actual
 '
 
-test_expect_success "no typos in master branch" '
+test_expect_success "only initial-letter typos in master branch" '
 	git -C workdir checkout master &&
-	git -C workdir $HELPER \
+	test_must_fail git -C workdir $HELPER \
 		check-po $POT_NO --report-typos=error \
-		po/pt_PT.po
+		po/pt_PT.po >out 2>&1 &&
+	test_grep "ERROR.*initial letter case mismatch" out &&
+	format_legacy_po_check_output <out >actual &&
+	! grep "^ ERROR " actual
 '
 
 test_done
