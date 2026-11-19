@@ -195,6 +195,17 @@ following can be inferred from the code structure:
 
 ### Commit Conventions
 
+Before creating a commit, run these checks from the repository root.
+Fix any failures and rerun the affected checks before committing.
+
+1. Run `gofmt -w` on the changed Go source files and stage the formatted
+   versions. Use the generator to update generated Go files.
+2. Run `make lint` for static analysis.
+3. Run `make ut` for unit tests.
+
+Run `make it` before promoting a version. Fix any failures and rerun the
+integration suite before proceeding.
+
 - **Specification**: Commit messages MUST follow the
   [Conventional Commits Specification](https://www.conventionalcommits.org/en/v1.0.0/).
 - **Language**: Commit messages MUST be written in English.
