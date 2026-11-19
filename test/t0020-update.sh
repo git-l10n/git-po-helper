@@ -236,4 +236,36 @@ test_expect_success "update from po/ with shorthand path (cwd in po/)" '
 	)
 '
 
+test_expect_success "update reports an invalid locale as a warning" '
+	cp workdir/po/zh_CN.po workdir/po/invalid.po &&
+	git -C workdir $HELPER update --pot-file=po/git.pot po/invalid.po >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	grep "^ WARNING .*invalid language code" actual &&
+	! grep "ERROR" actual
+'
+
+test_expect_success "update requires a POT path when the project name is missing" '
+	sed "/^\"Project-Id-Version:/d" workdir/po/zh_CN.po >workdir/po/fr.po &&
+	test_must_fail git -C workdir $HELPER update po/fr.po >out 2>&1 &&
+	grep "missing project name in Project-Id-Version; specify a POT file with --pot-file=<path>" out &&
+	git -C workdir $HELPER update --pot-file=po/git.pot po/fr.po
+'
+
+test_expect_success "update fails when msgfmt rejects a format string" '
+	cat >workdir/po/format.pot <<-\EOF &&
+	msgid ""
+	msgstr ""
+	"Project-Id-Version: Git\n"
+	"Content-Type: text/plain; charset=UTF-8\n"
+
+	#, c-format
+	msgid "value: %s"
+	msgstr ""
+	EOF
+	sed "\$s/.*/msgstr \"value: %d\"/" workdir/po/format.pot >workdir/po/en.po &&
+	test_must_fail git -C workdir $HELPER update --pot-file=po/format.pot po/en.po >out 2>&1 &&
+	grep "format specifications in .msgid. and .msgstr. for argument 1 are not the same" out &&
+	grep "update command failed" out
+'
+
 test_done

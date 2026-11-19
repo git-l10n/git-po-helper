@@ -18,6 +18,10 @@ var (
 // When commit is "HEAD" or empty, uses the file from disk; otherwise checkouts
 // the file from the given commit. projectName is from Project-Id-Version meta.
 func CheckWithPotFile(commit, projectName, poFile string) bool {
+	return checkWithPotFile(commit, projectName, poFile, false)
+}
+
+func checkWithPotFile(commit, projectName, poFile string, warnOnly bool) bool {
 	cfg := GetProjectPotConfig(projectName, poFile)
 	action := cfg.GetEffectiveAction()
 	if action == DefaultPotActionNo {
@@ -25,6 +29,10 @@ func CheckWithPotFile(commit, projectName, poFile string) bool {
 	}
 	poTemplate, err := cfg.AcquirePotFile(projectName, poFile)
 	if err != nil {
+		if warnOnly {
+			log.Warn(err)
+			return true
+		}
 		log.Error(err)
 		return false
 	}
@@ -45,11 +53,10 @@ func CheckWithPotFile(commit, projectName, poFile string) bool {
 		defer tmpFile.Cleanup()
 		path, err := tmpFile.GetFile()
 		if err != nil || path == "" {
-			ReportSection("Incomplete translations found", false, log.WarnLevel,
-				fmt.Sprintf("[%s@%s]", locale+".po", AbbrevCommit(commit)),
+			return reportPoCheck("Incomplete translations found", false, log.WarnLevel,
+				fmt.Sprintf("[%s@%s]", locale+".po", AbbrevCommit(commit)), warnOnly,
 				fmt.Sprintf("commit %s: fail to checkout %s of revision %s: %s",
 					AbbrevCommit(commit), tmpFile.File, tmpFile.Revision, err))
-			return false
 		}
 		fileToCheck = path
 		prompt = fmt.Sprintf("[%s@%s]", locale+".po", AbbrevCommit(commit))
@@ -59,24 +66,14 @@ func CheckWithPotFile(commit, projectName, poFile string) bool {
 
 	potJ, poJ, loadMsgs, loadOK := loadPotAndPoJSON(poTemplate, fileToCheck)
 	if !loadOK {
-		ReportSection("Incomplete translations found", false, log.WarnLevel, prompt, loadMsgs...)
-		return false
+		return reportPoCheck("Incomplete translations found", false, log.WarnLevel, prompt, warnOnly, loadMsgs...)
 	}
 
-	ret := true
 	msgs, unfinishedOK := checkUnfinishedPoFile(potJ, poJ, projectName, poFile)
-	if len(msgs) > 0 {
-		ReportSection("Incomplete translations found", unfinishedOK, log.WarnLevel, prompt, msgs...)
-	}
-	ret = ret && unfinishedOK
+	ret := reportPoCheck("Incomplete translations found", unfinishedOK, log.WarnLevel, prompt, warnOnly, msgs...)
 
 	orderMsgs, orderOK := checkPoEntryOrder(potJ, poJ)
-	if len(orderMsgs) > 0 {
-		ReportSection("Entry order mismatch", orderOK, log.WarnLevel, prompt, orderMsgs...)
-	}
-	ret = ret && orderOK
-
-	return ret
+	return reportPoCheck("Entry order mismatch", orderOK, log.WarnLevel, prompt, warnOnly, orderMsgs...) && ret
 }
 
 func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {

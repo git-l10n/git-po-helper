@@ -215,6 +215,10 @@ func CheckPoFile(locale, poFile string, compareWithPot bool) bool {
 // not at tip. The receiver is cleaned up on return (Cleanup); callers may still defer Cleanup
 // on the same pointer for earlier cleanup after other uses.
 func CheckPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fileRev *FileRevision) bool {
+	return checkPoFileWithPrompt(locale, compareWithPot, prompt, fileRev, false)
+}
+
+func checkPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fileRev *FileRevision, warnOnly bool) bool {
 	var (
 		ret  = true
 		ok   bool
@@ -246,6 +250,13 @@ func CheckPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 	errs, ok = checkPoWithMsgfmt(poFile)
 	ReportSection("Syntax check with msgfmt", ok, log.InfoLevel, prompt, errs...)
 	ret = ret && ok
+	reportCheck := func(title string, ok bool, level log.Level, msgs ...string) {
+		ret = reportPoCheck(title, ok, level, prompt, warnOnly, msgs...) && ret
+	}
+	fileErrorLevel := log.ErrorLevel
+	if warnOnly {
+		fileErrorLevel = log.WarnLevel
+	}
 
 	// Get pretty locale name, and validate locale name.
 	locale = strings.TrimSuffix(filepath.Base(locale), ".po")
@@ -255,40 +266,36 @@ func CheckPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 		for _, e := range localeErrs {
 			msgs = append(msgs, e.Error())
 		}
-		ReportSection("Locale name", false, log.InfoLevel, prompt, msgs...)
-		ret = false
+		reportCheck("Locale name", false, log.InfoLevel, msgs...)
 	}
 
 	poData, err := os.ReadFile(poFile)
 	if err != nil {
-		log.Errorf(`%s\tfail to read %q: %v`, prompt, poFile, err)
-		return false
+		log.StandardLogger().Logf(fileErrorLevel, `%s\tfail to read %q: %v`, prompt, poFile, err)
+		return warnOnly && ret
 	}
 	po, err := ParsePoEntries(poData)
 	if err != nil {
-		log.Errorf(`%s\tfail to parse %q: %v`, prompt, poFile, err)
-		return false
+		log.StandardLogger().Logf(fileErrorLevel, `%s\tfail to parse %q: %v`, prompt, poFile, err)
+		return warnOnly && ret
 	}
 
 	// Check header meta for abnormal newline sequences (e.g. literal \n).
 	errs, ok = checkPoMetaEscapeChars(po)
-	ReportSection("Syntax of PO header meta lines", ok, log.InfoLevel, prompt, errs...)
-	ret = ret && ok
+	reportCheck("Syntax of PO header meta lines", ok, log.InfoLevel, errs...)
 
 	// Compatibility checks (only when project sets MinGettextVersion): 0.15+ msgctxt/#|/#~ msgctxt, 0.16+ #~|.
 	projectName := po.GetProject()
 	cfg := GetProjectPotConfig(projectName, poFile)
 	if cfg.MinGettextVersion != "" {
 		errs, ok = checkPoCompatibility(po, cfg.MinGettextVersion)
-		ReportSection("gettext compatibility", ok, log.InfoLevel, prompt, errs...)
-		ret = ret && ok
+		reportCheck("gettext compatibility", ok, log.InfoLevel, errs...)
 	}
 
 	// No obsolete entries allowed (unless AllowObsoleteEntries, e.g. in update flow).
 	if !flag.AllowObsoleteEntries() {
 		errs, ok = checkPoNoObsoleteEntries(po)
-		ReportSection("Obsolete #~ entries", ok, log.InfoLevel, prompt, errs...)
-		ret = ret && ok
+		reportCheck("Obsolete #~ entries", ok, log.InfoLevel, errs...)
 	}
 
 	// Policy check: git check-attr filter must be a supported driver name (see checkPoFilterFormat).
@@ -298,7 +305,7 @@ func CheckPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 
 		ok = filterOk
 
-		if flag.ReportFileLocations() == flag.ReportIssueNone {
+		if !warnOnly && flag.ReportFileLocations() == flag.ReportIssueNone {
 			filterReportLevel = log.InfoLevel
 			ok = true
 		} else if flag.ReportFileLocations() == flag.ReportIssueWarn {
@@ -308,8 +315,7 @@ func CheckPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 			filterReportLevel = log.WarnLevel
 			ok = true
 		}
-		ReportSection("PO filter (.gitattributes)", ok, filterReportLevel, prompt, errs...)
-		ret = ret && ok
+		reportCheck("PO filter (.gitattributes)", ok, filterReportLevel, errs...)
 
 		if filterContentWarns := checkPoFilterContent(fileRev, ""); len(filterContentWarns) > 0 {
 			ReportSection("PO filter clean output", true, log.WarnLevel, prompt, filterContentWarns...)
@@ -319,25 +325,32 @@ func CheckPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 	// Check possible typos in a .po file (Git project only).
 	if strings.EqualFold(projectName, "Git") {
 		errs, ok = checkTyposInPo(locale, po)
-		ReportSection("msgid/msgstr pattern check", ok, log.WarnLevel, prompt, errs...)
-		ret = ret && ok
+		reportCheck("msgid/msgstr pattern check", ok, log.WarnLevel, errs...)
 	}
 
 	// Check that Project-Id-Version defines a project name.
 	if projectName == "" {
-		ReportSection("Project name", false, log.InfoLevel, prompt,
+		reportCheck("Project name", false, log.InfoLevel,
 			"project name is not defined in PO file")
-		ret = false
 	}
 
 	// Check incomplete translations against POT (can be disabled with "--pot-file=no" inside CheckWithPoFile).
 	if compareWithPot {
-		if !CheckWithPotFile("HEAD", projectName, poFile) {
+		if !checkWithPotFile("HEAD", projectName, poFile, warnOnly) {
 			ret = false
 		}
 	}
 
 	return ret
+}
+
+func reportPoCheck(title string, ok bool, level log.Level, prompt string, warnOnly bool, msgs ...string) bool {
+	if warnOnly && !ok {
+		ok = true
+		level = log.WarnLevel
+	}
+	ReportSection(title, ok, level, prompt, msgs...)
+	return ok
 }
 
 // CmdCheckPo implements check-po sub command.
