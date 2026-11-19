@@ -15,7 +15,7 @@ test_expect_success "checkout po-2.31.1" '
 test_expect_success "check typos in es.po of git 2.31.1" '
 	test_must_fail git -C workdir $HELPER check-po $POT_NO \
 		po/es.po >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
+	format_legacy_po_check_output <out >actual &&
 	cp "$TEST_DIRECTORY/t0034-typos-in-es.expect" expect &&
 	test_cmp expect actual
 '
@@ -25,7 +25,7 @@ test_expect_success "typos in master branch" '
 	test_must_fail git -C workdir $HELPER \
 		check-po $POT_NO --report-typos=error \
 		po/es.po >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
+	format_legacy_po_check_output <out >actual &&
 	cp "$TEST_DIRECTORY/t0034-typos-in-es-master.expect" expect &&
 	test_cmp expect actual
 '

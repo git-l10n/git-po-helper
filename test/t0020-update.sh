@@ -236,12 +236,37 @@ test_expect_success "update from po/ with shorthand path (cwd in po/)" '
 	)
 '
 
-test_expect_success "update reports an invalid locale as a warning" '
+test_expect_success "update only checks PO syntax" '
 	cp workdir/po/zh_CN.po workdir/po/invalid.po &&
 	git -C workdir $HELPER update --pot-file=po/git.pot po/invalid.po >out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
-	grep "^ WARNING .*invalid language code" actual &&
-	! grep "ERROR" actual
+	grep "Syntax check with msgfmt" actual &&
+	! grep -E "invalid language code|ERROR" actual
+'
+
+test_expect_success "update saves a PO with a mismatched Git option" '
+	cat >workdir/po/options.pot <<-\EOF &&
+	msgid ""
+	msgstr ""
+	"Project-Id-Version: Git\n"
+	"Content-Type: text/plain; charset=UTF-8\n"
+
+	msgid "use --force"
+	msgstr ""
+
+	msgid "added by the POT"
+	msgstr ""
+	EOF
+	sed -e "/^msgid \"added by the POT\"/,\$d" \
+		-e "/^msgid \"use --force\"/{n;s/.*/msgstr \"use --quiet\"/;}" \
+		workdir/po/options.pot >workdir/po/en.po &&
+	git -C workdir $HELPER update --pot-file=po/options.pot po/en.po >out 2>&1 &&
+	grep "^msgid \"added by the POT\"$" workdir/po/en.po &&
+	grep "Syntax check with msgfmt" out &&
+	! grep -E "msgid/msgstr pattern check|PO filter|Incomplete translations" out &&
+	test_must_fail git -C workdir $HELPER check-po --pot-file=no \
+		--report-file-locations=none --report-typos=error po/en.po >out 2>&1 &&
+	grep "mismatched patterns: --force, --quiet" out
 '
 
 test_expect_success "update requires a POT path when the project name is missing" '

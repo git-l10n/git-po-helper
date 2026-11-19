@@ -56,7 +56,7 @@ test_expect_success "zh_CN.po: remove locations" '
 	) &&
 	test_must_fail git -C workdir $HELPER check-po --report-typos=error $POT_NO \
 		po/zh_CN.po >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
+	format_legacy_po_check_output <out >actual &&
 	test_cmp expect actual
 '
 
@@ -69,7 +69,7 @@ test_expect_success "zh_CN.po: remove both files and locations" '
 	) &&
 	test_must_fail git -C workdir $HELPER check-po --report-typos=error $POT_NO \
 		po/zh_CN.po >out 2>&1 &&
-	make_user_friendly_and_stable_output <out >actual &&
+	format_legacy_po_check_output <out >actual &&
 	test_cmp expect actual
 '
 

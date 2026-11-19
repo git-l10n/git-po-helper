@@ -29,6 +29,32 @@ make_user_friendly_and_stable_output () {
 
 }
 
+# Historical PO snapshots exercise the original protected-pattern checks.
+# Keep their diagnostics and context without snapshotting hundreds of new
+# case mismatches. The focused case test compares the new format separately.
+format_legacy_po_check_output () {
+	make_user_friendly_and_stable_output |
+	awk '
+		/msgid\/msgstr pattern check$/ { heading = $0; next }
+		/^ (WARNING|ERROR) \[[^]]+\] initial letter case mismatch$/ {
+			skip_context = 1
+			next
+		}
+		/^ (WARNING|ERROR) \[[^]]+\] mismatched patterns:/ {
+			skip_context = 0
+			if (heading != "") {
+				print heading
+				heading = ""
+			}
+		}
+		!/^ (WARNING|ERROR) \[[^]]+\]/ {
+			skip_context = 0
+			heading = ""
+		}
+		!skip_context { print }
+	'
+}
+
 show_separator () {
 	cat <<EOF
 INFO: ---------------------------------------------------------------------------
