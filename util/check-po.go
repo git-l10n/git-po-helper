@@ -215,10 +215,6 @@ func CheckPoFile(locale, poFile string, compareWithPot bool) bool {
 // not at tip. The receiver is cleaned up on return (Cleanup); callers may still defer Cleanup
 // on the same pointer for earlier cleanup after other uses.
 func CheckPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fileRev *FileRevision) bool {
-	return checkPoFileWithPrompt(locale, compareWithPot, prompt, fileRev, false)
-}
-
-func checkPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fileRev *FileRevision, warnOnly bool) bool {
 	var (
 		ret  = true
 		ok   bool
@@ -251,11 +247,8 @@ func checkPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 	ReportSection("Syntax check with msgfmt", ok, log.InfoLevel, prompt, errs...)
 	ret = ret && ok
 	reportCheck := func(title string, ok bool, level log.Level, msgs ...string) {
-		ret = reportPoCheck(title, ok, level, prompt, warnOnly, msgs...) && ret
-	}
-	fileErrorLevel := log.ErrorLevel
-	if warnOnly {
-		fileErrorLevel = log.WarnLevel
+		ReportSection(title, ok, level, prompt, msgs...)
+		ret = ret && ok
 	}
 
 	// Get pretty locale name, and validate locale name.
@@ -271,13 +264,13 @@ func checkPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 
 	poData, err := os.ReadFile(poFile)
 	if err != nil {
-		log.StandardLogger().Logf(fileErrorLevel, `%s\tfail to read %q: %v`, prompt, poFile, err)
-		return warnOnly && ret
+		log.Errorf(`%s\tfail to read %q: %v`, prompt, poFile, err)
+		return false
 	}
 	po, err := ParsePoEntries(poData)
 	if err != nil {
-		log.StandardLogger().Logf(fileErrorLevel, `%s\tfail to parse %q: %v`, prompt, poFile, err)
-		return warnOnly && ret
+		log.Errorf(`%s\tfail to parse %q: %v`, prompt, poFile, err)
+		return false
 	}
 
 	// Check header meta for abnormal newline sequences (e.g. literal \n).
@@ -292,7 +285,7 @@ func checkPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 		reportCheck("gettext compatibility", ok, log.InfoLevel, errs...)
 	}
 
-	// No obsolete entries allowed (unless AllowObsoleteEntries, e.g. in update flow).
+	// No obsolete entries allowed unless configured.
 	if !flag.AllowObsoleteEntries() {
 		errs, ok = checkPoNoObsoleteEntries(po)
 		reportCheck("Obsolete #~ entries", ok, log.InfoLevel, errs...)
@@ -305,7 +298,7 @@ func checkPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 
 		ok = filterOk
 
-		if !warnOnly && flag.ReportFileLocations() == flag.ReportIssueNone {
+		if flag.ReportFileLocations() == flag.ReportIssueNone {
 			filterReportLevel = log.InfoLevel
 			ok = true
 		} else if flag.ReportFileLocations() == flag.ReportIssueWarn {
@@ -335,22 +328,11 @@ func checkPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 	}
 
 	// Check incomplete translations against POT (can be disabled with "--pot-file=no" inside CheckWithPoFile).
-	if compareWithPot {
-		if !checkWithPotFile("HEAD", projectName, poFile, warnOnly) {
-			ret = false
-		}
+	if compareWithPot && !CheckWithPotFile("HEAD", projectName, poFile) {
+		ret = false
 	}
 
 	return ret
-}
-
-func reportPoCheck(title string, ok bool, level log.Level, prompt string, warnOnly bool, msgs ...string) bool {
-	if warnOnly && !ok {
-		ok = true
-		level = log.WarnLevel
-	}
-	ReportSection(title, ok, level, prompt, msgs...)
-	return ok
 }
 
 // CmdCheckPo implements check-po sub command.

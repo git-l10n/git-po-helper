@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -118,6 +119,7 @@ func CmdUpdate(fileName string) bool {
 		return false
 	}
 
-	fr := &FileRevision{File: poFile, IsTipCommit: true}
-	return checkPoFileWithPrompt(locale, true, "", fr, true)
+	msgs, ok := checkPoWithMsgfmt(poFile)
+	ReportSection("Syntax check with msgfmt", ok, log.InfoLevel, fmt.Sprintf("[%s.po]", locale), msgs...)
+	return ok
 }
