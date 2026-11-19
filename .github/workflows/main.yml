@@ -1,6 +1,10 @@
- on:
+on:
   push:
+    branches: [main]
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   linux:
