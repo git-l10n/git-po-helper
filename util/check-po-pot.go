@@ -63,20 +63,12 @@ func CheckWithPotFile(commit, projectName, poFile string) bool {
 		return false
 	}
 
-	ret := true
 	msgs, unfinishedOK := checkUnfinishedPoFile(potJ, poJ, projectName, poFile)
-	if len(msgs) > 0 {
-		ReportSection("Incomplete translations found", unfinishedOK, log.WarnLevel, prompt, msgs...)
-	}
-	ret = ret && unfinishedOK
+	ReportSection("Incomplete translations found", unfinishedOK, log.WarnLevel, prompt, msgs...)
 
 	orderMsgs, orderOK := checkPoEntryOrder(potJ, poJ)
-	if len(orderMsgs) > 0 {
-		ReportSection("Entry order mismatch", orderOK, log.WarnLevel, prompt, orderMsgs...)
-	}
-	ret = ret && orderOK
-
-	return ret
+	ReportSection("Entry order mismatch", orderOK, log.WarnLevel, prompt, orderMsgs...)
+	return unfinishedOK && orderOK
 }
 
 func CheckUnfinishedPoFiles(commit string, poFiles []string) bool {

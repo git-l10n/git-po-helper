@@ -246,6 +246,10 @@ func CheckPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 	errs, ok = checkPoWithMsgfmt(poFile)
 	ReportSection("Syntax check with msgfmt", ok, log.InfoLevel, prompt, errs...)
 	ret = ret && ok
+	reportCheck := func(title string, ok bool, level log.Level, msgs ...string) {
+		ReportSection(title, ok, level, prompt, msgs...)
+		ret = ret && ok
+	}
 
 	// Get pretty locale name, and validate locale name.
 	locale = strings.TrimSuffix(filepath.Base(locale), ".po")
@@ -255,8 +259,7 @@ func CheckPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 		for _, e := range localeErrs {
 			msgs = append(msgs, e.Error())
 		}
-		ReportSection("Locale name", false, log.InfoLevel, prompt, msgs...)
-		ret = false
+		reportCheck("Locale name", false, log.InfoLevel, msgs...)
 	}
 
 	poData, err := os.ReadFile(poFile)
@@ -272,23 +275,20 @@ func CheckPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 
 	// Check header meta for abnormal newline sequences (e.g. literal \n).
 	errs, ok = checkPoMetaEscapeChars(po)
-	ReportSection("Syntax of PO header meta lines", ok, log.InfoLevel, prompt, errs...)
-	ret = ret && ok
+	reportCheck("Syntax of PO header meta lines", ok, log.InfoLevel, errs...)
 
 	// Compatibility checks (only when project sets MinGettextVersion): 0.15+ msgctxt/#|/#~ msgctxt, 0.16+ #~|.
 	projectName := po.GetProject()
 	cfg := GetProjectPotConfig(projectName, poFile)
 	if cfg.MinGettextVersion != "" {
 		errs, ok = checkPoCompatibility(po, cfg.MinGettextVersion)
-		ReportSection("gettext compatibility", ok, log.InfoLevel, prompt, errs...)
-		ret = ret && ok
+		reportCheck("gettext compatibility", ok, log.InfoLevel, errs...)
 	}
 
-	// No obsolete entries allowed (unless AllowObsoleteEntries, e.g. in update flow).
+	// No obsolete entries allowed unless configured.
 	if !flag.AllowObsoleteEntries() {
 		errs, ok = checkPoNoObsoleteEntries(po)
-		ReportSection("Obsolete #~ entries", ok, log.InfoLevel, prompt, errs...)
-		ret = ret && ok
+		reportCheck("Obsolete #~ entries", ok, log.InfoLevel, errs...)
 	}
 
 	// Policy check: git check-attr filter must be a supported driver name (see checkPoFilterFormat).
@@ -308,8 +308,7 @@ func CheckPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 			filterReportLevel = log.WarnLevel
 			ok = true
 		}
-		ReportSection("PO filter (.gitattributes)", ok, filterReportLevel, prompt, errs...)
-		ret = ret && ok
+		reportCheck("PO filter (.gitattributes)", ok, filterReportLevel, errs...)
 
 		if filterContentWarns := checkPoFilterContent(fileRev, ""); len(filterContentWarns) > 0 {
 			ReportSection("PO filter clean output", true, log.WarnLevel, prompt, filterContentWarns...)
@@ -319,22 +318,18 @@ func CheckPoFileWithPrompt(locale string, compareWithPot bool, prompt string, fi
 	// Check possible typos in a .po file (Git project only).
 	if strings.EqualFold(projectName, "Git") {
 		errs, ok = checkTyposInPo(locale, po)
-		ReportSection("msgid/msgstr pattern check", ok, log.WarnLevel, prompt, errs...)
-		ret = ret && ok
+		reportCheck("msgid/msgstr pattern check", ok, log.WarnLevel, errs...)
 	}
 
 	// Check that Project-Id-Version defines a project name.
 	if projectName == "" {
-		ReportSection("Project name", false, log.InfoLevel, prompt,
+		reportCheck("Project name", false, log.InfoLevel,
 			"project name is not defined in PO file")
-		ret = false
 	}
 
 	// Check incomplete translations against POT (can be disabled with "--pot-file=no" inside CheckWithPoFile).
-	if compareWithPot {
-		if !CheckWithPotFile("HEAD", projectName, poFile) {
-			ret = false
-		}
+	if compareWithPot && !CheckWithPotFile("HEAD", projectName, poFile) {
+		ret = false
 	}
 
 	return ret

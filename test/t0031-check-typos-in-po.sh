@@ -309,4 +309,45 @@ test_expect_success "check typos of mismatched options" '
 	test_cmp expect actual
 '
 
+test_expect_success "report initial letter case mismatches by severity" '
+	cat >workdir/po/sv.po <<-\EOF &&
+	msgid ""
+	msgstr ""
+	"Project-Id-Version: Git\n"
+	"Report-Msgid-Bugs-To: Git Mailing List <git@vger.kernel.org>\n"
+	"POT-Creation-Date: 2021-03-04 22:41+0800\n"
+	"PO-Revision-Date: 2021-03-04 22:41+0800\n"
+	"Last-Translator: Automatically generated\n"
+	"Language-Team: none\n"
+	"Language: sv\n"
+	"MIME-Version: 1.0\n"
+	"Content-Type: text/plain; charset=UTF-8\n"
+	"Content-Transfer-Encoding: 8bit\n"
+	"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+	msgid "unable to add additional attribute"
+	msgstr "Kunde inte lägga till ytterligare attribut"
+	EOF
+
+	git -C workdir $HELPER check-po $POT_NO --report-typos=none po/sv.po >out 2>&1 &&
+	! grep "msgid/msgstr pattern check" out &&
+
+	cat >expect <<-\EOF &&
+	 WARNING [sv.po] initial letter case mismatch
+	 WARNING [sv.po] >> msgid: unable to add additional attribute
+	 WARNING [sv.po] >> msgstr: Kunde inte lägga till ytterligare attribut
+	 WARNING [sv.po]
+	EOF
+	git -C workdir $HELPER check-po $POT_NO --report-typos=warn po/sv.po >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	grep "^ WARNING " actual >diagnostics &&
+	test_cmp expect diagnostics &&
+
+	test_must_fail git -C workdir $HELPER check-po $POT_NO --report-typos=error po/sv.po >out 2>&1 &&
+	make_user_friendly_and_stable_output <out >actual &&
+	grep "^ ERROR " actual >diagnostics &&
+	sed "s/^ WARNING / ERROR /" expect >expect-error &&
+	test_cmp expect-error diagnostics
+'
+
 test_done

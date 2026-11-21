@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,17 +51,8 @@ func CmdUpdate(fileName string) bool {
 
 	locale = strings.TrimSuffix(filepath.Base(fileName), ".po")
 	localeFullName = FormatLocaleName(locale)
-	localeErrs := ValidateLocale(locale)
-	// ISO / locale validation errors are logged but do not stop the update when
-	// FormatLocaleName still yields a display name (warn-only). If the locale
-	// cannot be interpreted at all (empty display name), abort.
-	if len(localeErrs) > 0 {
-		for _, e := range localeErrs {
-			log.Errorf("%s", e)
-		}
-		if localeFullName == "" {
-			return false
-		}
+	if localeFullName == "" {
+		localeFullName = locale
 	}
 
 	poFile = fileName
@@ -86,17 +78,16 @@ func CmdUpdate(fileName string) bool {
 		return false
 	}
 
-	if projectName == "" {
-		log.Errorf("fail to get project name from %s", poFile)
-		return false
-	}
-
 	// Update pot file.
 	if poTemplate, ok = UpdatePotFile(projectName, poFile); !ok {
 		return false
 	}
 	if poTemplate == "" {
-		log.Errorf("fail to update %s, unknown pot file", poFile)
+		if projectName == "" {
+			log.Errorf("fail to update %s: missing project name in Project-Id-Version; specify a POT file with --pot-file=<path>", poFile)
+		} else {
+			log.Errorf("fail to update %s, unknown pot file", poFile)
+		}
 		return false
 	}
 	if !Exist(poTemplate) {
@@ -128,13 +119,7 @@ func CmdUpdate(fileName string) bool {
 		return false
 	}
 
-	prevReportLoc := viper.GetString("check--report-file-locations")
-	prevAllowObsolete := viper.GetBool("check--allow-obsolete")
-	defer func() {
-		viper.Set("check--report-file-locations", prevReportLoc)
-		viper.Set("check--allow-obsolete", prevAllowObsolete)
-	}()
-	viper.Set("check--report-file-locations", "none")
-	viper.Set("check--allow-obsolete", true)
-	return CheckPoFile(locale, poFile, true)
+	msgs, ok := checkPoWithMsgfmt(poFile)
+	ReportSection("Syntax check with msgfmt", ok, log.InfoLevel, fmt.Sprintf("[%s.po]", locale), msgs...)
+	return ok
 }
