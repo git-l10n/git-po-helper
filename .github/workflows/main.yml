@@ -28,6 +28,9 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
 
+      - name: Build Go packages
+        run: go build -v ./...
+
       - name: Build
         run: |
           export GO111MODULE=on
@@ -71,6 +74,9 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go }}
+
+      - name: Build Go packages
+        run: go build -v ./...
 
       - name: Build
         run: |
