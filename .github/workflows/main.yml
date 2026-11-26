@@ -35,7 +35,7 @@ jobs:
           make
 
       - name: Install test prerequisites
-        run: sudo test/install-prereq.sh
+        run: test/install-prereq.sh
 
       - name: Run integration tests
         run: make gh-it
@@ -79,7 +79,7 @@ jobs:
           make
 
       - name: Install test prerequisites
-        run: sudo test/install-prereq.sh
+        run: test/install-prereq.sh
 
       - name: Run integration tests
         run: make gh-it
