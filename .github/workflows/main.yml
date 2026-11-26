@@ -57,13 +57,13 @@ jobs:
       - name: Run unit tests
         run: make ut
 
-      # Run static analysis last because installing the tool
-      # may modify go.mod and affect earlier test steps.
+      # Run static analysis last so build and test results are
+      # available even if installing the analysis tool fails.
       - name: Run static analysis
         if: ${{ matrix.go != '~1.17' }}
         run: |
           export GO111MODULE=on
-          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install honnef.co/go/tools/cmd/staticcheck@v0.8.2
           make golint
 
   macos:
