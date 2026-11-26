@@ -10,10 +10,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   linux:
     name: Linux Go ${{ matrix.go }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     strategy:
       fail-fast: false
@@ -60,6 +65,7 @@ jobs:
   macos:
     name: macOS Go ${{ matrix.go }}
     runs-on: macos-latest
+    timeout-minutes: 60
 
     strategy:
       fail-fast: false
