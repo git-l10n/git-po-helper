@@ -42,6 +42,9 @@ jobs:
           go-version: ${{ matrix.go }}
           cache: false
 
+      - name: Build Go packages
+        run: go build -v ./...
+
       - name: Build
         run: |
           export GO111MODULE=on
@@ -88,6 +91,9 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
           cache: false
+
+      - name: Build Go packages
+        run: go build -v ./...
 
       - name: Build
         run: |
