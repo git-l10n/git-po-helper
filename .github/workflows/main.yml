@@ -7,10 +7,22 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   linux:
     name: Linux Go ${{ matrix.go }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     strategy:
       fail-fast: false
@@ -19,14 +31,16 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go }}
+          cache: false
 
       - name: Build
         run: |
@@ -35,7 +49,7 @@ jobs:
           make
 
       - name: Install test prerequisites
-        run: sudo test/install-prereq.sh
+        run: test/install-prereq.sh
 
       - name: Run integration tests
         run: make gh-it
@@ -43,18 +57,19 @@ jobs:
       - name: Run unit tests
         run: make ut
 
-      # Run static analysis last because installing the tool
-      # may modify go.mod and affect earlier test steps.
+      # Run static analysis last so build and test results are
+      # available even if installing the analysis tool fails.
       - name: Run static analysis
         if: ${{ matrix.go != '~1.17' }}
         run: |
           export GO111MODULE=on
-          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install honnef.co/go/tools/cmd/staticcheck@v0.8.2
           make golint
 
   macos:
     name: macOS Go ${{ matrix.go }}
     runs-on: macos-latest
+    timeout-minutes: 60
 
     strategy:
       fail-fast: false
@@ -63,14 +78,16 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go }}
+          cache: false
 
       - name: Build
         run: |
@@ -79,7 +96,7 @@ jobs:
           make
 
       - name: Install test prerequisites
-        run: sudo test/install-prereq.sh
+        run: test/install-prereq.sh
 
       - name: Run integration tests
         run: make gh-it
